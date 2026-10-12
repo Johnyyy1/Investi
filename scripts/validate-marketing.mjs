@@ -1,12 +1,13 @@
-// Phase 1 browser acceptance: local app/database, disposable isolated demo users.
+// v14.1 landing acceptance. Only isolated browser-demo identities may be mutated.
 import "dotenv/config";
 import assert from "node:assert/strict";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { chromium } from "playwright";
 import postgres from "postgres";
 
 const baseURL = process.env.MARKETING_TEST_URL ?? "http://localhost:3000";
-const local = (hostname) => ["localhost", "127.0.0.1", "[::1]"].includes(hostname);
+const local = host => ["localhost", "127.0.0.1", "[::1]"].includes(host);
 assert.ok(local(new URL(baseURL).hostname) && local(new URL(process.env.DATABASE_URL).hostname), "Use a local app and database only.");
 const output = process.env.MARKETING_SCREENSHOT_DIR ?? "/tmp/investi-marketing-qa";
 await mkdir(output, { recursive: true });
@@ -14,291 +15,253 @@ const sql = postgres(process.env.DATABASE_URL, { prepare: false });
 const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || "chrome" });
 const owners = new Set(), errors = [], checks = [];
 const widths = [1440, 1024, 768, 390, 375, 320];
-let contextIndex = 70;
-const newContext = () => browser.newContext({ viewport: { width: 1440, height: 1000 }, extraHTTPHeaders: { "x-forwarded-for": `127.0.0.${contextIndex++}` } });
-async function session(context) {
-  const result = await context.request.get(`${baseURL}/api/auth/get-session`);
-  const data = await result.json();
-  assert.equal(data?.user?.isAnonymous, true);
-  owners.add(data.user.id);
-  return data.user.id;
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, timezoneId: "Europe/Prague" });
+const page = await context.newPage();
+page.on("pageerror", error => errors.push(error.message));
+const lesson = () => page.locator("main > section").first();
+const compactLesson = () => page.locator('section[aria-labelledby="lesson-title"]');
+const portfolio = () => page.locator("#portfolio-lab");
+const sliders = () => portfolio().getByRole("slider");
+const button = (scope, name) => scope.getByRole("button", { name, exact: true });
+async function recordSession(ctx) {
+  const session = await (await ctx.request.get(`${baseURL}/api/auth/get-session`)).json();
+  assert.equal(session.user.isAnonymous, true);
+  owners.add(session.user.id);
+  return session.user.id;
 }
-async function layout(page, width, enlarged) {
-  await page.setViewportSize({ width, height: 1000 });
-  await page.evaluate((large) => { document.documentElement.style.fontSize = large ? "200%" : ""; window.scrollTo(0, 0); }, enlarged);
-  await page.locator("[data-asset-state] img").evaluateAll((images) => Promise.all(images.map((image) => image.decode())));
+async function settle() {
+  await page.evaluate(async () => {
+    window.scrollTo(0, 0);
+    await document.fonts.ready;
+    for (const image of document.images) image.loading = "eager";
+    await Promise.all([...document.images].map(image => image.decode().catch(() => {})));
+  });
+  await page.waitForFunction(() => [...document.images].every(image => image.complete && image.naturalWidth > 0));
+  // Paint offscreen illustrations before a full-page capture; decode alone can
+  // precede Chrome's rasterization when responsive sources change.
+  for (const section of await page.locator("main > section").all()) await section.scrollIntoViewIfNeeded();
+  await page.evaluate(async () => {
+    window.scrollTo(0, 0);
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  });
+}
+async function layout(width, enlarged = false) {
+  await page.setViewportSize({ width, height: 900 });
+  await page.evaluate(large => { document.documentElement.style.fontSize = large ? "200%" : ""; }, enlarged);
+  await settle();
   const dimensions = await page.evaluate(() => {
-    const hero = document.querySelector("main > section").getBoundingClientRect();
-    const content = document.querySelector("h1").parentElement.getBoundingClientRect();
-    const artwork = document.querySelector("[data-asset-state]").getBoundingClientRect();
-    const sections = [...document.querySelectorAll("main > section")];
-    const scene = sections[1].getBoundingClientRect();
-    const how = sections[2];
-    const lab = sections[3];
-    const backtesting = sections[4];
-    const progress = sections[5];
-    const finalCta = sections[6];
-    const howTitle = how.querySelector("h2").getBoundingClientRect();
-    const howPhone = how.querySelector('[role="img"]').getBoundingClientRect();
-    const howFeatures = [...how.querySelectorAll("h3")]
-      .filter((heading) => !heading.closest('[role="img"]'))
-      .map((heading) => heading.parentElement.getBoundingClientRect());
-    const labCopy = lab.querySelector("h2").parentElement.getBoundingClientRect();
-    const labDemo = lab.querySelector('[data-testid="portfolio-showcase-demo"]').getBoundingClientRect();
-    const labPie = lab.querySelector('img[alt^="Třídílný koláčový graf portfolia"]').getBoundingClientRect();
-    const backtestingCopy = backtesting.querySelector("h2").parentElement.getBoundingClientRect();
-    const backtestingDemo = backtesting.querySelector('[data-testid="backtesting-showcase-demo"]').getBoundingClientRect();
-    const progressCopy = progress.querySelector("h2").parentElement.getBoundingClientRect();
-    const progressDemo = progress.querySelector('[data-testid="progress-showcase-demo"]').getBoundingClientRect();
-    const finalCtaCard = finalCta.firstElementChild.firstElementChild.getBoundingClientRect();
-    const finalCtaContentEl = finalCta.querySelector("h2").parentElement;
-    const finalCtaSceneEl = finalCta.querySelector('[data-testid="final-cta-scene"]');
-    const finalCtaScene = finalCtaSceneEl.getBoundingClientRect();
+    const visible = element => element.checkVisibility();
+    const copy = [...document.querySelectorAll("h1,h2,h3,p,button,a,label,output,small")].filter(visible);
     const midWordWraps = [];
-    for (const element of document.querySelectorAll("h1, h2, h3, article p, main a, main button, footer p, footer a")) {
-      if (element.getClientRects().length === 0) continue;
+    for (const element of copy) {
       const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
       while (walker.nextNode()) {
-        const node = walker.currentNode;
-        for (const match of node.textContent.matchAll(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)) {
+        for (const match of walker.currentNode.textContent.matchAll(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu)) {
           const range = document.createRange();
-          range.setStart(node, match.index);
-          range.setEnd(node, match.index + match[0].length);
-          const lines = new Set([...range.getClientRects()].filter((rect) => rect.width > 0).map((rect) => Math.round(rect.top)));
-          if (lines.size > 1) midWordWraps.push(match[0]);
+          range.setStart(walker.currentNode, match.index);
+          range.setEnd(walker.currentNode, match.index + match[0].length);
+          const lines = new Set([...range.getClientRects()].filter(rect => rect.width > 0).map(rect => Math.round(rect.top)));
+          if (lines.size > 1 && getComputedStyle(element).hyphens !== "auto") midWordWraps.push(match[0]);
         }
       }
     }
     return {
-      overflow: document.documentElement.scrollWidth > innerWidth,
-      heroGap: Math.round(scene.top - hero.bottom),
-      split: artwork.left > content.left + content.width * 0.75 && artwork.top < content.bottom,
-      stacked: artwork.top >= content.bottom && Math.abs(artwork.left + artwork.width / 2 - innerWidth / 2) < 4,
-      artworkWidth: Math.round(artwork.width),
-      howMobileOrder: howTitle.bottom <= howPhone.top + 1 && howPhone.bottom <= howFeatures[0].top + 1 && howFeatures[0].bottom <= howFeatures[1].top + 1,
-      labStacked: labDemo.top >= labCopy.bottom - 1,
-      labPieWidth: Math.round(labPie.width),
-      backtestingStacked: backtestingDemo.top >= backtestingCopy.bottom - 1,
-      progressStacked: progressDemo.top >= progressCopy.bottom - 1,
-      // Offset geometry verifies the grid structure without scroll-linked reveal transforms shifting client rects.
-      finalCtaStacked: finalCtaSceneEl.offsetTop >= finalCtaContentEl.offsetTop + finalCtaContentEl.offsetHeight - 1,
-      finalCtaSceneContained: finalCtaScene.left >= finalCtaCard.left - 1 && finalCtaScene.right <= finalCtaCard.right + 1,
-      clipped: [...document.querySelectorAll("h1, h2, h3, article, main p, main a, main button, main label, main output, footer p, footer a")].some((el) => {
-        const css = getComputedStyle(el);
-        // Display-font descenders can exceed the line box without being clipped.
-        return (css.overflowX !== "visible" && el.scrollWidth > el.clientWidth + 1)
-          || (css.overflowY !== "visible" && el.scrollHeight > el.clientHeight + 1);
-      }),
+      width: innerWidth,
+      scroll: document.documentElement.scrollWidth,
+      outside: copy.filter(element => {
+        const rect = element.getBoundingClientRect();
+        return rect.right > innerWidth + 1 || rect.left < -1;
+      }).map(element => element.textContent.slice(0, 80)),
+      clipped: copy.filter(element => {
+        const css = getComputedStyle(element);
+        return (css.overflowX !== "visible" && element.scrollWidth > element.clientWidth + 1)
+          || (css.overflowY !== "visible" && element.scrollHeight > element.clientHeight + 1);
+      }).map(element => element.textContent.slice(0, 80)),
       midWordWraps,
+      overlaps: (() => {
+        const rect = selector => document.querySelector(selector).getBoundingClientRect();
+        const course = rect('[class*="courseCard"]');
+        const steps = rect('[class*="threeSteps"]');
+        const closingTitle = rect('#closing-title');
+        const closingArt = rect('[class*="closingArt"]');
+        const image = rect('[class*="progressImage"] img');
+        const imageBox = rect('[class*="progressImage"]');
+        return {
+          courseOverSteps: course.bottom > steps.top + 1,
+          closingArtOverTitle: closingArt.left < closingTitle.right - 1 && closingArt.right > closingTitle.left + 1
+            && closingArt.top < closingTitle.bottom - 1 && closingArt.bottom > closingTitle.top + 1,
+          progressImageEscapes: image.top < imageBox.top - 1 || image.bottom > imageBox.bottom + 1,
+        };
+      })(),
+      sections: [...document.querySelectorAll("main > section")].map(element => ({ top: element.offsetTop, height: element.offsetHeight })),
     };
   });
-  assert.equal(dimensions.overflow, false, `No overflow: ${width}, enlarged=${enlarged}`);
-  assert.equal(dimensions.clipped, false, `No clipped text: ${width}, enlarged=${enlarged}`);
-  assert.deepEqual(dimensions.midWordWraps, [], `No mid-word wrapping: ${width}, enlarged=${enlarged}`);
-  assert.ok(Math.abs(dimensions.heroGap) <= 1, `Hero meets journey section: ${width}, enlarged=${enlarged}`);
-  assert.equal(width >= 920 ? dimensions.split : dimensions.stacked, true, `Responsive hero composition: ${width}, enlarged=${enlarged}`);
-  assert.ok(dimensions.artworkWidth >= (width <= 390 ? 280 : 430), `Mascot remains visually meaningful: ${width}, enlarged=${enlarged}`);
-  if (width <= 620) assert.equal(dimensions.howMobileOrder, true, `Walkthrough mobile order: ${width}, enlarged=${enlarged}`);
-  if (width <= 1024 || enlarged) assert.equal(dimensions.labStacked, true, `Portfolio showcase stacks when space is limited: ${width}, enlarged=${enlarged}`);
-  if (width <= 768 || enlarged) assert.equal(dimensions.backtestingStacked, true, `Backtesting showcase stacks when space is limited: ${width}, enlarged=${enlarged}`);
-  if (width <= 768) assert.equal(dimensions.progressStacked, true, `Progress showcase stacks on mobile and tablet: ${width}, enlarged=${enlarged}`);
-  assert.equal((width <= 768 || enlarged) ? dimensions.finalCtaStacked : !dimensions.finalCtaStacked, true, `Final CTA uses the intended split/stacked layout: ${width}, enlarged=${enlarged}`);
-  assert.equal(dimensions.finalCtaSceneContained, true, `Final CTA artwork stays contained: ${width}, enlarged=${enlarged}`);
-  assert.ok(dimensions.labPieWidth >= (width <= 390 ? 220 : 260), `Portfolio pie remains meaningful: ${width}, enlarged=${enlarged}`);
-  await page.screenshot({ path: `${output}/landing-${width}${enlarged ? "-200" : ""}.png`, fullPage: true });
-  if (width <= 1100) {
-    const menu = page.getByLabel("Navigační menu");
-    await menu.focus(); await menu.press("Enter");
+  assert.deepEqual(dimensions.overlaps, { courseOverSteps: false, closingArtOverTitle: false, progressImageEscapes: false }, `${width}px, text 200%=${enlarged}: content overlap`);
+  assert.equal(dimensions.scroll, width, `${width}px, text 200%=${enlarged}: document overflow`);
+  assert.deepEqual(dimensions.outside, [], `${width}px, text 200%=${enlarged}: content outside viewport`);
+  assert.deepEqual(dimensions.clipped, [], `${width}px, text 200%=${enlarged}: clipped content`);
+  assert.deepEqual(dimensions.midWordWraps, [], `${width}px, text 200%=${enlarged}: split words`);
+  await page.screenshot({ path: `${output}/landing-${width}${enlarged ? "-200" : ""}.png`, fullPage: true, animations: "disabled" });
+  if (!enlarged && [1440, 1024, 768, 390].includes(width)) {
+    for (let index = 1; index <= 6; index++) {
+      await page.locator(`main > section:nth-child(${index})`).screenshot({ path: `${output}/section-${width}-${index}.png`, animations: "disabled" });
+    }
+  }
+  if (width <= 768) {
+    const trigger = page.getByLabel("Navigační menu", { exact: true });
+    await trigger.focus(); await trigger.press("Enter");
     const nav = page.getByRole("navigation", { name: "Mobilní navigace" });
     assert.equal(await nav.isVisible(), true);
-    assert.deepEqual(await nav.getByRole("link").allTextContents(), ["Domů", "Učení", "Portfolio Lab", "Backtesting Lab", "Přihlásit se", "Začít se učit "]);
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "Expanded menu fits");
-    await page.screenshot({ path: `${output}/menu-${width}${enlarged ? "-200" : ""}.png`, fullPage: true });
-    await menu.press("Enter");
+    for (const link of await nav.getByRole("link").all()) {
+      const rect = await link.boundingBox();
+      assert.ok(rect && rect.height >= 44 && rect.x >= 0 && rect.x + rect.width <= width, "Menu touch targets and reflow");
+    }
+    await trigger.press("Escape");
+    assert.equal(await nav.isVisible(), false);
+    assert.equal(await trigger.evaluate(element => document.activeElement === element), true, "Menu returns focus");
   }
+  return dimensions;
+}
+async function mix() {
+  const percentages = await sliders().evaluateAll(inputs => inputs.map(input => Number(input.value)));
+  assert.equal(percentages.reduce((a, b) => a + b, 0), 100);
+  assert.ok(percentages.every(percent => Number.isInteger(percent) && percent >= 0 && percent <= 100));
+  const amounts = await portfolio().locator('output').allTextContents();
+  assert.deepEqual(amounts.map(value => Number(value.replace(/\D/g, ""))), percentages);
+  return percentages;
+}
+async function snapshot(owner) {
+  const [result] = await sql`
+    select
+      (select coalesce(jsonb_agg(to_jsonb(p) order by p.lesson_id), '[]') from lesson_progress p where p.user_id = ${owner}) as progress,
+      (select coalesce(jsonb_agg(to_jsonb(a) order by a.lesson_id), '[]') from lesson_award a where a.user_id = ${owner}) as awards,
+      (select coalesce(jsonb_agg(to_jsonb(t) order by t.id), '[]') from portfolio_trade t join portfolio p on p.id = t.portfolio_id where p.user_id = ${owner}) as trades,
+      (select coalesce(jsonb_agg(to_jsonb(g) order by g.id), '[]') from portfolio g where g.user_id = ${owner}) as generations`;
+  return result;
 }
 try {
-  const context = await newContext(), page = await context.newPage();
-  page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(baseURL);
-  await page.evaluate(() => document.fonts.ready);
-  assert.equal(await page.title(), "Uč se investovat praxí · investi");
+  assert.equal(await page.title(), "Peníze jsou vážné. Učení nemusí být. · investi");
   assert.equal(await page.locator("h1").count(), 1);
-  assert.equal(await page.locator("h1").innerText(), "Uč se investovat\npraxí.");
-  assert.equal(await page.locator("main > section").count(), 7, "Includes all product showcases and the final CTA");
-  assert.deepEqual(await page.locator("article h3").allTextContents(), ["Uč se", "Sestavuj", "Backtestuj"]);
-  assert.deepEqual(await page.locator("main > section h2").allTextContents(), [
-    "Uč se. Sestavuj. Backtestuj.",
-    "Jak investi funguje?",
-    "O diverzifikaci jen nečti. Rozlož portfolio.",
-    "Tvoje intuice potřebuje data.",
-    "Udrž si rytmus.Sleduj, jak rosteš.",
-    "Jsi připravený učit se investovat praxí?",
+  assert.equal(await page.locator("main > section").count(), 6);
+  assert.deepEqual(await page.locator("main > section").evaluateAll(sections => sections.map(section => section.querySelector("h1,h2").textContent)), [
+    "Peníze jsou vážné.Učení nemusí být.", "Malé kroky.Velké souvislosti.", "Jedna otázka.O jedno aha víc.",
+    "Vlastní nápady.Cvičné peníze.", "Rostou znalosti. Ne tlak.", "Zvědavost stačí.Začni první lekcí.",
   ]);
-  assert.equal(await page.getByRole("img", { name: "Obrazovka lekce investi vysvětlující, co je akcie" }).count(), 1);
-  assert.equal(await page.getByRole("img", { name: /Třídílný koláčový graf portfolia/ }).count(), 1);
-  assert.equal(await page.getByRole("slider").count(), 0, "Portfolio showcase exposes no fake slider controls");
-  assert.equal(await page.locator('input[type="range"]').count(), 0, "Portfolio showcase has no native range inputs");
-  assert.equal(await page.getByRole("img", { name: "Rozložení portfolia: 60 % akcie, 30 % dluhopisy, 10 % hotovost." }).count(), 1, "Portfolio allocation has a static text equivalent");
-  assert.equal(await page.locator('[aria-label^="Rozložení portfolia:"]').evaluate((element) => getComputedStyle(element).pointerEvents), "none", "Static allocation ignores pointer interaction");
-  assert.equal(await page.getByText("100 % rozloženo · bezpečné experimentování", { exact: true }).count(), 1);
-  assert.equal(await page.getByText("Ilustrační rozložení 60 / 30 / 10.", { exact: true }).count(), 1);
-  assert.equal(await page.getByText("Ilustrační data pro učení. Nejde o prognózu ani doporučení.", { exact: true }).count(), 1);
-  assert.equal(await page.getByRole("link", { name: "Vyzkoušet Backtesting Lab", exact: true }).getAttribute("href"), "/lab/backtesting");
-  assert.equal(await page.getByText("Vzdělávací demo data · syntetické scénáře pro učení", { exact: true }).count(), 1);
-  assert.equal(await page.getByText(/Ukázkový vzdělávací backtest od ledna 2015 do prosince 2025/).count(), 1, "Backtest chart has a screen-reader summary");
-  assert.deepEqual(await page.locator('[data-testid="backtesting-showcase-demo"] dt').allTextContents(), ["Konečná hodnota", "CAGR", "Maximální drawdown", "Volatilita"]);
-  assert.equal(await page.locator('[data-testid="backtesting-showcase-demo"] dd').filter({ hasText: "14,16" }).count(), 1, "Max drawdown uses the product's positive loss-magnitude convention");
-  const progress = page.locator('[data-testid="progress-showcase-demo"]');
-  await progress.scrollIntoViewIfNeeded();
-  await progress.locator("img").evaluateAll((images) => Promise.all(images.map((image) => image.decode())));
-  assert.equal(await progress.getByText("Ilustrační náhled pokroku", { exact: true }).count(), 1);
-  assert.equal(await progress.getByText("4 dny", { exact: true }).count(), 1);
-  assert.equal(await progress.getByText("5 000 Kč", { exact: true }).count(), 1);
-  assert.equal(await progress.locator("strong").filter({ hasText: "7 z 10 lekcí dokončeno" }).count(), 1);
-  assert.equal(await progress.getByText("420 XP · Portfolio Lab odemčen", { exact: true }).count(), 1);
-  assert.equal(await progress.getByText(/za lekci/i).count(), 0, "Progress marketing does not imply a per-lesson capital reward");
-  assert.equal(await progress.getByRole("progressbar", { name: "7 z 10 lekcí dokončeno" }).getAttribute("value"), "7");
-  const progressAssets = ["flame-icon.webp", "growing-coin.webp", "gold-icon.webp", "books-icon.webp"];
-  assert.equal(await progress.locator("img").count(), progressAssets.length, "Progress scene uses a curated four-asset composition");
-  for (const asset of progressAssets) {
-    const image = progress.locator(`img[src*="${asset}"]`);
-    assert.equal(await image.count(), 1, `${asset} is used once`);
-    assert.equal(await image.getAttribute("alt"), "", `${asset} is decorative`);
-    assert.equal(await image.evaluate((img) => img.complete && img.naturalWidth > 0), true, `${asset} loads`);
+  const expectedAssets = ["v14-curiosity-cropped.png", "v14-discovery-edge.png", "v14-discovery-top-grip.png", "v14-discovery-side-grip.png", "v14-steady-understanding.png", "generated-19.webp"];
+  await settle();
+  assert.equal(await page.locator('img[src*="marketing"]').count(), 6);
+  for (const asset of expectedAssets) {
+    const image = page.locator(`img[src*="${asset}"]`);
+    assert.equal(await image.count(), 1);
+    assert.equal(await image.getAttribute("alt"), "");
+    assert.equal(await image.evaluate(element => element.complete && element.naturalWidth > 0), true);
   }
-  for (const invented of ["leaderboard", "Level 4", "daily loot", "Achievement unlocked"]) {
-    assert.equal(await page.getByText(invented, { exact: false }).count(), 0, `Progress preview does not invent ${invented}`);
-  }
-  for (const removed of ["Knowledge today", "Opportunity tomorrow", "Different choices", "Real outcomes"]) {
-    assert.equal(await page.getByText(removed, { exact: true }).count(), 0, `Removed handwritten copy: ${removed}`);
-  }
-  assert.equal(await page.locator("[data-asset-state]").getAttribute("data-asset-state"), "ready");
-  const heroScene = page.locator("[data-asset-state]");
-  const mascot = heroScene.locator('img[src*="mascot-hero.webp"]');
-  const heroSun = heroScene.locator('img[src*="sun.webp"]');
-  const heroClouds = heroScene.locator('img[src*="cloud.webp"]');
-  assert.equal(await mascot.count(), 1, "Approved mascot is used once");
-  assert.equal(await heroSun.count(), 1, "Hero uses one sun");
-  assert.equal(await heroClouds.count(), 3, "Hero reuses the cloud asset three times");
-  assert.equal(await heroScene.getAttribute("aria-hidden"), "true", "Decorative scene stays out of the accessibility tree");
-  for (const image of [mascot, heroSun, ...await heroClouds.all()]) {
-    assert.equal(await image.getAttribute("alt"), "", "Hero artwork has empty alt text");
-    assert.equal(await image.evaluate((img) => img.complete && img.naturalWidth > 0), true, "Hero artwork loads");
-  }
-  const pie = page.getByRole("img", { name: /Třídílný koláčový graf portfolia/ });
-  assert.equal((await pie.getAttribute("src")).includes("portfolio-pie.webp"), true, "Approved portfolio pie is used");
-  assert.equal(await pie.evaluate((img) => img.complete && img.naturalWidth > 0), true, "Portfolio pie artwork loads");
-  for (const text of ["A smarter", "A brighter"]) {
-    assert.equal(await page.getByText(text, { exact: false }).count(), 0);
-  }
-  assert.equal(await page.getByText("Same curiosity.", { exact: false }).count(), 0, "Blue scene has no handwritten callout");
-  const finalCta = page.locator('[data-testid="final-cta"]');
-  await finalCta.scrollIntoViewIfNeeded();
-  await finalCta.locator("img").evaluateAll((images) => Promise.all(images.map((image) => image.decode())));
-  assert.equal(await finalCta.getByText("Další krok", { exact: true }).count(), 1);
-  assert.equal(await finalCta.getByRole("link", { name: "Začít se učit", exact: true }).getAttribute("href"), "/sign-up");
-  assert.equal(await finalCta.getByRole("button", { name: "Vyzkoušet demo", exact: true }).count(), 1);
-  for (const asset of ["hill.webp", "clouds.webp"]) {
-    const image = finalCta.locator(`img[src*="${asset}"]`);
-    assert.equal(await image.count(), 1, `${asset} is used once in the final CTA`);
-    assert.equal(await image.getAttribute("alt"), "", `${asset} is decorative`);
-    assert.equal(await image.evaluate((img) => img.complete && img.naturalWidth > 0), true, `${asset} loads`);
-  }
-  const footer = page.locator("footer");
-  assert.deepEqual(await footer.getByRole("heading").allTextContents(), ["Produkt", "Účet"]);
-  assert.equal(await footer.getByText("Uč se investovat praxí.", { exact: true }).count(), 1);
-  assert.equal(await footer.getByText("© 2026 investi. Všechna práva vyhrazena.", { exact: true }).count(), 1);
-  assert.equal(await footer.getByText("investi je vzdělávací produkt. Tento web neposkytuje finanční poradenství.", { exact: true }).count(), 1);
-  assert.equal(await page.getByText(/real market data/i).count(), 0, "Marketing makes no unsupported real-market-data claim");
-  assert.deepEqual(
-    [...new Set(await page.locator("a[href]").evaluateAll((links) => links.map((link) => link.getAttribute("href"))))].sort(),
-    ["#main", "/", "/lab/backtesting", "/lab/portfolio", "/learn", "/progress", "/sign-in", "/sign-up"],
-    "Every marketing link points to an implemented destination",
-  );
-  assert.equal(await page.locator('link[rel="preload"][as="image"]').count(), 1, "Only the hero LCP image is preloaded");
-  assert.equal(await page.locator('img[src*="investi-logo.png"]').first().getAttribute("loading"), "lazy", "The header logo is not redundantly preloaded");
-  assert.equal(await page.locator("article").first().evaluate((element) => getComputedStyle(element.parentElement).animationName), "none", "Journey cards do not float indefinitely");
+  assert.deepEqual([...new Set(await page.locator("a[href]").evaluateAll(links => links.map(link => link.getAttribute("href"))))].sort(), ["#jak-to-funguje", "#main", "#portfolio-lab", "/", "/sign-in", "/sign-up"]);
+  const layouts = [];
   for (const width of widths) {
-    await layout(page, width, false);
-    await layout(page, width, true);
+    layouts.push(await layout(width));
+    await layout(width, true);
   }
-  checks.push("All six widths at 100% and 200% text: no overflow, clipping, or mid-word wrapping; responsive split/stacked layout; loaded mascot and portfolio pie artwork; compact section transition; keyboard mobile menu");
-  await page.evaluate(() => document.documentElement.style.fontSize = "");
-  checks.push("Portfolio allocation is static, has no fake slider semantics, preserves the 60 / 30 / 10 example, and retains a readable disclosure");
-  await page.setViewportSize({ width: 390, height: 1000 });
-  for (const [name, path] of [["Domů", "/"], ["Učení", "/sign-in"], ["Portfolio Lab", "/sign-in"], ["Backtesting Lab", "/sign-in"], ["Přihlásit se", "/sign-in"], ["Začít se učit", "/sign-up"]]) {
-    await page.goto(baseURL);
-    await page.getByLabel("Navigační menu").click();
-    await page.getByRole("navigation", { name: "Mobilní navigace" }).getByRole("link", { name, exact: true }).click();
-    await page.waitForURL(`**${path}`);
-  }
-  checks.push("Every mobile-menu destination works, including protected-route auth gates and Start learning");
-  await page.goto(baseURL);
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  assert.equal(await page.getByRole("button", { name: "Vyzkoušet demo" }).first().evaluate((el) => getComputedStyle(el).transitionDuration), "0s");
-  assert.equal(await progress.locator("img").first().evaluate((el) => getComputedStyle(el).transitionDuration), "0s");
+  checks.push("Six original assets and all six sections; responsive/text-200% reflow, no overflow/clipping/unintentional split words; natural Czech heading hyphenation; mobile menu keyboard, Escape, focus return and touch targets.");
+  await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(baseURL);
   await page.keyboard.press("Tab");
-  assert.equal(await page.getByRole("link", { name: "Přejít k obsahu" }).evaluate((el) => el === document.activeElement), true);
+  assert.equal(await page.getByRole("link", { name: "Přejít k obsahu" }).evaluate(element => element === document.activeElement), true);
   await page.keyboard.press("Enter");
-  assert.equal(await page.locator("main").evaluate((el) => el === document.activeElement), true);
-  await page.getByRole("link", { name: "Začít se učit", exact: true }).last().click();
-  await page.waitForURL("**/sign-up");
-  await page.getByRole("heading", { name: "Vytvořit účet", exact: true }).waitFor();
+  assert.equal(await page.locator("main").evaluate(element => element === document.activeElement), true);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  assert.equal(await button(lesson(), "Pokračovat").evaluate(element => getComputedStyle(element).transitionDuration), "0s");
+  assert.equal(await page.locator('img[src*="curiosity"]').evaluate(element => getComputedStyle(element).animationName), "none");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  const writes = [];
+  page.on("request", request => { if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method())) writes.push(request.url()); });
+  for (const scope of [lesson(), compactLesson()]) {
+    await button(scope, "Pokračovat").click();
+    const answers = scope.getByRole("group", { name: "Odpověď na ukázkovou otázku" }).getByRole("button");
+    await page.waitForFunction(element => element === document.activeElement, await answers.first().elementHandle());
+    assert.equal(await button(scope, "Vyber odpověď").isDisabled(), true);
+    await answers.first().press("Enter");
+    await button(scope, "Zkontrolovat odpověď").click();
+    await scope.getByRole("status").filter({ hasText: "Ještě ne." }).waitFor();
+    await button(scope, "Pokračovat").click();
+    await answers.last().click();
+    await button(scope, "Zkontrolovat odpověď").click();
+    await scope.getByRole("status").filter({ hasText: "Přesně." }).waitFor();
+  }
+  assert.deepEqual(await mix(), [60, 30, 10]);
+  for (const [name, value] of [["Akcie", "40"], ["Dluhopisy", "100"], ["Hotovost", "100"], ["Akcie", "100"], ["Dluhopisy", "25"]]) {
+    await portfolio().getByRole("slider", { name, exact: true }).fill(value); await mix();
+  }
+  await portfolio().getByRole("slider", { name: "Akcie", exact: true }).focus();
+  await page.keyboard.press("ArrowLeft"); await mix();
+  await button(portfolio(), "Uložit portfolio").click();
+  await portfolio().getByRole("status").filter({ hasText: "pouze v této ukázce" }).waitFor();
+  await button(portfolio(), "Vrátit původní mix").click();
+  assert.deepEqual(await mix(), [60, 30, 10]);
+  assert.deepEqual(writes, [], "Marketing interactions perform no network mutation");
+  assert.equal((await (await context.request.get(`${baseURL}/api/auth/get-session`)).json()), null, "Previews never create an anonymous identity");
+  checks.push("Both independent lessons: initial answer, retry focus, disabled submit, incorrect/correct feedback. Three keyboard/pointer allocation controls keep 100%; save/reset remains local; no mutation request or session creation.");
+  for (const [label, path, heading] of [["Začít se učit", "/sign-up", "Vytvořit účet"], ["Přihlásit se", "/sign-in", "Vítej zpět"]]) {
+    await page.goto(baseURL);
+    await page.getByRole("link", { name: label, exact: true }).first().click();
+    await page.waitForURL(`**${path}`);
+    await page.getByRole("heading", { name: heading, exact: true }).waitFor();
+    const leaked = await page.locator("main").evaluate(element => ({ font: getComputedStyle(element).getPropertyValue("--pen-body"), marketing: document.querySelector('[class*="pen-landing"]') !== null }));
+    assert.deepEqual(leaked, { font: "", marketing: false }, "Marketing styles/fonts unmount on auth routes");
+    await settle();
+    const screenshot = `${output}/${path.slice(1)}.png`;
+    await page.screenshot({ path: screenshot, animations: "disabled" });
+    if (process.env.MARKETING_AUTH_BASELINE_DIR) {
+      const baseline = await readFile(`${process.env.MARKETING_AUTH_BASELINE_DIR}/${path.slice(1)}.png`);
+      const actual = await readFile(screenshot);
+      assert.equal(createHash("sha256").update(actual).digest("hex"), createHash("sha256").update(baseline).digest("hex"), "Auth appearance matches pre-change baseline");
+    }
+  }
+  for (const [anchor, target] of [["Jak to funguje", "#jak-to-funguje"], ["Portfolio Lab", "#portfolio-lab"]]) {
+    await page.goto(baseURL); await page.getByRole("navigation", { name: "Hlavní navigace", exact: true }).getByRole("link", { name: anchor, exact: true }).click();
+    assert.equal(new URL(page.url()).hash, target);
+  }
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.goto(baseURL); await page.getByLabel("Navigační menu").click();
+  await page.getByRole("navigation", { name: "Mobilní navigace" }).getByRole("link", { name: "Jak to funguje" }).click();
+  assert.equal(await page.getByRole("navigation", { name: "Mobilní navigace" }).isVisible(), false);
+  checks.push("Signup/login and section anchors navigate; marketing fonts/styles leave the page on client navigation.");
   await page.goto(baseURL);
-  await page.getByRole("link", { name: "Přihlásit se", exact: true }).first().click();
-  await page.waitForURL("**/sign-in");
-  await page.getByRole("heading", { name: "Vítej zpět" }).waitFor();
-  checks.push("Metadata, one H1, seven semantic sections, accessible product visuals, final conversion CTA, structured footer, loaded decorative artwork, skip link, reduced motion, existing signup and sign-in");
-
-  await page.goto(baseURL);
-  await page.setViewportSize({ width: 390, height: 1000 });
-  let releaseFailure;
-  let reportFailureStarted;
-  const failureStarted = new Promise((resolve) => { reportFailureStarted = resolve; });
-  await page.route("**/api/auth/sign-in/anonymous", async (route) => {
-    await new Promise((resolve) => { releaseFailure = resolve; reportFailureStarted(); });
-    await route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Unavailable" }) });
-  });
-  await page.getByRole("button", { name: "Vyzkoušet demo" }).first().click();
-  await failureStarted;
-  assert.equal(await page.getByRole("button", { name: "Otevírám demo…" }).first().isDisabled(), true, "Demo prevents repeat activation while pending");
-  releaseFailure();
+  await page.route("**/api/auth/sign-in/anonymous", route => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ message: "Unavailable" }) }));
+  await button(page, "Vyzkoušet demo").click();
   await page.getByRole("alert").filter({ hasText: "Demo se nepodařilo otevřít" }).waitFor();
-  assert.equal(new URL(page.url()).pathname, "/");
-  assert.equal(await page.getByRole("button", { name: "Vyzkoušet demo" }).first().isEnabled(), true);
+  assert.equal(await button(page, "Vyzkoušet demo").isEnabled(), true);
   await page.unroute("**/api/auth/sign-in/anonymous");
-  await page.getByRole("button", { name: "Vyzkoušet demo" }).first().click();
+  await button(page, "Vyzkoušet demo").click();
   await page.waitForURL("**/learn");
-  const owner = await session(context);
-  await page.goto(baseURL);
-  assert.equal(new URL(page.url()).pathname, "/", "Root stays public with a session");
-  await page.getByRole("button", { name: "Vyzkoušet demo" }).first().click();
-  await page.waitForURL("**/learn");
-  assert.equal(await session(context), owner, "Demo reuses an existing session");
-  await page.goto(baseURL);
-  await page.locator('[data-testid="final-cta"]').getByRole("button", { name: "Vyzkoušet demo" }).click();
-  await page.waitForURL("**/learn");
-  assert.equal(await session(context), owner, "Final CTA demo reaches the same real experience");
-  for (const path of ["/lab/portfolio", "/lab/backtesting", "/progress"]) {
+  const owner = await recordSession(context);
+  for (const path of ["/lab/portfolio", "/lab/backtesting", "/progress", "/learn/returns/log-returns"]) {
     await page.goto(`${baseURL}${path}`);
     assert.equal(new URL(page.url()).pathname, path);
-    assert.equal(await page.locator("h1").count(), 1, `${path} keeps a single page heading`);
-    assert.equal(await page.locator("[data-asset-state]").count(), 0, "Marketing does not enter the product");
+    assert.equal(await page.locator("h1").count(), 1);
+    assert.equal(await page.locator('[class*="pen-landing"]').count(), 0);
   }
-  const other = await newContext(), otherPage = await other.newPage();
-  await otherPage.goto(baseURL);
-  await otherPage.getByRole("button", { name: "Vyzkoušet demo" }).first().click();
-  await otherPage.waitForURL("**/learn");
-  assert.notEqual(await session(other), owner, "Separate browsers create isolated demo profiles");
-  checks.push("Demo failure/retry, one-click real demo, existing-session reuse, isolated profiles, protected product routes still work");
+  const before = await snapshot(owner);
+  await page.goto(baseURL);
+  await button(lesson(), "Pokračovat").click();
+  await lesson().getByRole("button", { name: /Aby výsledek/ }).click();
+  await button(lesson(), "Zkontrolovat odpověď").click();
+  await portfolio().getByRole("slider", { name: "Akcie", exact: true }).fill("40");
+  await button(portfolio(), "Uložit portfolio").click();
+  assert.deepEqual(await snapshot(owner), before, "Authenticated previews preserve exact lesson, reward, trade and generation records");
+  await button(page, "Vyzkoušet demo").click(); await page.waitForURL("**/learn");
+  assert.equal(await recordSession(context), owner, "Existing session reused");
+  const other = await browser.newContext(); const otherPage = await other.newPage();
+  await otherPage.goto(baseURL); await button(otherPage, "Vyzkoušet demo").click(); await otherPage.waitForURL("**/learn");
+  assert.notEqual(await recordSession(other), owner, "Independent demo identities");
+  checks.push("Existing DemoButton failure/retry, real entry, session reuse and isolation; protected product routes; authenticated landing interactions preserve exact persisted records.");
   assert.deepEqual(errors, []);
-  await writeFile(`${output}/results.json`, JSON.stringify({ widths, checks, asset: "Approved mascot, hero sun and clouds, Progress, hill, and final CTA cloud assets; loaded and visually reviewed across all six widths." }, null, 2));
-  console.log("PASS\n" + checks.join("\n") + `\nScreenshots: ${output}`);
+  await writeFile(`${output}/results.json`, JSON.stringify({ widths, checks, layouts }, null, 2));
+  console.log(`PASS\n${checks.join("\n")}\nScreenshots: ${output}`);
 } finally {
   await browser.close();
-  for (const id of owners) await sql`delete from "user" where id = ${id}`;
+  for (const owner of owners) await sql`delete from "user" where id = ${owner}`;
   await sql.end();
 }

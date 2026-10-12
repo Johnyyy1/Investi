@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { Nunito } from "next/font/google";
-import styles from "@/components/marketing/marketing.module.css";
+import { Manrope, Inter } from "next/font/google";
 
-const display = Nunito({ subsets: ["latin"], weight: "800", variable: "--font-marketing-display", display: "swap" });
+const display = Manrope({ subsets: ["latin", "latin-ext"], weight: ["600", "800"], variable: "--pen-display", display: "swap" });
+const body = Inter({ subsets: ["latin", "latin-ext"], variable: "--pen-body", display: "swap" });
 
 export default function MarketingLayout({ children }: { children: ReactNode }) {
-  return <div className={`${display.variable} ${styles.marketing}`}>{children}</div>;
+  return <div className={`${display.variable} ${body.variable}`}>{children}</div>;
 }
