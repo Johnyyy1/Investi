@@ -9,7 +9,7 @@ import { PersonalizationPrompt } from "@/components/personalization/personalizat
 import { reasonLabels, contextLabels, scaffoldLabels } from "@/features/personalization/presentation";
 import { ResponsiveDisclosure } from "./responsive-disclosure";
 import { StudovnaQuestion } from "./studovna-question";
-import { blockDescription, portfolioComposition, studovnaLesson, type LearnerSummary } from "./studovna-model";
+import { blockDescription, chapterTitle, PLANNED_CHAPTER_TITLE, portfolioComposition, studovnaLesson, type LearnerSummary } from "./studovna-model";
 import styles from "./studovna-page.module.css";
 
 type Chapter = (typeof moduleCatalog)[number];
@@ -18,7 +18,7 @@ function ChapterCard({ chapter, index, summary }: { chapter: Chapter; index: num
   const lessons = getModuleLessons(chapter.slug).filter((lesson) => lesson.status === "available");
   const finished = lessons.filter((lesson) => summary.completed.some((done) => done.id === lesson.id)).length;
   const focused = summary.next.moduleSlug === chapter.slug && !summary.allComplete;
-  const title = chapter.slug === "returns" ? "Výnosy" : chapter.title;
+  const title = chapterTitle(chapter);
   return <ResponsiveDisclosure className={`${styles.chapter} ${focused ? styles.chapterActive : ""}`} initiallyOpen={focused || summary.allComplete}>
     <summary className={styles.chapterHead}>
       <span className={styles.chapterNumber}>{String(index + 1).padStart(2, "0")}</span>
@@ -94,7 +94,7 @@ export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; 
         </section>
       </div>
       <div className={styles.columns}>
-        <section className={styles.curriculum} id="curriculum" aria-labelledby="curriculum-title"><div className={styles.curriculumHeading}><p className={styles.eyebrow}>Kurikulum</p><h2 id="curriculum-title">Všechny lekce jsou otevřené.</h2><p>Doporučujeme pořadí shora dolů, ale začít můžeš kdekoli.</p></div><div className={styles.chapterList} data-testid="journey-modules">{chapters.map((chapter, index) => <ChapterCard key={chapter.slug} chapter={chapter} index={index} summary={summary} />)}{planned.length > 0 && <section className={styles.plannedChapter} aria-label="Riziko – připravujeme"><span className={styles.chapterNumber}>{String(chapters.length + 1).padStart(2, "0")}</span><div><h3>Riziko</h3><p>{planned.map((chapter) => chapter.title).join(" · ")}</p></div><span className={styles.plannedState}><Clock3 size={16} aria-hidden="true" />Připravujeme</span></section>}</div></section>
+        <section className={styles.curriculum} id="curriculum" aria-labelledby="curriculum-title"><div className={styles.curriculumHeading}><p className={styles.eyebrow}>Kurikulum</p><h2 id="curriculum-title">Všechny lekce jsou otevřené.</h2><p>Doporučujeme pořadí shora dolů, ale začít můžeš kdekoli.</p></div><div className={styles.chapterList} data-testid="journey-modules">{chapters.map((chapter, index) => <ChapterCard key={chapter.slug} chapter={chapter} index={index} summary={summary} />)}{planned.length > 0 && <section className={styles.plannedChapter} aria-label={`${PLANNED_CHAPTER_TITLE} – připravujeme`}><span className={styles.chapterNumber}>{String(chapters.length + 1).padStart(2, "0")}</span><div><h3>{PLANNED_CHAPTER_TITLE}</h3><p>{planned.map((chapter) => chapter.title).join(" · ")}</p></div><span className={styles.plannedState}><Clock3 size={16} aria-hidden="true" />Připravujeme</span></section>}</div></section>
         <aside className={styles.side} aria-label="Lab a studijní pokrok"><PortfolioCard summary={summary} portfolio={portfolio} /><Link href="/lab/backtesting" className={styles.backtesting}><Clock3 size={15} aria-hidden="true" />Otevřít Backtesting Lab<ArrowRight size={15} aria-hidden="true" /></Link><section className={styles.sideCard}><p className={styles.eyebrow}>Tvůj pokrok</p><div className={styles.progressValue}><strong>{summary.percentage} %</strong><span>{summary.completed.length} z {summary.lessons.length} lekcí<small>dokončeno</small></span></div><p className={styles.progressNote}>Učení není závod. K hotovým lekcím se můžeš vracet vlastním tempem.</p><Link href="/progress" className={styles.sideLink}>Zobrazit pokrok<ArrowRight size={16} aria-hidden="true" /></Link></section></aside>
       </div>
       <section className={styles.planContext} aria-label="Tvůj studijní plán"><p>{recommendationReason}</p>{recommendedLesson && <Link className={styles.recommendedLink} href={`/learn/${recommendedLesson.moduleSlug}/${recommendedLesson.slug}`}>Doporučená lekce: {recommendedLesson.title}<ArrowRight size={16} aria-hidden="true" /></Link>}<details><summary>Jak si rozvrhnout učení</summary><p>{contextLabels[summary.recommendation.exampleContext]}</p><p>{scaffoldLabels[summary.recommendation.scaffoldLevel]}</p>{summary.recommendation.splitLessonAcrossSessions && <p>Lekci si můžeš rozdělit do více sezení. Uložený postup tě dovede zpět.</p>}</details></section>

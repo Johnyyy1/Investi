@@ -136,6 +136,26 @@
         749,
         562
       ]
+    },
+    {
+      "path": "public/investi-assets/guide/18-bookshelf.webp",
+      "bytes": 221000,
+      "sha256": "0f1c0291b8cccefce3dcc2c8d48901ceee66f90dceb65b7332211f94a5130cc0",
+      "source": "Original user-supplied guide illustration 18-bookshelf.webp, the image source of investi-design.pen Guide / 18 bookshelf (IXrwy); byte-for-byte copy, no generated or altered artwork.",
+      "pixel_size": [
+        1448,
+        1086
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/20-searching-box.webp",
+      "bytes": 44622,
+      "sha256": "6a1390fd5968ec214ab27825d6328189d6836ee38f34f9b5a0ebdd1b89bddf2c",
+      "source": "Original user-supplied guide illustration 20-searching-box.webp, the image source of investi-design.pen Guide / 20 searching box (BfRKn); byte-for-byte copy, no generated or altered artwork.",
+      "pixel_size": [
+        872,
+        654
+      ]
     }
   ]
 }
