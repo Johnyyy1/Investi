@@ -5,9 +5,9 @@ import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import postgres from "postgres";
 import { db } from "../src/db";
-import { lesson, lessonAward, portfolioTrade, user } from "../src/db/schema";
+import { lesson, lessonAward, portfolioAllocation, portfolioTrade, user } from "../src/db/schema";
 import { PortfolioInputError } from "../src/features/portfolio/decimal";
-import { executeTrade, getOrCreateActivePortfolio } from "../src/features/portfolio/repository";
+import { executeAllocation, executeTrade, getOrCreateActivePortfolio, reviewAllocation } from "../src/features/portfolio/repository";
 import { loadPortfolioView } from "../src/features/portfolio/service";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -44,12 +44,17 @@ try {
       "each rejected idempotent retry remains a normalized market-closed failure",
     );
   }
+  const mix = { lines: [{ instrumentId: "US-XNAS:AAPL", weightBasisPoints: 9_000 }], cashWeightBasisPoints: 1_000 };
+  const isMarketClosed = (error: unknown) => error instanceof PortfolioInputError && error.code === "MarketClosed";
+  await assert.rejects(() => reviewAllocation(userId, mix), isMarketClosed, "a closed market blocks the mix review");
+  await assert.rejects(() => executeAllocation(userId, { ...mix, clientIdempotencyKey: randomUUID() }), isMarketClosed, "a closed market blocks saving a mix");
+  assert.equal((await db.select().from(portfolioAllocation).where(eq(portfolioAllocation.portfolioId, active.id))).length, 0, "a blocked mix is never stored");
   const trades = await db.select().from(portfolioTrade).where(eq(portfolioTrade.portfolioId, active.id));
   assert.equal(trades.length, 0, "a rejected closed-market execution is never persisted");
   const view = await loadPortfolioView(userId);
   assert.equal(view.availableCashMinor, "200000", "a rejected execution does not deduct Practice Capital");
   assert.equal(view.holdings.length, 0);
-  console.log("PASS: closed-market execution rejects repeatably without a trade or Practice Capital mutation.");
+  console.log("PASS: closed-market execution and mixes reject repeatably without a trade, a stored mix or a Practice Capital mutation.");
 } finally {
   await db.delete(user).where(eq(user.id, userId));
   await sql.end();

@@ -2,16 +2,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   user: vi.fn(), requireUnlock: vi.fn(), search: vi.fn(), execute: vi.fn(), reset: vi.fn(),
-  preview: vi.fn(), view: vi.fn(), revalidate: vi.fn(),
+  preview: vi.fn(), view: vi.fn(), revalidate: vi.fn(), executeAllocation: vi.fn(), reviewAllocation: vi.fn(), quotes: vi.fn(),
 }));
 vi.mock("@/lib/session", () => ({ getCurrentUser: mocks.user }));
 vi.mock("@/features/progression/repository", () => ({ requirePortfolioLabUnlock: mocks.requireUnlock }));
 vi.mock("./environment", () => ({ portfolioMarketData: { service: { searchInstruments: mocks.search } } }));
-vi.mock("./repository", () => ({ executeTrade: mocks.execute, resetActivePortfolio: mocks.reset }));
-vi.mock("./service", () => ({ loadInstrumentPreview: mocks.preview, loadPortfolioView: mocks.view }));
+vi.mock("./repository", () => ({ executeTrade: mocks.execute, resetActivePortfolio: mocks.reset, executeAllocation: mocks.executeAllocation, reviewAllocation: mocks.reviewAllocation }));
+vi.mock("./service", () => ({ loadInstrumentPreview: mocks.preview, loadPortfolioView: mocks.view, loadAllocationQuotes: mocks.quotes }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 
-import { buyPortfolioAction, loadInstrumentPreviewAction, resetPortfolioAction, searchPortfolioInstrumentsAction, sellPortfolioAction } from "./actions";
+import {
+  buyPortfolioAction, loadAllocationQuotesAction, loadInstrumentPreviewAction, resetPortfolioAction, reviewPortfolioAllocationAction,
+  savePortfolioAllocationAction, searchPortfolioInstrumentsAction, sellPortfolioAction,
+} from "./actions";
+
+const mix = { lines: [{ instrumentId: "US-XNAS:AAPL", weightBasisPoints: 9_000 }], cashWeightBasisPoints: 1_000 };
 
 describe("Portfolio Lab server authorization", () => {
   beforeEach(() => {
@@ -28,13 +33,47 @@ describe("Portfolio Lab server authorization", () => {
       buyPortfolioAction(input),
       sellPortfolioAction(input),
       resetPortfolioAction({ clientIdempotencyKey: crypto.randomUUID() }),
+      loadAllocationQuotesAction(["US-XNAS:AAPL"]),
+      reviewPortfolioAllocationAction(mix),
+      savePortfolioAllocationAction({ ...mix, clientIdempotencyKey: crypto.randomUUID() }),
     ]);
     for (const result of results) expect(result).toMatchObject({ ok: false, message: "Portfolio Lab je zamčený. Dokonči Základy investování a odemkni ho." });
-    expect(mocks.requireUnlock).toHaveBeenCalledTimes(5);
+    expect(mocks.requireUnlock).toHaveBeenCalledTimes(8);
+    expect(mocks.quotes).not.toHaveBeenCalled();
+    expect(mocks.reviewAllocation).not.toHaveBeenCalled();
+    expect(mocks.executeAllocation).not.toHaveBeenCalled();
     expect(mocks.search).not.toHaveBeenCalled();
     expect(mocks.preview).not.toHaveBeenCalled();
     expect(mocks.execute).not.toHaveBeenCalled();
     expect(mocks.reset).not.toHaveBeenCalled();
     expect(mocks.view).not.toHaveBeenCalled();
+  });
+});
+
+describe("target mix input boundary", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mocks.user.mockResolvedValue({ id: "unlocked-user" });
+    mocks.requireUnlock.mockResolvedValue(undefined);
+  });
+
+  it("rejects client-supplied prices, amounts or fractional weights before any domain work", async () => {
+    const key = crypto.randomUUID();
+    const attempts = [
+      { ...mix, clientIdempotencyKey: key, totalValueMinor: "999999" },
+      { lines: [{ instrumentId: "US-XNAS:AAPL", weightBasisPoints: 9_000, price: 1 }], cashWeightBasisPoints: 1_000, clientIdempotencyKey: key },
+      { lines: [{ instrumentId: "US-XNAS:AAPL", weightBasisPoints: 8_999.5 }], cashWeightBasisPoints: 1_000.5, clientIdempotencyKey: key },
+      { ...mix, clientIdempotencyKey: "not-a-uuid" },
+    ];
+    for (const attempt of attempts) expect(await savePortfolioAllocationAction(attempt)).toMatchObject({ ok: false });
+    expect(mocks.executeAllocation).not.toHaveBeenCalled();
+  });
+
+  it("passes only identities, integer weights and the idempotency key to execution", async () => {
+    mocks.executeAllocation.mockResolvedValue({ allocationId: "a", tradeCount: 1, duplicate: false });
+    const key = crypto.randomUUID();
+    expect(await savePortfolioAllocationAction({ ...mix, clientIdempotencyKey: key })).toEqual({ ok: true, duplicate: false, tradeCount: 1 });
+    expect(mocks.executeAllocation).toHaveBeenCalledWith("unlocked-user", { ...mix, clientIdempotencyKey: key });
+    expect(mocks.revalidate).toHaveBeenCalledWith("/lab/portfolio");
   });
 });

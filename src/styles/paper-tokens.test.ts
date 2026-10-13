@@ -19,4 +19,11 @@ describe("Pen design-system contrast", () => {
     expect(contrast("teal", "track")).toBeGreaterThanOrEqual(3);
     expect(contrast("error-ink", "error-tint")).toBeGreaterThanOrEqual(4.5);
   });
+  it.each(["viz-equity", "viz-etf", "viz-bonds", "viz-cash", "viz-other"])("keeps the %s data mark at 3:1 on cards (SC 1.4.11)", (mark) => {
+    expect(contrast(mark, "paper-surface")).toBeGreaterThanOrEqual(3);
+  });
+  it.each(["butter-ink", "info-ink", "error-ink", "action"])("keeps %s status text readable on its tint", (text) => {
+    const tint = { "butter-ink": "butter-tint", "info-ink": "info-tint", "error-ink": "error-tint", action: "teal-soft" }[text]!;
+    expect(contrast(text, tint)).toBeGreaterThanOrEqual(4.5);
+  });
 });

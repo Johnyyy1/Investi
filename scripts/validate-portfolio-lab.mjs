@@ -6,6 +6,9 @@ import { mkdir } from "node:fs/promises";
 import postgres from "postgres";
 import { chromium } from "playwright";
 
+/** Portfolio Lab (Pen "Investi / Portfolio Lab — 390px", states 1–5) against deterministic sample
+ * data: locked, zero capital, first visit, instrument buy/sell, the mix builder with review,
+ * the saved overview, attribution, unavailable prices, reset, responsive layouts and 200 % text. */
 const baseURL = process.env.PORTFOLIO_TEST_URL ?? "http://localhost:3000";
 const local = (host) => ["localhost", "127.0.0.1", "[::1]"].includes(host);
 assert.ok(local(new URL(baseURL).hostname) && local(new URL(process.env.DATABASE_URL).hostname), "Requires local app and database.");
@@ -15,11 +18,51 @@ const screenshotDir = process.env.PORTFOLIO_SCREENSHOT_DIR ?? "/tmp/investi-port
 await mkdir(screenshotDir, { recursive: true });
 const email = `portfolio-browser-${randomUUID()}@example.com`;
 const password = randomUUID();
+const widths = [320, 375, 390, 768, 1024, 1440];
 let userId;
-const minorFromCzk = (value) => BigInt(Math.round(Number(value.replace(/\s/g, "").replace("Kč", "").replace("−", "-").replace(",", ".")) * 100));
+const minorFromCzk = (value) => BigInt(Math.round(Number(value.replace(/[\s ]/g, "").replace("Kč", "").replace("−", "-").replace("+", "").replace(",", ".")) * 100));
+const clean = (text) => text.replace(/[\s ]+/g, " ").trim();
+
+async function overflowing(page, root = "body") {
+  return page.evaluate((selector) => {
+    const scope = document.querySelector(selector) ?? document.body;
+    const wide = document.documentElement.scrollWidth > innerWidth;
+    const outside = [...scope.querySelectorAll("*")].filter((element) => {
+      const box = element.getBoundingClientRect();
+      if (box.width === 0 || getComputedStyle(element).visibility === "hidden" || element.closest(".sr-only")) return false;
+      return box.right > innerWidth + 1 || box.left < -1;
+    }).slice(0, 6).map((element) => `${element.tagName}.${element.className?.toString().slice(0, 40)} "${element.textContent?.trim().slice(0, 40)}"`);
+    return { wide, outside };
+  }, root);
+}
+
+/** Every width, plus 320 px at 200 % text: no horizontal page scroll, nothing pushed off screen. */
+async function responsive(page, name, { root = "body", reloadEachWidth = true, ready } = {}) {
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    if (reloadEachWidth) { await page.reload(); if (ready) await ready(); }
+    assert.deepEqual(await overflowing(page, root), { wide: false, outside: [] }, `${name} fits at ${width}px`);
+    await page.screenshot({ path: `${screenshotDir}/${name}-${width}.png`, fullPage: true });
+  }
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+  assert.deepEqual(await overflowing(page, root), { wide: false, outside: [] }, `${name} reflows at 320px with 200% text`);
+  await page.screenshot({ path: `${screenshotDir}/${name}-320-200-percent.png`, fullPage: true });
+  await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
+  await page.setViewportSize({ width: 1440, height: 950 });
+}
+
+async function targetsAtLeast44(page, selectors) {
+  const small = await page.evaluate((list) => list.flatMap((selector) => [...document.querySelectorAll(selector)].filter((element) => {
+    const box = element.getBoundingClientRect();
+    return box.width > 0 && (box.height < 44 || box.width < 44);
+  }).map((element) => `${selector} ${Math.round(element.getBoundingClientRect().width)}×${Math.round(element.getBoundingClientRect().height)}`)), selectors);
+  assert.deepEqual(small, [], "interactive targets are at least 44 px");
+}
+
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 }, timezoneId: "Europe/Prague" });
-  page.setDefaultTimeout(5_000);
+  page.setDefaultTimeout(10_000);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${baseURL}/sign-up`);
@@ -29,33 +72,24 @@ try {
   await page.getByRole("button", { name: "Vytvořit účet", exact: true }).click();
   await finishOnboarding(page);
   [{ id: userId }] = await sql`select id from "user" where email = ${email}`;
+
+  // Locked: the Lab explains how to unlock it and offers no trading.
   await page.goto(`${baseURL}/lab/portfolio`);
   await page.getByRole("heading", { name: "Portfolio Lab", exact: true }).waitFor();
   assert.equal(await page.getByRole("link", { name: "Pokračovat v učení", exact: true }).getAttribute("href"), "/learn", "new learner sees unlock path");
-  // This suite exercises the existing zero-capital trade UI with an explicit
-  // entitlement fixture. The progression suite covers the real unlock grant.
+  assert.equal(await page.getByRole("link", { name: /Sestavit/ }).count(), 0);
+
+  // Zero capital: an explicit entitlement fixture with no money points back to learning.
   await sql`insert into progression_unlock (user_id, unlock_id, practice_capital_minor, reason, unlocked_at)
     values (${userId}, 'PORTFOLIO_LAB', 0, 'test_fixture', now())`;
   await page.reload();
-  await page.getByText("Ukázková data", { exact: true }).waitFor();
-  assert.equal(await page.getByText("Ukázková data", { exact: true }).count(), 1, "deterministic mode is labeled as sample data");
   await page.getByRole("heading", { name: "Získej kapitál učením", exact: true }).waitFor();
-  assert.equal(await page.getByRole("button", { name: /Investovat/ }).count(), 0, "zero capital does not suggest investing is possible");
-  assert.equal(await page.getByRole("heading", { name: "Pozice", exact: true }).count(), 0);
-  assert.equal(await page.getByRole("heading", { name: "Nedávná aktivita", exact: true }).count(), 0);
+  assert.equal(await page.getByTestId("portfolio-cash").textContent(), "0 Kč", "zero capital is stated, not hidden");
+  assert.equal(await page.getByRole("link", { name: /Sestavit/ }).count(), 0, "zero capital does not suggest investing is possible");
   assert.equal(await page.getByRole("link", { name: "Pokračovat v učení", exact: true }).getAttribute("href"), "/learn");
+  await responsive(page, "zero", { ready: () => page.getByRole("heading", { name: "Získej kapitál učením" }).waitFor() });
 
-  for (const width of [320, 375, 390, 768, 1024, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `zero-capital portfolio has no overflow at ${width}`);
-    if ([320, 375, 390, 1024, 1440].includes(width)) await page.screenshot({ path: `${screenshotDir}/zero-${width}.png`, fullPage: true });
-  }
-  await page.setViewportSize({ width: 320, height: 900 });
-  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "zero-capital portfolio supports 200% text");
-  await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
-  await page.setViewportSize({ width: 1440, height: 950 });
-
+  // First visit (state 1): a later reward is cash, the guide explains weights with the real amount.
   const [{ id: lessonId }] = await sql`select id from lesson where is_published = true order by id limit 1`;
   await sql.begin(async (tx) => {
     const now = new Date();
@@ -63,49 +97,18 @@ try {
     await tx`insert into lesson_award (user_id, lesson_id, xp, practice_capital_minor, reward_policy_version, learning_date, time_zone, awarded_at) values (${userId}, ${lessonId}, 60, 200000, 1, '2026-09-14', 'Europe/Prague', ${now})`;
   });
   await page.reload();
-  assert.equal(await page.getByTestId("portfolio-cash").textContent(), "2\u00a0000\u00a0Kč", "later reward becomes available cash");
-  assert.equal(await page.getByTestId("portfolio-invested").textContent(), "0\u00a0Kč", "an empty portfolio has no invested value");
-  assert.equal(await page.getByText("Získaný Practice Capital", { exact: true }).count(), 0, "earned-capital copy is absent from the portfolio overview");
-  assert.match(await page.locator('section[aria-labelledby="portfolio-value-label"]').textContent(), /0\sKč\s*·\s*0,00\s*%/, "reward does not create investment gain");
-  await page.getByRole("heading", { name: "Portfolio je připravené", exact: true }).waitFor();
-  assert.equal(await page.getByRole("heading", { name: "Pozice", exact: true }).count(), 0, "empty state avoids an empty holdings section");
-  assert.equal(await page.getByRole("heading", { name: "Nedávná aktivita", exact: true }).count(), 0, "empty state avoids an empty activity section");
-  assert.equal(await page.getByRole("button", { name: "Možnosti portfolia", exact: true }).count(), 0, "reset is absent from the empty state");
-  for (const width of [320, 375, 390, 768, 1024, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
-    if (width === 320) {
-      await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-      const overflowing = await page.evaluate(() => [...document.querySelectorAll("body *")].filter((element) => { const box = element.getBoundingClientRect(); return box.right > innerWidth + 1 || box.left < -1; }).slice(0, 8).map((element) => ({ tag: element.tagName, text: element.textContent?.trim().slice(0, 80), className: element.className?.toString().slice(0, 100), box: element.getBoundingClientRect().toJSON() })));
-      assert.deepEqual(overflowing, [], "capital/no-holdings state supports 200% text");
-      await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
-    }
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `capital/no-holdings state has no overflow at ${width}`);
-    await page.screenshot({ path: `${screenshotDir}/ready-${width}.png`, fullPage: true });
-  }
-  await page.setViewportSize({ width: 1440, height: 950 });
+  await page.getByRole("heading", { name: "Zkus si investovat nanečisto.", level: 1 }).waitFor();
+  assert.equal(await page.getByTestId("portfolio-cash").textContent(), "2 000 Kč", "later reward becomes available cash");
+  assert.match(clean(await page.locator("main").innerText()), /Váha je díl z celku: 60 % z 2 000 Kč je 1 200 Kč\./, "the guide uses the learner's real capital");
+  assert.equal(await page.getByText("Ukázková data", { exact: true }).count(), 1, "deterministic mode is labeled as sample data");
+  assert.equal(await page.getByText(/Příklad rozdělení · ne doporučení/i).count(), 1, "the example mix is labeled as an example, not advice");
+  assert.equal(await page.getByRole("button", { name: "Možnosti portfolia" }).count(), 0, "reset is absent before anything happened");
+  assert.equal(await page.getByRole("link", { name: /Sestavit první mix/ }).getAttribute("href"), "/lab/portfolio/mix");
+  assert.equal(await page.locator('img[src*="15-weights"]').count(), 0, "concept pose 15 stays in its lesson (guide rule 01)");
+  await responsive(page, "first-visit", { ready: () => page.getByRole("heading", { name: "Zkus si investovat nanečisto." }).waitFor() });
 
-  const investTrigger = page.getByRole("button", { name: "Investovat", exact: true });
-  await investTrigger.click();
-  const investDialog = page.getByRole("dialog", { name: "Investuj virtuální kapitál" });
-  await investDialog.waitFor();
-  const emptySearch = investDialog.getByRole("combobox", { name: "Hledat investice" });
-  await page.waitForFunction((element) => document.activeElement === element, await emptySearch.elementHandle());
-  assert.equal(await emptySearch.evaluate((element) => element === document.activeElement), true, "investment sheet focuses search");
-  await page.keyboard.press("Escape");
-  assert.equal(await investDialog.isVisible(), false, "Escape closes investment sheet");
-  assert.equal(await investTrigger.evaluate((element) => element === document.activeElement), true, "investment sheet returns focus");
-  await page.getByRole("button", { name: "Provést první investici", exact: true }).click();
-  const search = investDialog.getByRole("combobox", { name: "Hledat investice" });
-  await search.fill("apple");
-  await investDialog.getByRole("option", { name: /AAPL/ }).waitFor();
-  for (const width of [320, 375, 390, 768, 1024, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `search sheet has no overflow at ${width}`);
-    await page.screenshot({ path: `${screenshotDir}/search-open-${width}.png`, fullPage: true });
-  }
-  await page.setViewportSize({ width: 1440, height: 950 });
-  await search.press("Enter");
-  await page.waitForURL(/\/lab\/instruments\/US-XNAS%3AAAPL/);
+  // Instrument detail is unchanged by the redesign: charts, metrics, ETF analytics and the single-instrument order flow.
+  await page.goto(`${baseURL}/lab/instruments/US-XNAS%3AAAPL`);
   await page.getByRole("heading", { name: "Apple Inc.", exact: true }).waitFor();
   assert.equal(await page.getByRole("heading", { name: "Tvoje pozice" }).count(), 0, "unowned instrument has no invented position");
   assert.equal(await page.getByText("Ukázková data", { exact: true }).count(), 1, "deterministic detail is labeled as sample data");
@@ -277,172 +280,207 @@ try {
   await page.setViewportSize({ width: 390, height: 900 });
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-owned-390.png`, fullPage: true });
   await page.setViewportSize({ width: 1440, height: 950 });
-  await page.goto(`${baseURL}/lab/portfolio`);
-  const primaryInvest = page.getByRole("button", { name: "Investovat", exact: true });
-  assert.equal(await page.getByTestId("portfolio-cash").textContent(), "1\u00a0351,62\u00a0Kč");
-  const aapl = page.getByTestId("holding-AAPL");
-  await aapl.waitFor();
-  assert.equal(await page.getByRole("heading", { name: "Portfolio je připravené", exact: true }).count(), 0, "onboarding disappears after the first investment");
-  assert.equal(await page.getByText("Historie výkonnosti zatím není dostupná", { exact: true }).count(), 1, "the hero is honest about missing performance history");
-  assert.equal(await page.getByRole("heading", { name: "Alokace", exact: true }).count(), 0, "allocation is part of holdings, not a separate panel");
-  assert.match(await aapl.textContent(), /100,00\s*%/, "a single holding owns the full invested weight");
-  const firstCash = minorFromCzk(await page.getByTestId("portfolio-cash").textContent());
-  const firstInvested = minorFromCzk(await page.getByTestId("portfolio-invested").textContent());
-  const firstTotal = minorFromCzk(await page.getByTestId("portfolio-value").textContent());
-  assert.equal(firstCash + firstInvested, firstTotal, "portfolio value equals available cash plus invested value");
-  assert.match(await page.getByTestId("portfolio-gain-loss").textContent(), /0\sKč\s*·\s*0,00\s*%/, "the initial holding does not fabricate investment performance");
 
-  for (const width of [320, 375, 390, 768, 1024, 1440]) {
-    await page.setViewportSize({ width, height: 900 });
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `populated portfolio has no overflow at ${width}`);
-    if ([320, 390, 768, 1024, 1440].includes(width)) await page.screenshot({ path: `${screenshotDir}/populated-${width}.png`, fullPage: true });
-  }
-  await page.setViewportSize({ width: 320, height: 900 });
-  await page.getByTestId("holding-mobile-AAPL").waitFor();
-  assert.equal(await page.getByTestId("holding-AAPL").isVisible(), false, "the desktop holdings table gives way to a dedicated mobile row");
-  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-  const zoomOverflow = await page.evaluate(() => [...document.querySelectorAll("body *")].filter((element) => { const box = element.getBoundingClientRect(); return box.right > innerWidth + 1 || box.left < -1; }).slice(0, 8).map((element) => ({ tag: element.tagName, text: element.textContent?.trim().slice(0, 60), className: element.className?.toString().slice(0, 100), box: element.getBoundingClientRect().toJSON() })));
-  assert.deepEqual(zoomOverflow, [], "populated portfolio supports 200% text");
-  const zoomInvestTrigger = page.getByRole("button", { name: "Investovat", exact: true });
-  await zoomInvestTrigger.click();
-  await investDialog.getByRole("combobox", { name: "Hledat investice" }).fill("MSFT");
-  await investDialog.getByRole("option", { name: /MSFT/ }).waitFor();
-  const resultLayout = await investDialog.getByRole("option", { name: /MSFT/ }).locator("button").evaluate((button) => ({ direction: getComputedStyle(button).flexDirection, primaryWidth: button.firstElementChild.getBoundingClientRect().width, metadataWidth: button.lastElementChild.getBoundingClientRect().width }));
-  assert.equal(resultLayout.direction, "column", "search result metadata stacks at 200% text on narrow screens");
-  assert.ok(resultLayout.primaryWidth > 192 && resultLayout.metadataWidth > 192, "search result labels have readable line width at 200% text");
-  const sheetOverflow = await investDialog.evaluate((dialog) => [...dialog.querySelectorAll("*")].filter((element) => { const box = element.getBoundingClientRect(); return box.right > innerWidth + 1 || box.left < -1; }).slice(0, 8).map((element) => ({ tag: element.tagName, text: element.textContent?.trim().slice(0, 60), className: element.className?.toString().slice(0, 100), box: element.getBoundingClientRect().toJSON() })));
-  assert.deepEqual(sheetOverflow, [], "investment sheet supports 200% text without horizontal overflow");
-  await page.screenshot({ path: `${screenshotDir}/search-open-320-200-percent.png`, fullPage: true });
+  // Saved overview without a mix: real ledger numbers, no fabricated performance.
+  await page.goto(`${baseURL}/lab/portfolio`);
+  await page.getByRole("heading", { name: "Moje portfolio", level: 1 }).waitFor();
+  assert.equal(await page.getByTestId("portfolio-cash").textContent(), "1 351,62 Kč");
+  const coherent = async (label) => {
+    const cash = minorFromCzk(await page.getByTestId("portfolio-cash").textContent());
+    const invested = minorFromCzk(await page.getByTestId("portfolio-invested").textContent());
+    const total = minorFromCzk(await page.getByTestId("portfolio-value").textContent());
+    assert.equal(cash + invested, total, `${label}: value = cash + holdings`);
+    return { cash, invested, total };
+  };
+  assert.equal((await coherent("single holding")).total, 200_000n, "a buy at the observed price moves value from cash to holdings only");
+  assert.equal(await page.getByTestId("portfolio-gain-loss").textContent(), "0 Kč", "the first holding does not fabricate performance");
+  assert.match(clean(await page.getByTestId("holding-AAPL").innerText()), /AAPL 32,4 %/, "weight is measured against the whole portfolio, cash included");
+  assert.equal(await page.getByTestId("holding-AAPL").getByText(/cíl/).count(), 0, "no target without a saved mix");
+  assert.equal(await page.getByText("Zatím se nic nepohnulo.").count(), 1, "unchanged sample prices are explained, not dressed up");
+  assert.equal(await page.getByTestId("contribution-equity").count(), 0, "no all-zero contribution chart");
+  assert.equal(await page.getByRole("status").filter({ hasText: "Ukázková data" }).count(), 1, "the data banner names sample data");
+  await page.getByText("Kapitál z lekcí je vklad, ne výnos.", { exact: false }).waitFor();
+  await responsive(page, "overview-single", { ready: () => page.getByTestId("portfolio-value").waitFor() });
+
+  // Builder (state 2) prefilled from today's weights; keyboard search, slider and percent field.
+  await page.getByRole("link", { name: "Sestavit mix" }).click();
+  await page.waitForURL("**/lab/portfolio/mix");
+  await page.getByRole("heading", { name: "Uprav mix", level: 1 }).waitFor();
+  assert.equal(await page.getByRole("navigation", { name: "Mobilní navigace" }).count(), 0, "the sticky save bar replaces the tab bar");
+  const percentField = (name) => page.getByRole("textbox", { name: `Váha ${name} v procentech` });
+  assert.equal(await percentField("AAPL").inputValue(), "32");
+  assert.equal(await percentField("hotovosti").inputValue(), "68");
+  const checkStatus = page.locator("[data-check]");
+  const save = page.getByRole("button", { name: /Uložit portfolio/ });
+  await checkStatus.filter({ hasText: "Rozděleno 100 %" }).waitFor();
+  const search = page.getByRole("combobox", { name: "Přidat nástroj" });
+  await search.focus();
+  await page.keyboard.type("vanguard");
+  await page.getByRole("option", { name: /VWCE/ }).waitFor();
+  await page.keyboard.press("Enter");
+  await page.getByTestId("mix-line-VWCE").waitFor();
+  await page.getByRole("option", { name: /VWCE/ }).getByText("V mixu").waitFor();
+  await checkStatus.filter({ hasText: "Nástroj s 0 % odeber" }).waitFor();
+  assert.equal(await save.getAttribute("aria-disabled"), "true", "a 0 % line cannot be saved");
   await page.keyboard.press("Escape");
-  assert.equal(await zoomInvestTrigger.evaluate((element) => element === document.activeElement), true, "zoomed investment sheet returns focus");
+  const aaplSlider = page.getByRole("slider", { name: "Váha AAPL" });
+  await aaplSlider.focus();
+  await aaplSlider.press("ArrowLeft");
+  await aaplSlider.press("ArrowLeft");
+  assert.equal(await percentField("AAPL").inputValue(), "30", "the slider moves in whole percents from the keyboard");
+  assert.equal(await aaplSlider.evaluate((element) => getComputedStyle(element).outlineWidth), "3px", "the focused slider shows a 3 px ring");
+  await percentField("hotovosti").fill("30");
+  await percentField("VWCE").fill("50");
+  await checkStatus.filter({ hasText: "Rozděleno 110 % · o 10 % víc" }).waitFor();
+  assert.equal(await save.getAttribute("aria-disabled"), "true", "110 % cannot be saved");
+  await save.click({ force: true });
+  assert.equal(await page.getByRole("dialog").count(), 0, "a blocked save opens nothing");
+  await page.screenshot({ path: `${screenshotDir}/builder-110-1440.png`, fullPage: true });
+  await percentField("VWCE").fill("25");
+  await checkStatus.filter({ hasText: "Rozděleno 85 % · zbývá 15 %" }).waitFor();
+  assert.equal(await save.getAttribute("aria-disabled"), "true", "85 % cannot be saved");
+  await page.screenshot({ path: `${screenshotDir}/builder-85-1440.png`, fullPage: true });
+  await percentField("VWCE").fill("40");
+  await checkStatus.filter({ hasText: "Rozděleno 100 %" }).waitFor();
+  await page.getByText("2 000 Kč z 2 000 Kč").waitFor();
+  assert.equal(await save.getAttribute("aria-disabled"), "false");
+  await targetsAtLeast44(page, ['a[href="/lab/portfolio"]', 'button[aria-label^="Odebrat"]', 'input[type="range"]', 'input[inputmode="numeric"]', "#mix-search", 'button[aria-describedby]']);
+  await responsive(page, "builder", { reloadEachWidth: false });
+
+  // Review (server-planned, nothing written), Escape returns focus, then confirm.
+  const tradesBefore = Number((await sql`select count(*)::int as count from portfolio_trade pt join portfolio p on p.id = pt.portfolio_id where p.user_id = ${userId}`)[0].count);
+  await save.click();
+  const review = page.getByRole("dialog", { name: "Zkontroluj mix" });
+  await review.getByTestId("review-cash").waitFor();
+  await review.getByTestId("review-buy-VWCE").waitFor();
+  await review.getByTestId("review-sell-AAPL").waitFor();
+  assert.match(clean(await review.innerText()), /Rozdělovaná hodnota 2 000 Kč/);
+  assert.equal(Number((await sql`select count(*)::int as count from portfolio_trade pt join portfolio p on p.id = pt.portfolio_id where p.user_id = ${userId}`)[0].count), tradesBefore, "review writes nothing");
+  await page.screenshot({ path: `${screenshotDir}/review-1440.png` });
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+  assert.deepEqual(await overflowing(page, "dialog[open]"), { wide: false, outside: [] }, "review reflows at 320px with 200% text");
+  await page.screenshot({ path: `${screenshotDir}/review-320-200-percent.png` });
   await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
-  await page.setViewportSize({ width: 1440, height: 950 });
-
-  await primaryInvest.click();
-  await investDialog.getByRole("combobox", { name: "Hledat investice" }).fill("MSFT");
-  await investDialog.getByRole("option", { name: /MSFT/ }).waitFor();
-  await investDialog.getByRole("combobox", { name: "Hledat investice" }).press("Enter");
-  await page.waitForURL(/\/lab\/instruments\/US-XNAS%3AMSFT/);
-  assert.equal(await metricSignal("net-debt-ebitda"), "positive", "confirmed sample net cash receives the positive reference");
-  await page.getByRole("button", { name: /Investovat/ }).first().click();
-  const msftDialog = page.getByRole("dialog", { name: "Investovat do MSFT" });
-  await msftDialog.getByRole("heading", { name: "Zvol množství", exact: true }).waitFor();
-  await msftDialog.getByLabel("Množství", { exact: true }).fill("0.05");
-  await msftDialog.getByRole("button", { name: "Zkontrolovat pokyn", exact: true }).click();
-  await msftDialog.getByRole("button", { name: "Potvrdit nákup MSFT", exact: true }).click();
-  await page.getByRole("status").filter({ hasText: "Nákup dokončen" }).waitFor();
-  await page.goto(`${baseURL}/lab/portfolio`);
-  await page.getByTestId("holding-MSFT").waitFor();
-  assert.equal(await page.getByRole("table", { name: "Aktuální pozice v portfoliu" }).getByRole("row").count(), 3, "the desktop table contains a header plus two holdings");
-  assert.equal(await page.getByRole("table", { name: "Aktuální pozice v portfoliu" }).getByRole("columnheader", { name: "Zisk / ztráta" }).count(), 1, "absolute holding P&L is labeled as gain/loss");
-  assert.equal(await page.locator("main header").getByRole("button", { name: "Možnosti portfolia", exact: true }).count(), 1, "portfolio options live beside the primary header action");
-  assert.match(await page.getByTestId("holding-AAPL").textContent(), /\d+,\d{2}\s*%/);
-  assert.match(await page.getByTestId("holding-MSFT").textContent(), /\d+,\d{2}\s*%/, "multiple holdings show weight in the table");
-  assert.equal(await page.locator('section[aria-labelledby="activity-heading"] li').count(), 2, "recent activity remains secondary and records both buys");
-  const multiCash = minorFromCzk(await page.getByTestId("portfolio-cash").textContent());
-  const multiInvested = minorFromCzk(await page.getByTestId("portfolio-invested").textContent());
-  const multiTotal = minorFromCzk(await page.getByTestId("portfolio-value").textContent());
-  assert.equal(multiCash + multiInvested, multiTotal, "summary metrics remain coherent with multiple holdings");
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ path: `${screenshotDir}/multiple-holdings-1440.png`, fullPage: true });
   await page.setViewportSize({ width: 390, height: 900 });
-  await page.getByTestId("holding-mobile-AAPL").waitFor();
-  await page.getByTestId("holding-mobile-MSFT").waitFor();
-  assert.equal(await page.getByTestId("holding-mobile-AAPL").getByText("Zisk / ztráta", { exact: true }).count(), 1, "mobile holding labels the same absolute P&L correctly");
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "multiple mobile holding rows do not overflow");
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ path: `${screenshotDir}/multiple-holdings-390.png`, fullPage: true });
+  await page.screenshot({ path: `${screenshotDir}/review-390.png` });
+  await page.keyboard.press("Escape");
+  await review.waitFor({ state: "hidden" });
+  await page.waitForFunction((element) => document.activeElement === element, await save.elementHandle());
+  assert.equal(await save.evaluate((element) => element === document.activeElement), true, "closing the review returns focus to Save");
+  await save.click();
+  await review.getByTestId("review-cash").waitFor();
+  await review.getByRole("button", { name: "Potvrdit a uložit" }).click();
+  await page.waitForURL(/\/lab\/portfolio\?ulozeno=2$/);
+  await page.getByRole("status").filter({ hasText: "Mix uložen" }).filter({ hasText: "Nanečisto proběhly 2 obchody." }).waitFor();
   await page.setViewportSize({ width: 1440, height: 950 });
 
-  await aapl.getByRole("button", { name: "Akce pro AAPL", exact: true }).click();
-  await page.getByRole("menu", { name: "Akce pro AAPL" }).getByRole("menuitem", { name: "Prodat", exact: true }).click();
-  const sellDialog = page.getByRole("dialog", { name: "Prodat AAPL" });
-  await sellDialog.waitFor();
-  await page.screenshot({ path: `${screenshotDir}/sell-1440.png`, fullPage: true });
-  for (const width of [320, 375, 390, 1024]) {
-    await page.setViewportSize({ width, height: 900 });
-    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `sell sheet has no overflow at ${width}`);
-    if (width === 320) {
-      await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-      const overflowing = await sellDialog.evaluate((dialog) => [...dialog.querySelectorAll("*")].filter((element) => { const box = element.getBoundingClientRect(); return box.right > innerWidth + 1 || box.left < -1; }).slice(0, 8).map((element) => ({ tag: element.tagName, text: element.textContent?.trim().slice(0, 80), className: element.className?.toString().slice(0, 100), box: element.getBoundingClientRect().toJSON() })));
-      assert.deepEqual(overflowing, [], "sell sheet supports 200% text");
-      await page.screenshot({ path: `${screenshotDir}/sell-320-200-percent.png`, fullPage: true });
-      await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
-    }
-    await page.screenshot({ path: `${screenshotDir}/sell-${width}.png`, fullPage: true });
-  }
-  await page.setViewportSize({ width: 1440, height: 950 });
-  await sellDialog.getByLabel("Množství k prodeji").fill("0.3");
+  // Saved mix overview (state 3): targets next to real weights, ledger appended, never rewritten.
+  await page.getByRole("heading", { name: "Můj mix", level: 1 }).waitFor();
+  assert.match(clean(await page.locator("main header").innerText()), /Mix uložen .* · rozděleno 2 000 Kč nanečisto/);
+  assert.match(clean(await page.getByTestId("holding-AAPL").innerText()), /cíl 30 %/);
+  assert.match(clean(await page.getByTestId("holding-VWCE").innerText()), /cíl 40 %/);
+  assert.match(clean(await page.getByTestId("holding-cash").innerText()), /cíl 30 %/);
+  assert.match(clean(await page.getByRole("img", { name: /Rozložení portfolia/ }).getAttribute("aria-label")), /Akcie 30,0 %, cíl 30 %; ETF 40,0 %, cíl 40 %; Hotovost 30,0 %, cíl 30 %/);
+  await page.getByText(/Váhy jsou blízko uloženého cíle 30 \/ 40 \/ 30/).waitFor();
+  await coherent("saved mix");
+  assert.equal(await page.getByTestId("portfolio-gain-loss").textContent(), "0 Kč", "rebalancing at unchanged prices is not performance");
+  const ledger = await sql`select pt.side, pt.instrument_symbol, pt.client_idempotency_key from portfolio_trade pt join portfolio p on p.id = pt.portfolio_id where p.user_id = ${userId} and p.closed_at is null order by pt.executed_at, pt.id`;
+  assert.equal(ledger.length, 3, "one single buy plus the two mix trades");
+  assert.equal(ledger.filter(({ client_idempotency_key }) => client_idempotency_key.startsWith("allocation:")).length, 2);
+  assert.equal(Number((await sql`select count(*)::int as count from portfolio_allocation pa join portfolio p on p.id = pa.portfolio_id where p.user_id = ${userId}`)[0].count), 1);
+  await page.getByText("Poslední obchody · 3").click();
+  await page.getByRole("list", { name: "Poslední obchody nanečisto" }).getByText("Prodej AAPL").waitFor();
+  await responsive(page, "overview-mix", { ready: () => page.getByTestId("portfolio-value").waitFor() });
+
+  // Selling stays a single-instrument flow on the instrument page; oversell is refused by the server.
+  await page.getByTestId("holding-AAPL").getByRole("link").click();
+  await page.waitForURL(/\/lab\/instruments\/US-XNAS%3AAAPL/);
+  await page.getByRole("heading", { name: "Tvoje pozice" }).waitFor();
+  await page.getByRole("button", { name: "Prodat", exact: true }).click();
+  const sellDialog = page.getByRole("dialog", { name: "Prodat" });
+  await sellDialog.getByLabel("Množství k prodeji").fill("1");
   await sellDialog.getByRole("button", { name: "Prodat AAPL", exact: true }).click();
   await sellDialog.getByRole("alert").filter({ hasText: "prodat více" }).waitFor();
-  await sellDialog.getByLabel("Množství k prodeji").fill("0.1");
+  await sellDialog.getByLabel("Množství k prodeji").fill("0.05");
   await sellDialog.getByRole("button", { name: "Prodat AAPL", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Prodej dokončen" }).waitFor();
-  const holdingAction = page.getByTestId("holding-AAPL").getByRole("button", { name: "Akce pro AAPL", exact: true });
-  await page.waitForFunction((element) => document.activeElement === element, await holdingAction.elementHandle());
-  assert.equal(await holdingAction.evaluate((element) => element === document.activeElement), true, "sale returns focus to the holding action");
-  await page.reload();
-  await page.getByTestId("holding-AAPL").getByText("0,15 pozic", { exact: true }).waitFor();
 
+  // Attribution (state 5): a ledger buy at another price and FX splits the result into price and FX.
   const [{ id: activePortfolioId }] = await sql`select id from portfolio where user_id = ${userId} and closed_at is null`;
-  const unavailableTradeTime = new Date();
-  await sql`insert into portfolio_trade (
-    id, portfolio_id, instrument_id, instrument_symbol, instrument_name, instrument_asset_type,
-    side, quantity, unit_price, quote_currency, fx_rate_to_base, gross_amount_base_minor,
-    fee_base_minor, cash_delta_base_minor, quote_observed_at, executed_at,
-    market_data_provider, market_data_dataset, market_data_kind, market_data_is_deterministic,
-    fx_rate_provider, fx_rate_dataset, fx_rate_kind, fx_rate_is_deterministic,
-    fx_reference_date, fx_rate_retrieved_at, client_idempotency_key
-  ) values (
-    ${randomUUID()}, ${activePortfolioId}, 'FMP:NASDAQ:NVDA', 'NVDA', 'NVIDIA Corporation', 'equity',
-    'BUY', '0.01', '100', 'USD', '22', 2200,
-    0, -2200, ${unavailableTradeTime}, ${unavailableTradeTime},
-    'fmp', 'quote', 'live', false,
-    'frankfurter', 'ecb-reference', 'reference', false,
-    '2026-09-20', ${unavailableTradeTime}, ${randomUUID()}
-  )`;
-  await page.reload();
-  await page.getByRole("status").filter({ hasText: "Oceněno je 2 z 3 pozic" }).waitFor();
-  assert.equal(await page.getByTestId("portfolio-value").textContent(), "—", "partial valuation does not invent a portfolio total");
-  assert.equal(await page.getByText("Neúplné ocenění", { exact: true }).count(), 1, "the missing total is labeled explicitly");
-  assert.equal(await page.getByTestId("portfolio-invested").textContent(), "Neúplné", "partial valuation does not treat an unavailable holding as zero");
-  assert.match(await page.getByTestId("holding-NVDA").textContent(), /Tento zdroj data neposkytuje/, "the unavailable holding explains its state");
-  assert.match(await page.getByTestId("holding-AAPL").textContent(), /Nedostupné/, "partial valuation suppresses misleading weight even for a valued holding");
-  await page.screenshot({ path: `${screenshotDir}/partial-valuation-1440.png`, fullPage: true });
-  await page.setViewportSize({ width: 320, height: 900 });
-  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-  await page.screenshot({ path: `${screenshotDir}/partial-valuation-320-200-percent.png`, fullPage: true });
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "partial valuation supports 320px and 200% text");
-  await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
-  await page.setViewportSize({ width: 1440, height: 950 });
+  const historicTime = new Date();
+  await sql`insert into portfolio_trade (id, portfolio_id, instrument_id, instrument_symbol, instrument_name, instrument_asset_type, side, quantity, unit_price, quote_currency, fx_rate_to_base, gross_amount_base_minor, fee_base_minor, cash_delta_base_minor, quote_observed_at, executed_at, market_data_provider, market_data_dataset, market_data_kind, market_data_is_deterministic, client_idempotency_key)
+    values (${randomUUID()}, ${activePortfolioId}, 'US-XNAS:MSFT', 'MSFT', 'Microsoft Corporation', 'equity', 'BUY', '0.1', '200', 'USD', '23.1', 46200, 0, -46200, ${historicTime}, ${historicTime}, 'investi-deterministic', 'investi-education-market-v1', 'synthetic', true, ${randomUUID()})`;
+  await page.goto(`${baseURL}/lab/portfolio`);
+  await page.getByTestId("holding-MSFT").waitFor();
+  assert.match(clean(await page.getByTestId("holding-MSFT").innerText()), /mimo mix/, "a holding outside the saved mix says so");
+  // MSFT: 0.1 × 212 USD × 22.75 = 482.30 Kč vs 462.00 Kč paid → price +27.72 Kč (at the 23.10 purchase rate), FX −7.42 Kč.
+  assert.equal(await page.getByTestId("portfolio-price-effect").textContent(), "+27,72 Kč");
+  assert.equal(await page.getByTestId("portfolio-fx-effect").textContent(), "−7,42 Kč");
+  const gain = minorFromCzk(await page.getByTestId("portfolio-gain-loss").textContent());
+  const realizedRow = page.getByTestId("contribution-realized");
+  const realized = await realizedRow.count() ? minorFromCzk((await realizedRow.locator('td[role="cell"]').textContent())) : 0n;
+  assert.equal(2772n - 742n + realized, gain, "price + FX + closed sells add up exactly to the investment gain");
+  assert.equal(clean(await page.getByTestId("contribution-equity").locator('td[role="cell"]').textContent()), "+27,72 Kč");
+  assert.match(clean(await page.locator("#story-title").textContent()), /^Přibylo 20 Kč\. Nejvíc pohnuly akcie\.$/);
+  assert.match(clean(await page.locator("main").innerText()), /Akcie \(AAPL, MSFT\) přidaly 27,72 Kč pohybem cen\./);
+  await coherent("attribution");
+  await responsive(page, "overview-attribution", { ready: () => page.getByTestId("portfolio-value").waitFor() });
 
-  await page.getByRole("button", { name: "Možnosti portfolia", exact: true }).click();
-  await page.screenshot({ path: `${screenshotDir}/portfolio-options-1440.png`, fullPage: true });
+  // Unavailable prices (state 4d): no total, no estimate, only what the ledger knows; the builder is blocked.
+  await sql`insert into portfolio_trade (id, portfolio_id, instrument_id, instrument_symbol, instrument_name, instrument_asset_type, side, quantity, unit_price, quote_currency, fx_rate_to_base, gross_amount_base_minor, fee_base_minor, cash_delta_base_minor, quote_observed_at, executed_at, market_data_provider, market_data_dataset, market_data_kind, market_data_is_deterministic, fx_rate_provider, fx_rate_dataset, fx_rate_kind, fx_rate_is_deterministic, fx_reference_date, fx_rate_retrieved_at, client_idempotency_key)
+    values (${randomUUID()}, ${activePortfolioId}, 'FMP:NASDAQ:NVDA', 'NVDA', 'NVIDIA Corporation', 'equity', 'BUY', '0.01', '100', 'USD', '22', 2200, 0, -2200, ${historicTime}, ${historicTime}, 'fmp', 'quote', 'live', false, 'frankfurter', 'ecb-reference', 'reference', false, '2026-09-20', ${historicTime}, ${randomUUID()})`;
+  await page.reload();
+  await page.getByRole("status").filter({ hasText: "Některé ceny chybí" }).filter({ hasText: "Oceněno 3 z 4 položek" }).waitFor();
+  await page.getByRole("heading", { name: "Co víme jistě" }).waitFor();
+  assert.equal(await page.getByTestId("portfolio-value").count(), 0, "an incomplete valuation shows no total at all");
+  assert.equal(await page.getByTestId("portfolio-gain-loss").count(), 0, "and no gain or loss");
+  assert.match(clean(await page.getByTestId("holding-NVDA").innerText()), /cena chybí/);
+  assert.match(clean(await page.getByTestId("holding-NVDA").innerText()), /nakoupeno 22 Kč|22 Kč/);
+  await page.getByRole("button", { name: "Načíst znovu" }).click();
+  await page.getByRole("heading", { name: "Co víme jistě" }).waitFor();
+  await responsive(page, "unavailable", { ready: () => page.getByRole("heading", { name: "Co víme jistě" }).waitFor() });
+  const tradesBlocked = (await sql`select count(*)::int as count from portfolio_trade where portfolio_id = ${activePortfolioId}`)[0].count;
+  await page.goto(`${baseURL}/lab/portfolio/mix`);
+  await page.getByRole("heading", { name: "Uprav mix" }).waitFor();
+  await page.getByText("Bez cen všech položek nejde mix spočítat.").waitFor();
+  assert.equal(await page.getByRole("button", { name: /Uložit portfolio/ }).getAttribute("aria-disabled"), "true", "orders needing unavailable data stay disabled");
+  await page.getByRole("button", { name: /Uložit portfolio/ }).click({ force: true });
+  assert.equal(await page.getByRole("dialog").count(), 0);
+  assert.equal((await sql`select count(*)::int as count from portfolio_trade where portfolio_id = ${activePortfolioId}`)[0].count, tradesBlocked, "a blocked mix adds no trade");
+  await page.screenshot({ path: `${screenshotDir}/builder-blocked-1440.png`, fullPage: true });
+
+  // Reset: options → confirm (Escape-safe) → a clean generation with all earned capital; history retained.
+  await page.goto(`${baseURL}/lab/portfolio`);
+  const options = page.getByRole("button", { name: "Možnosti portfolia", exact: true });
+  await options.click();
+  await page.getByRole("menu", { name: "Možnosti portfolia" }).getByRole("menuitem", { name: "Resetovat portfolio" }).click();
+  const resetDialog = page.getByRole("dialog", { name: "Resetovat portfolio?" });
+  await resetDialog.getByText("Postup v učení i dřívější obchody zůstanou zaznamenané.", { exact: false }).waitFor();
+  await page.keyboard.press("Escape");
+  await resetDialog.waitFor({ state: "hidden" });
+  await page.waitForFunction((element) => document.activeElement === element, await options.elementHandle());
+  assert.equal(await options.evaluate((element) => element === document.activeElement), true, "Escape returns focus to the options button");
+  await options.click();
+  await page.getByRole("menuitem", { name: "Resetovat portfolio" }).click();
   await page.setViewportSize({ width: 320, height: 900 });
   await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-  const optionsOverflow = await page.evaluate(() => [...document.querySelectorAll("body *")].filter((element) => { const box = element.getBoundingClientRect(); return box.right > innerWidth + 1 || box.left < -1; }).slice(0, 8).map((element) => ({ tag: element.tagName, text: element.textContent?.trim().slice(0, 80), className: element.className?.toString().slice(0, 100), box: element.getBoundingClientRect().toJSON() })));
-  assert.deepEqual(optionsOverflow, [], "portfolio options support 200% text");
-  await page.screenshot({ path: `${screenshotDir}/portfolio-options-320-200-percent.png`, fullPage: true });
-  await page.getByRole("menu", { name: "Možnosti portfolia" }).getByRole("menuitem", { name: "Resetovat portfolio", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Resetovat portfolio?" });
-  await dialog.getByText("Postup v učení i dřívější obchody zůstanou zaznamenané.", { exact: false }).waitFor();
-  const resetOverflow = await dialog.evaluate((element) => [...element.querySelectorAll("*")].filter((child) => { const box = child.getBoundingClientRect(); return box.right > innerWidth + 1 || box.left < -1; }).slice(0, 8).map((child) => ({ tag: child.tagName, text: child.textContent?.trim().slice(0, 80), className: child.className?.toString().slice(0, 100), box: child.getBoundingClientRect().toJSON() })));
-  assert.deepEqual(resetOverflow, [], "reset confirmation supports 200% text");
-  await page.screenshot({ path: `${screenshotDir}/reset-confirmation-320-200-percent.png`, fullPage: true });
+  assert.deepEqual(await overflowing(page, "dialog[open]"), { wide: false, outside: [] }, "reset confirmation reflows at 200% text");
   await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
   await page.setViewportSize({ width: 1440, height: 950 });
-  await page.screenshot({ path: `${screenshotDir}/reset-confirmation-1440.png`, fullPage: true });
-  await dialog.getByRole("button", { name: "Resetovat portfolio", exact: true }).click();
+  await resetDialog.getByRole("button", { name: "Resetovat portfolio", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Portfolio resetováno" }).waitFor();
-  await page.getByTestId("holding-AAPL").waitFor({ state: "detached" });
-  await page.getByTestId("portfolio-cash").filter({ hasText: /2\s000\sKč/ }).waitFor();
-  assert.equal(await page.getByRole("button", { name: "Možnosti portfolia", exact: true }).count(), 0, "reset returns to the guided empty state");
-  const investAfterReset = page.getByRole("button", { name: "Investovat", exact: true });
-  await page.waitForFunction((element) => document.activeElement === element, await investAfterReset.elementHandle());
-  assert.equal(await investAfterReset.evaluate((element) => element === document.activeElement), true, "reset returns focus to Invest when its options trigger is removed");
+  await page.getByRole("heading", { name: "Zkus si investovat nanečisto." }).waitFor();
+  assert.equal(await page.getByTestId("portfolio-cash").textContent(), "2 000 Kč", "reset restores all earned capital as cash");
+  await page.waitForFunction(() => document.activeElement?.id === "first-mix-cta");
+  const generations = await sql`select id, closed_at from portfolio where user_id = ${userId} order by opened_at`;
+  assert.equal(generations.length, 2);
+  assert.ok(generations[0].closed_at, "the old generation is closed, not deleted");
+  assert.equal((await sql`select count(*)::int as count from portfolio_trade where portfolio_id = ${generations[0].id}`)[0].count, tradesBlocked, "old trades are retained");
+  assert.equal((await sql`select count(*)::int as count from portfolio_allocation where portfolio_id = ${generations[0].id}`)[0].count, 1, "the old mix is retained");
   await page.screenshot({ path: `${screenshotDir}/post-reset-1440.png`, fullPage: true });
   assert.deepEqual(errors, [], "Portfolio Lab has no browser errors");
-  console.log("PASS: zero-capital, later reward, keyboard search, fractional buy, insufficient cash, oversell, partial sell, persistence, reset, responsive layouts, and 200% text. Screenshots:", screenshotDir);
+  console.log("PASS: locked, zero capital, first visit, instrument buy/sell, keyboard mix builder (85/110/100 %), server-planned review, saved mix with targets, price/FX attribution, unavailable prices, reset, 44 px targets, responsive layouts and 200% text. Screenshots:", screenshotDir);
 } finally {
   await browser.close();
   if (userId) await sql`delete from "user" where id = ${userId}`;

@@ -6,6 +6,7 @@ import {
   bigint,
   check,
   date,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -260,4 +261,43 @@ export const portfolioTrade = pgTable("portfolio_trade", {
     (${table.side} = 'BUY' and ${table.cashDeltaBaseMinor} = -(${table.grossAmountBaseMinor} + ${table.feeBaseMinor}))
     or (${table.side} = 'SELL' and ${table.cashDeltaBaseMinor} = ${table.grossAmountBaseMinor} - ${table.feeBaseMinor})
   )`),
+]);
+
+/**
+ * Append-only target mixes ("Uložit portfolio"). Each saved version records the learner's
+ * intended weights and the trades it executed through the ordinary ledger; the latest version
+ * of the active generation is the current target. It holds no balance: cash, holdings and
+ * valuation are still derived from receipts and trades only.
+ */
+export const portfolioAllocation = pgTable("portfolio_allocation", {
+  id: text("id").primaryKey(),
+  portfolioId: text("portfolio_id").notNull().references(() => portfolio.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  cashWeightBasisPoints: integer("cash_weight_basis_points").notNull(),
+  /** Audit snapshot of the portfolio value the weights were applied to; never read back as a balance. */
+  appliedValueMinor: bigint("applied_value_minor", { mode: "bigint" }).notNull(),
+  clientIdempotencyKey: text("client_idempotency_key").notNull(),
+}, (table) => [
+  index("portfolio_allocation_portfolio_created_idx").on(table.portfolioId, table.createdAt),
+  uniqueIndex("portfolio_allocation_idempotency_idx").on(table.portfolioId, table.clientIdempotencyKey),
+  check("portfolio_allocation_cash_weight_check", sql`${table.cashWeightBasisPoints} between 0 and 10000`),
+  check("portfolio_allocation_applied_value_check", sql`${table.appliedValueMinor} >= 0`),
+]);
+
+export const portfolioAllocationLine = pgTable("portfolio_allocation_line", {
+  allocationId: text("allocation_id").notNull(),
+  position: integer("position").notNull(),
+  instrumentId: text("instrument_id").notNull(),
+  instrumentSymbol: text("instrument_symbol").notNull(),
+  instrumentName: text("instrument_name").notNull(),
+  instrumentAssetType: text("instrument_asset_type").notNull(),
+  quoteCurrency: text("quote_currency").notNull(),
+  weightBasisPoints: integer("weight_basis_points").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.allocationId, table.instrumentId] }),
+  foreignKey({ name: "portfolio_allocation_line_allocation_fk", columns: [table.allocationId], foreignColumns: [portfolioAllocation.id] }).onDelete("cascade"),
+  uniqueIndex("portfolio_allocation_line_position_idx").on(table.allocationId, table.position),
+  check("portfolio_allocation_line_weight_check", sql`${table.weightBasisPoints} between 1 and 10000`),
+  check("portfolio_allocation_line_asset_type_check", sql`${table.instrumentAssetType} in ('equity', 'etf', 'bond')`),
+  check("portfolio_allocation_line_currency_check", sql`${table.quoteCurrency} in ('CZK', 'USD', 'EUR')`),
 ]);

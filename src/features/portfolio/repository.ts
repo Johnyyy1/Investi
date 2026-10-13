@@ -1,10 +1,11 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { lessonAward, portfolio, portfolioTrade, progressionUnlock, user } from "@/db/schema";
+import { lessonAward, portfolio, portfolioAllocation, portfolioAllocationLine, portfolioTrade, progressionUnlock, user } from "@/db/schema";
 import type { Currency } from "@/features/market-data/contracts";
+import { planAllocation, validateAllocation, type AllocationInput, type AllocationPlan } from "./allocation";
 import { foldTrades, type LedgerTrade } from "./domain";
 import {
   fxToDecimal,
@@ -209,4 +210,167 @@ export async function loadPortfolioRows(userId: string) {
     db.select().from(portfolioTrade).where(eq(portfolioTrade.portfolioId, current.id)).orderBy(asc(portfolioTrade.executedAt), asc(portfolioTrade.id)),
   ]);
   return { portfolio: current, earnedPracticeCapitalMinor, trades };
+}
+
+export interface AllocationLineRow {
+  instrumentId: string;
+  symbol: string;
+  name: string;
+  assetType: "equity" | "etf" | "bond";
+  quoteCurrency: Currency;
+  weightBasisPoints: number;
+}
+
+export interface SavedAllocation {
+  id: string;
+  createdAt: Date;
+  cashWeightBasisPoints: number;
+  appliedValueMinor: bigint;
+  lines: AllocationLineRow[];
+}
+
+/** The latest saved mix of a generation is its current target; older versions stay for audit. */
+export async function loadLatestAllocation(portfolioId: string): Promise<SavedAllocation | null> {
+  const [latest] = await db.select().from(portfolioAllocation)
+    .where(eq(portfolioAllocation.portfolioId, portfolioId))
+    .orderBy(desc(portfolioAllocation.createdAt), desc(portfolioAllocation.id))
+    .limit(1);
+  if (!latest) return null;
+  const lines = await db.select().from(portfolioAllocationLine)
+    .where(eq(portfolioAllocationLine.allocationId, latest.id))
+    .orderBy(asc(portfolioAllocationLine.position));
+  return {
+    id: latest.id,
+    createdAt: latest.createdAt,
+    cashWeightBasisPoints: latest.cashWeightBasisPoints,
+    appliedValueMinor: latest.appliedValueMinor,
+    lines: lines.map((line) => ({
+      instrumentId: line.instrumentId,
+      symbol: line.instrumentSymbol,
+      name: line.instrumentName,
+      assetType: line.instrumentAssetType as AllocationLineRow["assetType"],
+      quoteCurrency: line.quoteCurrency as Currency,
+      weightBasisPoints: line.weightBasisPoints,
+    })),
+  };
+}
+
+type ExecutionObservations = Map<string, PortfolioExecutionObservation>;
+
+/** One fresh execution observation per instrument the mix touches: every target line and
+ * every current holding (a holding outside the mix has a 0 % target and is sold). */
+async function observeForAllocation(instrumentIds: readonly string[]): Promise<ExecutionObservations> {
+  const observations = await Promise.all(instrumentIds.map((instrumentId) => observePortfolioExecution(portfolioMarketData, instrumentId, "1", BASE_CURRENCY)));
+  return new Map(observations.map((observation) => [observation.instrument.instrumentId, observation]));
+}
+
+function planningInputs(observations: ExecutionObservations) {
+  return new Map([...observations].map(([instrumentId, observation]) => [instrumentId, { priceUnits: observation.priceUnits, fxUnits: observation.fxUnits }]));
+}
+
+function assertAllocatable(allocation: AllocationInput, observations: ExecutionObservations) {
+  for (const line of allocation.lines) {
+    const { assetType } = observations.get(line.instrumentId)!.instrument;
+    if (assetType !== "equity" && assetType !== "etf" && assetType !== "bond") {
+      throw new PortfolioInputError("InvalidInstrument", "Do mixu patří akcie, ETF nebo dluhopisy.");
+    }
+  }
+}
+
+export interface AllocationReview {
+  plan: AllocationPlan;
+  observations: ExecutionObservations;
+}
+
+/** Plans the mix against fresh observations without writing anything. Execution repeats
+ * the observation and the plan under the learner lock, so this is an estimate. */
+export async function reviewAllocation(userId: string, input: AllocationInput): Promise<AllocationReview> {
+  const allocation = validateAllocation(input);
+  const rows = await loadPortfolioRows(userId);
+  const folded = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades.map(asLedgerTrade));
+  const instrumentIds = [...new Set([...allocation.lines.map(({ instrumentId }) => instrumentId), ...folded.holdings.map(({ instrumentId }) => instrumentId)])];
+  const observations = await observeForAllocation(instrumentIds);
+  assertAllocatable(allocation, observations);
+  const plan = planAllocation({ cashMinor: folded.cashMinor, holdings: folded.holdings, observations: planningInputs(observations), allocation });
+  return { plan, observations };
+}
+
+/**
+ * Saves a target mix and executes it through the append-only ledger. The learner row is
+ * locked like every other trade, reset and reward, so cash, holdings and receipts are
+ * re-read under the lock and the plan can never overspend or oversell. The client only
+ * sends instrument ids, integer weights and an idempotency key.
+ */
+export async function executeAllocation(userId: string, input: AllocationInput & { clientIdempotencyKey: string }) {
+  const allocation = validateAllocation(input);
+  const existing = await activePortfolio(db, userId);
+  if (existing) {
+    const [duplicate] = await db.select().from(portfolioAllocation).where(and(
+      eq(portfolioAllocation.portfolioId, existing.id),
+      eq(portfolioAllocation.clientIdempotencyKey, input.clientIdempotencyKey),
+    ));
+    if (duplicate) return { allocationId: duplicate.id, tradeCount: 0, duplicate: true };
+  }
+  const rows = await loadPortfolioRows(userId);
+  const preview = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades.map(asLedgerTrade));
+  const observations = await observeForAllocation([...new Set([
+    ...allocation.lines.map(({ instrumentId }) => instrumentId),
+    ...preview.holdings.map(({ instrumentId }) => instrumentId),
+  ])]);
+  assertAllocatable(allocation, observations);
+
+  return db.transaction(async (tx) => {
+    const [owner] = await tx.select({ id: user.id }).from(user).where(eq(user.id, userId)).for("update");
+    if (!owner) throw new PortfolioInputError("PortfolioUnavailable", "Portfolio se nepodařilo najít.");
+    const current = await activePortfolio(tx, userId);
+    if (!current) throw new PortfolioInputError("PortfolioChanged", "Portfolio se mezitím změnilo. Zkontroluj mix znovu.");
+    const [duplicate] = await tx.select().from(portfolioAllocation).where(and(
+      eq(portfolioAllocation.portfolioId, current.id),
+      eq(portfolioAllocation.clientIdempotencyKey, input.clientIdempotencyKey),
+    ));
+    if (duplicate) return { allocationId: duplicate.id, tradeCount: 0, duplicate: true };
+
+    const [earned, trades] = await Promise.all([
+      entitlement(tx, userId),
+      tx.select().from(portfolioTrade).where(eq(portfolioTrade.portfolioId, current.id)).orderBy(asc(portfolioTrade.executedAt), asc(portfolioTrade.id)),
+    ]);
+    const folded = foldTrades(earned, trades.map(asLedgerTrade));
+    if (folded.holdings.some(({ instrumentId }) => !observations.has(instrumentId))) {
+      throw new PortfolioInputError("PortfolioChanged", "Portfolio se mezitím změnilo. Zkontroluj mix znovu.");
+    }
+    const plan = planAllocation({ cashMinor: folded.cashMinor, holdings: folded.holdings, observations: planningInputs(observations), allocation });
+    const now = new Date();
+    const allocationId = randomUUID();
+    await tx.insert(portfolioAllocation).values({
+      id: allocationId,
+      portfolioId: current.id,
+      createdAt: now,
+      cashWeightBasisPoints: allocation.cashWeightBasisPoints,
+      appliedValueMinor: plan.totalValueMinor,
+      clientIdempotencyKey: input.clientIdempotencyKey,
+    });
+    await tx.insert(portfolioAllocationLine).values(allocation.lines.map((line, position) => {
+      const { instrument } = observations.get(line.instrumentId)!;
+      return {
+        allocationId,
+        position,
+        instrumentId: instrument.instrumentId,
+        instrumentSymbol: instrument.symbol,
+        instrumentName: instrument.name,
+        instrumentAssetType: instrument.assetType,
+        quoteCurrency: instrument.quoteCurrency,
+        weightBasisPoints: line.weightBasisPoints,
+      };
+    }));
+    if (plan.trades.length > 0) {
+      await tx.insert(portfolioTrade).values(plan.trades.map((planned, index) => tradeValues(
+        current.id,
+        { ...observations.get(planned.instrumentId)!, quantityUnits: planned.quantityUnits, grossMinor: planned.grossMinor },
+        planned.side,
+        `allocation:${input.clientIdempotencyKey}:${index}`,
+        now,
+      )));
+    }
+    return { allocationId, tradeCount: plan.trades.length, duplicate: false };
+  });
 }
