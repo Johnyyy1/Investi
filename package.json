@@ -34,7 +34,8 @@
     "demo:cleanup": "node scripts/cleanup-demos.mjs",
     "test:personalization-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-personalization-persistence.mts",
     "test:personalization-compatibility": "node scripts/validate-personalization-compatibility.mjs",
-    "test:personalization-browser": "node scripts/validate-personalization-browser.mjs"
+    "test:personalization-browser": "node scripts/validate-personalization-browser.mjs",
+    "test:onboarding-redesign": "node scripts/validate-onboarding-redesign.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.3",

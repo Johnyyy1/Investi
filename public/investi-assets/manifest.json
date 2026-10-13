@@ -1,5 +1,5 @@
 {
-  "source": "User-supplied investi-studovna-redesign-phase1 overlay, public/investi-assets/guide; original standalone character assets, unchanged. Final Pen boards QB1gf, liRhy, mAWd8.",
+  "source": "Original user-supplied Studovna assets remain unchanged. Additional onboarding guide poses are exported from investi-design.pen, final Investi / Onboarding boards wKThC, Ui4uz, Z9Mlw, XFfjW and Guide illustration library V507P; per-asset origins are recorded below.",
   "assets": [
     {
       "path": "public/investi-assets/guide/01-welcome.webp",
@@ -35,6 +35,106 @@
       "pixel_size": [
         680,
         680
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/02-thinking.webp",
+      "bytes": 21204,
+      "sha256": "305e77a73c8ee05dfcf643a3aa7dfbdab82bffe5d66527cb7236c1e77cb90dd0",
+      "source": "Exported existing illustration eoOex from investi-design.pen, Investi / Guide — Illustration library, 3x WebP. Original supplied artwork; no generated or altered character.",
+      "pixel_size": [
+        525,
+        525
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/03-explaining.webp",
+      "bytes": 30164,
+      "sha256": "f0cd31b8a0926de23f794fb09ef166defeb2de42a224b4e308ac01cc89703982",
+      "source": "Exported existing illustration h4gjzX from investi-design.pen, Investi / Guide — Illustration library, 3x WebP. Original supplied artwork; no generated or altered character.",
+      "pixel_size": [
+        627,
+        627
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/04-calm-book.webp",
+      "bytes": 27982,
+      "sha256": "90051ddcdfdfe98105e7a6c288b54349d37346fa9ef756616220471f28e9fe30",
+      "source": "Exported existing illustration zkZiB from investi-design.pen, Investi / Guide — Illustration library, 3x WebP. Original supplied artwork; no generated or altered character.",
+      "pixel_size": [
+        477,
+        477
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/06-map.webp",
+      "bytes": 20242,
+      "sha256": "47bd093d008ef98a0b7bdafb1726cd9dd5c493088a2fa82ddd454e87583dcbb6",
+      "source": "Exported existing illustration myCFV from investi-design.pen, Investi / Guide — Illustration library, 3x WebP. Original supplied artwork; no generated or altered character.",
+      "pixel_size": [
+        656,
+        656
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/10-diversification.webp",
+      "bytes": 21960,
+      "sha256": "a002d5dec516b14c1cfcab24ff4d32265fff9e24760beccba3071d7fe2a87fc6",
+      "source": "Exported existing illustration iiXFC from investi-design.pen, Investi / Guide — Illustration library, 3x WebP. Original supplied artwork; no generated or altered character.",
+      "pixel_size": [
+        789,
+        592
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/12-compounding.webp",
+      "bytes": 25908,
+      "sha256": "a485edd393bd75b1957963af7b1ee4d4ebc634d1157ecfb63792cfc3ce7c3831",
+      "source": "Exported existing illustration RfKkl from investi-design.pen, Investi / Guide — Illustration library, 3x WebP. Original supplied artwork; no generated or altered character.",
+      "pixel_size": [
+        859,
+        644
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/14-returns.webp",
+      "bytes": 23094,
+      "sha256": "272c8a871497f376003ed448daadc19e700a025d4f2eaebe032e86414f394966",
+      "source": "Exported existing illustration Tt9ca from investi-design.pen, Investi / Guide — Illustration library, 3x WebP. Original supplied artwork; no generated or altered character.",
+      "pixel_size": [
+        824,
+        618
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/15-weights.webp",
+      "bytes": 24432,
+      "sha256": "726674df83e7431d095316971015c9e7c18fca404d5fb0ac3e232bac830c2b86",
+      "source": "Exported existing illustration OVrVg from investi-design.pen, Investi / Guide — Illustration library, 3x WebP. Original supplied artwork; no generated or altered character.",
+      "pixel_size": [
+        715,
+        536
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/16-bid-ask.webp",
+      "bytes": 32314,
+      "sha256": "ba6cc46d2d02df3d19c62d526d374e2a6d226a9046f5c027e5e0b63400be03e1",
+      "source": "Exported existing illustration xJEZv from investi-design.pen, Investi / Guide — Illustration library, 3x WebP. Original supplied artwork; no generated or altered character.",
+      "pixel_size": [
+        715,
+        536
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/21-hourglass.webp",
+      "bytes": 20008,
+      "sha256": "493da1ad6ea3f2e76d0ea9d9af125b584faa96e16568d7e06f734e1b39ef8ebf",
+      "source": "Exported existing illustration ZQOkS from investi-design.pen, Investi / Guide — Illustration library, 3x WebP. Original supplied artwork; no generated or altered character.",
+      "pixel_size": [
+        749,
+        562
       ]
     }
   ]

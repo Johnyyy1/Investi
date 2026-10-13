@@ -532,7 +532,7 @@
   ],
   "narrative": {
     "northStar": "Studovna",
-    "overview": "A calm place to return to a learning decision. Warm paper, clear ink, generous separation, and a restrained teal action give the authored exercise priority. The supplied guide adds encouragement at welcome, continuation, and completion; real lesson content and learner state provide the substance.\n\nThis is the implemented system from the approved Pen.dev boards `V7mUpG`, `QB1gf`, `liRhy`, and `mAWd8`. Its current application is `.investi-theme` on `/learn`. Other product routes and focused lessons retain the existing Nunito-based theme during the staged migration. The legacy palette and typography in AGENTS.md are not additional tokens for this scoped system.",
+    "overview": "A calm place to return to a learning decision. Warm paper, clear ink, generous separation, and a restrained teal action give the authored exercise priority. The supplied guide adds encouragement at welcome, continuation, and completion; real lesson content and learner state provide the substance.\n\nThis is the implemented system from the approved Pen.dev boards `V7mUpG`, `QB1gf`, `liRhy`, and `mAWd8`. The onboarding extension follows `wKThC` (desktop), `Ui4uz` (mobile), `Z9Mlw` (plans), `XFfjW` (components), and `V507P` (guide library). Its current application is `.investi-theme` on `/learn`, `/onboarding`, and `/onboarding/plan`. Other product routes and focused lessons retain the existing Nunito-based theme during the staged migration. The legacy palette and typography in AGENTS.md are not additional tokens for this scoped system.",
     "keyCharacteristics": [
       "Warm paper with crisp, readable text.",
       "One dominant learning action and quieter supporting context.",
