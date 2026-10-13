@@ -12,7 +12,7 @@ const MONEY_SCALE = 100n;
 
 export class PortfolioInputError extends Error {
   constructor(
-    public readonly code: "InvalidQuantity" | "InvalidInstrument" | "InsufficientCash" | "Oversell" | "MarketClosed" | "QuoteUnavailable" | "FxUnavailable" | "PortfolioUnavailable",
+    public readonly code: "InvalidQuantity" | "InvalidInstrument" | "InsufficientCash" | "Oversell" | "MarketClosed" | "QuoteUnavailable" | "FxUnavailable" | "PortfolioUnavailable" | "InvalidAllocation" | "PortfolioChanged",
     message: string,
   ) {
     super(message);
@@ -90,5 +90,10 @@ export function grossBaseMinor(quantityUnits: bigint, priceUnits: bigint, fxUnit
 }
 
 export function decimalToQuantityUnits(value: string) {
+  return parseQuantity(value);
+}
+
+/** Persisted execution prices share the 8 dp quantity scale. */
+export function decimalToPriceUnits(value: string) {
   return parseQuantity(value);
 }

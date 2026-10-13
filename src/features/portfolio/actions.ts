@@ -5,14 +5,15 @@ import { z } from "zod";
 import { isMarketDataError } from "@/features/market-data/errors";
 import { getCurrentUser } from "@/lib/session";
 import { requirePortfolioLabUnlock } from "@/features/progression/repository";
-import { PortfolioInputError } from "./decimal";
+import { PortfolioInputError, priceToDecimal, quantityToDecimal, fxToDecimal } from "./decimal";
 import { portfolioMarketData } from "./environment";
-import { idempotencySchema, instrumentIdSchema, tradeInputSchema } from "./input";
-import { executeTrade, resetActivePortfolio } from "./repository";
-import { loadInstrumentPreview, loadPortfolioView } from "./service";
+import { allocationExecutionSchema, allocationInputSchema, idempotencySchema, instrumentIdSchema, tradeInputSchema } from "./input";
+import { executeAllocation, executeTrade, resetActivePortfolio, reviewAllocation } from "./repository";
+import { loadAllocationQuotes, loadInstrumentPreview, loadPortfolioView } from "./service";
 
 function messageFor(error: unknown) {
   if (error instanceof PortfolioInputError) return error.message;
+  if (error instanceof z.ZodError) return "Mix se nepodařilo přečíst. Zkontroluj váhy a zkus to znovu.";
   if (isMarketDataError(error)) {
     if (error.code === "FxUnavailable") return "Potřebný kurz CZK není dostupný. Obchod nebyl proveden.";
     if (error.code === "InstrumentNotFound" || error.code === "UnsupportedInstrument") return "Tento instrument není z nastaveného zdroje tržních dat dostupný.";
@@ -85,6 +86,70 @@ export async function resetPortfolioAction(input: unknown) {
     const portfolio = await loadPortfolioView(current.id);
     revalidatePath("/lab/portfolio");
     return { ok: true as const, duplicate: result.duplicate, portfolio };
+  } catch (error) {
+    return { ok: false as const, message: messageFor(error) };
+  }
+}
+
+export async function loadAllocationQuotesAction(instrumentIds: unknown) {
+  try {
+    await authenticatedUser();
+    const ids = z.array(instrumentIdSchema).min(1).max(24).parse(instrumentIds);
+    return { ok: true as const, quotes: await loadAllocationQuotes([...new Set(ids)]) };
+  } catch (error) {
+    return { ok: false as const, message: messageFor(error) };
+  }
+}
+
+/** Server-planned estimate of the trades a mix would execute right now. Nothing is written. */
+export async function reviewPortfolioAllocationAction(input: unknown) {
+  try {
+    const current = await authenticatedUser();
+    const parsed = allocationInputSchema.parse(input);
+    const { plan, observations } = await reviewAllocation(current.id, parsed);
+    const describe = (instrumentId: string) => {
+      const observation = observations.get(instrumentId)!;
+      return {
+        instrumentId,
+        symbol: observation.instrument.symbol,
+        name: observation.instrument.name,
+        assetType: observation.instrument.assetType,
+        quoteCurrency: observation.instrument.quoteCurrency,
+        price: priceToDecimal(observation.priceUnits),
+        fxRate: fxToDecimal(observation.fxUnits),
+        fxReferenceDate: observation.fx.referenceDate,
+        isDeterministic: observation.quote.provenance.isDeterministic,
+      };
+    };
+    return {
+      ok: true as const,
+      review: {
+        totalValueMinor: plan.totalValueMinor.toString(),
+        targetCashMinor: plan.targetCashMinor.toString(),
+        resultingCashMinor: plan.resultingCashMinor.toString(),
+        trades: plan.trades.map((trade) => ({ ...describe(trade.instrumentId), side: trade.side, quantity: quantityToDecimal(trade.quantityUnits), grossMinor: trade.grossMinor.toString() })),
+        positions: plan.positions.map((position) => ({
+          ...describe(position.instrumentId),
+          weightBasisPoints: position.weightBasisPoints,
+          targetValueMinor: position.targetValueMinor.toString(),
+          currentValueMinor: position.currentValueMinor.toString(),
+          resultingValueMinor: position.resultingValueMinor.toString(),
+          resultingQuantity: quantityToDecimal(position.resultingQuantityUnits),
+        })),
+      },
+    };
+  } catch (error) {
+    return { ok: false as const, message: messageFor(error) };
+  }
+}
+
+export async function savePortfolioAllocationAction(input: unknown) {
+  try {
+    const current = await authenticatedUser();
+    const parsed = allocationExecutionSchema.parse(input);
+    const result = await executeAllocation(current.id, parsed);
+    revalidatePath("/lab/portfolio");
+    return { ok: true as const, duplicate: result.duplicate, tradeCount: result.tradeCount };
   } catch (error) {
     return { ok: false as const, message: messageFor(error) };
   }

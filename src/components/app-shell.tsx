@@ -28,7 +28,7 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const activeId = activeNavigationId(pathname);
-  const paper = pathname === "/learn" || pathname === "/progress";
+  const paper = pathname === "/learn" || pathname === "/progress" || pathname === "/lab/portfolio";
   useEffect(() => { if (needsTimeZone) void initializeTimeZoneAction(Intl.DateTimeFormat().resolvedOptions().timeZone); }, [needsTimeZone]);
   async function signOut() {
     setPending(true); setError(undefined);
@@ -38,7 +38,8 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
       router.replace("/sign-in"); router.refresh();
     } catch { setError("Odhlášení se nezdařilo. Zkus to znovu."); setPending(false); }
   }
-  if (availableLessons.some((lesson) => pathname === `/learn/${lesson.moduleSlug}/${lesson.slug}`)) return children;
+  // Focused flows render without the shell: lessons, and the mix builder whose sticky save bar replaces the tab bar.
+  if (pathname === "/lab/portfolio/mix" || availableLessons.some((lesson) => pathname === `/learn/${lesson.moduleSlug}/${lesson.slug}`)) return children;
 
   const initial = userName.trim().charAt(0).toUpperCase() || "I";
   return <div className={`min-h-dvh bg-background ${paper ? `investi-theme ${styles.shell}` : ""}`}>

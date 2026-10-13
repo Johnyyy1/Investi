@@ -1,22 +1,26 @@
 import Link from "next/link";
-import { LockKeyhole } from "lucide-react";
-import { LearningLink } from "@/components/learning/learning-button";
-import { PageFrame } from "@/components/shell/page-frame";
+import { ArrowLeft, ArrowRight, Circle, CircleCheck, LockKeyhole } from "lucide-react";
+import styles from "@/components/lab/portfolio/portfolio-lab.module.css";
 import type { evaluateUnlock } from "@/features/progression/unlocks";
 
 type UnlockStatus = ReturnType<typeof evaluateUnlock>;
 
+/** The real unlock conditions, in the Portfolio Lab paper style; no balances or trading. */
 export function LockedPortfolioLab({ unlock }: { unlock: UnlockStatus }) {
-  return <PageFrame width="focused">
-    <Link href="/lab" className="inline-flex min-h-11 items-center text-small font-semibold text-primary-hover">← Lab</Link>
-    <div className="mt-10"><LockKeyhole aria-hidden="true" className="size-8 text-ql-link" /><p className="mt-5 text-ql-small font-semibold text-ql-secondary">Zamčeno · odemkni učením</p><h1 className="mt-2 break-words text-section-title font-bold min-[375px]:text-page-title">Portfolio Lab</h1>
-      <p className="mt-4 max-w-xl text-ql-body text-ql-secondary">Nejdřív zvládni základy, potom si z virtuálního kapitálu sestav první portfolio.</p>
-      <div className="mt-8 space-y-4 border-y border-ql-border py-6" aria-label="Podmínky odemčení">
-        <p className="text-ql-body"><span aria-hidden="true">{unlock.prerequisitesComplete ? "✓" : "○"}</span> Základy investování <span className="ml-2 text-ql-small text-ql-secondary">{unlock.completedPrerequisiteLessons} / {unlock.requiredPrerequisiteLessons} lekcí</span></p>
-        <p className="text-ql-body"><span aria-hidden="true">{unlock.totalXp >= unlock.xpRequired ? "✓" : "○"}</span> {unlock.totalXp} / {unlock.xpRequired} XP</p>
-      </div>
-      <p className="mt-4 text-ql-small text-ql-secondary">Dokonči všech sedm lekcí Základů investování a získej 420 XP. Odemčením dostaneš jednorázově 5 000 Kč virtuálního kapitálu.</p>
-      <LearningLink href="/learn" className="mt-8 w-full sm:w-auto">Pokračovat v učení</LearningLink>
-    </div>
-  </PageFrame>;
+  const lessonsDone = unlock.prerequisitesComplete;
+  const xpDone = unlock.totalXp >= unlock.xpRequired;
+  return <main className={`investi-theme ${styles.page}`}><div className={`${styles.container} ${styles.locked}`}>
+    <Link href="/lab" className={styles.textLink}><ArrowLeft size={16} aria-hidden="true" />Lab</Link>
+    <div className={styles.eyebrowRow}><LockKeyhole size={16} aria-hidden="true" className={styles.lockIcon} /><p className={styles.eyebrow}>Zamčeno · odemkni učením</p></div>
+    <h1>Portfolio Lab</h1>
+    <p className={styles.lockedLead}>Nejdřív zvládni základy, potom si z cvičného kapitálu sestav první portfolio.</p>
+    <section className={`${styles.card} ${styles.lockedCard}`} aria-label="Podmínky odemčení">
+      <ul>
+        <li>{lessonsDone ? <CircleCheck size={18} aria-hidden="true" /> : <Circle size={18} aria-hidden="true" />}<span>Základy investování</span><span className={styles.num}>{unlock.completedPrerequisiteLessons} / {unlock.requiredPrerequisiteLessons} lekcí</span></li>
+        <li>{xpDone ? <CircleCheck size={18} aria-hidden="true" /> : <Circle size={18} aria-hidden="true" />}<span>Body za lekce</span><span className={styles.num}>{unlock.totalXp} / {unlock.xpRequired} XP</span></li>
+      </ul>
+      <p className={styles.meta}>Dokonči všech sedm lekcí Základů investování a získej 420 XP. Odemčením dostaneš jednorázově 5 000 Kč cvičného kapitálu.</p>
+    </section>
+    <Link href="/learn" className={styles.primary}>Pokračovat v učení<ArrowRight size={18} aria-hidden="true" /></Link>
+  </div></main>;
 }

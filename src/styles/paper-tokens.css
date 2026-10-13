@@ -28,6 +28,10 @@
   --color-error-tint: #f6e6e0;
   --color-info-tint: #e7ebf3;
   --color-info-ink: #38557a;
+  /* Categorical viz order (Portfolio Lab): equity, ETF, bonds, cash. Validated as one
+     palette on paper-surface: chroma, CVD and normal-vision separation, ≥ 3:1 marks. */
+  --color-viz-equity: #00897a;
+  --color-viz-etf: #c2593a;
   --color-viz-bonds: #6468d8;
   --color-viz-cash: #a88a2e;
   --color-viz-other: #8f9187;

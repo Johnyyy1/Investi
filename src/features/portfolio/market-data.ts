@@ -5,6 +5,7 @@ import type { FxDataProviderName, MarketDataProviderName } from "@/features/mark
 import { isMarketDataError, MarketDataError } from "@/features/market-data/errors";
 import type { MarketDataService } from "@/features/market-data/service";
 import {
+  fxToDecimal,
   fxUnitsFromNumber,
   grossBaseMinor,
   parseQuantity,
@@ -45,6 +46,8 @@ export interface PortfolioHoldingMarketObservation {
   fxReferenceDate: string | null;
   fxRetrievedAt: UtcTimestamp | null;
   fxProvider: string | null;
+  /** Current valuation FX (base per quote unit) as a 12 dp decimal string. */
+  fxRate: string | null;
   unavailableReason?: ValuationUnavailableReason;
 }
 
@@ -179,6 +182,7 @@ function unavailableHolding(instrumentId: string, reason: ValuationUnavailableRe
     fxReferenceDate: null,
     fxRetrievedAt: null,
     fxProvider: null,
+    fxRate: null,
     unavailableReason: reason,
   };
 }
@@ -206,9 +210,10 @@ export async function observePortfolioHoldingValue(
     // Current valuation uses the current reference FX fixing independently from the security observation.
     const fx = await gateway.service.getFxRate(quote.currency, baseCurrency, quote.retrievedAt);
     const priceUnits = priceUnitsFromNumber(quote.price);
+    const fxUnits = fxUnitsFromNumber(fx.rate);
     return {
       instrumentId: holding.instrumentId,
-      marketValueMinor: grossBaseMinor(holding.quantityUnits, priceUnits, fxUnitsFromNumber(fx.rate)),
+      marketValueMinor: grossBaseMinor(holding.quantityUnits, priceUnits, fxUnits),
       currentPrice: priceToDecimal(priceUnits),
       currentPriceCurrency: quote.currency,
       quoteObservedAt: quote.observedAt,
@@ -219,8 +224,65 @@ export async function observePortfolioHoldingValue(
       fxReferenceDate: fx.referenceDate,
       fxRetrievedAt: fx.retrievedAt,
       fxProvider: fx.provenance.provider,
+      fxRate: fxToDecimal(fxUnits),
     };
   } catch (error) {
     return unavailableHolding(holding.instrumentId, failureReason(error, "fx"));
+  }
+}
+
+export type AllocationQuoteStatus = "executable" | "market-closed" | "stale" | "unavailable" | "unsupported";
+
+export interface AllocationQuote {
+  instrumentId: string;
+  status: AllocationQuoteStatus;
+  instrument: Instrument | null;
+  /** Native price and the estimated CZK cost of one unit; present whenever the quote is usable for valuation. */
+  price: string | null;
+  unitCostBaseMinor: string | null;
+  fxRate: string | null;
+  fxReferenceDate: string | null;
+  quoteObservedAt: UtcTimestamp | null;
+  marketDataMode: PortfolioMarketDataMode | null;
+}
+
+/**
+ * Builder status for one instrument. Unlike execution it never throws for an unusable
+ * quote: it says why the instrument cannot be bought right now, and it never turns a
+ * missing price into zero. The authoritative check is repeated when the mix is executed.
+ */
+export async function observeAllocationQuote(
+  gateway: PortfolioMarketDataGateway,
+  instrumentId: string,
+  baseCurrency: Currency,
+): Promise<AllocationQuote> {
+  const empty = { instrument: null, price: null, unitCostBaseMinor: null, fxRate: null, fxReferenceDate: null, quoteObservedAt: null, marketDataMode: null };
+  try {
+    assertCompatibleInstrumentId(gateway, instrumentId);
+    const instrument = await gateway.service.getInstrumentMetadata(instrumentId);
+    if (instrument.assetType === "cash" || instrument.assetType === "index") return { instrumentId, status: "unsupported", ...empty, instrument };
+    const quote = await gateway.service.getQuote(instrument.instrumentId);
+    assertQuoteMatchesInstrument(instrument, quote);
+    const status: AllocationQuoteStatus = quote.usability.usableForExecution ? "executable"
+      : quote.usability.marketState === "closed" ? "market-closed"
+        : quote.usability.usableForValuation ? "stale" : "unavailable";
+    if (!quote.usability.usableForValuation) return { instrumentId, status, ...empty, instrument };
+    const fx = await gateway.service.getFxRate(quote.currency, baseCurrency, quote.observedAt);
+    const priceUnits = priceUnitsFromNumber(quote.price);
+    const fxUnits = fxUnitsFromNumber(fx.rate);
+    return {
+      instrumentId,
+      status,
+      instrument,
+      price: priceToDecimal(priceUnits),
+      unitCostBaseMinor: grossBaseMinor(parseQuantity("1"), priceUnits, fxUnits).toString(),
+      fxRate: fxToDecimal(fxUnits),
+      fxReferenceDate: fx.referenceDate,
+      quoteObservedAt: quote.observedAt,
+      marketDataMode: quote.provenance.isDeterministic ? "sample" : "market",
+    };
+  } catch (error) {
+    if (isMarketDataError(error) && (error.code === "InstrumentNotFound" || error.code === "UnsupportedInstrument")) return { instrumentId, status: "unsupported", ...empty };
+    return { instrumentId, status: "unavailable", ...empty };
   }
 }
