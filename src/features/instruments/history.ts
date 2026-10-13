@@ -4,7 +4,7 @@ export const chartRanges = ["1M", "3M", "6M", "YTD", "1Y", "5Y", "Max"] as const
 export type ChartRange = (typeof chartRanges)[number];
 
 export function parseChartRange(value: unknown): ChartRange {
-  return typeof value === "string" && chartRanges.includes(value as ChartRange) ? value as ChartRange : "1Y";
+  return typeof value === "string" && chartRanges.includes(value as ChartRange) ? value as ChartRange : "5Y";
 }
 
 function calendarDate(date: Date): CalendarDate { return date.toISOString().slice(0, 10); }

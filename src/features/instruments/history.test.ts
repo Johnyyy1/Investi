@@ -15,9 +15,9 @@ describe("instrument price history", () => {
     expect(historicalDateRange("1M", new Date("2026-03-31T00:00:00.000Z")).startDate).toBe("2026-02-28");
   });
   it("defaults unsupported range values to 1Y", () => {
-    expect(parseChartRange(undefined)).toBe("1Y");
-    expect(parseChartRange("intraday")).toBe("1Y");
-    expect(parseChartRange(["1M"])).toBe("1Y");
+    expect(parseChartRange(undefined)).toBe("5Y");
+    expect(parseChartRange("intraday")).toBe("5Y");
+    expect(parseChartRange(["1M"])).toBe("5Y");
   });
   it("requests daily split-adjusted prices, not total return", () => {
     expect(historicalRequest("FMP:NASDAQ:AAPL", "1Y", now)).toMatchObject({ instrumentId: "FMP:NASDAQ:AAPL", interval: "daily", timeZone: "UTC", adjustment: adjustmentPolicies["split-adjusted"] });

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { InstrumentPriceChart } from "./instrument-price-chart";
 
 function render(points: { date: string; close: number; open?: number; high?: number; low?: number }[]) {
-  return renderToStaticMarkup(createElement(InstrumentPriceChart, { instrumentId: "US-XNAS:AAPL", range: "1Y", points, currency: "USD", message: null, partial: false }));
+  return renderToStaticMarkup(createElement(InstrumentPriceChart, { instrumentId: "US-XNAS:AAPL", range: "1Y", points, currency: "USD", message: null, partial: false, metrics: null }));
 }
 
 describe("instrument price chart", () => {
