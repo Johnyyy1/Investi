@@ -20,4 +20,7 @@
   .wordmark { font-size: 1.75rem; }
   .shell > header summary { padding: 6px; border: 0; background: transparent; }
   .shell > header summary > svg { display: none; }
+  .shell:has([data-investi-settings]:not([data-section="root"])) > header,
+  .shell:has([data-investi-settings]:not([data-section="root"])) > nav { display: none; }
+  .shell:has([data-investi-settings]:not([data-section="root"])) > #main-content { min-height: 100dvh; padding-bottom: 0; }
 }

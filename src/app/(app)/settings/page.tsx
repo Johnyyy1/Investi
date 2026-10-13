@@ -1,23 +1,34 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/session";
-import { getLearningProfile, hasLearningHistory } from "@/features/onboarding/repository";
+import { SettingsExperience } from "@/components/settings/settings-experience";
+import { settingsSections } from "@/components/settings/settings-model";
+import { loadLearner } from "@/features/learning/load-learner";
 import { readLearnerProfile, requiresInitialOnboarding } from "@/features/personalization/profile";
-import { PersonalizationEditor } from "@/components/personalization/preferences-editor";
-import { AppHeader } from "@/components/shell/app-header";
-import { PageFrame } from "@/components/shell/page-frame";
-import { AccountSecurity } from "@/components/auth/account-security";
-import { authProviderAvailability } from "@/lib/auth";
+import { hasLearningHistory } from "@/features/onboarding/repository";
+import { loadPortfolioLabUnlock } from "@/features/progression/repository";
+import { auth, authProviderAvailability } from "@/lib/auth";
+import { mapLinkedAccounts } from "@/lib/auth-accounts";
+import { formatDate } from "@/lib/formatters";
 import { getSocialAuthErrorMessage } from "@/lib/social-auth-error";
 
-export const metadata = { title: "Přizpůsobení učení" };
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ error?: string | string[] }> }) {
-  const user = await getCurrentUser();
+export const metadata = { title: "Profil a nastavení" };
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ section?: string; error?: string | string[] }> }) {
+  const summary = await loadLearner();
+  const { user, profile } = summary;
   if (!user) redirect("/sign-in");
-  const profile = await getLearningProfile(user.id);
   if (requiresInitialOnboarding(profile, !profile?.onboardingCompletedAt && await hasLearningHistory(user.id))) redirect("/onboarding");
   const learner = readLearnerProfile(profile);
-  const preferences = { primaryGoal: learner.primaryGoal, interests: learner.interests, selfAssessedExperience: learner.selfAssessedExperience, preferredSessionMinutes: learner.preferredSessionMinutes };
-  const { error } = await searchParams;
-  const errorCode = Array.isArray(error) ? error[0] : error;
-  return <PageFrame width="reading"><p className="mb-3 text-small font-bold text-primary-hover">Nastavení</p><AppHeader title="Přizpůsobení učení" description="Uprav své zájmy a tempo. Postup v lekcích ti zůstane." /><PersonalizationEditor initialPreferences={preferences} personalized={learner.personalized} hasDiagnostic={Boolean(learner.diagnostic)} /><AccountSecurity providers={authProviderAvailability} initialError={errorCode ? getSocialAuthErrorMessage(errorCode) : undefined} /></PageFrame>;
+  const params = await searchParams;
+  const section = settingsSections.find((item) => item.id === params.section)?.id ?? null;
+  const errorCode = Array.isArray(params.error) ? params.error[0] : params.error;
+  const [accounts, unlock] = await Promise.all([
+    auth.api.listUserAccounts({ headers: await headers() }).then(mapLinkedAccounts).catch(() => null),
+    loadPortfolioLabUnlock(user.id),
+  ]);
+  return <SettingsExperience section={section}
+    identity={{ name: user.name, email: user.email, demo: user.isAnonymous === true, since: formatDate(user.createdAt, { timeZone: profile?.timeZone ?? "UTC" }), completed: summary.completed.length, total: summary.lessons.length }}
+    initialPreferences={{ primaryGoal: learner.primaryGoal, interests: learner.interests, selfAssessedExperience: learner.selfAssessedExperience, preferredSessionMinutes: learner.preferredSessionMinutes }}
+    personalized={learner.personalized} hasDiagnostic={Boolean(learner.diagnostic)} providers={authProviderAvailability} initialAccounts={accounts}
+    initialError={errorCode ? getSocialAuthErrorMessage(errorCode) : undefined} portfolioUnlocked={unlock.unlocked} timeZone={profile?.timeZone ?? "UTC"}
+    earnedCapital={summary.practiceCapital.earnedPracticeCapitalMinor.toString()} />;
 }

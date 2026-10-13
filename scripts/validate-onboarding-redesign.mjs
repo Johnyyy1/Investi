@@ -153,6 +153,7 @@ try {
   const savedA = await profile(a.id);
   await a.page.goto(`${baseURL}/onboarding?retake=1`); await a.page.getByRole('link', { name: 'Zpět do nastavení', exact: true }).waitFor(); await a.page.locator('header').nth(1).waitFor({ state: 'detached' }).catch(() => {}); await layouts(a.page, 'retake');
   await a.page.getByRole('link', { name: 'Zpět do nastavení', exact: true }).click(); await a.page.waitForURL('**/settings');
+  await a.page.locator('main').getByRole('link', { name: 'Učení', exact: true }).click();
   await a.page.getByRole('link', { name: 'Zopakovat krátkou diagnostiku', exact: true }).click();
   await diagnostic(a.page, correct);
   const retaken = await profile(a.id);

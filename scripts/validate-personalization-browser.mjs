@@ -116,8 +116,9 @@ async function diagnostic(page, answers, screenshots = false, failureCheck) {
       await failureCheck();
       await page.unroute("**/*");
     }
-    if (i === 4) page.once("request", (request) => { if (request.method() === "POST") finalRequest = request; });
+    const submissionRequest = i === 4 ? page.waitForRequest((request) => request.method() === "POST" && Boolean(request.headers()["next-action"])) : null;
     await page.getByRole("button", { name: i === 4 ? "Zobrazit můj plán" : "Další otázka", exact: true }).click({ clickCount: i === 4 ? 2 : 1 });
+    if (submissionRequest) finalRequest = await submissionRequest;
   }
   await page.waitForURL("**/onboarding/plan");
   await page.getByRole("heading", { name: "Tvůj plán", exact: true }).waitFor();
@@ -178,8 +179,8 @@ try {
   await e.page.getByText("Výnosy tvoří základ pro pozdější práci s daty a analýzu rizika.").waitFor();
   console.log("PASS D/E: existing progress/420 XP/capital/trade preserved; quant recommends published Returns.");
 
-  const settingsResponse = await e.page.goto(`${baseURL}/settings`);
-  assert.ok((await settingsResponse.text()).includes("Načítám prostředí pro učení"), "Settings supplies the app loading status");
+  await e.page.goto(`${baseURL}/settings?section=goal`);
+  await e.page.getByRole("button", { name: "Změnit cíl nebo úroveň…", exact: true }).click();
   await matrix(e.page, "09-settings");
   const [profileBefore] = await sql`select * from learning_profile where user_id = ${e.id}`;
   await e.page.locator('input[value="COMPANIES"]').check();
@@ -229,7 +230,8 @@ try {
   await e.page.getByRole("status").filter({ hasText: "Tvoje předvolby učení jsou uložené." }).waitFor();
   await e.page.unroute("**/*");
   await retained();
-  await e.page.reload(); await e.page.getByRole("heading", { name: "Přizpůsobení učení", exact: true }).waitFor(); await retained();
+  await e.page.reload(); await e.page.getByRole("heading", { name: "Můj cíl a tempo", exact: true }).waitFor();
+  await e.page.getByRole("button", { name: "Změnit cíl nebo úroveň…", exact: true }).click(); await retained();
   const [edited] = await sql`select * from learning_profile where user_id = ${e.id}`;
   assert.deepEqual(edited.goals, ["COMPANIES"]); assert.ok(edited.interests.includes("STOCKS")); assert.equal(edited.daily_goal_minutes, 30);
   assert.equal(edited.experience_level, "BASIC");
@@ -242,9 +244,9 @@ try {
   assert.ok(replay.ok());
   assert.deepEqual((await sql`select * from learning_profile where user_id = ${e.id}`)[0], edited);
   await e.page.goto(`${baseURL}/learn`); await e.page.getByText("Práce s výnosy ti pomůže porovnávat investice do jednotlivých firem.").waitFor();
-  await e.page.goto(`${baseURL}/settings`); await e.page.getByRole("link", { name: "Zopakovat krátkou diagnostiku", exact: true }).click();
+  await e.page.goto(`${baseURL}/settings?section=learning`); await e.page.getByRole("link", { name: "Zopakovat krátkou diagnostiku", exact: true }).click();
   await e.page.waitForURL("**/onboarding?retake=1");
-  await e.page.goBack(); await e.page.waitForURL("**/settings");
+  await e.page.goBack(); await e.page.waitForURL("**/settings?section=learning");
   await e.page.getByRole("link", { name: "Zopakovat krátkou diagnostiku", exact: true }).click();
   await matrix(e.page, "10-retake"); await diagnostic(e.page, weak, false, async () => {
     assert.deepEqual((await sql`select * from learning_profile where user_id = ${e.id}`)[0], edited);
@@ -259,7 +261,8 @@ try {
   await e.page.goto(`${baseURL}/learn`);
   assert.equal(await e.page.getByRole("heading", { name: "Přizpůsobit učení", exact: true }).count(), 0);
   assert.equal(await e.page.getByRole("region", { name: "Doporučeno pro tebe" }).getByRole("link", { name: "Pokračovat", exact: true }).getAttribute("href"), "/learn/returns/what-is-a-return");
-  await e.page.goto(`${baseURL}/settings`);
+  await e.page.goto(`${baseURL}/settings?section=goal`);
+  await e.page.getByRole("button", { name: "Změnit cíl nebo úroveň…", exact: true }).click();
   await e.page.locator('input[value="LONG_TERM_ETF"]').check();
   await e.page.getByRole("button", { name: "Uložit předvolby", exact: true }).click();
   await e.page.getByRole("status").filter({ hasText: "Tvoje předvolby učení jsou uložené." }).waitFor();

@@ -39,7 +39,8 @@ try {
   await page.goto(`${baseURL}/onboarding`);
   await page.waitForURL("**/learn");
   await page.goto(`${baseURL}/settings`);
-  await page.getByRole("heading", { name: "Přizpůsobení učení", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Účet", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Změnit cíl nebo úroveň…", exact: true }).click();
   await page.getByRole("button", { name: "Uložit předvolby", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Tvoje předvolby učení jsou uložené." }).waitFor();
   const [profile] = await sql`select * from learning_profile where user_id = ${id}`;
@@ -55,7 +56,7 @@ try {
   await sql`delete from lesson_progress where user_id = ${id}`;
   await sql`insert into portfolio (id, user_id, opened_at, opening_capital_minor) values (${randomUUID()}, ${id}, now(), 0)`;
   await page.goto(`${baseURL}/lab/portfolio`);
-  await page.getByRole("heading", { name: "Portfolio Lab", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Získej kapitál učením", exact: true }).waitFor();
   assert.equal(new URL(page.url()).pathname, "/lab/portfolio");
   assert.equal(await page.getByText("0 / 420 XP", { exact: true }).count(), 0);
   assert.equal((await sql`select * from lesson_award where user_id = ${id}`).length, 0);

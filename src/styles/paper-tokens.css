@@ -26,6 +26,9 @@
   --color-butter-ink: #765717;
   --color-error-ink: #a63d28;
   --color-error-tint: #f6e6e0;
+  --color-danger-quiet: #8a3b2c;
+  --color-danger-quiet-hover: #76321f;
+  --color-danger-quiet-border: #a87466;
   --color-info-tint: #e7ebf3;
   --color-info-ink: #38557a;
   /* Categorical viz order (Portfolio Lab): equity, ETF, bonds, cash. Validated as one

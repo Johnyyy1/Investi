@@ -156,6 +156,16 @@
         872,
         654
       ]
+    },
+    {
+      "path": "public/investi-assets/guide/17-reading-armchair.webp",
+      "bytes": 66326,
+      "sha256": "ceda6985e3df4095666b4c6704a6533d0e2ff7a87082f7458ac4f128049dd6e9",
+      "pixel_size": [
+        850,
+        638
+      ],
+      "source": "Exported existing Settings profile artwork Kuli2 from investi-design.pen, approved desktop Profile & Settings screen hJhbM, 2x WebP. Original supplied artwork; no generated or altered character."
     }
   ]
 }
