@@ -77,4 +77,29 @@ describe("instrument detail loading", () => {
     expect(detail.instrument).toBeNull();
     expect(detail.metadataMessage).toMatch(/není.*k dispozici/);
   });
+  it("derives price-only metrics from the loaded closes", async () => {
+    const detail = await loadInstrumentDetail(createDeterministicMarketDataService(), "US-XNAS:AAPL", "1Y", now);
+    expect(detail.metrics?.observationCount).toBe(detail.points.length);
+    expect(detail.metrics?.periodReturn).toBeCloseTo(detail.points.at(-1)!.close / detail.points[0].close - 1, 12);
+  });
+  it("converts a non-CZK quote with a dated reference rate", async () => {
+    const detail = await loadInstrumentDetail(createDeterministicMarketDataService(), "US-XNAS:AAPL", "1Y", now);
+    expect(detail.homeCurrency?.rate).toBeGreaterThan(0);
+    expect(detail.homeCurrency?.referenceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(detail.homeCurrencyMessage).toBeNull();
+  });
+  it("keeps the quote and reports the conversion as unavailable when FX fails", async () => {
+    const service = createDeterministicMarketDataService();
+    vi.spyOn(service, "getFxRate").mockRejectedValue(new MarketDataError("FxUnavailable", "no rate"));
+    const detail = await loadInstrumentDetail(service, "US-XNAS:AAPL", "1Y", now);
+    expect(detail.quote?.price).toBe(114);
+    expect(detail.homeCurrency).toBeNull();
+    expect(detail.homeCurrencyMessage).toMatch(/Přepočet do korun teď není dostupný/);
+  });
+  it("leaves the metrics empty when history is unavailable instead of inventing returns", async () => {
+    const service = createDeterministicMarketDataService();
+    vi.spyOn(service, "getHistoricalPrices").mockRejectedValue(new MarketDataError("HistoricalDataUnavailable", "upstream failure"));
+    const detail = await loadInstrumentDetail(service, "US-XNAS:AAPL", "1Y", now);
+    expect(detail.metrics).toBeNull();
+  });
 });

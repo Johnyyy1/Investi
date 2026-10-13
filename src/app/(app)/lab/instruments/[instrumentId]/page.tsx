@@ -28,14 +28,14 @@ export default async function InstrumentPage({ params, searchParams }: { params:
     loadInstrumentDetail(portfolioMarketData.service, instrumentId, range, env.MARKET_DATA_PROVIDER === "deterministic" ? new Date(env.DETERMINISTIC_MARKET_NOW ?? FIXTURE_RETRIEVED_AT) : new Date()),
     loadPortfolioView(user.id),
   ]);
-  return <PageFrame width="wide" className="max-w-[80rem] pt-6 sm:pt-7 lg:pt-8">
+  return <PageFrame width="wide" className="max-w-[80rem] pt-6 pb-28 sm:pt-7 sm:pb-10 lg:pt-8">
     <Link href="/lab/portfolio" className="inline-flex min-h-11 items-center text-small font-semibold text-primary-hover">← Portfolio Lab</Link>
     {detail.instrument ? <InstrumentDetailView instrument={detail.instrument} quote={detail.quote ? {
       price: detail.quote.price,
       observedAt: detail.quote.observedAt,
       status: detail.quote.usability.status,
       marketState: detail.quote.usability.marketState,
-    } : null} quoteMessage={detail.quoteMessage} historyMessage={detail.historyMessage} points={detail.points} historyPartial={detail.historyPartial} fundamentals={detail.fundamentals} fundamentalsMessage={detail.fundamentalsMessage} etfAnalytics={detail.etfAnalytics} etfAnalyticsMessage={detail.etfAnalyticsMessage} range={range} portfolio={portfolio} />
+    } : null} quoteMessage={detail.quoteMessage} historyMessage={detail.historyMessage} points={detail.points} historyPartial={detail.historyPartial} metrics={detail.metrics} homeCurrency={detail.homeCurrency} homeCurrencyMessage={detail.homeCurrencyMessage} fundamentals={detail.fundamentals} fundamentalsMessage={detail.fundamentalsMessage} etfAnalytics={detail.etfAnalytics} etfAnalyticsMessage={detail.etfAnalyticsMessage} range={range} portfolio={portfolio} />
       : <div className="mt-6"><h1 className="text-page-title font-bold">Instrument není dostupný</h1><Feedback state="warning" role="status" className="mt-5">{detail.metadataMessage}</Feedback></div>}
   </PageFrame>;
 }
