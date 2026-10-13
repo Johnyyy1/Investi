@@ -32,7 +32,7 @@ export function PenLanding() {
           </div>
           <div className={styles.heroLessonWrap} role="group" aria-label="Interaktivní ukázka; nezapisuje pokrok ani neuděluje XP">
             <Image className={styles.heroArt} src="/marketing/v14-curiosity-cropped.png" alt="" aria-hidden="true" width={620} height={628} sizes="(max-width: 500px) 98px, (max-width: 1100px) 194px, 256px" preload />
-            <div className={styles.lessonBrowserHeader}><span className={styles.smallWordmark}>investi!</span><span>Základy investování / Diverzifikace</span><span>Lekce 4 z 6 · ≈ 5 min</span><span>Ukázka lekce</span></div>
+            <div className={styles.lessonBrowserHeader}><span className={styles.smallWordmark}>investi!</span><span>Základy investování / Portfolio, váhy a diverzifikace</span><span>Lekce 7 ze 7 · ≈ 10 min</span><span>Ukázka lekce</span></div>
             <LessonPreview hero />
           </div>
           <p className={styles.microDisclaimer}>Ukázka lekce · odpověď a vysvětlení</p>
@@ -51,9 +51,9 @@ export function PenLanding() {
               <Image className={styles.discoveryGripTop} src="/marketing/v14-discovery-top-grip.png" alt="" aria-hidden="true" width={136} height={86} />
               <Image className={styles.discoveryGripSide} src="/marketing/v14-discovery-side-grip.png" alt="" aria-hidden="true" width={97} height={115} />
               <span className={styles.cardOverline}>Ukázka kurzu · ilustrační průchod</span>
-              <div className={styles.courseHeader}><h3>Základy investování</h3><span>3 / 6</span></div>
+              <div className={styles.courseHeader}><h3>Základy investování</h3><span>3 / 7</span></div>
               <div className={styles.courseProgress}><span/></div>
-              {[["Co je akcie?","Hotovo"],["Výnos a riziko","Hotovo"],["Investiční horizont","Hotovo"],["Diverzifikace","Pokračovat"]].map(([title,status],i)=><div className={styles.courseRow} key={title}><span className={styles.rowIcon}>{i<3?<CircleCheck size={18} aria-hidden="true"/>:<Play size={18} aria-hidden="true"/>}</span><span>{title}</span><small>{status}</small></div>)}
+              {[["Spoření vs. investování","Hotovo"],["Akcie a vlastnictví firmy","Hotovo"],["ETF a indexy","Hotovo"],["Portfolio, váhy a diverzifikace","Pokračovat"]].map(([title,status],i)=><div className={styles.courseRow} key={title}><span className={styles.rowIcon}>{i<3?<CircleCheck size={18} aria-hidden="true"/>:<Play size={18} aria-hidden="true"/>}</span><span>{title}</span><small>{status}</small></div>)}
               <p>Portfolio Lab navazuje na základy.</p>
             </div>
           </div>
@@ -81,8 +81,8 @@ export function PenLanding() {
             <div className={styles.progressCard}>
               <span className={styles.cardOverline}>Ukázka pokroku · ilustrační stav</span>
               <div className={styles.progressReward}><strong>60 XP</strong><div><p>3 dokončené lekce</p><small>Ukázková odměna za učení.</small></div></div>
-              <div className={styles.progressItem}><CircleDashed size={20} aria-hidden="true"/><div><span>Základy investování</span><small>3 z 6 lekcí dokončeno</small></div></div>
-              <div className={styles.progressItem}><ArrowRight aria-hidden="true" size={20}/><div><span>Další krok: Diverzifikace</span><small>≈ 5 minut · +20 XP v ukázce</small></div></div>
+              <div className={styles.progressItem}><CircleDashed size={20} aria-hidden="true"/><div><span>Základy investování</span><small>3 ze 7 lekcí dokončeno</small></div></div>
+              <div className={styles.progressItem}><ArrowRight aria-hidden="true" size={20}/><div><span>Další krok: Portfolio, váhy a diverzifikace</span><small>≈ 10 min</small></div></div>
               <div className={styles.progressItem}><LockKeyhole size={20} aria-hidden="true"/><div><span>Portfolio Lab</span><small>Navazuje na lekce základů.</small></div></div>
               <p className={styles.progressPromise}>XP nejsou závod. Jsou malá odměna za pochopení, ne měřítko toho, jak dobrý jsi investor.</p>
             </div>

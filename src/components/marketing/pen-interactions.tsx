@@ -47,8 +47,8 @@ export function LessonPreview({ compact = false, hero = false }: { compact?: boo
   return <div className={hero ? styles.heroLessonContent : styles.lessonPreview} role="group" aria-label="Interaktivní ukázka; nezapisuje pokrok ani neuděluje XP">
     <div className={`${styles.lessonCard} ${compact ? styles.lessonCompact : styles.heroLessonMain}`}>
       <p className={styles.lessonDisclosure}>Ukázka lekce · ilustrační odpověď</p>
-      <div className={styles.lessonMeta}><span>Diverzifikace</span><span>≈ 5 min</span></div>
-      <p className={styles.lessonTrack}>ZÁKLADY INVESTOVÁNÍ · Lekce 4 z 6</p>
+      <div className={styles.lessonMeta}><span>Portfolio, váhy a diverzifikace</span><span>≈ 10 min</span></div>
+      <p className={styles.lessonTrack}>ZÁKLADY INVESTOVÁNÍ · Lekce 7 ze 7</p>
       {(!compact || !revealed) && <>
         <h3 className={styles.lessonQuestion}>Proč rozdělit peníze mezi více investic?</h3>
         <div className={styles.answers} role="group" aria-label="Odpověď na ukázkovou otázku">
@@ -106,7 +106,7 @@ export function PortfolioPreview() {
         {([
           ["stocks", "Akcie", stocks, "Podíl ve firmách · větší kolísání"],
           ["bonds", "Dluhopisy", bonds, "Půjčka emitentovi · také nesou riziko"],
-          ["cash", "Hotovost", cash, "Peníze po ruce · ztrácí hodnotu inflací"],
+          ["cash", "Hotovost", cash, "Peníze po ruce · ztrácí kupní sílu inflací"],
         ] as const).map(([asset, label, percent, context]) => <div className={styles.assetRow} key={asset}>
           <div className={styles.assetTop}><label htmlFor={`${asset}-allocation`}>{label}</label><output htmlFor={`${asset}-allocation`}>{percent} %</output></div>
           <input id={`${asset}-allocation`} type="range" min="0" max="100" step="1" value={percent}

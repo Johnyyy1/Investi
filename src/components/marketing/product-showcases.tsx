@@ -28,12 +28,12 @@ function LessonPhone() {
         </div>
         <div className={styles.phoneAppBar}>
           <ArrowLeft />
-          <span>Lekce 1 ze 6</span>
+          <span>Lekce 2 ze 7</span>
           <Share2 />
         </div>
         <div className={styles.phoneScreenContent}>
-          <p className={styles.phoneKicker}>Lekce 1 ze 6</p>
-          <h3>Co je akcie?</h3>
+          <p className={styles.phoneKicker}>Lekce 2 ze 7</p>
+          <h3>Akcie a vlastnictví firmy</h3>
           <p className={styles.phoneDefinition}>Akcie představuje malý podíl ve skutečné společnosti. Když společnost roste, může růst i hodnota tvého podílu.</p>
           <div className={styles.lessonVisual}>
             <div className={styles.lessonIllustration}>

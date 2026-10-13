@@ -107,8 +107,8 @@ try {
   assert.equal(await page.locator('img[src*="15-weights"]').count(), 0, "concept pose 15 stays in its lesson (guide rule 01)");
   await responsive(page, "first-visit", { ready: () => page.getByRole("heading", { name: "Zkus si investovat nanečisto." }).waitFor() });
 
-  // Instrument detail is unchanged by the redesign: charts, metrics, ETF analytics and the single-instrument order flow.
-  await page.goto(`${baseURL}/lab/instruments/US-XNAS%3AAAPL`);
+  // Instrument detail (Pen Instrument board; default period 5L, URL range=1Y keeps the 1R view): charts, metrics, ETF analytics and the single-instrument order flow.
+  await page.goto(`${baseURL}/lab/instruments/US-XNAS%3AAAPL?range=1Y`);
   await page.getByRole("heading", { name: "Apple Inc.", exact: true }).waitFor();
   assert.equal(await page.getByRole("heading", { name: "Tvoje pozice" }).count(), 0, "unowned instrument has no invented position");
   assert.equal(await page.getByText("Ukázková data", { exact: true }).count(), 1, "deterministic detail is labeled as sample data");
@@ -116,7 +116,7 @@ try {
   assert.equal(await page.locator('[data-chart-tone="positive"]').count(), 1, "positive equity return gives the line chart a green tone");
   assert.equal(await page.getByRole("button", { name: "Křivka", exact: true }).getAttribute("aria-pressed"), "true");
   assert.equal(await page.getByRole("button", { name: "Svíčky", exact: true }).isEnabled(), true, "OHLC supports candlesticks");
-  assert.match(await page.locator("main").innerText(), /Cenový výnos za 1 rok/);
+  assert.match(await page.locator("main").innerText(), /Cenový výnos za zobrazené období/);
   await page.getByRole("heading", { name: "Klíčové ukazatele" }).waitFor();
   assert.equal(await page.getByRole("heading", { name: "Přehled fondu" }).count(), 0, "equities do not render ETF analytics");
   assert.match(await page.locator("main").innerText(), /382,4B USD/);
@@ -152,7 +152,7 @@ try {
   await page.getByRole("img", { name: /týdenní, svíčkový graf cen očištěných o splity/ }).waitFor();
   assert.equal(await page.getByRole("button", { name: "Obnovit rozsah" }).count(), 1, "switching chart type preserves the viewport");
   const candleStatistics = await selectedStatistics();
-  assert.equal(candleStatistics.match(/Cenový výnos za 1 rok\n([^\n]+)/)?.[1], fullStatistics.match(/Cenový výnos za 1 rok\n([^\n]+)/)?.[1], "candle mode keeps the selected-period return");
+  assert.equal(candleStatistics.match(/Cenový výnos za zobrazené období\n([^\n]+)/)?.[1], fullStatistics.match(/Cenový výnos za zobrazené období\n([^\n]+)/)?.[1], "candle mode keeps the selected-period return");
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-candles-zoom-1440.png`, fullPage: true });
   await page.getByRole("button", { name: "Obnovit rozsah" }).click();
   assert.equal(await page.getByRole("button", { name: "Obnovit rozsah" }).count(), 0, "reset returns to the full viewport");
@@ -161,13 +161,13 @@ try {
   assert.ok(await page.locator('[data-testid="candlestick-chart"] [data-direction]').count() >= 2, "candles have wicks and bodies");
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-candles-1440.png`, fullPage: true });
   for (const longRange of ["5Y", "Max"]) {
-    await page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: longRange }).click();
+    await page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: longRange === "5Y" ? "5L" : longRange }).click();
     await page.waitForURL(new RegExp(`range=${longRange}`));
     await page.getByRole("button", { name: "Svíčky", exact: true }).click();
     assert.match(await page.getByRole("img", { name: /měsíční, svíčkový graf cen očištěných o splity/ }).getAttribute("aria-label"), /pokrývá pozorování od 2\. 1\. 2025 do 16\. 1\. 2026/, `${longRange} candles retain all available observations`);
     await page.screenshot({ path: `${screenshotDir}/instrument-aapl-${longRange.toLowerCase()}-candles-1440.png`, fullPage: true });
   }
-  await page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: "1Y" }).click();
+  await page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: "1R" }).click();
   await page.waitForURL(/range=1Y/);
   await equityScreenshotStyle.evaluate((style) => style.remove());
   await page.getByRole("button", { name: "Křivka", exact: true }).click();
@@ -177,7 +177,7 @@ try {
   await page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: "1M" }).click();
   await page.waitForURL(/range=1M/);
   assert.equal(await page.getByRole("button", { name: "Obnovit rozsah" }).count(), 0, "changing timeframe resets the viewport");
-  assert.match(await page.locator("main").innerText(), /Cenový výnos za 1 měsíc/);
+  assert.match(await page.locator("main").innerText(), /Cenový výnos za zobrazené období/);
   assert.match(await page.locator("main").innerText(), /Začátek · .*Konec · .*Minimum období.*Maximum období/s);
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-1m-1440.png`, fullPage: true });
   await page.getByRole("button", { name: "Svíčky", exact: true }).click();
@@ -203,10 +203,10 @@ try {
   assert.match(await page.locator("main").innerText(), /Cena \/ FCF TTM\s*—/);
   assert.match(await page.locator("main").innerText(), /Volný peněžní tok FY\s*—/);
   await page.screenshot({ path: `${screenshotDir}/instrument-equity-partial-1440.png`, fullPage: true });
-  await page.goto(`${baseURL}/lab/instruments/IE-XETR%3AVWCE`);
+  await page.goto(`${baseURL}/lab/instruments/IE-XETR%3AVWCE?range=1Y`);
   await page.getByRole("heading", { name: "Vanguard FTSE All-World UCITS ETF" }).waitFor();
   assert.equal(await page.getByRole("heading", { name: "Klíčové ukazatele" }).count(), 0, "ETF detail excludes company fundamentals");
-  assert.match(await page.locator("main").innerText(), /VWCE · ETF · XETR/, "ETF detail uses ETF identity and exchange");
+  assert.match(await page.locator("main").innerText(), /VWCE\s+ETF · burza XETR/, "ETF detail uses ETF identity and exchange");
   assert.equal(await page.getByText("Poslední dostupná cena · Poslední dostupná cena", { exact: false }).count(), 0, "unknown session state does not duplicate the observation label");
   assert.equal(await page.getByRole("heading", { name: "Tvoje pozice" }).count(), 0, "unowned ETF has no fake position");
   await page.getByRole("heading", { name: "Přehled fondu" }).waitFor();
@@ -250,7 +250,7 @@ try {
   await etfScreenshotStyle.evaluate((style) => style.remove());
   await page.setViewportSize({ width: 1440, height: 950 });
   await page.goto(`${baseURL}/lab/instruments/US-XNAS%3AAAPL`);
-  const detailInvest = page.getByRole("button", { name: /Investovat/, exact: false }).first();
+  const detailInvest = page.getByRole("button", { name: /Přidat do Portfolio Labu/, exact: false }).first();
   await detailInvest.click();
   const orderDialog = page.getByRole("dialog", { name: "Investovat do AAPL" });
   await orderDialog.getByRole("heading", { name: "Zvol množství", exact: true }).waitFor();

@@ -200,7 +200,7 @@ try {
 
   await page.getByRole("button", { name: "Otevřít Portfolio Lab", exact: true }).click();
   await page.getByTestId("portfolio-cash").filter({ hasText: /5\s000\sKč/ }).waitFor();
-  assert.equal(await page.getByRole("button", { name: /Investovat/ }).count() > 0, true, "Unlocked portfolio has an Invest action");
+  assert.equal(await page.getByRole("link", { name: /Sestavit/ }).count() > 0, true, "Unlocked portfolio has a build-mix action");
   await page.screenshot({ path: `${screenshotDir}/11-unlocked-portfolio-1440.png`, fullPage: true });
 
   await page.goto(`${baseURL}/learn/investing-foundations`);

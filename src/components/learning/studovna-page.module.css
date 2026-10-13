@@ -13,7 +13,7 @@
 .continueContent { display: flex; flex-direction: column; min-width: 0; padding: 36px 40px; }
 .lessonContext { display: flex; flex-direction: column; gap: 12px; }
 .contextRow { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
-.contextMeta { color: var(--color-text-muted); font-size: .8125rem; }
+.contextMeta { color: var(--color-text-muted); font-size: .8125rem; display: inline-flex; align-items: center; min-height: 2.75rem; margin-block: -.75rem; }
 .contextMeta:hover { text-decoration: underline; text-underline-offset: 4px; }
 .lessonContext h2 { font-size: 2.375rem; line-height: 1.15; letter-spacing: -.034em; }
 .lessonProgress { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }

@@ -151,7 +151,7 @@ try {
   console.log('PASS: initial gate, responsive choices/plan, back/refresh, network and validation failures, disabled saving, real completion, no financial/learning writes.');
 
   const savedA = await profile(a.id);
-  await a.page.goto(`${baseURL}/onboarding?retake=1`); await layouts(a.page, 'retake');
+  await a.page.goto(`${baseURL}/onboarding?retake=1`); await a.page.getByRole('link', { name: 'Zpět do nastavení', exact: true }).waitFor(); await a.page.locator('header').nth(1).waitFor({ state: 'detached' }).catch(() => {}); await layouts(a.page, 'retake');
   await a.page.getByRole('link', { name: 'Zpět do nastavení', exact: true }).click(); await a.page.waitForURL('**/settings');
   await a.page.getByRole('link', { name: 'Zopakovat krátkou diagnostiku', exact: true }).click();
   await diagnostic(a.page, correct);
