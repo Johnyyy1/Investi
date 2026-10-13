@@ -1,19 +1,47 @@
 "use client";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { learningChartStyle } from "@/components/learning/learning-chart";
-import { formatDecimal } from "@/lib/formatters";
-export type ComparisonPoint = { label: string; value: number; benchmark: number };
-export function BacktestChart({ data }: { data: ComparisonPoint[] }) {
-  const compact = (value: number) => `${formatDecimal(value / 1000, { maximumFractionDigits: 0 })} tis.`;
-  return <figure className="min-w-0">
-    <figcaption className="text-ql-title font-semibold">Cesta tvé investice</figcaption>
-    <p className="mt-2 text-ql-small text-ql-secondary">Hodnota v Kč · <span className="font-semibold text-ql-link">━ Tvůj mix</span> · ┄ Akciový srovnávací index</p>
-    <div className="mt-4 h-64 min-w-0 max-w-full overflow-hidden sm:h-80"><ResponsiveContainer width="100%" height="100%" minWidth={0}><LineChart data={data} accessibilityLayer margin={{ top: 10, right: 8, bottom: 8, left: 0 }}>
-      <CartesianGrid stroke="var(--color-ql-border)" vertical={false} /><XAxis dataKey="label" tick={learningChartStyle.axis} minTickGap={60} tickFormatter={(value: string) => value.slice(0, 4)} tickLine={false} axisLine={false} /><YAxis width={45} tick={learningChartStyle.axis} tickFormatter={compact} tickLine={false} axisLine={false} />
-      <Tooltip contentStyle={learningChartStyle.tooltip} formatter={(value) => [`${formatDecimal(Number(value), { maximumFractionDigits: 0 })} Kč`]} />
-      <Line dataKey="value" name="Tvůj mix" stroke="var(--color-ql-link)" strokeWidth={2.5} dot={false} isAnimationActive={false} />
-      <Line dataKey="benchmark" name="Akciový srovnávací index" stroke="var(--color-ql-secondary)" strokeDasharray="5 5" strokeWidth={1.5} dot={false} isAnimationActive={false} />
-    </LineChart></ResponsiveContainer></div>
-    <details className="mt-3 text-ql-small"><summary className="flex min-h-12 cursor-pointer items-center text-ql-link">Zobrazit tabulku dat</summary><div className="max-h-80 overflow-y-auto" tabIndex={0} aria-label="Tabulka měsíčních hodnot"><table className="w-full table-fixed text-left tabular-nums [overflow-wrap:anywhere]"><caption className="sr-only">Měsíční hodnoty v Kč včetně počáteční investice</caption><thead><tr><th scope="col" className="py-3">Měsíc</th><th scope="col" className="text-right">Tvůj mix</th><th scope="col" className="text-right">Srovnávací index</th></tr></thead><tbody>{data.map((point) => <tr key={point.label} className="border-t border-ql-border"><th scope="row" className="py-3 font-normal">{point.label}</th><td className="text-right">{formatDecimal(Math.round(point.value))}</td><td className="text-right">{formatDecimal(Math.round(point.benchmark))}</td></tr>)}</tbody></table></div></details>
+
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
+import { Info } from "lucide-react";
+import { formatCurrency, formatDecimal } from "@/lib/formatters";
+import { formatBacktestMonth, formatBacktestMoney as money, type ComparisonPoint } from "./backtest-model";
+import styles from "./backtesting-lab.module.css";
+
+export type { ComparisonPoint } from "./backtest-model";
+const axis = { fill: "var(--color-text-muted)", fontSize: 12, fontFamily: "inherit" };
+function ChartTooltip({ active, payload, label }: TooltipContentProps) {
+  if (!active || !payload?.length) return null;
+  return <div className={styles.tooltip}><strong>{formatBacktestMonth(String(label))}</strong>{payload.map((entry) => <p key={String(entry.dataKey)}><span>{entry.name}</span><strong>{formatCurrency(Number(entry.value), "CZK")}</strong></p>)}</div>;
+}
+
+export function BacktestChart({ data, strategyLabel = "Tvůj mix", initial, compact = false }: { data: ComparisonPoint[]; strategyLabel?: string; initial?: number; compact?: boolean }) {
+  if (!data.length || data.some((point) => !Number.isFinite(point.value) || !Number.isFinite(point.benchmark))) return <figure className={styles.chart}><figcaption>Hodnota v Kč</figcaption><p role="status" className={styles.hint}>Pro toto období nejsou dostupná úplná data. Graf nelze zobrazit.</p></figure>;
+  const last = data.at(-1)!;
+  const first = data[0];
+  const shortPeriod = data.length <= 25;
+  const monthStep = Math.max(1, Math.ceil((data.length - 1) / 4));
+  const yearStep = Math.max(1, Math.ceil((Number(last.label.slice(0, 4)) - Number(first.label.slice(0, 4))) / (compact ? 3 : 5)));
+  const ticks = data.filter((point, index) => index === 0 || index === data.length - 1 || (shortPeriod ? index % monthStep === 0 : point.label.endsWith("-01") && (Number(point.label.slice(0, 4)) - Number(first.label.slice(0, 4))) % yearStep === 0)).map((point) => point.label);
+  return <figure className={`${styles.chart} ${compact ? styles.compactChart : ""}`}>
+    <figcaption><h3>{compact ? "Hodnota v Kč" : "Hodnota v korunách, měsíc po měsíci"}</h3>{!compact && <span className={styles.sampleTag}>Ukázková data</span>}</figcaption>
+    <ul className={styles.chartLegend} aria-label="Řady grafu"><li><span className={styles.strategySwatch} aria-hidden="true" /><span>A · {strategyLabel}</span></li><li><span className={styles.benchmarkSwatch} aria-hidden="true" /><span>B · Akciový vzorek</span></li>{initial !== undefined && <li><span className={styles.initialSwatch} aria-hidden="true" /><span>Vloženo {money(initial)}</span></li>}</ul>
+    <div className={styles.chartCanvas}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        <LineChart data={data} accessibilityLayer margin={{ top: 12, right: 12, bottom: 6, left: 0 }}>
+          <CartesianGrid stroke="var(--color-divider)" vertical={false} />
+          <XAxis dataKey="label" ticks={ticks} tick={axis} minTickGap={24} tickFormatter={(value: string) => shortPeriod ? `${Number(value.slice(5, 7))}/${value.slice(2, 4)}` : value.slice(0, 4)} tickLine={false} axisLine={false} />
+          <YAxis width={56} tick={axis} tickFormatter={(value: number) => formatDecimal(value, { notation: "compact", maximumFractionDigits: 1 })} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
+          <Tooltip content={ChartTooltip} isAnimationActive={false} />
+          {initial !== undefined && <ReferenceLine y={initial} stroke="var(--color-viz-other)" strokeDasharray="3 4" />}
+          <Line type="linear" dataKey="value" name={`A · ${strategyLabel}`} stroke="var(--color-action)" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+          <Line type="linear" dataKey="benchmark" name="B · Akciový vzorek" stroke="var(--color-text-secondary)" strokeDasharray="6 4" strokeWidth={1.75} dot={false} isAnimationActive={false} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+    {!compact && <>
+      <dl className={styles.chartEndpoints}><div><dt>A · {strategyLabel}</dt><dd>{money(last.value)}</dd></div><div><dt>B · Akciový vzorek</dt><dd>{money(last.benchmark)}</dd></div></dl>
+      <p className={styles.chartNote}><Info size={15} aria-hidden="true" />Vymyšlená měsíční řada. Nic z grafu nepředpovídá budoucí výnosy.</p>
+      <p className={styles.chartSource}>Kč je zobrazovací jednotka · bez FX, dalších vkladů, poplatků a daní · přímé spojnice měsíčních pozorování</p>
+    </>}
+    <details className={styles.dataTable}><summary>Zobrazit tabulku dat</summary><div tabIndex={0} role="region" aria-label={`Tabulka měsíčních hodnot · ${strategyLabel}`}><table><caption>Měsíční hodnoty v Kč včetně počáteční investice</caption><thead><tr><th scope="col">Měsíc</th><th scope="col">A · Strategie</th><th scope="col">B · Akciový vzorek</th></tr></thead><tbody>{data.map((point) => <tr key={point.label}><th scope="row">{point.label}</th><td>{money(point.value)}</td><td>{money(point.benchmark)}</td></tr>)}</tbody></table></div></details>
   </figure>;
 }

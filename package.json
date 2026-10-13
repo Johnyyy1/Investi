@@ -18,6 +18,7 @@
     "test:log-returns-browser": "node scripts/validate-log-returns.mjs",
     "test:curriculum-seed": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-curriculum-seed.mts",
     "test:product": "node scripts/validate-product-shell.mjs",
+    "test:backtesting-browser": "node scripts/validate-backtesting.mjs",
     "test:studovna": "node scripts/validate-studovna.mjs",
     "test:persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-persistence.mts",
     "test:migration": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-practice-capital-migration.mts",

@@ -28,7 +28,7 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const activeId = activeNavigationId(pathname);
-  const paper = pathname === "/learn" || pathname === "/progress" || pathname === "/lab/portfolio" || pathname.startsWith("/lab/instruments/");
+  const paper = pathname === "/learn" || pathname === "/progress" || pathname === "/lab/portfolio" || pathname === "/lab/backtesting" || pathname.startsWith("/lab/instruments/");
   useEffect(() => { if (needsTimeZone) void initializeTimeZoneAction(Intl.DateTimeFormat().resolvedOptions().timeZone); }, [needsTimeZone]);
   async function signOut() {
     setPending(true); setError(undefined);

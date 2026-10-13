@@ -34,7 +34,7 @@ try {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${label}: ${width}px overflow`);
       assert.equal(await page.locator("h1").count(), 1, `${label}: one page heading`);
       const nav = page.getByRole("navigation", { name: width < 1024 ? "Mobilní navigace" : "Hlavní navigace" });
-      assert.deepEqual(await nav.getByRole("link").allTextContents(), ["Učení", ["learn", "progress"].includes(label) && width >= 1024 ? "Portfolio Lab" : "Lab", "Pokrok"]);
+      assert.deepEqual(await nav.getByRole("link").allTextContents(), ["Učení", ["learn", "progress", "backtesting"].includes(label) && width >= 1024 ? "Portfolio Lab" : "Lab", "Pokrok"]);
       const active = nav.locator('[aria-current="page"]');
       assert.equal(await active.count(), activeHref ? 1 : 0);
       if (activeHref) assert.equal(await active.getAttribute("href"), activeHref);
@@ -45,7 +45,7 @@ try {
       const account = page.getByLabel("Nabídka účtu", { exact: true });
       await account.focus();
       await account.press("Enter");
-      for (const control of [page.getByRole("banner").getByRole("link", { name: "Nastavení", exact: true }), button("Odhlásit se")]) {
+      for (const control of [page.getByRole("banner").getByRole("link", { name: "Nastavení", exact: true }), page.getByRole("banner").getByRole("button", { name: "Odhlásit se", exact: true })]) {
         const box = await control.boundingBox();
         assert.ok(box && box.height >= 44 && box.x >= 0 && box.x + box.width <= width, `${label}: account menu reflow`);
       }
@@ -53,7 +53,10 @@ try {
       assert.equal(await account.evaluate((el) => el === document.activeElement && !el.parentElement.open), true, "Escape closes the menu and returns focus");
     }
     await page.setViewportSize({ width: 320, height: 900 });
-    await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+    await page.evaluate(async () => {
+      document.documentElement.style.fontSize = "200%";
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${label}: enlarged text overflow`);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `${screenshotDir}/${label}-320-text-200.png`, fullPage: false, animations: "disabled" });
@@ -95,6 +98,7 @@ try {
   await finalValue.waitFor();
   assert.equal((await finalValue.textContent()).replace(/\s/g, ""), "159732Kč");
   await page.locator(".recharts-surface").waitFor();
+  await page.getByText("Ověř si porozumění", { exact: true }).click();
   await page.getByRole("radio", { name: "Maximální drawdown", exact: true }).check();
   await button("Zkontrolovat odpověď").click();
   await page.getByRole("status").filter({ hasText: "Správně." }).waitFor();
@@ -102,6 +106,7 @@ try {
   assert.equal(await page.getByRole("row").count(), 134, "full monthly table and initial value");
   await page.getByText("Zobrazit tabulku dat", { exact: true }).click();
   await layouts("backtesting", "/lab");
+  await button("Změnit nastavení").click();
   await page.getByRole("textbox", { name: "Počáteční částka", exact: true }).fill("0");
   await button("Spustit backtest").click();
   await page.locator("main").getByRole("alert").waitFor();
@@ -113,7 +118,8 @@ try {
   await page.getByLabel("Od ledna", { exact: true }).selectOption("2020");
   await button("Spustit backtest").click();
   await page.locator("main").getByRole("alert").waitFor({ state: "hidden" });
-  await page.getByText(/Jan 2020 – Dec 2020/).waitFor();
+  await page.getByText(/Leden 2020 – prosinec 2020/).waitFor();
+  await button("Změnit nastavení").click();
   await page.emulateMedia({ reducedMotion: "reduce" });
   assert.equal(await button("Spustit backtest").evaluate((el) => getComputedStyle(el).transitionDuration), "0s");
   await page.goto(`${baseURL}/learn/returns/log-returns`);
