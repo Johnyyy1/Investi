@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "../styles/learning-tokens.css";
+@import "../styles/paper-tokens.css";
 
 html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
 html, body { min-height: 100%; background: var(--color-background); }

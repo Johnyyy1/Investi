@@ -272,9 +272,11 @@ try {
     const recommended = e.page.getByRole("region", { name: "Doporučeno pro tebe" });
     if (mode === "first-return") assert.equal(await recommended.getByRole("link", { name: "Pokračovat", exact: true }).getAttribute("href"), "/learn/returns/simple-returns");
     else {
-      await recommended.getByRole("heading", { name: "Všechny lekce máš hotové", exact: true }).waitFor();
-      assert.equal(await recommended.getByRole("link").getAttribute("href"), "/learn#curriculum");
-      await recommended.getByRole("link").click(); await e.page.waitForURL("**/learn#curriculum");
+      await recommended.getByRole("heading", { name: "Kurikulum máš za sebou.", exact: true }).waitFor();
+      const completeAction = recommended.getByRole("link", { name: "Vyzkoušet v Labu", exact: true });
+      assert.equal(await completeAction.getAttribute("href"), "/lab");
+      await completeAction.click(); await e.page.waitForURL("**/lab");
+      await e.page.goto(`${baseURL}/learn`);
     }
   }
   console.log("PASS: Learn quant and ETF explanations, next incomplete published lesson, curriculum-complete fallback.");

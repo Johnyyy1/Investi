@@ -1,0 +1,41 @@
+{
+  "source": "User-supplied investi-studovna-redesign-phase1 overlay, public/investi-assets/guide; original standalone character assets, unchanged. Final Pen boards QB1gf, liRhy, mAWd8.",
+  "assets": [
+    {
+      "path": "public/investi-assets/guide/01-welcome.webp",
+      "bytes": 35056,
+      "sha256": "a0447d779cadb20db38be629e5af00dead6b7b962f9821c407407808e4becae9",
+      "pixel_size": [
+        710,
+        710
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/05-shrug.webp",
+      "bytes": 34162,
+      "sha256": "c685fb56403eb8cd9de010ad156bf2f955c9033b8ec0a309b4760530db54910c",
+      "pixel_size": [
+        780,
+        780
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/07-small-joy.webp",
+      "bytes": 29178,
+      "sha256": "0e9ec9b1cca31829110fdece21a71cee5e6180cc264c35cc8894ad7ec739273d",
+      "pixel_size": [
+        686,
+        686
+      ]
+    },
+    {
+      "path": "public/investi-assets/guide/08-leaning.webp",
+      "bytes": 57080,
+      "sha256": "068771cc445a9a5fd3208161f68323be7fc9db29c7af2563bc4babce5e95cd49",
+      "pixel_size": [
+        680,
+        680
+      ]
+    }
+  ]
+}

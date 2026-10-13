@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
 import { MobileNav } from "./shell/mobile-nav";
 import { learningNavigation } from "./shell/navigation";
+import styles from "./shell/paper-shell.module.css";
 
 function activeNavigationId(pathname: string) {
   if (pathname.startsWith("/learn")) return "learn";
@@ -27,6 +28,7 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const activeId = activeNavigationId(pathname);
+  const paper = pathname === "/learn";
   useEffect(() => { if (needsTimeZone) void initializeTimeZoneAction(Intl.DateTimeFormat().resolvedOptions().timeZone); }, [needsTimeZone]);
   async function signOut() {
     setPending(true); setError(undefined);
@@ -39,12 +41,12 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
   if (availableLessons.some((lesson) => pathname === `/learn/${lesson.moduleSlug}/${lesson.slug}`)) return children;
 
   const initial = userName.trim().charAt(0).toUpperCase() || "I";
-  return <div className="min-h-dvh bg-background">
+  return <div className={`min-h-dvh bg-background ${paper ? `investi-theme ${styles.shell}` : ""}`}>
     <a href="#main-content" className="sr-only z-50 rounded-control bg-surface p-4 shadow-elevation-2 focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Přeskočit na obsah</a>
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95">
       <div className="mx-auto flex min-h-20 max-w-6xl items-center justify-between gap-3 px-4 min-[375px]:px-5 sm:px-8 lg:px-10">
         <Link href="/learn" className="flex min-h-12 w-[112px] shrink-0 items-center" aria-label="investi — Učení">
-          <Image src="/brand/investi-logo.png" alt="investi" width={2172} height={724} sizes="112px" loading="eager" className="h-auto w-full" />
+          {paper ? <span className={styles.wordmark}>investi!</span> : <Image src="/brand/investi-logo.png" alt="investi" width={2172} height={724} sizes="112px" loading="eager" className="h-auto w-full" />}
         </Link>
 
         <nav aria-label="Hlavní navigace" className="hidden items-center gap-1 rounded-button border border-border bg-surface p-1 shadow-elevation-1 lg:flex">
@@ -52,7 +54,7 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
             const active = id === activeId;
             return <Link key={id} href={href!} aria-current={active ? "page" : undefined} className={`relative flex min-h-12 items-center gap-2 rounded-control px-4 text-small transition-[background-color,color] duration-[var(--motion-micro)] ease-[var(--ease-standard)] ${active ? "bg-primary-soft font-bold text-primary-hover" : "font-semibold text-secondary hover:bg-surface-muted hover:text-foreground"}`}>
               <Icon className="size-[18px]" strokeWidth={active ? 2.4 : 2} aria-hidden="true" />
-              {label}
+              {paper && id === "lab" ? "Portfolio Lab" : label}
               {id === "lab" && portfolioLabLocked ? <LockKeyhole aria-label="Portfolio Lab je zamčený" className="size-3.5 text-secondary" /> : null}
               {active ? <span aria-hidden="true" className="absolute inset-x-4 bottom-1 h-0.5 rounded-pill bg-primary" /> : null}
             </Link>;
@@ -80,6 +82,6 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
       </div>
     </header>
     <div id="main-content" tabIndex={-1} className="min-h-[calc(100dvh-5rem)] pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
-    <MobileNav activeId={activeId} portfolioLabLocked={portfolioLabLocked} />
+    <MobileNav activeId={activeId} portfolioLabLocked={portfolioLabLocked} paper={paper} />
   </div>;
 }

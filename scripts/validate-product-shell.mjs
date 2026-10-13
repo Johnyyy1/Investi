@@ -34,7 +34,7 @@ try {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${label}: ${width}px overflow`);
       assert.equal(await page.locator("h1").count(), 1, `${label}: one page heading`);
       const nav = page.getByRole("navigation", { name: width < 1024 ? "Mobilní navigace" : "Hlavní navigace" });
-      assert.deepEqual(await nav.getByRole("link").allTextContents(), ["Učení", "Lab", "Pokrok"]);
+      assert.deepEqual(await nav.getByRole("link").allTextContents(), ["Učení", label === "learn" && width >= 1024 ? "Portfolio Lab" : "Lab", "Pokrok"]);
       const active = nav.locator('[aria-current="page"]');
       assert.equal(await active.count(), activeHref ? 1 : 0);
       if (activeHref) assert.equal(await active.getAttribute("href"), activeHref);
@@ -45,7 +45,7 @@ try {
       const account = page.getByLabel("Nabídka účtu", { exact: true });
       await account.focus();
       await account.press("Enter");
-      for (const control of [page.getByRole("link", { name: "Nastavení", exact: true }), button("Odhlásit se")]) {
+      for (const control of [page.getByRole("banner").getByRole("link", { name: "Nastavení", exact: true }), button("Odhlásit se")]) {
         const box = await control.boundingBox();
         assert.ok(box && box.height >= 44 && box.x >= 0 && box.x + box.width <= width, `${label}: account menu reflow`);
       }
