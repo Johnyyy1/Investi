@@ -7,6 +7,10 @@ import { roundDivide } from "@/features/portfolio/decimal";
 
 export type LearnerSummary = Awaited<ReturnType<typeof loadLearner>>;
 
+/** Curriculum labels shared by Studovna and Pokrok. Planned risk topics form one upcoming chapter. */
+export const chapterTitle = (chapter: { slug: string; title: string }) => chapter.slug === "returns" ? "Výnosy" : chapter.title;
+export const PLANNED_CHAPTER_TITLE = "Riziko";
+
 export function blockDescription(block: LessonBlock): string | undefined {
   if ("content" in block) return block.content;
   if (block.type === "heading") return block.body;

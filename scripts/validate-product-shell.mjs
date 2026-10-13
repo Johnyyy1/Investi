@@ -34,7 +34,7 @@ try {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${label}: ${width}px overflow`);
       assert.equal(await page.locator("h1").count(), 1, `${label}: one page heading`);
       const nav = page.getByRole("navigation", { name: width < 1024 ? "Mobilní navigace" : "Hlavní navigace" });
-      assert.deepEqual(await nav.getByRole("link").allTextContents(), ["Učení", label === "learn" && width >= 1024 ? "Portfolio Lab" : "Lab", "Pokrok"]);
+      assert.deepEqual(await nav.getByRole("link").allTextContents(), ["Učení", ["learn", "progress"].includes(label) && width >= 1024 ? "Portfolio Lab" : "Lab", "Pokrok"]);
       const active = nav.locator('[aria-current="page"]');
       assert.equal(await active.count(), activeHref ? 1 : 0);
       if (activeHref) assert.equal(await active.getAttribute("href"), activeHref);
@@ -83,7 +83,7 @@ try {
   await heading("Přizpůsobení učení");
   await layouts("settings", null);
   await page.goto(`${baseURL}/progress`);
-  await heading("Podívej se, jak daleko jsi došel.");
+  await page.getByRole("heading", { level: 1, name: /^(Co už umíš|.+ máš za sebou\.)/ }).waitFor();
   assert.match(await page.getByTestId("available-progress").textContent(), /6 z 12/);
   await layouts("progress", "/progress");
   await page.goto(`${baseURL}/lab`);
