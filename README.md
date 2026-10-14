@@ -27,6 +27,8 @@ Learn investing by doing. The authenticated product is organized around three de
    npm run db:seed
    ```
 
+   On Vercel, production deploys run `vercel-build` (`scripts/vercel-build.mjs`), which applies pending migrations before `next build`. Preview deploys skip migrations so unmerged branches never change the shared database.
+
 4. Start the app:
 
    ```bash
