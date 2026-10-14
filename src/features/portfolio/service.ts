@@ -4,6 +4,7 @@ import type { Currency } from "@/features/market-data/contracts";
 import { attributeHolding, foldQuoteCost, impliedPurchaseFxUnits } from "./attribution";
 import { allocationBasisPoints, foldTrades, valuePortfolio, type HoldingValuation } from "./domain";
 import { decimalToPriceUnits, fxToDecimal, quantityToDecimal } from "./decimal";
+import { perfMeasure } from "@/lib/perf";
 import { portfolioMarketData } from "./environment";
 import {
   loadPortfolioInstrumentPreview,
@@ -100,8 +101,8 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
   const baseCurrency = rows.portfolio.baseCurrency as Currency;
   const folded = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades);
   const [observations, allocation] = await Promise.all([
-    Promise.all(folded.holdings.map((holding) => observePortfolioHoldingValue(portfolioMarketData, holding, baseCurrency))),
-    loadLatestAllocation(rows.portfolio.id),
+    perfMeasure("portfolio.observeAllHoldings", "external", () => Promise.all(folded.holdings.map((holding) => perfMeasure("portfolio.observeHolding", "external", () => observePortfolioHoldingValue(portfolioMarketData, holding, baseCurrency))))),
+    perfMeasure("portfolio.latestAllocation", "db", () => loadLatestAllocation(rows.portfolio.id)),
   ]);
   const quoteCost = foldQuoteCost(rows.trades);
   const quoteCurrency = new Map(rows.trades.map((trade) => [trade.instrumentId, trade.quoteCurrency as Currency]));

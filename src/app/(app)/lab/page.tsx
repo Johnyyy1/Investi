@@ -5,8 +5,13 @@ import { AppHeader } from "@/components/shell/app-header";
 import { PageFrame } from "@/components/shell/page-frame";
 import { getCurrentUser } from "@/lib/session";
 import { loadPortfolioLabUnlock } from "@/features/progression/repository";
+import { perfSegment } from "@/lib/perf";
 export const metadata = { title: "Lab" };
-export default async function LabPage() {
+export default function LabPage() {
+  return perfSegment("page:/lab", renderLabPage);
+}
+
+async function renderLabPage() {
   const user = await getCurrentUser();
   const unlock = user ? await loadPortfolioLabUnlock(user.id) : null;
   return <PageFrame width="standard">

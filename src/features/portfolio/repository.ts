@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { perfMeasure } from "@/lib/perf";
 import { lessonAward, portfolio, portfolioAllocation, portfolioAllocationLine, portfolioTrade, progressionUnlock, user } from "@/db/schema";
 import type { Currency } from "@/features/market-data/contracts";
 import { planAllocation, validateAllocation, type AllocationInput, type AllocationPlan } from "./allocation";
@@ -204,10 +205,10 @@ export async function resetActivePortfolio(userId: string, clientIdempotencyKey:
 }
 
 export async function loadPortfolioRows(userId: string) {
-  const current = await getOrCreateActivePortfolio(userId);
+  const current = await perfMeasure("portfolio.getOrCreateActivePortfolio", "db", () => getOrCreateActivePortfolio(userId));
   const [earnedPracticeCapitalMinor, trades] = await Promise.all([
-    entitlement(db, userId),
-    db.select().from(portfolioTrade).where(eq(portfolioTrade.portfolioId, current.id)).orderBy(asc(portfolioTrade.executedAt), asc(portfolioTrade.id)),
+    perfMeasure("portfolio.entitlement", "db", () => entitlement(db, userId)),
+    perfMeasure("portfolio.trades", "db", () => db.select().from(portfolioTrade).where(eq(portfolioTrade.portfolioId, current.id)).orderBy(asc(portfolioTrade.executedAt), asc(portfolioTrade.id))),
   ]);
   return { portfolio: current, earnedPracticeCapitalMinor, trades };
 }

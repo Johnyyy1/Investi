@@ -37,3 +37,11 @@ export function evaluateUnlock(id: UnlockId, progression: LearningProgression, p
     unlocked: persisted || isDemo || (progression.totalXp >= definition.xpRequired && prerequisitesComplete),
   };
 }
+
+export type PortfolioLabUnlockFacts = { progression: LearningProgression; recorded: boolean; grandfathered: boolean; isDemo: boolean };
+
+/** A recorded unlock is never removed, so only an unlocked account without a record needs the locked write path. */
+export function resolvePortfolioLabUnlock({ progression, recorded, grandfathered, isDemo }: PortfolioLabUnlockFacts) {
+  const status = evaluateUnlock(PORTFOLIO_LAB_UNLOCK_ID, progression, recorded || grandfathered, isDemo);
+  return { status, needsRecord: !recorded && status.unlocked };
+}
