@@ -16,6 +16,8 @@ External market data (FMP quotes, ČNB FX) adds another measured ~320 ms + ~110 
 
 **What was not measured:** the real RTT between the Vercel function and Neon, Vercel cold starts, and Neon compute wake-up. The RTT sensitivity table is a model of that gap, not a production measurement.
 
+**Phase 1 (bottleneck #3) is done:** the unlock status read no longer opens a transaction or takes the row lock, and its five reads are one statement. See "Phase 1: unlock read path" at the end. The tables between here and there are the original baseline.
+
 ## What is measured, and how the layers are separated
 
 | Layer | Metric | Source |
@@ -211,7 +213,7 @@ Impact figures for #2–#4 are in milliseconds of injected latency, not producti
 `src/lib/perf.ts`, enabled only when the server process has `INVESTI_PERF_DEBUG=1` (read once at module load). When unset, every helper returns its callback untouched and the Drizzle logger is not attached; behaviour and UI are unchanged.
 
 - `perfSegment(name, fn)` wraps a layout or page. On completion it prints one line: `[investi:perf] {…}` with `segment`, a per-request id (random, scoped by `React.cache`), `totalMs`, per-label ops (`calls`, `totalMs`, `maxMs`, `kind`: auth/db/external/compute), `repeatedOps`, `counters` (market-data cache hit / miss / coalesced by family), `dbQueryCount`, `repeatedQueryShapes`, and an op `timeline`. Durations use `performance.now()`.
-- `perfMeasure(label, kind, fn)` times an async operation inside the active segment. Applied to: session lookup, layout reads, `loadLearner`'s four reads, the unlock transaction (lock and ensure separately), `loadPortfolioRows`, `loadPortfolioView` and each holding valuation, and every market-data provider call (`MarketDataService.call`, i.e. cache misses only).
+- `perfMeasure(label, kind, fn)` times an async operation inside the active segment. Applied to: session lookup, layout reads, `loadLearner`'s four reads, the unlock check (`progression.loadPortfolioLabUnlock`, its read `progression.readUnlockFacts`, and on the write path `lockUserRow` and `ensureUnlock` separately), `loadPortfolioRows`, `loadPortfolioView` and each holding valuation, and every market-data provider call (`MarketDataService.call`, i.e. cache misses only).
 - Query counts come from a Drizzle `logger` that receives the parameterised SQL text and keeps only `verb + table names`.
 - `BEGIN`/`COMMIT` issued by postgres.js are not logged by Drizzle, so `dbQueryCount` excludes them (+2 per transaction).
 - Nothing logged contains parameters, cookies, tokens, user ids or emails. Do not enable it in production by default; it prints one line per route render.
@@ -261,3 +263,63 @@ To measure external API latency, set `MARKET_DATA_PROVIDER=fmp`, `FX_DATA_PROVID
 - Vercel cold starts, Neon compute wake-up and region placement are not measured.
 - Per-route loading markup differs, so `feedbackMs` uses "URL committed and no `h1`", not a specific element.
 - The React throttle explanation rests on the measured experiment and the bundled source; the exact reveal timing can differ slightly between React versions.
+
+## Phase 1: unlock read path (measured 2026-10-14)
+
+Addresses bottleneck #3. No schema, migration, reward policy or unlock-rule change; `prepare: false`, `loading.tsx` and the instrumentation are untouched.
+
+### What changed
+
+`src/features/progression/repository.ts`
+
+- **One statement for the facts.** XP total, completed lesson ids, "unlock recorded", "has a portfolio" and `isAnonymous` come from a single `SELECT` on `user` with scalar subqueries (each served by an existing primary key or index). One statement is also one snapshot, so the facts are mutually consistent even without a transaction. Used on both paths, including inside `completeLesson`.
+- **Read first, lock only to record.** `resolvePortfolioLabUnlock` (pure, in `unlocks.ts`) decides from the facts whether anything must be written. A recorded unlock or a still-locked account is answered from that one read: no `BEGIN`, no `SELECT … FOR UPDATE`, no `COMMIT`, no write. Only an unlocked account without a record (first demo visit, legacy repair, grandfathered portfolio) takes the original path: transaction, user row lock, re-read under the lock, `INSERT … ON CONFLICT DO NOTHING`.
+
+Why the lock-free read is safe: `progression_unlock` and `portfolio` rows are never deleted (only by the user cascade), so "recorded" and "grandfathered" only ever go from false to true. A read can at worst see an account as still locked while a completion is committing; that completion records and reports the unlock itself, under the lock. Every grant still happens under the user row lock with the unique `(user_id, unlock_id)` key, so exactly-once is unchanged.
+
+### Unlock check alone (direct calls, n=20 sequential, median ms)
+
+`loadPortfolioLabUnlock` from a script against the disposable database, through `scripts/pg-latency-proxy.mjs`. Queries are Drizzle-logged statements; `BEGIN`/`COMMIT` are extra and not logged.
+
+| Case | Queries before → after | +0 ms | +10 ms | +30 ms |
+| --- | --- | --- | --- | --- |
+| Recorded unlock | 6 + BEGIN/COMMIT → 1 | 1.0 → 0.3 | 166.8 → 27.0 | 460.3 → 69.8 |
+| Locked learner | 6 + BEGIN/COMMIT → 1 | 0.9 → 0.3 | 167.0 → 26.7 | 458.8 → 69.8 |
+| Demo, recorded | 6 + BEGIN/COMMIT → 1 | 0.6 → 0.3 | 166.3 → 26.5 | 459.0 → 69.8 |
+| First recording (write path, demo) | 7 + BEGIN/COMMIT → 4 + BEGIN/COMMIT | 1.4 → 1.3 | – | 553.3 → 347.6 |
+| Read while another session holds the user row lock for 500 ms | – | 506.9 → 0.3 | 647.5 → 26.3 | 898.1 → 70.5 |
+| 8 concurrent reads, same user (wall time) | – | 26.6 → 5.5 | 1096 → 62 | 3023 → 147 |
+
+At +30 ms that is ≈15 round-trips → ≈2.3 (one statement, which still costs two round-trips under `prepare: false`). The last two rows are the lock contention that disappeared: before, every page view queued behind any completion, trade or other tab of the same user; the eight reads were fully serialised.
+
+### Navigation (same build and benchmark as above, warm, median ms)
+
+Before and after were both measured in this session on the same machine, database and seeds (`HEAD` at `00952de`, then the change). Navigation n=30 at +0 and n=20 at +10/+30 (`/lab/portfolio` half of that, extended cycle only). Server page and unlock time are from `[investi:perf]` lines.
+
+| Route | Queries | Navigation +0 | Navigation +10 | Navigation +30 | Server page +30 | Unlock in page +30 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/learn` | 19 → 14 | 321.7 → 320.9 | 422.5 → 318.4 | 1072.3 → 623.1 | 1043.8 → 600.7 | 483.8 → 66.7 |
+| `/progress` | 18 → 13 | 321.0 → 320.9 | 398.3 → 318.4 | 1003.2 → 559.4 | 972.7 → 533.9 | 482.9 → 66.8 |
+| `/lab` | 8 → 3 | 335.7 → 337.2 | 336.8 → 332.8 | 656.4 → 333.9 | 626.8 → 201.7 | 485.2 → 66.7 |
+| `/lab/portfolio` | 13 → 8 | 321.7 → 321.5 | 365.3 → 316.4 | 922.4 → 488.9 | 902.3 → 466.0 | 484.0 → 66.6 |
+
+Sequential round-trips on the server path (slope of server time against added RTT): `/learn` ≈34 → ≈20, `/progress` ≈32 → ≈17, `/lab` ≈21 → ≈6, `/lab/portfolio` ≈30 → ≈15.
+
+At +10 ms every route is now under the ~320 ms client floor (bottleneck #1), so navigation no longer changes with the database there; at +30 ms `/lab` is too. At +0 ms nothing changes: the floor decides.
+
+Hard loads, TTFB median (layout and page each run the unlock check): +10 ms 263–384 → 99; +30 ms 696–1010 → 268–270. `DOMContentLoaded` at +30 ms: `/learn` 1362 → 608, `/lab` 1037 → 297.
+
+The absolute "before" values are 1–6 % above the original baseline tables (same code, different run); the comparison above uses only numbers from this session.
+
+### Validation
+
+- `npm run test:progression-persistence` (disposable database) adds: a recorded and a locked account are read while another session holds the user row lock (the old code fails this, verified), with no rows written; eight concurrent `requirePortfolioLabUnlock` calls; a missing user still throws; a first demo recording does wait for the row lock; six concurrent reads, two action guards and a lesson completion on a qualifying unrecorded (legacy) account grant 5,000 Kč exactly once.
+- Unit tests for `resolvePortfolioLabUnlock` in `unlocks.test.ts`.
+- Unchanged and passing: `test:persistence`, `test:migration`, `test:portfolio-persistence` (buy/sell/reward concurrency), `test:portfolio-allocation`, `test:portfolio-migration`, `test:portfolio-closed-market`, `test:personalization-persistence`, `test:curriculum-seed`, `test:log-returns-persistence`.
+
+### Remaining lock contention and next steps
+
+- The user row lock is still taken, by design, by lesson completion and progress saves, trades, mixes, resets, demo seeding and first portfolio creation. Lesson completion now holds it for four fewer queries, because its unlock check is the one-statement read.
+- The write path (first demo visit, legacy or grandfathered repair) still locks the row; it runs once per account.
+- A hard load still runs the unlock check twice (layout and page); each is now one statement. A request-scoped `React.cache` would remove one.
+- Still open from the baseline: two round-trips per query (`prepare: false`), `loadLearner` and the unlock check running one after the other on `/learn` and `/progress`, the two-query entitlement in `loadPortfolioRows`, and the ~300 ms `loading.tsx` floor.

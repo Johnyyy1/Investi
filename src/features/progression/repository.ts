@@ -1,34 +1,41 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { perfMeasure } from "@/lib/perf";
 import { lessonAward, lessonProgress, portfolio, progressionUnlock, user } from "@/db/schema";
-import { evaluateUnlock, PORTFOLIO_LAB_UNLOCK_ID, progressionUnlocks } from "./unlocks";
+import { PORTFOLIO_LAB_UNLOCK_ID, progressionUnlocks, resolvePortfolioLabUnlock, type PortfolioLabUnlockFacts } from "./unlocks";
 
 type ProgressionQuery = Pick<typeof db, "select" | "insert">;
 
-async function facts(query: Pick<typeof db, "select">, userId: string) {
-  const [awards, states, recorded, priorPortfolio, owners] = await Promise.all([
-    query.select({ xp: lessonAward.xp }).from(lessonAward).where(eq(lessonAward.userId, userId)),
-    query.select({ lessonId: lessonProgress.lessonId }).from(lessonProgress).where(and(eq(lessonProgress.userId, userId), eq(lessonProgress.status, "completed"))),
-    query.select().from(progressionUnlock).where(and(eq(progressionUnlock.userId, userId), eq(progressionUnlock.unlockId, PORTFOLIO_LAB_UNLOCK_ID))).limit(1),
-    query.select({ id: portfolio.id }).from(portfolio).where(eq(portfolio.userId, userId)).limit(1),
-    query.select({ isAnonymous: user.isAnonymous }).from(user).where(eq(user.id, userId)).limit(1),
-  ]);
+/** Every fact the unlock rule needs, in one statement and therefore one snapshot. Undefined if the user is gone.
+ * Subqueries filter by the parameter rather than correlating with "user", so unqualified columns stay unambiguous. */
+async function facts(query: Pick<typeof db, "select">, userId: string): Promise<PortfolioLabUnlockFacts | undefined> {
+  const [row] = await query.select({
+    isAnonymous: user.isAnonymous,
+    totalXp: sql<number>`(select coalesce(sum(${lessonAward.xp}), 0)::integer from ${lessonAward} where ${lessonAward.userId} = ${userId})`.mapWith(Number),
+    completedLessonIds: sql<string[]>`array(select ${lessonProgress.lessonId} from ${lessonProgress} where ${lessonProgress.userId} = ${userId} and ${lessonProgress.status} = 'completed')`,
+    recorded: sql<boolean>`exists(select 1 from ${progressionUnlock} where ${progressionUnlock.userId} = ${userId} and ${progressionUnlock.unlockId} = ${PORTFOLIO_LAB_UNLOCK_ID})`,
+    grandfathered: sql<boolean>`exists(select 1 from ${portfolio} where ${portfolio.userId} = ${userId})`,
+  }).from(user).where(eq(user.id, userId));
+  if (!row) return undefined;
   return {
-    progression: { totalXp: awards.reduce((sum, award) => sum + award.xp, 0), completedLessonIds: new Set(states.map((state) => state.lessonId)) },
-    recorded: recorded[0],
-    grandfathered: priorPortfolio.length > 0,
-    isDemo: owners[0]?.isAnonymous === true,
+    progression: { totalXp: row.totalXp, completedLessonIds: new Set(row.completedLessonIds) },
+    recorded: row.recorded,
+    grandfathered: row.grandfathered,
+    isDemo: row.isAnonymous,
   };
 }
 
+const unchanged = (status: ReturnType<typeof resolvePortfolioLabUnlock>["status"]) => ({ ...status, newlyUnlocked: false, capitalAwardedMinor: 0n });
+
 /** Caller holds the user's row lock, shared with lesson completion and trades. */
 export async function ensurePortfolioLabUnlockInTransaction(query: ProgressionQuery, userId: string) {
-  const { progression, recorded, grandfathered, isDemo } = await facts(query, userId);
-  const status = evaluateUnlock(PORTFOLIO_LAB_UNLOCK_ID, progression, !!recorded || grandfathered, isDemo);
-  if (recorded || !status.unlocked) return { ...status, newlyUnlocked: false, capitalAwardedMinor: 0n };
+  const current = await facts(query, userId);
+  if (!current) throw new Error("Účet není dostupný.");
+  const { status, needsRecord } = resolvePortfolioLabUnlock(current);
+  if (!needsRecord) return unchanged(status);
+  const { grandfathered, isDemo } = current;
   const [inserted] = await query.insert(progressionUnlock).values({
     userId,
     unlockId: PORTFOLIO_LAB_UNLOCK_ID,
@@ -39,14 +46,22 @@ export async function ensurePortfolioLabUnlockInTransaction(query: ProgressionQu
   return { ...status, newlyUnlocked: !!inserted && !grandfathered && !isDemo, capitalAwardedMinor: inserted?.practiceCapitalMinor ?? 0n };
 }
 
-/** Opens demos and repairs qualifying legacy accounts on first access; retries grant nothing extra. */
+/** Opens demos and repairs qualifying legacy accounts on first access; retries grant nothing extra.
+ * Recorded and still-locked accounts are answered from one plain read with no transaction or row lock;
+ * only an account that must be recorded takes the locked write path, which re-reads under the lock. */
 export async function loadPortfolioLabUnlock(userId: string) {
-  return perfMeasure("progression.loadPortfolioLabUnlock", "db", () => db.transaction(async (tx) => {
-    // Separate op: a long lockRow means this transaction waited on another holder of the user's row lock.
-    const [owner] = await perfMeasure("progression.lockUserRow", "db", () => tx.select({ id: user.id }).from(user).where(eq(user.id, userId)).for("update"));
-    if (!owner) throw new Error("Účet není dostupný.");
-    return perfMeasure("progression.ensureUnlock", "db", () => ensurePortfolioLabUnlockInTransaction(tx, userId));
-  }));
+  return perfMeasure("progression.loadPortfolioLabUnlock", "db", async () => {
+    const current = await perfMeasure("progression.readUnlockFacts", "db", () => facts(db, userId));
+    if (!current) throw new Error("Účet není dostupný.");
+    const { status, needsRecord } = resolvePortfolioLabUnlock(current);
+    if (!needsRecord) return unchanged(status);
+    return db.transaction(async (tx) => {
+      // Separate op: a long lockRow means this transaction waited on another holder of the user's row lock.
+      const [owner] = await perfMeasure("progression.lockUserRow", "db", () => tx.select({ id: user.id }).from(user).where(eq(user.id, userId)).for("update"));
+      if (!owner) throw new Error("Účet není dostupný.");
+      return perfMeasure("progression.ensureUnlock", "db", () => ensurePortfolioLabUnlockInTransaction(tx, userId));
+    });
+  });
 }
 
 export async function requirePortfolioLabUnlock(userId: string) {
