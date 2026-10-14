@@ -3,6 +3,11 @@
 //
 //   navigation latency  click -> destination heading rendered and loading skeleton gone (in page)
 //   feedback latency    click -> URL committed with the loading UI shown and no page heading yet
+//   URL change          click -> location.pathname is the destination (with or without a loading UI)
+//   pending             click -> the shell's navigation indicator is pending (`data-navigation-pending`, fed by
+//                       useLinkStatus); it fades in after a CSS delay, so this is the earliest feedback, not paint
+//   RSC end             click -> end of the navigation response stream (Resource Timing)
+//   RSC requests        navigation (non-prefetch) and prefetch `_rsc` responses seen during each navigation
 //   RSC response        click -> response headers of the non-prefetch `_rsc` request (network + server TTFB).
 //                       The streamed body never reports "finished" to Playwright, so no end time is taken.
 //   after response      navigation end - RSC response start: body streaming + React commit + paint
@@ -42,7 +47,7 @@ function stats(values) {
   if (!present.length) return null;
   return { n: present.length, median: round(median(present)), p95: round(p95(present)), min: round(Math.min(...present)), max: round(Math.max(...present)) };
 }
-const METRICS = ["navigationMs", "feedbackMs", "rscResponseMs", "afterResponseMs", "serverPageMs", "serverLayoutMs", "serverExternalMs", "serverDbQueries"];
+const METRICS = ["navigationMs", "feedbackMs", "urlMs", "pendingMs", "rscEndMs", "rscNavigationRequests", "rscPrefetchRequests", "rscResponseMs", "afterResponseMs", "serverPageMs", "serverLayoutMs", "serverExternalMs", "serverDbQueries"];
 function summarize(samples) {
   const byRoute = {};
   for (const sample of samples) (byRoute[sample.to] ??= []).push(sample);
@@ -82,10 +87,11 @@ try {
     const viaLink = (await link.count()) > 0;
     const logOffset = await logSize();
     const rscRequests = [];
+    let prefetchRequests = 0;
     const onResponse = async (response) => {
       const request = response.request();
       if (!request.url().includes("_rsc=")) return;
-      if ((await request.allHeaders())["next-router-prefetch"]) return;
+      if ((await request.allHeaders())["next-router-prefetch"]) { prefetchRequests += 1; return; }
       const { startTime, responseStart } = request.timing();
       rscRequests.push({ startTime, responseStart });
     };
@@ -94,14 +100,18 @@ try {
     const result = await page.evaluate(({ to, handle }) => new Promise((resolve) => {
       const t0 = performance.now();
       const startEpoch = performance.timeOrigin + t0;
-      let skeleton = null;
+      let skeleton = null, url = null, pending = null;
       const ready = () => location.pathname === to && !!document.querySelector("h1");
       const check = () => {
-        if (skeleton === null && location.pathname === to && !document.querySelector("h1")) skeleton = performance.now() - t0;
+        const now = performance.now() - t0;
+        if (url === null && location.pathname === to) url = now;
+        if (skeleton === null && location.pathname === to && !document.querySelector("h1")) skeleton = now;
+        // Shell indicator fed by useLinkStatus. It fades in after a CSS delay on top of this.
+        if (pending === null && document.querySelector("[data-navigation-pending]")) pending = now;
         if (!ready()) return;
         observer.disconnect();
         // Two frames after commit so the paint that makes the page visible is included.
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve({ total: performance.now() - t0, skeleton, startEpoch, endEpoch: performance.timeOrigin + performance.now() })));
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve({ total: performance.now() - t0, skeleton, url, pending, startEpoch, endEpoch: performance.timeOrigin + performance.now() })));
       };
       const observer = new MutationObserver(check);
       observer.observe(document.body, { childList: true, subtree: true, attributes: true });
@@ -110,6 +120,12 @@ try {
     }), { to, handle });
     await page.waitForTimeout(250); // let response events and server log lines land
     page.off("response", onResponse);
+    // Resource Timing has the end of the streamed navigation response, which Playwright never reports.
+    const rscEndMs = await page.evaluate(({ to, startEpoch }) => {
+      const entry = performance.getEntriesByType("resource").filter((e) => e.name.includes("_rsc=") && new URL(e.name).pathname === to && performance.timeOrigin + e.startTime >= startEpoch - 1).at(-1);
+      performance.clearResourceTimings();
+      return entry ? performance.timeOrigin + entry.responseEnd - startEpoch : null;
+    }, { to, startEpoch: result.startEpoch });
     const rsc = rscRequests.sort((a, b) => a.startTime - b.startTime).at(-1);
     const segments = await readLogFrom(logOffset);
     const target = segments.find((segment) => segment.segment === `page:${to}`);
@@ -119,6 +135,11 @@ try {
       method: viaLink ? "link-click" : "router.push",
       navigationMs: result.total,
       feedbackMs: result.skeleton,
+      urlMs: result.url,
+      pendingMs: result.pending,
+      rscEndMs,
+      rscNavigationRequests: rscRequests.length,
+      rscPrefetchRequests: prefetchRequests,
       rscResponseMs: rsc ? rsc.startTime + rsc.responseStart - result.startEpoch : null,
       afterResponseMs: rsc ? result.endEpoch - (rsc.startTime + rsc.responseStart) : null,
       serverPageMs: target?.totalMs ?? null,

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ChevronRight, Info, LogOut } from "lucide-react";

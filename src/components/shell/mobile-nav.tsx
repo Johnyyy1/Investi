@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppLink as Link } from "./app-link";
 import { learningNavigation, type ShellNavItem } from "./navigation";
 import { Clock3, LockKeyhole, Sprout } from "lucide-react";
 import styles from "./paper-shell.module.css";

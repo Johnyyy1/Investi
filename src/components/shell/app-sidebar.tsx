@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { learningNavigation, type ShellNavItem } from "./navigation";
 
 export function AppSidebar({ activeId, items = learningNavigation }: { activeId: string; items?: ShellNavItem[] }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { ArrowRight, RotateCcw } from "lucide-react";
 import styles from "@/components/lab/portfolio/portfolio-lab.module.css";
 

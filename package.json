@@ -41,6 +41,7 @@
     "test:onboarding-redesign": "node scripts/validate-onboarding-redesign.mjs",
     "test:settings": "node scripts/validate-settings.mjs",
     "test:request-isolation": "node scripts/validate-request-isolation.mjs",
+    "test:navigation-feedback": "node scripts/validate-navigation-feedback.mjs",
     "bench:navigation": "node scripts/benchmark-navigation.mjs"
   },
   "dependencies": {

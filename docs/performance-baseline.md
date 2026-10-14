@@ -20,6 +20,8 @@ External market data (FMP quotes, ČNB FX) adds another measured ~320 ms + ~110 
 
 **Phase 2 (bottlenecks #4 and #6) is done:** session, learning profile and unlock status are read once per request, duplicate learner reads are gone, and independent reads run concurrently. At +30 ms RTT `/learn` server time went 602 → 354 ms. See "Phase 2: request-scoped reads and concurrency".
 
+**Phase 3 (bottleneck #1) is done:** the ~300 ms client floor is gone when the server is fast. Route-level `loading.tsx` boundaries on the main routes were replaced by one persistent boundary in the `(app)` layout plus a `useLinkStatus` pending indicator. At +0 ms, navigation went from 321 to 40 ms. When the server is slower than the floor, navigation is 2–5 % slower than before on the data routes. See "Phase 3: client navigation floor".
+
 ## What is measured, and how the layers are separated
 
 | Layer | Metric | Source |
@@ -395,3 +397,83 @@ On a demo's first render, the unlock check records the 5,000 Kč grant while the
 - `test:foundations-browser` fails at its last step, "Unlocked portfolio has a build-mix action", looking for a "Sestavit" link that no longer exists in `src` at `639f2d4` (a unit test asserts its absence). Every step before it passes, including the one-time 5,000 Kč grant. Stale assertion, independent of this change; not edited here.
 
 Reproduce as in "Reproduce" above; the analysis grouped `[investi:perf]` lines by request id to separate hard loads (layout + page) from soft navigations (page only).
+
+## Phase 3: client navigation floor (measured 2026-10-14)
+
+Addresses bottleneck #1. No change to React, Next.js, their configuration, `prepare: false`, transactions, rewards or data loading. Versions: `next` 16.3.4; `react`/`react-dom` 19.2.8 in `node_modules`, but the App Router runs Next's bundled `react-dom` **19.3.0-canary-cbb046ab-20260731**, which is where the throttle below lives.
+
+### Mechanism (read in the bundled `react-dom-client.production.js`, confirmed by experiment)
+
+React holds a commit in the **retry lanes** (content revealed into a Suspense boundary that is showing its fallback) until `globalMostRecentFallbackTime + 300 ms`. A **transition** that never shows a fallback is not throttled. Next renders each `loading.tsx` as a Suspense boundary keyed by its route segment. Navigating to a sibling route therefore mounts a *new* boundary, commits its fallback at once (URL and skeleton at ~6 ms), and the real content waits for the throttle. Which `loading.tsx` matters: the nearest one at or below the segment that changes. For `/learn` ↔ `/progress` ↔ `/lab` ↔ `/lab/portfolio` that was the route's own file, or `(app)/loading.tsx` for `/lab`, which had none. Every one of them produced the same floor.
+
+### Candidates (production build, same benchmark, warm, median ms)
+
+| Variant | What | Nav +0 (`/learn`) | Nav +30 (`/learn`, `/lab`) | Hard-load TTFB / DCL +30 (`/learn`) |
+| --- | --- | --- | --- | --- |
+| A | baseline: route `loading.tsx` files | 321.2 | 364.5, 331.1 | 202.8 / 335.3 |
+| B | all six `(app)` `loading.tsx` removed, pending indicator | 40.0 | 385.5, 236.5 | 345.0 / 391.5 |
+| C | D + `lab/portfolio/loading.tsx` kept | 38.5 (`/lab/portfolio` 322.1) | 386.8, 238.0 (`/lab/portfolio` 355.6) | 202.7 / 335.5 |
+| **D (chosen)** | route `loading.tsx` removed on main routes, **one persistent `<Suspense>` in the `(app)` layout**, pending indicator | 39.9 | 372.4, 238.0 | 201.5 / 334.6 |
+
+- **B** removes the floor but also all streaming on full page loads: HTML waits for the whole page (TTFB 203 → 345 ms at +30, DOMContentLoaded +56 ms).
+- **C** shows that any route-level boundary brings the floor back for that route (322 ms at +0). It is ~16 ms faster than D for that route at +30, because content is revealed into the committed fallback as it streams.
+- **D** keeps hard loads identical to A. The layout boundary streams the shell and a neutral fallback first, then the page. On a client navigation that boundary is already showing content and is not remounted, so React keeps the current page during the transition and commits the new one without a fallback, so there is no throttle.
+- **E** (`useLinkStatus` feedback) is part of B, C and D.
+
+### Before (A) → after (D): soft navigation, warm (median / p95 ms)
+
+n=15 at +0/+10/+30, n=10 at +60; `/lab/portfolio` from the extended cycle. "Server" is `serverPageMs`.
+
+| Route | +0 | +10 | +30 | +60 | Server +30 |
+| --- | --- | --- | --- | --- | --- |
+| `/learn` | 321.2 / 323.0 → **39.9 / 55.7** | 319.9 / 322.0 → **171.0 / 186.4** | 364.5 / 370.9 → 372.4 / 389.1 | 671.0 / 673.7 → 680.4 / 689.0 | 338.9 → 337.9 |
+| `/progress` | 321.2 / 323.4 → **39.0 / 56.6** | 320.4 / 337.5 → **170.8 / 187.1** | 358.7 / 372.6 → 375.7 / 388.5 | 672.0 / 681.7 → 686.8 / 691.0 | 337.7 → 337.2 |
+| `/lab` | 336.1 / 340.0 → **38.4 / 43.2** | 336.6 / 337.7 → **117.9 / 121.6** | 331.1 / 339.3 → **238.0 / 239.9** | 422.0 / 423.7 → 421.5 / 426.1 | 202.9 → 202.0 |
+| `/lab/portfolio` | 321.2 / 323.9 → **39.7 / 55.7** | 320.4 / 322.7 → **156.3 / 157.7** | 354.6 / 358.3 → 372.0 / 374.7 | 655.2 / 657.3 → 671.4 / 673.6 | 338.1 → 333.8 |
+
+The floor is eliminated whenever the server answers in under ~280 ms: at +0 and +10 on every route, and at +30 on `/lab`. Server time is unchanged.
+
+**Trade-off when the server is slower than the floor:** the data routes are 8–17 ms slower (2–5 %) at +30 and +60. Without a fallback, React renders the whole page after the response ends (RSC stream end → URL commit ≈ 13 ms, then two frames); a committed fallback lets React reveal content as it streams. This is the price of not showing a fallback, and it is far smaller than the 280 ms saved on fast responses.
+
+### Feedback and requests (D)
+
+| Signal | A | D |
+| --- | --- | --- |
+| First feedback after click | URL + skeleton at 5–7 ms | `useLinkStatus` pending at ~2 ms; bar fades in after 150 ms (CSS `transition-delay`, no JS timer), so navigations faster than that show none |
+| URL change | at click (5–7 ms) | at commit, with the content (Next's documented behaviour for dynamic routes without `loading.js`) |
+| RSC navigation requests per navigation | 1 | 1 |
+| Prefetch requests after loading `/learn` | 9 (route trees and segments; no page code ran on the server) | 9, identical |
+
+`loading.tsx` did not buy any extra prefetching here: in both builds the same prefetches were made and the server rendered no layout or page for them.
+
+### Pending feedback (what replaces the skeleton on client navigations)
+
+- `AppLink` (`src/components/shell/app-link.tsx`) is `next/link` plus a `LinkPendingReporter` that calls `useLinkStatus()` and renders nothing, so link DOM and CSS are unchanged. It is used by the desktop and mobile navigation, `ButtonLink` and every in-app link inside the shell.
+- `NavigationStatusProvider` in `AppShell` turns the reports into one indicator: a 3 px bar at the top edge (hidden for the first 150 ms; static under `prefers-reduced-motion`), a polite `role="status"` "Načítám stránku…" and `aria-busy` on `#main-content`. It clears as soon as history updates.
+- With an artificial 1.5 s delay on navigation responses, the current page stays visible and interactive, the bar starts fading in at 150 ms (fully opaque at ~270 ms by its CSS timing; the test checks it at 600 ms), the URL changes only at commit, and the indicator, status and busy flag clear after commit.
+
+### Kept, and why
+
+- `lab/instruments/[instrumentId]/loading.tsx`: a deep link, not primary navigation, whose content depends on external quotes and history that are usually slower than 300 ms on a cold cache. There the floor costs nothing, and its placeholder explicitly shows no price until data arrives.
+- `onboarding/loading.tsx`: outside the app shell, not part of this navigation.
+- Error boundaries (`error.tsx`) are unchanged; the layout boundary sits above them and does not catch errors.
+
+### Behaviours checked against the baseline build
+
+- **Interrupted navigation:** clicking route X and then Y before X responds can briefly commit X and leave an X history entry before Y commits. The baseline build does exactly the same (measured: `/lab` committed at t=1368 ms, `/learn` at 1617 ms), because neither build had X's loading shell cached. Each click is its own React transition. Not a regression; noted as a limitation.
+- **Repeated clicks** on one link: one history entry. **Back/forward:** correct pages, nothing left pending. **New page:** starts at the top. **Keyboard:** Enter on a nav link behaves like a click. **Before hydration:** a click is a full page load, as before.
+- **Full page loads:** unchanged TTFB and DOMContentLoaded (table above). The neutral layout fallback replaces the route-specific skeletons there.
+
+### Instant Navigations (Next 16.3)
+
+Requires `cacheComponents` and `partialPrefetching`, which this phase excludes. It also would not remove this floor by itself: these pages are per-user and dynamic, so the instant part would be a fallback shell, and content revealed into a fallback is what React throttles. It would improve slow-server feedback (immediate URL and shell), not fast-server latency. Worth evaluating together with a caching migration.
+
+### Validation
+
+- `npm run typecheck`, `npm run lint`, `npm test` (80 files, 766 tests; the two skeleton-content tests now check the layout fallback for no counts, balances or headings), `npm run build`.
+- New `test:navigation-feedback` (browser, production build): fast navigations under 250 ms with no indicator flash and no fallback; slow (1.5 s) navigations keep the page with indicator, status and busy state and update history only at commit; interrupted and repeated clicks end on the last destination with nothing stuck; back/forward; scroll to top; keyboard; hard reload; mobile nav; reduced motion.
+- Passing: `test:request-isolation`, `test:product` (includes the sign-out/auth gate), `test:progression-browser`, `test:studovna`, `test:portfolio-browser`, `test:portfolio-browser-closed`, `test:backtesting-browser`, `test:log-returns-browser`, `test:settings`, `test:onboarding-redesign`, `test:personalization-browser`, `test:personalization-compatibility`.
+- `test:foundations-browser`: the pre-existing "Sestavit" failure (see Phase 2), unchanged.
+- `test:instrument-browser-unavailable` fails identically on the baseline build in this environment ("old quote is labeled stale"). It depends on the deterministic market clock. With `DETERMINISTIC_MARKET_NOW=2026-01-20T15:00:00Z` that assertion passes on the new build, and the run stops at a later history-range check that also depends on the clock (not checked on the baseline with that clock). The stale-data labels on the instrument page are covered by `test:portfolio-browser-closed`, which passes.
+
+Benchmark additions (`scripts/benchmark-navigation.mjs`): `urlMs`, `pendingMs`, `rscEndMs` (Resource Timing end of the navigation response), and navigation/prefetch RSC request counts per navigation.

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, BookOpen, ChevronDown, Circle, CircleCheck, CircleDot, Clock3, Info, Layers, LockKeyhole, Receipt, RotateCcw, Scale } from "lucide-react";
 import { ResponsiveDisclosure } from "@/components/learning/responsive-disclosure";

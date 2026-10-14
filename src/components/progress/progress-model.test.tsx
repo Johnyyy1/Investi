@@ -8,7 +8,7 @@ import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
 import type { PortfolioLedgerSummary } from "@/features/portfolio/ledger-summary";
 import { evaluateUnlock, PORTFOLIO_LAB_UNLOCK_ID } from "@/features/progression/unlocks";
 import ProgressError from "@/app/(app)/progress/error";
-import ProgressLoading from "@/app/(app)/progress/loading";
+import { AppRouteFallback as ProgressLoading } from "@/components/shell/app-route-fallback";
 import { firstSentence, progressModel } from "./progress-model";
 import { ProgressOverview } from "./progress-overview";
 

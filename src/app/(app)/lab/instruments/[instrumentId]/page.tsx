@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { notFound, redirect } from "next/navigation";
 import { InstrumentDetailView } from "@/components/lab/instrument-detail";
 import { PageFrame } from "@/components/shell/page-frame";

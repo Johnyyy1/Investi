@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { ArrowRight, Check, LockKeyhole } from "lucide-react";
 import { getModuleLessons, moduleCatalog } from "@/features/learning/catalog";
 import type { loadLearner } from "@/features/learning/load-learner";
