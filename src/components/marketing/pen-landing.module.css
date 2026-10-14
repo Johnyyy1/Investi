@@ -4,6 +4,8 @@
   --ink: #171717;
   --teal: #236f66;
   --teal2: #2f8f83;
+  --wrong: #b23b2e;
+  --wrong-soft: #f9e7e2;
   --surface: #fffcf7;
   --divider: #d5d2c8;
   --muted: #55594f;
@@ -80,6 +82,9 @@
 .answer svg { flex-shrink: 0; color: var(--teal); }
 .answerSelected { border-color: var(--teal); background: #e7f0eb; }
 .answerSelected > span:first-child { color: var(--teal); }
+.answerSelected.answerWrong { border-color: var(--wrong); background: var(--wrong-soft); }
+.answerSelected.answerWrong > span:first-child, .answerWrong svg { color: var(--wrong); }
+.feedback h3.feedbackWrong, .asideFeedback h3.feedbackWrong { color: var(--wrong); }
 .lessonBottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
 .sampleReward { color: var(--teal); font-size: .875rem; font-weight: 600; }
 .lessonSubmit { max-width: 100%; flex-wrap: wrap; }

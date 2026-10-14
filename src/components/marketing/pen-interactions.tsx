@@ -3,7 +3,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { flushSync } from "react-dom";
 import Link from "next/link";
-import { ArrowRight, CircleCheck, Menu, RotateCcw } from "lucide-react";
+import { ArrowRight, CircleCheck, CircleX, Menu, RotateCcw } from "lucide-react";
 import { LESSON_DEMO_EVENT, PORTFOLIO_DEMO_EVENT, type LessonDemoDetail, type PortfolioDemoDetail, type PortfolioDemoView } from "./motion/events";
 import styles from "./pen-landing.module.css";
 
@@ -52,7 +52,8 @@ export function LessonPreview({ compact = false, hero = false }: { compact?: boo
     el.addEventListener(LESSON_DEMO_EVENT, onDemo);
     return () => el.removeEventListener(LESSON_DEMO_EVENT, onDemo);
   }, []);
-  const feedbackTitle = answer === "B"
+  const correct = answer === "B";
+  const feedbackTitle = correct
     ? "Přesně. Rozkládáš závislost, ne rušíš riziko."
     : "Ještě ne. Diverzifikace riziko neruší.";
   function retry() {
@@ -61,7 +62,7 @@ export function LessonPreview({ compact = false, hero = false }: { compact?: boo
     setHold(false);
     requestAnimationFrame(() => firstAnswer.current?.focus());
   }
-  const feedback = <><h3>{feedbackTitle}</h3><p>{reasoning}</p></>;
+  const feedback = <><h3 className={correct ? undefined : styles.feedbackWrong}>{feedbackTitle}</h3><p>{reasoning}</p></>;
   return <div ref={rootRef} data-lesson-demo={hero ? "hero" : compact ? "compact" : "base"} className={hero ? styles.heroLessonContent : styles.lessonPreview} role="group" aria-label="Interaktivní ukázka; nezapisuje pokrok ani neuděluje XP">
     <div className={`${styles.lessonCard} ${compact ? styles.lessonCompact : styles.heroLessonMain}`}>
       <p className={styles.lessonDisclosure}>Ukázka lekce · ilustrační odpověď</p>
@@ -71,17 +72,19 @@ export function LessonPreview({ compact = false, hero = false }: { compact?: boo
         <h3 className={styles.lessonQuestion}>Proč rozdělit peníze mezi více investic?</h3>
         <div className={styles.answers} role="group" aria-label="Odpověď na ukázkovou otázku">
           {(["A", "B"] as const).map(key => <button ref={key === "A" ? firstAnswer : undefined} key={key} type="button"
-            className={`${styles.answer} ${answer === key ? styles.answerSelected : ""}`} data-lift
+            className={`${styles.answer} ${answer === key ? styles.answerSelected : ""} ${answer === key && revealed && key !== "B" ? styles.answerWrong : ""}`} data-lift
             aria-pressed={answer === key} data-answer={key} onClick={() => { setAnswer(key); setRevealed(false); setHold(false); }}>
             <span>{key}</span><span>{key === "A" ? "Aby jejich hodnota nemohla klesnout." : "Aby výsledek nezávisel na jedné investici."}</span>
-            {answer === key && revealed && <CircleCheck size={18} aria-hidden="true"/>}
+            {answer === key && revealed && (key === "B"
+              ? <CircleCheck size={18} aria-hidden="true"/>
+              : <CircleX size={18} aria-hidden="true"/>)}
             <i className={styles.answerGlow} data-answer-glow aria-hidden="true"/>
           </button>)}
         </div>
       </>}
       {revealed && <div className={`${styles.feedback} ${hero ? styles.heroInlineFeedback : ""}`} role="status" data-feedback>{feedback}</div>}
       <div className={styles.lessonBottom}>
-        <span className={styles.sampleReward} data-xp>{revealed ? "+20 XP" : "Ukázka bez zápisu"}<span className={styles.visuallyHidden}> · pouze ilustrační, neuděluje skutečné XP</span></span>
+        <span className={styles.sampleReward} data-xp>{revealed && correct ? "+20 XP" : "Ukázka bez zápisu"}<span className={styles.visuallyHidden}> · pouze ilustrační, neuděluje skutečné XP</span></span>
         <button type="button" className={styles.lessonSubmit} data-lift data-press data-submit disabled={!answer}
           onClick={revealed ? retry : () => setRevealed(true)}>
           {revealed ? "Pokračovat" : answer ? "Zkontrolovat odpověď" : "Vyber odpověď"}<ArrowRight size={18} aria-hidden="true"/>
