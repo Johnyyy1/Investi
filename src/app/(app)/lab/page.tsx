@@ -1,6 +1,6 @@
 import { ArrowRight, LockKeyhole } from "lucide-react";
 import { LearningLink } from "@/components/learning/learning-button";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { AppHeader } from "@/components/shell/app-header";
 import { PageFrame } from "@/components/shell/page-frame";
 import { getCurrentUser } from "@/lib/session";

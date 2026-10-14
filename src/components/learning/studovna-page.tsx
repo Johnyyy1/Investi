@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { ArrowRight, ArrowRightCircle, BookOpen, ChevronDown, Circle, CircleCheck, Clock3 } from "lucide-react";
 import { getModuleLessons, moduleCatalog } from "@/features/learning/catalog";
 import { getStepDefinitions } from "@/features/lessons/returns/guided-flow";

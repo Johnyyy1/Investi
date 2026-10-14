@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { useRouter } from "next/navigation";
 import { ModulePath, type ModulePathItem } from "@/components/gamification/module-path";
 import { AppHeader } from "@/components/shell/app-header";

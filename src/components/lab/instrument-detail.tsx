@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { Check, ChevronRight, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type MouseEvent } from "react";

@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { resetPortfolioAction } from "@/features/portfolio/actions";

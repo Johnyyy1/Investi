@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { ArrowLeft, ArrowRight, Circle, CircleCheck, LockKeyhole } from "lucide-react";
 import styles from "@/components/lab/portfolio/portfolio-lab.module.css";
 import type { evaluateUnlock } from "@/features/progression/unlocks";

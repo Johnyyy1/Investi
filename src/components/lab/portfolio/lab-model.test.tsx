@@ -9,7 +9,7 @@ vi.mock("@/features/portfolio/actions", () => ({ resetPortfolioAction: vi.fn(), 
 import { contributionRows, contributionStory, dataStatus, groupSummaries } from "./lab-model";
 import { PortfolioOverview } from "./portfolio-overview";
 import PortfolioLabError from "@/app/(app)/lab/portfolio/error";
-import PortfolioLabLoading from "@/app/(app)/lab/portfolio/loading";
+import { AppRouteFallback as PortfolioLabLoading } from "@/components/shell/app-route-fallback";
 
 type HoldingInput = Partial<PortfolioView["holdings"][number]> & Pick<PortfolioView["holdings"][number], "instrumentId" | "symbol" | "assetType">;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
+import { AppLink as Link } from "@/components/shell/app-link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CircleCheck, CircleX, MousePointerClick } from "lucide-react";
 import type { LessonBlock } from "@/features/lessons/types";

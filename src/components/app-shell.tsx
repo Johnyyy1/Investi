@@ -1,7 +1,6 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { ChevronDown, LockKeyhole, LogOut, Settings } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -11,7 +10,9 @@ import { authClient } from "@/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Surface } from "@/components/ui/surface";
+import { AppLink as Link } from "./shell/app-link";
 import { MobileNav } from "./shell/mobile-nav";
+import { NavigationStatusProvider } from "./shell/navigation-status";
 import { learningNavigation } from "./shell/navigation";
 import styles from "./shell/paper-shell.module.css";
 
@@ -42,7 +43,7 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
   if (availableLessons.some((lesson) => pathname === `/learn/${lesson.moduleSlug}/${lesson.slug}`)) return children;
 
   const initial = userName.trim().charAt(0).toUpperCase() || "I";
-  return <div className={`min-h-dvh bg-background ${paper ? `investi-theme ${styles.shell}` : ""}`}>
+  return <NavigationStatusProvider>{(navigating) => <div className={`min-h-dvh bg-background ${paper ? `investi-theme ${styles.shell}` : ""}`}>
     <a href="#main-content" className="sr-only z-50 rounded-control bg-surface p-4 shadow-elevation-2 focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Přeskočit na obsah</a>
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95">
       <div className="mx-auto flex min-h-20 max-w-6xl items-center justify-between gap-3 px-4 min-[375px]:px-5 sm:px-8 lg:px-10">
@@ -82,7 +83,7 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
         </details>
       </div>
     </header>
-    <div id="main-content" tabIndex={-1} className="min-h-[calc(100dvh-5rem)] pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
+    <div id="main-content" tabIndex={-1} aria-busy={navigating || undefined} className="min-h-[calc(100dvh-5rem)] pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
     <MobileNav activeId={activeId} portfolioLabLocked={portfolioLabLocked} paper={paper} />
-  </div>;
+  </div>}</NavigationStatusProvider>;
 }

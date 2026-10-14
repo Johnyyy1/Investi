@@ -1,7 +1,9 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { requiresInitialOnboarding } from "@/features/personalization/profile";
 import { getLearningProfile, hasLearningHistory } from "@/features/onboarding/repository";
 import { AppShell } from "@/components/app-shell";
+import { AppRouteFallback } from "@/components/shell/app-route-fallback";
 import { getCurrentUser } from "@/lib/session";
 import { loadPortfolioLabUnlockStatus } from "@/features/progression/repository";
 import { perfMeasure, perfSegment } from "@/lib/perf";
@@ -21,5 +23,11 @@ async function renderApplicationLayout(children: React.ReactNode) {
     loadPortfolioLabUnlockStatus(user.id),
   ]);
   if (requiresInitialOnboarding(profile, !profile?.onboardingCompletedAt && await perfMeasure("layout.hasLearningHistory", "db", () => hasLearningHistory(user.id)))) redirect("/onboarding");
-  return <AppShell userName={user.name} isDemo={user.isAnonymous === true} needsTimeZone={!profile?.timeZone} portfolioLabLocked={!portfolioLabUnlock.unlocked}>{children}</AppShell>;
+  return <AppShell userName={user.name} isDemo={user.isAnonymous === true} needsTimeZone={!profile?.timeZone} portfolioLabLocked={!portfolioLabUnlock.unlocked}>
+    {/* One boundary that stays mounted across navigations. On a full load it streams the shell and this
+        fallback first. On a client navigation it is already showing content, so React keeps the current
+        page until the next one is ready instead of committing a fallback; a route-level loading.tsx would
+        mount a new boundary each time, and React holds content revealed into a fresh fallback for ~300 ms. */}
+    <Suspense fallback={<AppRouteFallback />}>{children}</Suspense>
+  </AppShell>;
 }
