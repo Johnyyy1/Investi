@@ -28,3 +28,6 @@ button, a, [role="button"] {
   .investi-range:not(:disabled):hover::-webkit-slider-thumb,
   .ql-range:not(:disabled):hover::-webkit-slider-thumb { transform: scale(1.06); }
 }
+
+/* KaTeX ships unlayered CSS, so the lesson formula reset must be unlayered too. */
+.lesson-formula .katex-display { margin: 0; }

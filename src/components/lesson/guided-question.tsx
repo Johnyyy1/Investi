@@ -1,28 +1,33 @@
 "use client";
 
-import { useState, type Ref } from "react";
-import { AnswerOption } from "@/components/learning/answer-option";
-import { FinanceInput } from "@/components/learning/finance-input";
-import { LearningButton } from "@/components/learning/learning-button";
-import { LessonFeedback } from "@/components/learning/lesson-feedback";
-import { evaluateQuestion, parseNumericAnswer, type QuestionBlock } from "@/features/lessons/question-evaluation";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { parseNumericAnswer, type QuestionBlock } from "@/features/lessons/question-evaluation";
+import { cn } from "@/lib/utils";
+import { AnswerChoice, NumberField, QuestionFeedback, type ChoiceState } from "./lesson-answer";
 
-export function GuidedQuestion({ block, onContinue, onPrevious, pending, continueButtonRef }: { block: QuestionBlock; onContinue: (answers: Record<string, string>) => void; onPrevious?: () => void; pending: boolean; continueButtonRef?: Ref<HTMLButtonElement> }) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [feedback, setFeedback] = useState<boolean>();
-  const evaluation = evaluateQuestion(block, answers);
-  function answer(id: string, value: string) { setAnswers((current) => ({ ...current, [id]: value })); }
-  const fields = block.type === "multiNumericQuestion" ? block.answers : block.type === "numericQuestion" ? [{ id: "answer", label: "Tvoje odpověď", unit: block.unit }] : [];
-  return <section aria-labelledby={`${block.id}-question`} className="mt-7 overflow-hidden rounded-panel border border-border bg-surface shadow-elevation-1">
-    <div className="px-5 pt-6 pb-7 sm:px-7 sm:pt-7">
-      <p className="text-microcopy font-extrabold tracking-[0.08em] text-primary-hover uppercase">Ověř si porozumění</p>
-      <h3 id={`${block.id}-question`} className="mt-2 text-card-title font-bold sm:text-[1.35rem]">{block.prompt}</h3>
-      {block.type === "multipleChoiceQuestion" ? <fieldset className="mt-6 space-y-3">
+/** Controlled question card; the lesson action bar owns Check → Continue / Try again. */
+export function GuidedQuestion({ block, answers, verdict, mastery, onAnswer }: {
+  block: QuestionBlock; answers: Record<string, string>; verdict?: boolean; mastery: boolean; onAnswer: (id: string, value: string) => void;
+}) {
+  const checked = verdict !== undefined;
+  const fields = block.type === "multiNumericQuestion" ? block.answers : block.type === "numericQuestion" ? [{ id: "answer", label: "Tvoje odpověď", unit: block.unit, answer: block.answer, tolerance: block.tolerance }] : [];
+  function choiceState(id: string): ChoiceState {
+    if (!checked) return answers.answer === id ? "selected" : "idle";
+    return answers.answer === id ? verdict ? "correct" : "incorrect" : "off";
+  }
+  return <section aria-labelledby={`${block.id}-question`} aria-describedby={checked ? `${block.id}-feedback` : undefined} className={cn("overflow-hidden rounded-paper-card border", mastery ? "border-paper-border bg-surface-practice" : "border-border-card bg-paper-surface shadow-paper-card")}>
+    <div className="flex flex-col gap-3.5 p-[18px] md:gap-[18px] md:px-7 md:py-[26px]">
+      {mastery ? null : <p className="text-[11px] font-semibold tracking-[0.9px] text-action uppercase md:text-xs md:tracking-[1px]">Ověř si porozumění</p>}
+      <h3 id={`${block.id}-question`} className="text-[19px]/6 font-semibold tracking-[-0.3px] md:text-[22px]/7">{block.prompt}</h3>
+      {block.type === "multipleChoiceQuestion" ? <fieldset disabled={checked} className="flex flex-col gap-2 md:gap-2.5">
         <legend className="sr-only">Vyber odpověď</legend>
-        {block.options.map((option) => <AnswerOption key={option.id} name={block.id} value={option.id} checked={answers.answer === option.id} disabled={feedback !== undefined} onChange={(value) => answer("answer", value)} state={answers.answer === option.id ? feedback === undefined ? "selected" : feedback ? "correct" : "incorrect" : "idle"}>{option.label}</AnswerOption>)}
-      </fieldset> : <div className="mt-6 grid gap-5 sm:grid-cols-2">{fields.map((field) => <FinanceInput key={field.id} label={field.label} suffix={field.unit} value={answers[field.id] ?? ""} onValueChange={(value) => answer(field.id, value)} disabled={feedback !== undefined} hint={field.unit === "%" ? "Zadej procento jako číslo." : field.unit ? `Zadej číselnou hodnotu v ${field.unit}.` : "Zadej číselnou hodnotu."} error={answers[field.id] && !Number.isFinite(parseNumericAnswer(answers[field.id])) ? "Zadej konečné číslo." : undefined} />)}</div>}
+        {block.options.map((option, index) => <AnswerChoice key={option.id} name={block.id} value={option.id} letter={String.fromCharCode(65 + index)} checked={answers.answer === option.id} state={choiceState(option.id)} onChange={(value) => onAnswer("answer", value)}>{option.label}</AnswerChoice>)}
+      </fieldset> : <div className="flex flex-col gap-3.5 md:gap-5">{fields.map((field) => {
+        const raw = answers[field.id] ?? "";
+        const parsed = parseNumericAnswer(raw);
+        const fieldCorrect = Number.isFinite(parsed) && Math.abs(parsed - field.answer) <= field.tolerance;
+        return <NumberField key={field.id} label={field.label} unit={field.unit || undefined} value={raw} onValueChange={(value) => onAnswer(field.id, value)} disabled={checked} state={checked ? fieldCorrect ? "correct" : "incorrect" : "idle"} hint={field.unit === "%" ? "Zadej procento jako číslo." : field.unit ? `Zadej číselnou hodnotu v ${field.unit}.` : "Zadej číselnou hodnotu."} error={raw && !Number.isFinite(parsed) ? "Zadej konečné číslo." : undefined} />;
+      })}</div>}
     </div>
-    {feedback === undefined ? <div className="flex flex-col gap-2 border-t border-border bg-surface-muted/55 px-5 py-4 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:px-7"><LearningButton className="order-2 w-full min-[420px]:w-auto" disabled={evaluation === undefined || pending} onClick={() => setFeedback(evaluation)}>Zkontrolovat odpověď<ArrowRight aria-hidden="true" className="size-4" /></LearningButton>{onPrevious ? <LearningButton className="order-1" variant="ghost" disabled={pending} onClick={onPrevious}><ArrowLeft aria-hidden="true" className="size-4" />Předchozí</LearningButton> : null}</div> : <div className="p-3"><LessonFeedback sticky autoFocusAction actionButtonRef={continueButtonRef} state={feedback ? "correct" : "incorrect"} title={feedback ? "Správně" : "Zkus to ještě jednou"} onPrevious={onPrevious} actionLabel={feedback ? "Pokračovat" : "Zkusit znovu"} onContinue={feedback ? () => onContinue(answers) : () => { setAnswers({}); setFeedback(undefined); }} actionPending={pending}>{feedback ? block.correctExplanation : block.incorrectExplanation}</LessonFeedback></div>}
+    <QuestionFeedback id={`${block.id}-feedback`} verdict={verdict}>{verdict ? block.correctExplanation : block.incorrectExplanation}</QuestionFeedback>
   </section>;
 }

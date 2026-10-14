@@ -1,23 +1,25 @@
 "use client";
 
-import { useEffect, useRef, useState }
- from "react";
+import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CompletionScreen } from "@/components/learning/completion-screen";
 import { LearningButton, LearningLink } from "@/components/learning/learning-button";
-import { LessonProgress } from "@/components/learning/lesson-progress";
 import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
 import { getModuleBySlug } from "@/features/learning/catalog";
-import { isQuestion } from "@/features/lessons/question-evaluation";
+import { evaluateQuestion, isQuestion } from "@/features/lessons/question-evaluation";
 import type { AuthoredLesson } from "@/features/lessons/types";
 import { completeLessonAction, markLessonStartedAction, saveLessonPositionAction } from "@/features/progress/actions";
 import type { CompletionRewardPresentation, LearningMomentum } from "@/features/progress/contracts";
 import { formatPracticeCapitalMinor, type SerializedPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { LearningStats } from "@/components/gamification/learning-stats";
+import { cn } from "@/lib/utils";
 import { GuidedBlock } from "./guided-block";
 import { GuidedQuestion } from "./guided-question";
-import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
-import { Feedback } from "@/components/ui/feedback";
+import { LessonActionBar, LessonTopBar } from "./lesson-chrome";
+import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, Leaf, RotateCcw } from "lucide-react";
+
+const primaryClassName = "min-h-[52px] min-w-0 flex-1 whitespace-nowrap border-action px-3 font-semibold shadow-none motion-safe:hover:translate-y-0 disabled:border-track disabled:bg-track disabled:text-text-disabled disabled:opacity-100 min-[420px]:px-6 md:flex-none";
 
 export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref }: {
   lesson: AuthoredLesson; initialStatus: "not_started" | "in_progress" | "completed"; initialPosition: number; initialCompletedLessons: number; initialLearningMomentum: LearningMomentum; initialEarnedPracticeCapitalMinor: SerializedPracticeCapitalMinor; nextHref: string;
@@ -32,10 +34,13 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
   const [finished, setFinished] = useState(false);
   const [completedLessons, setCompletedLessons] = useState(initialCompletedLessons);
   const [reward, setReward] = useState<CompletionRewardPresentation>();
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [verdict, setVerdict] = useState<boolean>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const retryActionRef = useRef<HTMLButtonElement>(null);
+  const primaryRef = useRef<HTMLButtonElement>(null);
+  const questionRef = useRef<HTMLDivElement>(null);
   const movedRef = useRef(false);
   const busyRef = useRef(false);
 
@@ -52,19 +57,19 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
   }, [position, finished]);
   useEffect(() => {
     if (!error) return;
-    const frame = requestAnimationFrame(() => retryActionRef.current?.focus());
+    const frame = requestAnimationFrame(() => primaryRef.current?.focus());
     return () => cancelAnimationFrame(frame);
   }, [error]);
 
-  async function move(next: number, answers?: Record<string, string>) {
+  async function move(next: number, submitted?: Record<string, string>) {
     if (busyRef.current) return;
     busyRef.current = true; setPending(true); setError(undefined);
     try {
       if (!review) {
-        const result = await saveLessonPositionAction(lesson.id, next, answers);
+        const result = await saveLessonPositionAction(lesson.id, next, submitted);
         if (!result.ok) { setError(result.message); return; }
       }
-      movedRef.current = true; setPosition(next);
+      movedRef.current = true; setPosition(next); setAnswers({}); setVerdict(undefined);
     } catch { setError("Postup se nepodařilo uložit. Zkus to znovu."); }
     finally { busyRef.current = false; setPending(false); }
   }
@@ -82,42 +87,68 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
     } catch { setError("Dokončení se nepodařilo uložit. Zkus to znovu."); }
     finally { busyRef.current = false; setPending(false); }
   }
+  function retry() {
+    setAnswers({}); setVerdict(undefined);
+    requestAnimationFrame(() => questionRef.current?.querySelector<HTMLInputElement>("input")?.focus());
+  }
+
   const step = steps[position];
+  const mastery = step.kind === "mastery";
   const masterySteps = steps.filter((item) => item.kind === "mastery");
-  const masteryPosition = step.kind === "mastery" ? masterySteps.findIndex((item) => item === step) + 1 : 0;
+  const masteryPosition = mastery ? masterySteps.findIndex((item) => item === step) + 1 : 0;
   const question = step.blocks.find(isQuestion);
-  const hasPrevious = position > 0;
-  const onPrevious = () => void move(position - 1);
-  return <main className="mx-auto min-h-screen w-full max-w-4xl px-3 py-4 min-[375px]:px-5 sm:px-8 sm:py-8 lg:py-10">
-    <header className="rounded-surface border border-border bg-surface px-3 py-4 shadow-elevation-1 min-[375px]:px-4 sm:px-6 sm:py-5">
-      <LessonProgress step={finished ? steps.length + 1 : position + 1} total={steps.length + 1} onBack={() => router.push("/learn")} />
-      <div className="mt-4 border-t border-border pt-4">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-microcopy font-extrabold tracking-[0.06em] text-primary-hover uppercase max-[359px]:gap-x-1"><span>{learningModule.title}</span><span aria-hidden="true">·</span><span>Lekce {lesson.position}</span>{review ? <><span aria-hidden="true">·</span><span className="inline-flex items-center gap-1 text-success-ink"><CheckCircle2 aria-hidden="true" className="size-4" />Opakování</span></> : null}</div>
-        <h1 lang="cs" className="mt-1 break-normal [overflow-wrap:normal] text-card-title font-bold sm:text-[1.4rem]">{lesson.title}</h1>
-        {review ? <p className="mt-1 text-small text-secondary">Lekce už je dokončena. Opakování uložený postup nezmění.</p> : null}
-      </div>
-    </header>
-    {error ? <Feedback role="alert" state="incorrect" className="mt-5 text-small text-danger-ink">{error}</Feedback> : null}
-    {finished ? <div className="mt-7 overflow-hidden rounded-panel border border-primary/30 bg-surface shadow-elevation-1">
-      <CompletionScreen autoFocusAction title={review ? "Opakování dokončeno" : "Lekce dokončena"} description={lesson.title} xpAwarded={reward?.xpAwarded} practiceCapitalAwardedMinor={reward && reward.practiceCapitalAwardedMinor !== "0" ? reward.practiceCapitalAwardedMinor : undefined} actionLabel={reward?.portfolioLabUnlocked ? "Otevřít Portfolio Lab" : reward?.allComplete ? "Prozkoumat Lab" : "Další lekce"} onContinue={() => { router.push(reward?.portfolioLabUnlocked ? "/lab/portfolio" : reward?.nextHref ?? nextHref); router.refresh(); }}>
-        {reward?.portfolioLabUnlocked && <p className="mt-5 text-ql-body font-bold text-ql-link" role="status">Portfolio Lab odemčen · +{formatPracticeCapitalMinor(reward.unlockCapitalAwardedMinor)} virtuálního kapitálu</p>}
-        {reward && reward.xpAwarded > 0 && !reward.portfolioLabUnlocked && <p className="mt-4 text-ql-small text-secondary">Virtuální kapitál získáš po dokončení základů a odemčení Portfolio Labu.</p>}
-        {review && <p className="mt-4 text-ql-small text-ql-secondary">Opakováním si znalost upevníš. Další XP ani virtuální kapitál se nepřipisují.</p>}
-        <div className="mt-7 rounded-surface border border-border bg-surface p-5 text-left"><LearningStats stats={reward?.learningMomentum ?? initialLearningMomentum} earnedPracticeCapitalMinor={reward?.earnedPracticeCapitalMinor ?? initialEarnedPracticeCapitalMinor} goal /></div>
-        {reward && !reward.allComplete && !reward.portfolioLabUnlocked && <p className="mt-6 text-ql-small text-ql-secondary">Další na řadě: {reward.nextTitle}</p>}
-      </CompletionScreen>
-      <div className="border-t border-border px-6 py-4 text-center"><LearningLink variant="ghost" href="/learn"><ArrowLeft aria-hidden="true" className="size-4" />Zpět na Učení</LearningLink><LearningLink variant="ghost" href={moduleHref}>Zobrazit modul</LearningLink><p className="sr-only" data-testid="completion-progress">Počet dokončených dostupných lekcí v modulu {learningModule.title}: {completedLessons} · Uloženo k účtu</p></div>
-    </div> : <>
-      <article key={position} className="mt-7 min-w-0" aria-labelledby="step-title">
-        <div>
-          <p className="text-microcopy font-extrabold tracking-[0.08em] text-primary-hover uppercase">{step.kind === "mastery" ? `Ověření znalostí · ${masteryPosition} z ${masterySteps.length}` : `Krok ${position + 1}`}</p>
-          <h2 ref={headingRef} id="step-title" tabIndex={-1} lang="cs" className="mt-1 scroll-mt-8 break-normal [overflow-wrap:normal] text-section-title font-bold tracking-[-0.02em]">{step.title}</h2>
-        </div>
-        <div className="mt-6 space-y-6">
+  const evaluation = question ? evaluateQuestion(question, answers) : undefined;
+  const isLast = position === steps.length - 1;
+  const wide = step.blocks.some((block) => block.type === "interactiveFigure");
+  const primary = question && verdict === undefined
+    ? { label: "Zkontrolovat odpověď", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: evaluation === undefined, onClick: () => setVerdict(evaluation) }
+    : question && verdict === false
+      ? { label: "Zkusit znovu", icon: <RotateCcw aria-hidden="true" className="size-[18px]" />, disabled: false, onClick: retry }
+      : { label: question || !isLast ? "Pokračovat" : review ? "Dokončit opakování" : "Dokončit lekci", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: false, onClick: () => void (question ? move(position + 1, answers) : isLast ? complete() : move(position + 1)) };
+
+  return <main className="investi-theme flex min-h-dvh flex-col">
+    <LessonTopBar eyebrow={`${learningModule.title} · Lekce ${lesson.position}${review ? " · Opakování" : ""}`} title={lesson.title} minutes={lesson.estimatedMinutes} segments={steps.map((item) => ({ mastery: item.kind === "mastery" }))} current={position} finished={finished} />
+    <div className="flex-1 px-5 pt-5 pb-7 md:px-8 md:pt-10 md:pb-14 lg:px-16 lg:pt-12 lg:pb-[72px]">
+      <div className={cn("mx-auto flex w-full min-w-0 flex-col gap-5 md:gap-7", wide && !finished ? "max-w-[1040px]" : "max-w-[760px]")}>
+        {error ? <p role="alert" className="flex items-start gap-2 rounded-paper-control bg-error-tint px-4 py-3 text-[15px]/[23px] text-error-ink"><CircleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" />{error}</p> : null}
+        {finished ? <div className="overflow-hidden rounded-paper-card border border-border-card bg-paper-surface shadow-paper-card">
+          <CompletionScreen autoFocusAction title={review ? "Opakování dokončeno" : "Lekce dokončena"} description={lesson.title} xpAwarded={reward?.xpAwarded} practiceCapitalAwardedMinor={reward && reward.practiceCapitalAwardedMinor !== "0" ? reward.practiceCapitalAwardedMinor : undefined} actionLabel={reward?.portfolioLabUnlocked ? "Otevřít Portfolio Lab" : reward?.allComplete ? "Prozkoumat Lab" : "Další lekce"} onContinue={() => { router.push(reward?.portfolioLabUnlocked ? "/lab/portfolio" : reward?.nextHref ?? nextHref); router.refresh(); }}>
+            {reward?.portfolioLabUnlocked && <p className="mt-5 text-ql-body font-bold text-action" role="status">Portfolio Lab odemčen · +{formatPracticeCapitalMinor(reward.unlockCapitalAwardedMinor)} virtuálního kapitálu</p>}
+            {reward && reward.xpAwarded > 0 && !reward.portfolioLabUnlocked && <p className="mt-4 text-ql-small text-text-secondary">Virtuální kapitál získáš po dokončení základů a odemčení Portfolio Labu.</p>}
+            {review && <p className="mt-4 text-ql-small text-text-secondary">Opakováním si znalost upevníš. Další XP ani virtuální kapitál se nepřipisují.</p>}
+            <div className="mt-7 rounded-paper-card border border-paper-border bg-paper-surface p-5 text-left"><LearningStats stats={reward?.learningMomentum ?? initialLearningMomentum} earnedPracticeCapitalMinor={reward?.earnedPracticeCapitalMinor ?? initialEarnedPracticeCapitalMinor} goal /></div>
+            {reward && !reward.allComplete && !reward.portfolioLabUnlocked && <p className="mt-6 text-ql-small text-text-secondary">Další na řadě: {reward.nextTitle}</p>}
+          </CompletionScreen>
+          <div className="flex flex-wrap justify-center gap-2 border-t border-divider px-6 py-4"><LearningLink variant="ghost" className="text-ink hover:bg-paper-muted" href="/learn"><ArrowLeft aria-hidden="true" className="size-4" />Zpět na Učení</LearningLink><LearningLink variant="ghost" className="text-ink hover:bg-paper-muted" href={moduleHref}>Zobrazit modul</LearningLink><p className="sr-only" data-testid="completion-progress">Počet dokončených dostupných lekcí v modulu {learningModule.title}: {completedLessons} · Uloženo k účtu</p></div>
+        </div> : <article key={position} className="flex min-w-0 flex-col gap-5 md:gap-7" aria-labelledby="step-title">
+          {review ? <p className="flex items-center gap-2 text-sm text-text-muted"><CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-action" /><span>Lekce už je dokončena. Opakování uložený postup nezmění.</span></p> : null}
+          <div className="flex flex-col gap-2 md:gap-2.5">
+            {mastery ? <p className="flex w-fit items-center gap-1.5 rounded-full border border-paper-border bg-surface-practice py-[5px] pr-2.5 pl-2 text-[13px] font-semibold text-action"><Leaf aria-hidden="true" className="size-3.5" />Ověření znalostí · {masteryPosition} z {masterySteps.length}</p> : <p className="text-[11px] font-semibold tracking-[0.9px] text-action uppercase md:text-xs md:tracking-[1px]">Krok {position + 1}</p>}
+            <h2 ref={headingRef} id="step-title" tabIndex={-1} lang="cs" className="scroll-mt-8 text-[28px]/8 font-semibold tracking-[-0.9px] [overflow-wrap:normal] md:text-[38px]/[44px] md:tracking-[-1.3px]">{step.title}</h2>
+            {mastery ? <p className="text-sm/5 text-text-muted">Bez časového limitu. Když odpověď nevyjde, ukážeme proč a zkusíš to znovu.</p> : null}
+          </div>
           {step.blocks.filter((block) => !isQuestion(block)).map((block) => <GuidedBlock key={block.id} block={block} />)}
-        </div>
-        {question ? <GuidedQuestion block={question} pending={pending} onPrevious={hasPrevious ? onPrevious : undefined} continueButtonRef={retryActionRef} onContinue={(answers) => void move(position + 1, answers)} /> : <nav aria-label="Navigace kroků lekce" className="mt-8 flex flex-col-reverse gap-2 border-t border-border pt-5 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">{hasPrevious ? <LearningButton variant="ghost" disabled={pending} onClick={onPrevious}><ArrowLeft aria-hidden="true" className="size-4" />Předchozí</LearningButton> : <span /> }<LearningButton buttonRef={retryActionRef} className="w-full min-[420px]:w-auto min-[420px]:min-w-48" loading={pending} onClick={() => void (position === steps.length - 1 ? complete() : move(position + 1))}>{position === steps.length - 1 ? review ? "Dokončit opakování" : "Dokončit lekci" : "Pokračovat"}<ArrowRight aria-hidden="true" className="size-4" /></LearningButton></nav>}
-      </article>
-    </>}
+          {question ? <div ref={questionRef} className="flex flex-col">
+            {mastery && verdict ? <MasteryGuide /> : null}
+            <div className="relative z-[1]"><GuidedQuestion block={question} answers={answers} verdict={verdict} mastery={mastery} onAnswer={(id, value) => setAnswers((current) => ({ ...current, [id]: value }))} /></div>
+          </div> : null}
+        </article>}
+      </div>
+    </div>
+    {finished ? null : <LessonActionBar>
+      {position > 0 ? <LearningButton variant="ghost" disabled={pending} onClick={() => void move(position - 1)} className="min-h-[52px] shrink-0 px-1 text-[15px] font-semibold text-ink hover:bg-paper-muted md:min-h-12 md:px-3"><ArrowLeft aria-hidden="true" className="size-4" /><span className="max-[359px]:sr-only">Předchozí</span></LearningButton> : null}
+      <LearningButton buttonRef={primaryRef} loading={pending} disabled={primary.disabled} aria-describedby={question && verdict !== undefined ? `${question.id}-feedback` : undefined} onClick={primary.onClick} className={cn(primaryClassName, position === 0 && "md:ml-auto")}>{primary.label}{pending ? null : <span className="contents max-[374px]:hidden">{primary.icon}</span>}</LearningButton>
+    </LessonActionBar>}
   </main>;
+}
+
+/** Guide 04 reacts once a mastery check is answered correctly; decorative, the verdict is announced by the card. */
+function MasteryGuide() {
+  return <div className="relative ml-auto h-[157px] w-full max-w-[350px]">
+    <Image src="/investi-assets/guide/04-calm-book.webp" width={710} height={710} sizes="169px" alt="" className="absolute top-0 right-0 size-[169px] object-contain" />
+    <p className="absolute top-[30px] left-0 z-[1] w-[167px] rounded-paper-card border border-paper-border bg-paper-surface px-3.5 py-3 text-sm/5 text-ink">
+      Přesně tak.
+      <span aria-hidden="true" className="absolute top-1/2 -right-[6px] size-3 -translate-y-1/2 rotate-45 border-t border-r border-paper-border bg-paper-surface" />
+    </p>
+  </div>;
 }
