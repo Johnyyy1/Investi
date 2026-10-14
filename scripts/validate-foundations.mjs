@@ -71,11 +71,9 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => { if (["warning", "error"].includes(message.type()) && !message.text().startsWith("You have Reduced Motion enabled")) errors.push(message.text()); });
 
-  await page.goto(`${baseURL}/sign-up`);
-  await page.getByLabel("Jméno", { exact: true }).fill("Foundations learner");
-  await page.getByLabel("E-mail", { exact: true }).fill(email);
-  await page.getByLabel("Heslo", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "Vytvořit účet", exact: true }).click();
+  // Registration now ends onboarding; create the account directly, then onboard as a signed-in learner.
+  assert.ok((await page.request.post(`${baseURL}/api/auth/sign-up/email`, { headers: { origin: baseURL }, data: { name: "Foundations learner", email, password } })).ok());
+  await page.goto(`${baseURL}/onboarding`);
   await finishOnboarding(page);
   [{ id: userId }] = await sql`select id from "user" where email = ${email}`;
 

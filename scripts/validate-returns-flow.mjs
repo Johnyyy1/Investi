@@ -39,11 +39,9 @@ try {
     await page.waitForURL("**/sign-in");
   }
 
-  await page.goto(`${baseURL}/sign-up`);
-  await page.getByRole("textbox", { name: "Jméno", exact: true }).fill("Returns integration QA");
-  await page.getByRole("textbox", { name: "E-mail", exact: true }).fill(email);
-  await page.getByRole("textbox", { name: "Heslo", exact: true }).fill(password);
-  await page.getByRole("button", { name: "Vytvořit účet", exact: true }).click();
+  // Registration now ends onboarding; create the account directly, then onboard as a signed-in learner.
+  assert.ok((await page.request.post(`${baseURL}/api/auth/sign-up/email`, { headers: { origin: baseURL }, data: { name: "Returns integration QA", email, password } })).ok());
+  await page.goto(`${baseURL}/onboarding`);
   await finishOnboarding(page);
   await page.getByRole("heading", { name: "Připraven na další krok?", exact: true }).waitFor();
   [{ id: userId }] = await sql`select id from "user" where email = ${email}`;

@@ -111,7 +111,53 @@ async function unchangedFinance(id) {
 }
 async function profile(id) { return (await sql`select * from learning_profile where user_id=${id}`)[0]; }
 try {
-  const guest = await browser.newPage(); await guest.goto(`${baseURL}/onboarding`); await guest.waitForURL('**/sign-in'); await guest.close();
+  // Pen main path: guest answers → plan → first mini-lesson → save account → Studovna. The account takes the guest's learning over.
+  const guestContext = await browser.newContext({ viewport: { width: 1440, height: 900 }, timezoneId: 'Europe/Prague', reducedMotion: 'reduce' });
+  const guest = await guestContext.newPage(); guest.on('pageerror', (error) => errors.push(error.message));
+  await guest.goto(`${baseURL}/onboarding`); assert.equal(new URL(guest.url()).pathname, '/onboarding');
+  assert.equal(await guest.getByRole('link', { name: 'Přihlásit se', exact: true }).getAttribute('href'), '/sign-in');
+  assert.equal((await (await guestContext.request.get(`${baseURL}/api/auth/get-session`)).json()), null, 'answering questions creates no identity');
+  await preferences(guest); await diagnostic(guest, correct, { submit: false });
+  await guest.getByRole('button', { name: 'Zobrazit můj plán', exact: true }).click();
+  await guest.waitForURL('**/onboarding/plan'); await guest.getByRole('heading', { name: 'Tvůj plán', exact: true }).waitFor();
+  const guestSession = await (await guestContext.request.get(`${baseURL}/api/auth/get-session`)).json();
+  assert.equal(guestSession.user.isAnonymous, true); assert.equal(guestSession.user.anonymousKind, 'guest');
+  const guestId = guestSession.user.id; accounts.push({ id: guestId });
+  assert.equal((await sql`select count(*)::int as n from lesson_award where user_id=${guestId}`)[0].n, 0, 'a guest is never seeded with demo data');
+  assert.equal((await profile(guestId)).diagnostic_result.level, 'strong_foundations');
+  await guest.goto(`${baseURL}/learn/investing-foundations/why-invest`);
+  await guest.getByRole('button', { name: 'Pokračovat', exact: true }).click();
+  await guest.getByRole('radio', { name: 'Nic. Pořád je to 10 000 Kč, koupím za ně stejně.', exact: true }).check();
+  await guest.getByRole('button', { name: 'Zkontrolovat odpověď', exact: true }).click();
+  await guest.getByText(/Skoro\. Číslo na obálce se nezmění/).waitFor();
+  await guest.getByRole('button', { name: 'Zkusit znovu', exact: true }).click();
+  await guest.getByRole('radio', { name: 'Koupím si za ně o něco méně.', exact: true }).check();
+  await guest.getByRole('button', { name: 'Zkontrolovat odpověď', exact: true }).click();
+  await guest.getByText(/Přesně\. Číslo stejné, hodnota menší/).waitFor();
+  await guest.getByRole('button', { name: 'Pokračovat', exact: true }).click();
+  await guest.getByRole('button', { name: 'Dokončit lekci', exact: true }).click();
+  await guest.getByRole('heading', { name: 'Lekce dokončena', exact: true }).waitFor();
+  const guestReceipt = (await sql`select * from lesson_award where user_id=${guestId}`)[0];
+  assert.equal(guestReceipt.lesson_id, 'foundations-why-invest');
+  await guest.getByRole('button', { name: 'Ulož si, co už víš', exact: true }).click();
+  await guest.waitForURL('**/onboarding/save'); await guest.getByRole('heading', { name: 'Ulož si, co už víš.', exact: true }).waitFor();
+  assert.equal(await guest.getByRole('link', { name: 'Teď ne', exact: true }).getAttribute('href'), '/learn');
+  for (const width of [1440, 390, 320]) { await guest.setViewportSize({ width, height: 900 }); assert.equal(await guest.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `guest save: overflow at ${width}`); await guest.screenshot({ path: `${output}/guest-save-${width}.png`, fullPage: true, animations: 'disabled' }); }
+  await guest.setViewportSize({ width: 1440, height: 900 });
+  const guestEmail = `personalization-guest-${randomUUID()}@example.com`;
+  await guest.getByLabel('Jméno', { exact: true }).fill('Jana'); await guest.getByLabel('E-mail', { exact: true }).fill(guestEmail); await guest.getByLabel('Heslo', { exact: true }).fill(randomUUID());
+  await guest.getByRole('button', { name: 'Vytvořit účet', exact: true }).click();
+  await guest.waitForURL('**/learn');
+  const [{ id: savedId }] = await sql`select id from "user" where email=${guestEmail}`; accounts.push({ id: savedId });
+  assert.equal((await sql`select count(*)::int as n from "user" where id=${guestId}`)[0].n, 0, 'the guest identity is gone after the claim');
+  const savedReceipts = await sql`select * from lesson_award where user_id=${savedId}`;
+  assert.equal(savedReceipts.length, 1); assert.equal(savedReceipts[0].awarded_at.getTime(), guestReceipt.awarded_at.getTime(), 'the original receipt moved');
+  assert.equal((await sql`select status from lesson_progress where user_id=${savedId} and lesson_id='foundations-why-invest'`)[0].status, 'completed');
+  assert.equal((await profile(savedId)).diagnostic_result.level, 'strong_foundations');
+  const savedSession = await (await guestContext.request.get(`${baseURL}/api/auth/get-session`)).json();
+  assert.equal(savedSession.user.id, savedId); assert.equal(savedSession.user.isAnonymous, false);
+  await guestContext.close();
+  console.log('PASS: guest answers, sees the plan, finishes the mini-lesson, then saves an account that takes over the receipt, progress and profile.');
   const a = await account();
   const response = await a.page.goto(`${baseURL}/learn`); await a.page.waitForURL('**/onboarding');
   assert.ok(!(await response.text()).includes('correctAnswer'));

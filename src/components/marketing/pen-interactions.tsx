@@ -24,7 +24,7 @@ export function MobileNavigation() {
         <a href="#jak-to-funguje">Jak to funguje</a>
         <a href="#portfolio-lab">Portfolio Lab</a>
         <Link href="/sign-in" prefetch={false}>Přihlásit se</Link>
-        <Link href="/sign-up" prefetch={false}>Začít se učit</Link>
+        <Link href="/onboarding" prefetch={false}>Začít se učit</Link>
       </nav>
     </details>
   </div>;

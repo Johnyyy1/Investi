@@ -6,7 +6,8 @@ import { getGuidedSteps, getStepDefinitions, isFocusedLesson } from "./guided-fl
 describe("shared guided lessons", () => {
   it.each(authoredLessons)("preserves every authored block in $title", (lesson) => {
     const steps = getGuidedSteps(lesson);
-    expect(steps.length).toBeGreaterThanOrEqual(6);
+    // The first Foundations lesson is the deliberately short mini-lesson that also opens onboarding.
+    expect(steps.length).toBeGreaterThanOrEqual(lesson.id === "foundations-why-invest" ? 3 : 6);
     expect(steps.length).toBeLessThanOrEqual(12);
     expect(new Set(lesson.blocks.map((block) => block.id)).size).toBe(lesson.blocks.length);
     expect(steps.flatMap((step) => step.blocks)).toEqual(lesson.blocks);

@@ -10,5 +10,5 @@ export const settingsSections = [
   { id: "security", label: "Přihlášení a zabezpečení", icon: ShieldCheck, group: "ÚČET" },
 ] as const;
 export type SettingsSection = typeof settingsSections[number]["id"];
-export type SettingsIdentity = { name: string; email: string; demo: boolean; since: string; completed: number; total: number };
+export type SettingsIdentity = { name: string; email: string; demo: boolean; guest?: boolean; since: string; completed: number; total: number };
 export const displayNameSchema = z.string().trim().min(1, "Zadej své jméno.").max(80, "Jméno může mít nejvýše 80 znaků.").refine((name) => !/[\u0000-\u001f\u007f]/u.test(name), "Jméno nesmí obsahovat řídicí znaky.");

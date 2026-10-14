@@ -13,7 +13,7 @@ export function FinalCta() {
           <h2 id="final-cta-title">Jsi připravený učit se investovat praxí?</h2>
           <p className={styles.finalCtaDescription}>Buduj skutečný cit pro investování pomocí interaktivních lekcí, portfolio experimentů a backtestů — krok za krokem.</p>
           <div className={styles.finalCtaActions}>
-            <Link href="/sign-up" prefetch={false} className={`${styles.button} ${styles.primaryButton} ${styles.finalCtaButton}`}>
+            <Link href="/onboarding" prefetch={false} className={`${styles.button} ${styles.primaryButton} ${styles.finalCtaButton}`}>
               Začít se učit <ArrowRight aria-hidden="true" />
             </Link>
             <DemoButton compact className={styles.finalCtaDemo} buttonClassName={`${styles.button} ${styles.demoButton} ${styles.finalCtaButton}`} />

@@ -1,0 +1,2 @@
+ALTER TABLE "user" ADD COLUMN "anonymous_kind" text;--> statement-breakpoint
+ALTER TABLE "user" ADD CONSTRAINT "user_anonymous_kind_check" CHECK ("user"."anonymous_kind" is null or ("user"."is_anonymous" and "user"."anonymous_kind" in ('demo', 'guest')));

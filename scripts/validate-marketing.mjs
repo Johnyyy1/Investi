@@ -157,7 +157,7 @@ try {
     assert.equal(await image.getAttribute("alt"), "");
     assert.equal(await image.evaluate(element => element.complete && element.naturalWidth > 0), true);
   }
-  assert.deepEqual([...new Set(await page.locator("a[href]").evaluateAll(links => links.map(link => link.getAttribute("href"))))].sort(), ["#jak-to-funguje", "#main", "#portfolio-lab", "/", "/sign-in", "/sign-up"]);
+  assert.deepEqual([...new Set(await page.locator("a[href]").evaluateAll(links => links.map(link => link.getAttribute("href"))))].sort(), ["#jak-to-funguje", "#main", "#portfolio-lab", "/", "/onboarding", "/sign-in"]);
   const layouts = [];
   for (const width of widths) {
     layouts.push(await layout(width));
@@ -203,7 +203,7 @@ try {
   assert.deepEqual(writes, [], "Marketing interactions perform no network mutation");
   assert.equal((await (await context.request.get(`${baseURL}/api/auth/get-session`)).json()), null, "Previews never create an anonymous identity");
   checks.push("Both independent lessons: initial answer, retry focus, disabled submit, incorrect/correct feedback. Three keyboard/pointer allocation controls keep 100%; save/reset remains local; no mutation request or session creation.");
-  for (const [label, path, heading] of [["Začít se učit", "/sign-up", "Vytvořit účet"], ["Přihlásit se", "/sign-in", "Vítej zpět"]]) {
+  for (const [label, path, heading] of [["Začít se učit", "/onboarding", "Co se chceš naučit?"], ["Přihlásit se", "/sign-in", "Vítej zpět"]]) {
     await page.goto(baseURL);
     await page.getByRole("link", { name: label, exact: true }).first().click();
     await page.waitForURL(`**${path}`);

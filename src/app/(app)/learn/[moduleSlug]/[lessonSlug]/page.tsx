@@ -7,6 +7,8 @@ import { getLessonProgress, getModuleProgress } from "@/features/progress/reposi
 import { getCurrentUser } from "@/lib/session";
 import { serializePracticeCapitalMinor } from "@/features/rewards/presentation";
 import { toLearningMomentum } from "@/features/progress/contracts";
+import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
+import { isGuestIdentity } from "@/features/guest/identity";
 
 type LessonPageProps = { params: Promise<{ moduleSlug: string; lessonSlug: string }> };
 export async function generateMetadata({ params }: LessonPageProps) {
@@ -26,5 +28,5 @@ export default async function LessonPage({ params }: LessonPageProps) {
   ]);
   const status = progress?.status ?? "not_started";
   if (!summary.gamification) redirect("/sign-in");
-  return <GuidedLesson key={lesson.id} lesson={lesson} initialStatus={status} initialPosition={progress?.lastPosition ?? 0} initialCompletedLessons={completedLessons} initialLearningMomentum={toLearningMomentum(summary.gamification)} initialEarnedPracticeCapitalMinor={serializePracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)} nextHref={summary.allComplete ? "/lab" : `/learn/${summary.next.moduleSlug}/${summary.next.slug}`} />;
+  return <GuidedLesson key={lesson.id} lesson={lesson} initialStatus={status} initialPosition={Math.min(progress?.lastPosition ?? 0, getGuidedSteps(lesson).length - 1)} initialCompletedLessons={completedLessons} initialLearningMomentum={toLearningMomentum(summary.gamification)} initialEarnedPracticeCapitalMinor={serializePracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)} nextHref={summary.allComplete ? "/lab" : `/learn/${summary.next.moduleSlug}/${summary.next.slug}`} guest={isGuestIdentity(user)} />;
 }

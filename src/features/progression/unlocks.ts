@@ -21,7 +21,8 @@ export const progressionUnlocks = {
 export type UnlockId = keyof typeof progressionUnlocks;
 export type LearningProgression = { totalXp: number; completedLessonIds: ReadonlySet<string> };
 
-export function evaluateUnlock(id: UnlockId, progression: LearningProgression, persisted = false, isDemo = false) {
+/** A guest has not saved an account yet, so nothing is unlocked or recorded until they do. */
+export function evaluateUnlock(id: UnlockId, progression: LearningProgression, persisted = false, isDemo = false, isGuest = false) {
   const definition = progressionUnlocks[id];
   const completedPrerequisiteLessons = definition.prerequisiteLessonIds.filter((lessonId) => progression.completedLessonIds.has(lessonId)).length;
   const requiredPrerequisiteLessons = definition.prerequisiteLessonIds.length;
@@ -34,14 +35,15 @@ export function evaluateUnlock(id: UnlockId, progression: LearningProgression, p
     completedPrerequisiteLessons,
     requiredPrerequisiteLessons,
     prerequisitesComplete,
-    unlocked: persisted || isDemo || (progression.totalXp >= definition.xpRequired && prerequisitesComplete),
+    requiresAccount: isGuest,
+    unlocked: !isGuest && (persisted || isDemo || (progression.totalXp >= definition.xpRequired && prerequisitesComplete)),
   };
 }
 
-export type PortfolioLabUnlockFacts = { progression: LearningProgression; recorded: boolean; grandfathered: boolean; isDemo: boolean };
+export type PortfolioLabUnlockFacts = { progression: LearningProgression; recorded: boolean; grandfathered: boolean; isDemo: boolean; isGuest?: boolean };
 
 /** A recorded unlock is never removed, so only an unlocked account without a record needs the locked write path. */
-export function resolvePortfolioLabUnlock({ progression, recorded, grandfathered, isDemo }: PortfolioLabUnlockFacts) {
-  const status = evaluateUnlock(PORTFOLIO_LAB_UNLOCK_ID, progression, recorded || grandfathered, isDemo);
+export function resolvePortfolioLabUnlock({ progression, recorded, grandfathered, isDemo, isGuest = false }: PortfolioLabUnlockFacts) {
+  const status = evaluateUnlock(PORTFOLIO_LAB_UNLOCK_ID, progression, recorded || grandfathered, isDemo, isGuest);
   return { status, needsRecord: !recorded && status.unlocked };
 }

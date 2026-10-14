@@ -7,7 +7,7 @@ import { TextInput } from "@/components/learning/text-input";
 import { authClient } from "@/lib/auth-client";
 import { getAuthErrorMessage } from "@/lib/auth-error";
 
-export function SignUpForm() {
+export function SignUpForm({ redirectTo = "/onboarding" }: { redirectTo?: string }) {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,10 +19,10 @@ export function SignUpForm() {
       name: String(formData.get("name") ?? ""),
       email: String(formData.get("email") ?? ""),
       password: String(formData.get("password") ?? ""),
-      callbackURL: "/onboarding",
+      callbackURL: redirectTo,
     });
     if (error) { setErrorMessage(getAuthErrorMessage(error, "Účet se nepodařilo vytvořit. Zkus to znovu.")); setIsSubmitting(false); return; }
-    router.replace("/onboarding"); router.refresh();
+    router.replace(redirectTo); router.refresh();
     } catch { setErrorMessage("Připojení se nepodařilo. Zkus to znovu."); }
     finally { setIsSubmitting(false); }
   }

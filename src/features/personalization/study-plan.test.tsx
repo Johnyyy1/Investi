@@ -20,11 +20,13 @@ describe("saved study plan", () => {
     expect(guided.recommendation.sessionLessonIds).toHaveLength(1);
     expect(compact.recommendation.sessionLessonIds).toHaveLength(3);
     expect(guided.html).toContain("Klidně od základů");
-    expect(guided.html).toContain("ve více sezeních");
+    // The five-minute first lesson fits a five-minute session; longer lessons still split (see the Returns case).
+    expect(guided.recommendation.splitLessonAcrossSessions).toBe(false);
+    expect(guided.html).toContain("vlastním tempem");
     expect(compact.html).toContain("Svižné zopakování");
     for (const { html } of [guided, compact]) {
       expect(html).toContain("/learn/investing-foundations/why-invest");
-      expect(html).toContain("Přibližně 7 min");
+      expect(html).toContain("Přibližně 5 min");
       expect(html).toContain("daty, statistikou a backtestingem");
       expect(html).not.toMatch(/Můžeš přeskočit|correctCount|correctAnswer/);
     }
@@ -36,6 +38,7 @@ describe("saved study plan", () => {
     expect(html).toContain("Hotovo");
     expect(html).toContain("/learn/returns/simple-returns");
     expect(html).toContain("14 min");
+    expect(recommendation.splitLessonAcrossSessions).toBe(false);
   });
   it("handles complete and unavailable curricula without an invented lesson", () => {
     const completed = plan(5, 30, availableLessons.map((lesson) => ({ lessonId: lesson.id, status: "completed" })));

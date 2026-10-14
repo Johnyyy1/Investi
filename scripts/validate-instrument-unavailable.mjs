@@ -21,11 +21,9 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 950 }, timezoneId: "Europe/Prague" });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto(`${baseURL}/sign-up`);
-  await page.getByLabel("Jméno", { exact: true }).fill("Instrument Unavailable QA");
-  await page.getByLabel("E-mail", { exact: true }).fill(email);
-  await page.getByLabel("Heslo", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "Vytvořit účet", exact: true }).click();
+  // Registration now ends onboarding; create the account directly, then onboard as a signed-in learner.
+  assert.ok((await page.request.post(`${baseURL}/api/auth/sign-up/email`, { headers: { origin: baseURL }, data: { name: "Instrument Unavailable QA", email, password } })).ok());
+  await page.goto(`${baseURL}/onboarding`);
   await finishOnboarding(page);
   [{ id: userId }] = await sql`select id from "user" where email = ${email}`;
   // Instrument Detail is part of Portfolio Lab, so this isolated fixture must

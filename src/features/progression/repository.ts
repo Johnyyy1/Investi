@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { perfMeasure } from "@/lib/perf";
 import { requestMemo } from "@/lib/request-memo";
 import { lessonAward, lessonProgress, portfolio, progressionUnlock, user } from "@/db/schema";
+import { isDemoIdentity, isGuestIdentity } from "@/features/guest/identity";
 import { PORTFOLIO_LAB_UNLOCK_ID, progressionUnlocks, resolvePortfolioLabUnlock, type PortfolioLabUnlockFacts } from "./unlocks";
 
 type ProgressionQuery = Pick<typeof db, "select" | "insert">;
@@ -14,6 +15,7 @@ type ProgressionQuery = Pick<typeof db, "select" | "insert">;
 async function facts(query: Pick<typeof db, "select">, userId: string): Promise<PortfolioLabUnlockFacts | undefined> {
   const [row] = await query.select({
     isAnonymous: user.isAnonymous,
+    anonymousKind: user.anonymousKind,
     totalXp: sql<number>`(select coalesce(sum(${lessonAward.xp}), 0)::integer from ${lessonAward} where ${lessonAward.userId} = ${userId})`.mapWith(Number),
     completedLessonIds: sql<string[]>`array(select ${lessonProgress.lessonId} from ${lessonProgress} where ${lessonProgress.userId} = ${userId} and ${lessonProgress.status} = 'completed')`,
     recorded: sql<boolean>`exists(select 1 from ${progressionUnlock} where ${progressionUnlock.userId} = ${userId} and ${progressionUnlock.unlockId} = ${PORTFOLIO_LAB_UNLOCK_ID})`,
@@ -24,7 +26,8 @@ async function facts(query: Pick<typeof db, "select">, userId: string): Promise<
     progression: { totalXp: row.totalXp, completedLessonIds: new Set(row.completedLessonIds) },
     recorded: row.recorded,
     grandfathered: row.grandfathered,
-    isDemo: row.isAnonymous,
+    isDemo: isDemoIdentity(row),
+    isGuest: isGuestIdentity(row),
   };
 }
 
@@ -77,6 +80,7 @@ export const loadPortfolioLabUnlockStatus = requestMemo("portfolioLabUnlock", as
 
 export async function requirePortfolioLabUnlock(userId: string) {
   const status = await loadPortfolioLabUnlock(userId);
+  if (status.requiresAccount) throw new Error("Portfolio Lab otevřeš, až si uložíš účet.");
   if (!status.unlocked) throw new Error("Portfolio Lab je zamčený. Odemkneš ho dokončením Základů investování.");
   return status;
 }

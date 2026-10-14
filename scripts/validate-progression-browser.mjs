@@ -15,7 +15,7 @@ const screenshotDir = process.env.PROGRESSION_SCREENSHOT_DIR ?? "/tmp/investi-pr
 await mkdir(screenshotDir, { recursive: true });
 const ids = [];
 const required = [
-  { id: "foundations-why-invest", slug: "why-invest", finalPosition: 6 },
+  { id: "foundations-why-invest", slug: "why-invest", finalPosition: 2 },
   { id: "foundations-stocks", slug: "stocks", finalPosition: 6 },
   { id: "foundations-etfs-indexes", slug: "etfs-and-indexes", finalPosition: 6 },
   { id: "foundations-bonds-cash", slug: "bonds-and-cash", finalPosition: 6 },
@@ -29,11 +29,17 @@ async function signUp(label) {
   const page = await context.newPage();
   await page.emulateMedia({ reducedMotion: "reduce" });
   const email = `progression-browser-${randomUUID()}@example.com`;
-  await page.goto(`${baseURL}/sign-up`);
-  await page.getByLabel("Jméno", { exact: true }).fill(label);
-  await page.getByLabel("E-mail", { exact: true }).fill(email);
-  await page.getByLabel("Heslo", { exact: true }).fill(randomUUID());
-  await page.getByRole("button", { name: "Vytvořit účet", exact: true }).click();
+  // Registration now ends onboarding; create the account directly, then onboard as a signed-in learner.
+  const password = randomUUID();
+  const signup = () => page.request.post(`${baseURL}/api/auth/sign-up/email`, { headers: { origin: baseURL }, data: { name: label, email, password } });
+  let response = await signup();
+  // Better Auth rate-limits sign-up; the UI flow used to space these out naturally.
+  for (let attempt = 0; response.status() === 429 && attempt < 6; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, (Number(response.headers()["retry-after"]) || 11) * 1000 + 1000));
+    response = await signup();
+  }
+  assert.ok(response.ok(), `sign-up: ${response.status()}`);
+  await page.goto(`${baseURL}/onboarding`);
   await finishOnboarding(page);
   const [{ id }] = await sql`select id from "user" where email = ${email}`;
   ids.push(id);
