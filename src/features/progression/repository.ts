@@ -3,6 +3,7 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { perfMeasure } from "@/lib/perf";
+import { requestMemo } from "@/lib/request-memo";
 import { lessonAward, lessonProgress, portfolio, progressionUnlock, user } from "@/db/schema";
 import { PORTFOLIO_LAB_UNLOCK_ID, progressionUnlocks, resolvePortfolioLabUnlock, type PortfolioLabUnlockFacts } from "./unlocks";
 
@@ -63,6 +64,16 @@ export async function loadPortfolioLabUnlock(userId: string) {
     });
   });
 }
+
+/** The unlock status for rendering, shared by the layout and page of one request. It still records a
+ * first unlock through loadPortfolioLabUnlock (once per request instead of twice). Only the status is
+ * returned: whether this call granted capital is a mutation outcome, not something to share.
+ * Mutations call requirePortfolioLabUnlock, which is never memoized. */
+export const loadPortfolioLabUnlockStatus = requestMemo("portfolioLabUnlock", async (userId: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- the mutation outcome is dropped on purpose
+  const { newlyUnlocked, capitalAwardedMinor, ...status } = await loadPortfolioLabUnlock(userId);
+  return status;
+});
 
 export async function requirePortfolioLabUnlock(userId: string) {
   const status = await loadPortfolioLabUnlock(userId);
