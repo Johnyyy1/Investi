@@ -2,12 +2,13 @@ import "server-only";
 import { validTimeZone } from "@/features/gamification/domain";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
+import { requestMemo } from "@/lib/request-memo";
 import { learningProfile, lessonProgress, lessonAward, portfolio, progressionUnlock } from "@/db/schema";
 import { draftPayloadSchema, quickStartSchema, preferencesSchema, recommendLearningPath } from "./domain";
 
-export async function getLearningProfile(userId: string) {
-  return db.query.learningProfile.findFirst({ where: eq(learningProfile.userId, userId) });
-}
+/** Shared by the layout, the learner summary and gamification within one render. */
+export const getLearningProfile = requestMemo("learningProfile", (userId: string) =>
+  db.query.learningProfile.findFirst({ where: eq(learningProfile.userId, userId) }));
 export async function saveOnboardingDraft(userId: string, input: unknown) {
   const { answers, step } = draftPayloadSchema.parse(input);
   const values = { ...answers, onboardingStep: step, updatedAt: new Date() };

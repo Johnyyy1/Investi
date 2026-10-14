@@ -1,10 +1,11 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
-import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { perfMeasure } from "@/lib/perf";
-import { lessonAward, portfolio, portfolioAllocation, portfolioAllocationLine, portfolioTrade, progressionUnlock, user } from "@/db/schema";
+import { portfolio, portfolioAllocation, portfolioAllocationLine, portfolioTrade, user } from "@/db/schema";
+import { readPracticeCapitalEntitlementMinor as entitlement } from "@/features/rewards/repository";
 import type { Currency } from "@/features/market-data/contracts";
 import { planAllocation, validateAllocation, type AllocationInput, type AllocationPlan } from "./allocation";
 import { foldTrades, type LedgerTrade } from "./domain";
@@ -36,13 +37,6 @@ function asLedgerTrade(trade: TradeRow): LedgerTrade {
   };
 }
 
-async function entitlement(query: Pick<typeof db, "select">, userId: string) {
-  const [result] = await query.select({ total: sql<string>`coalesce(sum(${lessonAward.practiceCapitalMinor}), 0)::text` })
-    .from(lessonAward).where(eq(lessonAward.userId, userId));
-  const [grant] = await query.select({ total: sql<string>`coalesce(sum(${progressionUnlock.practiceCapitalMinor}), 0)::text` })
-    .from(progressionUnlock).where(eq(progressionUnlock.userId, userId));
-  return BigInt(result?.total ?? "0") + BigInt(grant?.total ?? "0");
-}
 
 async function activePortfolio(query: Pick<typeof db, "select">, userId: string) {
   const [row] = await query.select().from(portfolio)
@@ -205,7 +199,11 @@ export async function resetActivePortfolio(userId: string, clientIdempotencyKey:
 }
 
 export async function loadPortfolioRows(userId: string) {
-  const current = await perfMeasure("portfolio.getOrCreateActivePortfolio", "db", () => getOrCreateActivePortfolio(userId));
+  return loadLedgerRows(userId, await perfMeasure("portfolio.getOrCreateActivePortfolio", "db", () => getOrCreateActivePortfolio(userId)));
+}
+
+/** Entitlement and ordered trades of an already resolved active generation. */
+export async function loadLedgerRows(userId: string, current: PortfolioRow) {
   const [earnedPracticeCapitalMinor, trades] = await Promise.all([
     perfMeasure("portfolio.entitlement", "db", () => entitlement(db, userId)),
     perfMeasure("portfolio.trades", "db", () => db.select().from(portfolioTrade).where(eq(portfolioTrade.portfolioId, current.id)).orderBy(asc(portfolioTrade.executedAt), asc(portfolioTrade.id))),

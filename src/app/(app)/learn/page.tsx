@@ -1,7 +1,8 @@
 import { loadLearner } from "@/features/learning/load-learner";
-import { loadPortfolioLabUnlock } from "@/features/progression/repository";
+import { loadPortfolioLabUnlockStatus } from "@/features/progression/repository";
 import { loadPortfolioView, type PortfolioView } from "@/features/portfolio/service";
 import { perfMeasure, perfSegment } from "@/lib/perf";
+import { getCurrentUser } from "@/lib/session";
 import { StudovnaPage } from "@/components/learning/studovna-page";
 
 export const metadata = { title: "Studovna" };
@@ -10,17 +11,18 @@ export default function LearnPage() {
 }
 
 async function renderLearnPage() {
-  const summary = await loadLearner();
-  let portfolio: PortfolioView | null | undefined;
-  if (summary.user) {
-    try {
-      const userId = summary.user.id;
-      const unlock = await loadPortfolioLabUnlock(userId);
-      portfolio = unlock.unlocked ? await perfMeasure("portfolio.loadPortfolioView", "compute", () => loadPortfolioView(userId)) : null;
-    } catch {
-      // Unavailable portfolio data is explicit; learning can still continue.
-      portfolio = undefined;
-    }
-  }
+  const user = await getCurrentUser();
+  // The portfolio card depends only on the user id, so it loads alongside the learner reads.
+  const [summary, portfolio] = await Promise.all([loadLearner(), user ? loadPortfolioCard(user.id) : undefined]);
   return <StudovnaPage summary={summary} portfolio={portfolio} />;
+}
+
+async function loadPortfolioCard(userId: string): Promise<PortfolioView | null | undefined> {
+  try {
+    const unlock = await loadPortfolioLabUnlockStatus(userId);
+    return unlock.unlocked ? await perfMeasure("portfolio.loadPortfolioView", "compute", () => loadPortfolioView(userId)) : null;
+  } catch {
+    // Unavailable portfolio data is explicit; learning can still continue.
+    return undefined;
+  }
 }

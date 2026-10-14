@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AppHeader } from "@/components/shell/app-header";
 import { PageFrame } from "@/components/shell/page-frame";
 import { getCurrentUser } from "@/lib/session";
-import { loadPortfolioLabUnlock } from "@/features/progression/repository";
+import { loadPortfolioLabUnlockStatus } from "@/features/progression/repository";
 import { perfSegment } from "@/lib/perf";
 export const metadata = { title: "Lab" };
 export default function LabPage() {
@@ -13,7 +13,7 @@ export default function LabPage() {
 
 async function renderLabPage() {
   const user = await getCurrentUser();
-  const unlock = user ? await loadPortfolioLabUnlock(user.id) : null;
+  const unlock = user ? await loadPortfolioLabUnlockStatus(user.id) : null;
   return <PageFrame width="standard">
     <p className="text-ql-small font-semibold text-ql-link">Lab</p>
     <div className="mt-3"><AppHeader title="Co se stane, když…" description="Něco změň. Sleduj dopad. Pochop proč." /></div>

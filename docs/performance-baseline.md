@@ -18,6 +18,8 @@ External market data (FMP quotes, ČNB FX) adds another measured ~320 ms + ~110 
 
 **Phase 1 (bottleneck #3) is done:** the unlock status read no longer opens a transaction or takes the row lock, and its five reads are one statement. See "Phase 1: unlock read path" at the end. The tables between here and there are the original baseline.
 
+**Phase 2 (bottlenecks #4 and #6) is done:** session, learning profile and unlock status are read once per request, duplicate learner reads are gone, and independent reads run concurrently. At +30 ms RTT `/learn` server time went 602 → 354 ms. See "Phase 2: request-scoped reads and concurrency".
+
 ## What is measured, and how the layers are separated
 
 | Layer | Metric | Source |
@@ -323,3 +325,73 @@ The absolute "before" values are 1–6 % above the original baseline tables (sam
 - The write path (first demo visit, legacy or grandfathered repair) still locks the row; it runs once per account.
 - A hard load still runs the unlock check twice (layout and page); each is now one statement. A request-scoped `React.cache` would remove one.
 - Still open from the baseline: two round-trips per query (`prepare: false`), `loadLearner` and the unlock check running one after the other on `/learn` and `/progress`, the two-query entitlement in `loadPortfolioRows`, and the ~300 ms `loading.tsx` floor.
+
+## Phase 2: request-scoped reads and concurrency (measured 2026-10-14)
+
+Addresses bottlenecks #4 (long sequential chain) and #6 (redundant reads, second session lookup and unlock on hard loads). No schema, migration, reward policy, unlock rule, auth configuration or `loading.tsx` change; `prepare: false` and the Phase 1 read path are untouched.
+
+### What changed
+
+- **`requestMemo` (`src/lib/request-memo.ts`).** A thin wrapper over `React.cache`: one call per argument list per RSC render, shared by the layout and page of that request. React scopes the cache to the Flight request, so nothing crosses requests or users. Outside a render (Server Actions, route handlers, scripts) React has no request and does not memoize; every mutation path keeps its own fresh reads. The wrapper adopts the result into a native promise, because a Drizzle query is a lazy thenable that re-executes on every `then` (caching it directly ran the profile SQL twice per render; caught by the instrumentation, covered by a unit test). No `unstable_cache`, `use cache` or process-level cache is used.
+- **Memoized per request:** the Better Auth session (`getCurrentUser`), `getLearningProfile`, and the new `loadPortfolioLabUnlockStatus` for rendering. The status variant still records a first unlock (once per request instead of once in the layout and once in the page) and returns only the status, never `newlyUnlocked` / `capitalAwardedMinor`. `loadPortfolioLabUnlock` and `requirePortfolioLabUnlock` (actions, lesson completion) are not memoized.
+- **Learner reads deduplicated.** `loadGamification` reuses the request's profile instead of reading it again. Practice Capital (`readPracticeCapitalEntitlementMinor`) is one statement with two scalar sums (lesson receipts, unlock grants) added as `BigInt`: same authoritative rows, same exact integers, one round-trip instead of two sequential ones. The portfolio ledger's entitlement uses the same function, including inside the trade, mix, reset and creation transactions.
+- **Concurrency once the user is known.** `/learn` and `/progress` load the learner summary alongside the unlock and portfolio card (the unlock no longer waits for the learner). The layout reads profile and unlock together. Settings, the module page and the lesson page start their independent reads together. `loadPortfolioView` loads the saved mix alongside the ledger (it needs only the generation id).
+- **Kept sequential on purpose.** The portfolio view still starts only after the unlock check: `getOrCreateActivePortfolio` can create a generation, which must not happen for a locked account. The learner's Practice Capital and the ledger's entitlement are still separate reads on `/learn`; the ledger value is read next to the trades it is folded with, rather than reused from earlier in the request.
+
+Why the layout may read the unlock before its onboarding redirect: an account that still needs onboarding has no lessons, awards, unlock rows or portfolio, and demo identities are seeded with a completed profile before their session exists, so that check is a plain read that cannot write. The page renders in parallel with the layout and already ran the same check before this change. `test:onboarding-redesign` ("no financial/learning writes") passes.
+
+### Soft navigation, warm (median / p95 ms, before → after)
+
+Same machine, disposable database, seeds and benchmark; "before" is `639f2d4` measured in this session. n=20 at +0 ms, n=15 at +10/+30 ms (`/lab/portfolio` from the extended cycle). Server = `serverPageMs` from `[investi:perf]`.
+
+| Route | Queries | Navigation +0 | Navigation +10 | Navigation +30 | Server +0 | Server +10 | Server +30 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `/learn` | 14 → 11 | 320.3 / 322.4 → 320.7 / 323.1 | 320.5 / 323.2 → 321.5 / 325.6 | 624.5 / 638.7 → 376.4 / 387.7 | 12.9 → 12.1 | 221.6 → 135.7 | 601.6 / 609.3 → 354.1 / 361.9 |
+| `/progress` | 13 → 10 | 320.4 / 322.6 → 320.8 / 333.3 | 320.1 / 341.2 → 319.9 / 337.3 | 558.8 / 573.2 → 376.7 / 389.6 | 13.3 → 11.3 | 197.4 → 135.3 | 532.8 / 540.0 → 353.7 / 358.3 |
+| `/lab` | 3 → 3 | 328.1 / 339.2 → 336.4 / 340.9 | 325.9 / 339.6 → 336.4 / 338.8 | 337.4 / 339.2 → 337.2 / 339.9 | 8.6 → 8.9 | 74.5 → 82.2 | 203.0 / 205.5 → 211.9 / 216.4 |
+| `/lab/portfolio` | 8 → 7 | 318.0 / 323.0 → 321.2 / 322.8 | 320.6 / 323.2 → 321.5 / 340.8 | 488.7 / 491.6 → 371.1 / 375.8 | 10.1 → 9.1 | 171.7 → 135.3 | 465.6 / 469.7 → 350.1 / 355.0 |
+
+Sequential round-trips (slope of server time against added RTT): `/learn` ≈20 → ≈11, `/progress` ≈17 → ≈11, `/lab/portfolio` ≈15 → ≈11, `/lab` ≈6.5 → ≈6.8.
+
+At +0 and +10 ms every route stays at the ~320 ms client floor (bottleneck #1), before and after: the server already answered well under it, so unchanged navigation there is expected and says nothing about the backend. The server columns show the backend gain. At +30 ms the server now needs ~350 ms on the three data routes, just above the floor, and navigation follows it.
+
+`/lab` runs the same three statements before and after. In the "after" runs, identical statements were 4–10 % slower than in the "before" runs (unlock read at +30: 66.9 → 70.0 ms; session: 135.3 → 142.6 ms), and `/lab`'s +8–9 ms matches that drift. It is attributed to the environment, not proven.
+
+### Hard loads (layout + page in one request)
+
+| Route | Queries per request | Layout +30 | Page +30 | TTFB +10 | TTFB +30 | DOMContentLoaded +30 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/learn` | 18 → 11 | 263.9 → 208.4 | 590.4 → 345.3 | 99.6 → 83.1 | 268.0 → 212.4 | 605.2 → 352.1 |
+| `/progress` | 17 → 10 | 263.1 → 208.6 | 523.5 → 345.5 | 99.3 → 83.1 | 268.0 → 213.2 | 536.9 → 354.4 |
+| `/lab` | 7 → 4 | 261.5 → 207.1 | 197.0 → 206.9 | 99.1 → 82.8 | 268.0 → 212.8 | 295.4 → 235.0 |
+| `/lab/portfolio` | 12 → 8 | 262.7 → 208.2 | 458.0 → 343.6 | 99.0 → 82.8 | 268.5 → 212.4 | 464.0 → 349.1 |
+
+Medians, n=15–28. The memo counters confirm one read per request on every hard load: e.g. `/learn` `memo.call.session: 3, memo.miss.session: 1`, `learningProfile 3 / 1`, `portfolioLabUnlock 2 / 1`. The layout and page render concurrently (evidence: on the old build a demo's first hard load showed the pre-grant Practice Capital, so the page read it before the layout's grant committed; see below), so a hit is usually a shared in-flight promise, not a finished one.
+
+### Remaining repeated reads (soft `/learn`, after)
+
+`select lesson_award,progression_unlock` ×2: the learner's Practice Capital and the ledger's entitlement (kept separate, see above). No other shape repeats on any of the four routes.
+
+### Remaining sequential bottlenecks (at +30 ms, `/learn`)
+
+`session (≈142) → unlock (≈70) → active generation (≈70) → ledger + mix (≈70)`. In order of size:
+
+1. **Session lookup, ~40 % of every route:** Better Auth issues two sequential statements (session, then user), each two round-trips under `prepare: false`. Options (not done, they change auth behaviour or configuration): Better Auth's signed cookie cache, which delays revocation by its max-age, or a joined lookup.
+2. **`prepare: false`:** still ~2 round-trips per statement (bottleneck #2), unchanged by design.
+3. **Unlock → generation → ledger:** the portfolio view cannot start before the unlock because it may create a generation. A plain read of an existing active generation could run alongside the unlock, with creation kept behind it; trades could be selected by a subquery on the active generation. Each removes ~one query depth.
+4. **Saved mix:** `loadLatestAllocation` is two sequential statements when a mix exists. The benchmark's demo account has none, so this is not in the numbers above.
+5. **Client floor (~320 ms):** untouched (out of scope).
+
+### Pre-existing behaviour found, not changed
+
+On a demo's first render, the unlock check records the 5,000 Kč grant while the learner summary reads Practice Capital in parallel, so the "Cvičný kapitál" figure can show the pre-grant value for that one render (the old build showed "0 Kč" on 2/2 first hard loads; the next request shows 5 000 Kč). Before this change, the layout's recording raced the page the same way, and a soft first render read Practice Capital strictly before the unlock. Accounting is unaffected: the portfolio's cash comes from the entitlement read after the unlock. Fixing the display needs the render to know whether its unlock check granted capital; that is a product decision for a later phase.
+
+### Validation
+
+- Unit (`npm test`, 80 files / 766 tests): `src/lib/request-memo.test.ts` runs `requestMemo` against React's real server `cache` with a per-request dispatcher: one read per argument list within a request (including concurrent callers), separate reads in separate requests, no memoization outside a render, a rejection shared only within its request, a lazy thenable executed once, and the perf counters.
+- `test:progression-persistence` adds: the status variant is not memoized outside a render (a completion is visible on the next call) and exposes no grant outcome; four concurrent status reads plus an action guard repair a qualifying unrecorded account exactly once (5,000 Kč); the one-statement entitlement equals independent SQL sums exactly, including a 9,007,199,254,740,993 minor-unit grant beyond float precision, inside and outside a transaction, and is exactly `0n` without receipts.
+- New `test:request-isolation` (browser, production build): two users' hard loads interleaved and concurrent for 12 rounds, each sees only its own email, name and exact Practice Capital; a receipt inserted between requests is visible on the next request; soft navigation keeps the user's own data; sign-out redirects on the next request; switching accounts in the same browser shows only the new account; a demo identity is isolated and granted once.
+- Unchanged and passing on the disposable databases: `test:persistence`, `test:migration`, `test:portfolio-persistence` (buy/sell/reward concurrency), `test:portfolio-allocation`, `test:portfolio-migration`, `test:portfolio-closed-market`, `test:personalization-persistence`, `test:curriculum-seed`, `test:log-returns-persistence`; browser: `test:product`, `test:progression-browser`, `test:studovna`, `test:portfolio-browser`, `test:settings`, `test:onboarding-redesign`, `test:personalization-browser`, `test:personalization-compatibility`, `scripts/validate-progress.mjs`.
+- `test:foundations-browser` fails at its last step, "Unlocked portfolio has a build-mix action", looking for a "Sestavit" link that no longer exists in `src` at `639f2d4` (a unit test asserts its absence). Every step before it passes, including the one-time 5,000 Kč grant. Stale assertion, independent of this change; not edited here.
+
+Reproduce as in "Reproduce" above; the analysis grouped `[investi:perf]` lines by request id to separate hard loads (layout + page) from soft navigations (page only).

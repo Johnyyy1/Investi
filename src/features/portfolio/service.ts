@@ -15,7 +15,7 @@ import {
   type PortfolioInstrumentPreview,
   type ValuationUnavailableReason,
 } from "./market-data";
-import { loadLatestAllocation, loadPortfolioRows, type AllocationLineRow } from "./repository";
+import { getOrCreateActivePortfolio, loadLatestAllocation, loadLedgerRows, type AllocationLineRow } from "./repository";
 
 export interface PortfolioView {
   portfolioId: string;
@@ -97,13 +97,15 @@ export interface PortfolioView {
 export type InstrumentPreview = PortfolioInstrumentPreview;
 
 export async function loadPortfolioView(userId: string): Promise<PortfolioView> {
-  const rows = await loadPortfolioRows(userId);
+  const current = await perfMeasure("portfolio.getOrCreateActivePortfolio", "db", () => getOrCreateActivePortfolio(userId));
+  // The saved mix needs only the generation id, so it loads alongside the ledger.
+  const [rows, allocation] = await Promise.all([
+    loadLedgerRows(userId, current),
+    perfMeasure("portfolio.latestAllocation", "db", () => loadLatestAllocation(current.id)),
+  ]);
   const baseCurrency = rows.portfolio.baseCurrency as Currency;
   const folded = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades);
-  const [observations, allocation] = await Promise.all([
-    perfMeasure("portfolio.observeAllHoldings", "external", () => Promise.all(folded.holdings.map((holding) => perfMeasure("portfolio.observeHolding", "external", () => observePortfolioHoldingValue(portfolioMarketData, holding, baseCurrency))))),
-    perfMeasure("portfolio.latestAllocation", "db", () => loadLatestAllocation(rows.portfolio.id)),
-  ]);
+  const observations = await perfMeasure("portfolio.observeAllHoldings", "external", () => Promise.all(folded.holdings.map((holding) => perfMeasure("portfolio.observeHolding", "external", () => observePortfolioHoldingValue(portfolioMarketData, holding, baseCurrency)))));
   const quoteCost = foldQuoteCost(rows.trades);
   const quoteCurrency = new Map(rows.trades.map((trade) => [trade.instrumentId, trade.quoteCurrency as Currency]));
   const observationByInstrument = new Map(observations.map((observation) => [observation.instrumentId, observation]));

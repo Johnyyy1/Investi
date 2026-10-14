@@ -9,9 +9,9 @@ import { db } from "../src/db";
 import { lessonAward, lessonProgress, portfolio, progressionUnlock, user } from "../src/db/schema";
 import { lessonSteps } from "../src/features/progress/transition";
 import { completeLesson } from "../src/features/progress/repository";
-import { loadPortfolioLabUnlock, requirePortfolioLabUnlock } from "../src/features/progression/repository";
+import { loadPortfolioLabUnlock, loadPortfolioLabUnlockStatus, requirePortfolioLabUnlock } from "../src/features/progression/repository";
 import { progressionUnlocks } from "../src/features/progression/unlocks";
-import { loadPracticeCapitalSummary } from "../src/features/rewards/repository";
+import { loadPracticeCapitalSummary, readPracticeCapitalEntitlementMinor } from "../src/features/rewards/repository";
 import { loadPortfolioView } from "../src/features/portfolio/service";
 import { executeTrade, resetActivePortfolio } from "../src/features/portfolio/repository";
 import { ensureDemoSeed } from "../src/features/demo/repository";
@@ -226,7 +226,54 @@ try {
   const afterBackfill = await loadPortfolioView(backfill);
   assert.equal(afterBackfill.holdings[0].quantity, beforeBackfill.holdings[0].quantity, "migration backfill preserves holdings and trades");
   assert.equal(afterBackfill.earnedPracticeCapitalMinor, beforeBackfill.earnedPracticeCapitalMinor, "grandfathering contributes no capital");
-  console.log("PASS: demo access, isolated trading/reset, concurrent one-time demo grant, preserved learning history, XP, concurrent learning unlock, lock-free side-effect-free status reads, locked-path recording, concurrent legacy repair, grandfathering, accounting, and migration rerun.");
+  // The render-path status is memoized only inside a React render. Here, as in a Server Action, every call
+  // reads afresh, so a completion is visible immediately; it exposes no mutation outcome.
+  const statusLearner = await owner();
+  for (const lessonId of required.slice(0, -1)) {
+    await finalCursor(statusLearner, lessonId);
+    await completeLesson(statusLearner, lessonId);
+  }
+  const lockedStatus = await loadPortfolioLabUnlockStatus(statusLearner);
+  assert.equal(lockedStatus.unlocked, false);
+  assert.ok(!("newlyUnlocked" in lockedStatus) && !("capitalAwardedMinor" in lockedStatus), "status carries no grant outcome");
+  await finalCursor(statusLearner, required.at(-1)!);
+  assert.equal((await completeLesson(statusLearner, required.at(-1)!)).portfolioLabUnlocked, true);
+  const unlockedStatus = await loadPortfolioLabUnlockStatus(statusLearner);
+  assert.equal(unlockedStatus.unlocked, true, "no stale status after a completion");
+  assert.equal(unlockedStatus.totalXp, 420);
+
+  // The status path still repairs a qualifying unrecorded account, exactly once under concurrency.
+  const statusRepair = await owner();
+  for (const lessonId of required) {
+    await db.insert(lessonProgress).values({ userId: statusRepair, lessonId, status: "completed", lastPosition: lessonSteps(lessonId).length - 1, completedAt: new Date(), updatedAt: new Date() });
+    await db.insert(lessonAward).values({ userId: statusRepair, lessonId, xp: 60, practiceCapitalMinor: 0n, rewardPolicyVersion: 2, learningDate: "2026-10-14", timeZone: "UTC", awardedAt: new Date() });
+  }
+  const statusRepairs = await Promise.all([
+    ...Array.from({ length: 4 }, () => loadPortfolioLabUnlockStatus(statusRepair)),
+    requirePortfolioLabUnlock(statusRepair),
+  ]);
+  assert.ok(statusRepairs.every((status) => status.unlocked));
+  assert.deepEqual((await unlockRowsOf(statusRepair)).map((row) => [row.reason, row.practiceCapitalMinor]), [["learning_requirements", 500_000n]]);
+  assert.equal((await loadPracticeCapitalSummary(statusRepair)).earnedPracticeCapitalMinor, 500_000n);
+
+  // Entitlement is one statement now; it must equal the independent sums exactly, beyond float precision.
+  const exact = await owner();
+  const exactAwards = [200_000n, 123_457n, 1n];
+  for (const [index, amount] of exactAwards.entries()) {
+    await db.insert(lessonAward).values({ userId: exact, lessonId: required[index], xp: 60, practiceCapitalMinor: amount, rewardPolicyVersion: 1, learningDate: "2026-10-14", timeZone: "UTC", awardedAt: new Date() });
+  }
+  await db.insert(progressionUnlock).values({ userId: exact, unlockId: "QA_EXACTNESS", practiceCapitalMinor: 9_007_199_254_740_993n, reason: "qa", unlockedAt: new Date() });
+  const [independent] = await sql<{ total: string }[]>`select (
+    (select coalesce(sum(practice_capital_minor), 0) from lesson_award where user_id = ${exact}) +
+    (select coalesce(sum(practice_capital_minor), 0) from progression_unlock where user_id = ${exact}))::text as total`;
+  const expectedExact = 200_000n + 123_457n + 1n + 9_007_199_254_740_993n;
+  assert.equal(BigInt(independent.total), expectedExact);
+  assert.equal(await readPracticeCapitalEntitlementMinor(db, exact), expectedExact);
+  assert.equal(await db.transaction((tx) => readPracticeCapitalEntitlementMinor(tx, exact)), expectedExact, "same value inside a transaction");
+  assert.equal((await loadPracticeCapitalSummary(exact)).earnedPracticeCapitalMinor, expectedExact);
+  assert.equal(await readPracticeCapitalEntitlementMinor(db, await owner()), 0n, "no receipts is exactly zero");
+
+  console.log("PASS: demo access, isolated trading/reset, concurrent one-time demo grant, preserved learning history, XP, concurrent learning unlock, lock-free side-effect-free status reads, locked-path recording, concurrent legacy repair, uncached status outside a render, exact one-statement entitlement, grandfathering, accounting, and migration rerun.");
 } finally {
   await db.delete(user).where(eq(user.id, ids[0] ?? ""));
   for (const id of ids.slice(1)) await db.delete(user).where(eq(user.id, id));

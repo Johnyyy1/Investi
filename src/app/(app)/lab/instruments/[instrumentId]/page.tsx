@@ -11,7 +11,7 @@ import { portfolioMarketData } from "@/features/portfolio/environment";
 import { loadPortfolioView } from "@/features/portfolio/service";
 import { getCurrentUser } from "@/lib/session";
 import { env } from "@/lib/env";
-import { loadPortfolioLabUnlock } from "@/features/progression/repository";
+import { loadPortfolioLabUnlockStatus } from "@/features/progression/repository";
 import { LockedPortfolioLab } from "@/components/lab/locked-portfolio-lab";
 
 export const metadata = { title: "Instrument | Portfolio Lab" };
@@ -19,7 +19,7 @@ export const metadata = { title: "Instrument | Portfolio Lab" };
 export default async function InstrumentPage({ params, searchParams }: { params: Promise<{ instrumentId: string }>; searchParams: Promise<{ range?: string | string[] }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
-  const unlock = await loadPortfolioLabUnlock(user.id);
+  const unlock = await loadPortfolioLabUnlockStatus(user.id);
   if (!unlock.unlocked) return <LockedPortfolioLab unlock={unlock} />;
   const instrumentId = resolveInstrumentRouteParam((await params).instrumentId);
   if (!instrumentId) notFound();
