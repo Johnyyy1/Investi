@@ -1,4 +1,5 @@
 import "server-only";
+import { perfMeasure } from "@/lib/perf";
 import { getCurrentUser } from "@/lib/session";
 import { db } from "@/db";
 import { lessonProgress } from "@/db/schema";
@@ -15,10 +16,10 @@ import { getLearnerSummary } from "./learner-summary";
 export async function loadLearner() {
   const user = await getCurrentUser();
   const [rows, profile, gamification, practiceCapital] = user ? await Promise.all([
-    db.select().from(lessonProgress).where(eq(lessonProgress.userId, user.id)),
-    getLearningProfile(user.id),
-    loadGamification(user.id),
-    loadPracticeCapitalSummary(user.id),
+    perfMeasure("learner.lessonProgress", "db", () => db.select().from(lessonProgress).where(eq(lessonProgress.userId, user.id))),
+    perfMeasure("learner.learningProfile", "db", () => getLearningProfile(user.id)),
+    perfMeasure("learner.gamification", "db", () => loadGamification(user.id)),
+    perfMeasure("learner.practiceCapital", "db", () => loadPracticeCapitalSummary(user.id)),
   ]) : [[], undefined, undefined, { earnedPracticeCapitalMinor: BigInt(0) }];
   const states = rows.filter((row) => row !== undefined);
   const recommendation = recommendLearning({ profile: readLearnerProfile(profile), progress: states });

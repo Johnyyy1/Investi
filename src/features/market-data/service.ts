@@ -1,5 +1,6 @@
 import "server-only";
 
+import { perfCount, perfMeasure } from "@/lib/perf";
 import { NoopMarketDataCache, type CachedEtfDataset, type MarketDataCache } from "./cache";
 import {
   adjustmentPolicies,
@@ -351,7 +352,7 @@ export class MarketDataService {
 
   private async call<T>(operation: string, provider: { providerId: string }, execute: () => Promise<T>): Promise<T> {
     try {
-      return await execute();
+      return await perfMeasure(`market.provider.${operation}`, "external", execute);
     } catch (error) {
       if (isMarketDataError(error)) throw error;
       throw new MarketDataError(
@@ -371,9 +372,11 @@ export class MarketDataService {
     shouldCache: (value: T) => boolean = () => true,
   ): Promise<T> {
     const cached = await get();
-    if (cached !== undefined) return cached;
+    const family = flightKey.slice(0, flightKey.indexOf(":"));
+    if (cached !== undefined) { perfCount(`market.cache.hit.${family}`); return cached; }
     const existing = this.inFlight.get(flightKey) as Promise<T> | undefined;
-    if (existing) return existing;
+    if (existing) { perfCount(`market.cache.coalesced.${family}`); return existing; }
+    perfCount(`market.cache.miss.${family}`);
     const pending = (async () => {
       const racedCache = await get();
       if (racedCache !== undefined) return racedCache;

@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
+import { perfMeasure } from "@/lib/perf";
 import { lessonAward, lessonProgress, portfolio, progressionUnlock, user } from "@/db/schema";
 import { evaluateUnlock, PORTFOLIO_LAB_UNLOCK_ID, progressionUnlocks } from "./unlocks";
 
@@ -40,11 +41,12 @@ export async function ensurePortfolioLabUnlockInTransaction(query: ProgressionQu
 
 /** Opens demos and repairs qualifying legacy accounts on first access; retries grant nothing extra. */
 export async function loadPortfolioLabUnlock(userId: string) {
-  return db.transaction(async (tx) => {
-    const [owner] = await tx.select({ id: user.id }).from(user).where(eq(user.id, userId)).for("update");
+  return perfMeasure("progression.loadPortfolioLabUnlock", "db", () => db.transaction(async (tx) => {
+    // Separate op: a long lockRow means this transaction waited on another holder of the user's row lock.
+    const [owner] = await perfMeasure("progression.lockUserRow", "db", () => tx.select({ id: user.id }).from(user).where(eq(user.id, userId)).for("update"));
     if (!owner) throw new Error("Účet není dostupný.");
-    return ensurePortfolioLabUnlockInTransaction(tx, userId);
-  });
+    return perfMeasure("progression.ensureUnlock", "db", () => ensurePortfolioLabUnlockInTransaction(tx, userId));
+  }));
 }
 
 export async function requirePortfolioLabUnlock(userId: string) {

@@ -39,7 +39,8 @@
     "test:personalization-compatibility": "node scripts/validate-personalization-compatibility.mjs",
     "test:personalization-browser": "node scripts/validate-personalization-browser.mjs",
     "test:onboarding-redesign": "node scripts/validate-onboarding-redesign.mjs",
-    "test:settings": "node scripts/validate-settings.mjs"
+    "test:settings": "node scripts/validate-settings.mjs",
+    "bench:navigation": "node scripts/benchmark-navigation.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.3",
