@@ -29,7 +29,7 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const activeId = activeNavigationId(pathname);
-  const paper = pathname === "/learn" || pathname === "/progress" || pathname === "/settings" || pathname === "/lab/portfolio" || pathname === "/lab/backtesting" || pathname.startsWith("/lab/instruments/");
+  const paper = pathname === "/learn" || pathname === "/progress" || pathname === "/settings" || pathname === "/lab" || pathname === "/lab/portfolio" || pathname === "/lab/backtesting" || pathname.startsWith("/lab/instruments/");
   useEffect(() => { if (needsTimeZone) void initializeTimeZoneAction(Intl.DateTimeFormat().resolvedOptions().timeZone); }, [needsTimeZone]);
   async function signOut() {
     setPending(true); setError(undefined);
@@ -56,7 +56,7 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
             const active = id === activeId;
             return <Link key={id} href={href!} aria-current={active ? "page" : undefined} className={`relative flex min-h-12 items-center gap-2 rounded-control px-4 text-small transition-[background-color,color] duration-[var(--motion-micro)] ease-[var(--ease-standard)] ${active ? "bg-primary-soft font-bold text-primary-hover" : "font-semibold text-secondary hover:bg-surface-muted hover:text-foreground"}`}>
               <Icon className="size-[18px]" strokeWidth={active ? 2.4 : 2} aria-hidden="true" />
-              {paper && id === "lab" ? "Portfolio Lab" : label}
+              {label}
               {id === "lab" && portfolioLabLocked ? <LockKeyhole aria-label="Portfolio Lab je zamčený" className="size-3.5 text-secondary" /> : null}
               {active ? <span aria-hidden="true" className="absolute inset-x-4 bottom-1 h-0.5 rounded-pill bg-primary" /> : null}
             </Link>;
