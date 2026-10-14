@@ -7,8 +7,8 @@ import postgres from "postgres";
 import { chromium } from "playwright";
 
 /** Portfolio Lab (Pen "Investi / Portfolio Lab — 390px", states 1–5) against deterministic sample
- * data: locked, zero capital, first visit, instrument buy/sell, the mix builder with review,
- * the saved overview, attribution, unavailable prices, reset, responsive layouts and 200 % text. */
+ * data: locked, zero capital, first visit, search → instrument detail → buy/sell, the overview
+ * with its split in koruny, attribution, unavailable prices, reset, responsive layouts and 200 % text. */
 const baseURL = process.env.PORTFOLIO_TEST_URL ?? "http://localhost:3000";
 const local = (host) => ["localhost", "127.0.0.1", "[::1]"].includes(host);
 assert.ok(local(new URL(baseURL).hostname) && local(new URL(process.env.DATABASE_URL).hostname), "Requires local app and database.");
@@ -77,7 +77,7 @@ try {
   await page.goto(`${baseURL}/lab/portfolio`);
   await page.getByRole("heading", { name: "Portfolio Lab", exact: true }).waitFor();
   assert.equal(await page.getByRole("link", { name: "Pokračovat v učení", exact: true }).getAttribute("href"), "/learn", "new learner sees unlock path");
-  assert.equal(await page.getByRole("link", { name: /Sestavit/ }).count(), 0);
+  assert.equal(await page.getByRole("combobox").count(), 0, "locked Lab offers no instrument search");
 
   // Zero capital: an explicit entitlement fixture with no money points back to learning.
   await sql`insert into progression_unlock (user_id, unlock_id, practice_capital_minor, reason, unlocked_at)
@@ -85,7 +85,7 @@ try {
   await page.reload();
   await page.getByRole("heading", { name: "Získej kapitál učením", exact: true }).waitFor();
   assert.equal(await page.getByTestId("portfolio-cash").textContent(), "0 Kč", "zero capital is stated, not hidden");
-  assert.equal(await page.getByRole("link", { name: /Sestavit/ }).count(), 0, "zero capital does not suggest investing is possible");
+  assert.equal(await page.getByRole("combobox").count(), 0, "zero capital does not suggest investing is possible");
   assert.equal(await page.getByRole("link", { name: "Pokračovat v učení", exact: true }).getAttribute("href"), "/learn");
   await responsive(page, "zero", { ready: () => page.getByRole("heading", { name: "Získej kapitál učením" }).waitFor() });
 
@@ -103,9 +103,27 @@ try {
   assert.equal(await page.getByText("Ukázková data", { exact: true }).count(), 1, "deterministic mode is labeled as sample data");
   assert.equal(await page.getByText(/Příklad rozdělení · ne doporučení/i).count(), 1, "the example mix is labeled as an example, not advice");
   assert.equal(await page.getByRole("button", { name: "Možnosti portfolia" }).count(), 0, "reset is absent before anything happened");
-  assert.equal(await page.getByRole("link", { name: /Sestavit první mix/ }).getAttribute("href"), "/lab/portfolio/mix");
+  assert.equal(await page.locator('input[type="range"]').count(), 0, "no weight sliders");
   assert.equal(await page.locator('img[src*="15-weights"]').count(), 0, "concept pose 15 stays in its lesson (guide rule 01)");
   await responsive(page, "first-visit", { ready: () => page.getByRole("heading", { name: "Zkus si investovat nanečisto." }).waitFor() });
+
+  // The retired weight builder redirects; search is the way to a first purchase.
+  await page.goto(`${baseURL}/lab/portfolio/mix`);
+  await page.waitForURL(/\/lab\/portfolio$/);
+  const firstSearch = page.getByRole("combobox", { name: "Najdi, co chceš koupit" });
+  await firstSearch.focus();
+  await page.keyboard.type("apple");
+  await page.getByRole("option", { name: /AAPL/ }).waitFor();
+  await page.keyboard.press("Escape");
+  assert.equal(await page.getByRole("option").count(), 0, "Escape closes the results");
+  await page.keyboard.press("Backspace");
+  await page.keyboard.type("e");
+  await page.getByRole("option", { name: /AAPL/ }).waitFor();
+  await targetsAtLeast44(page, ["#first-buy-search", 'button[aria-label="Vymazat hledání"]', '[role="option"]']);
+  await page.screenshot({ path: `${screenshotDir}/first-visit-search-1440.png`, fullPage: true });
+  await page.keyboard.press("Enter");
+  await page.waitForURL(/\/lab\/instruments\/US-XNAS%3AAAPL$/);
+  await page.getByRole("heading", { name: "Apple Inc.", exact: true }).waitFor();
 
   // Instrument detail (Pen Instrument board; default period 5L, URL range=1Y keeps the 1R view): charts, metrics, ETF analytics and the single-instrument order flow.
   await page.goto(`${baseURL}/lab/instruments/US-XNAS%3AAAPL?range=1Y`);
@@ -250,7 +268,7 @@ try {
   await etfScreenshotStyle.evaluate((style) => style.remove());
   await page.setViewportSize({ width: 1440, height: 950 });
   await page.goto(`${baseURL}/lab/instruments/US-XNAS%3AAAPL`);
-  const detailInvest = page.getByRole("button", { name: /Přidat do Portfolio Labu/, exact: false }).first();
+  const detailInvest = page.getByRole("button", { name: "Koupit AAPL", exact: true }).first();
   await detailInvest.click();
   const orderDialog = page.getByRole("dialog", { name: "Investovat do AAPL" });
   await orderDialog.getByRole("heading", { name: "Zvol množství", exact: true }).waitFor();
@@ -275,13 +293,14 @@ try {
   await page.screenshot({ path: `${screenshotDir}/buy-review-confirm-1440.png`, fullPage: true });
   await orderDialog.getByRole("button", { name: "Potvrdit nákup AAPL", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Nákup dokončen" }).waitFor();
+  assert.equal(await page.getByRole("status").filter({ hasText: "Nákup dokončen" }).getByRole("link", { name: /Zobrazit portfolio/ }).getAttribute("href"), "/lab/portfolio");
   await page.getByRole("heading", { name: "Tvoje pozice" }).waitFor();
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-owned-1440.png`, fullPage: true });
   await page.setViewportSize({ width: 390, height: 900 });
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-owned-390.png`, fullPage: true });
   await page.setViewportSize({ width: 1440, height: 950 });
 
-  // Saved overview without a mix: real ledger numbers, no fabricated performance.
+  // Overview after one buy: real ledger numbers, no fabricated performance.
   await page.goto(`${baseURL}/lab/portfolio`);
   await page.getByRole("heading", { name: "Moje portfolio", level: 1 }).waitFor();
   assert.equal(await page.getByTestId("portfolio-cash").textContent(), "1 351,62 Kč");
@@ -295,103 +314,42 @@ try {
   assert.equal((await coherent("single holding")).total, 200_000n, "a buy at the observed price moves value from cash to holdings only");
   assert.equal(await page.getByTestId("portfolio-gain-loss").textContent(), "0 Kč", "the first holding does not fabricate performance");
   assert.match(clean(await page.getByTestId("holding-AAPL").innerText()), /AAPL 32,4 %/, "weight is measured against the whole portfolio, cash included");
-  assert.equal(await page.getByTestId("holding-AAPL").getByText(/cíl/).count(), 0, "no target without a saved mix");
+  assert.equal(await page.getByText(/cíl \d|Můj mix|mimo mix/).count(), 0, "no targets or mixes");
+  assert.match(clean(await page.getByRole("img", { name: /Rozložení portfolia/ }).getAttribute("aria-label")), /^Rozložení portfolia: Akcie 32,4 %, 648,38 Kč; Hotovost 67,6 %, 1 351,62 Kč\.$/, "the split names each share in koruny");
   assert.equal(await page.getByText("Zatím se nic nepohnulo.").count(), 1, "unchanged sample prices are explained, not dressed up");
   assert.equal(await page.getByTestId("contribution-equity").count(), 0, "no all-zero contribution chart");
   assert.equal(await page.getByRole("status").filter({ hasText: "Ukázková data" }).count(), 1, "the data banner names sample data");
   await page.getByText("Kapitál z lekcí je vklad, ne výnos.", { exact: false }).waitFor();
   await responsive(page, "overview-single", { ready: () => page.getByTestId("portfolio-value").waitFor() });
 
-  // Builder (state 2) prefilled from today's weights; keyboard search, slider and percent field.
-  await page.getByRole("link", { name: "Sestavit mix" }).click();
-  await page.waitForURL("**/lab/portfolio/mix");
-  await page.getByRole("heading", { name: "Uprav mix", level: 1 }).waitFor();
-  assert.equal(await page.getByRole("navigation", { name: "Mobilní navigace" }).count(), 0, "the sticky save bar replaces the tab bar");
-  const percentField = (name) => page.getByRole("textbox", { name: `Váha ${name} v procentech` });
-  assert.equal(await percentField("AAPL").inputValue(), "32");
-  assert.equal(await percentField("hotovosti").inputValue(), "68");
-  const checkStatus = page.locator("[data-check]");
-  const save = page.getByRole("button", { name: /Uložit portfolio/ });
-  await checkStatus.filter({ hasText: "Rozděleno 100 %" }).waitFor();
-  const search = page.getByRole("combobox", { name: "Přidat nástroj" });
-  await search.focus();
-  await page.keyboard.type("vanguard");
-  await page.getByRole("option", { name: /VWCE/ }).waitFor();
-  await page.keyboard.press("Enter");
-  await page.getByTestId("mix-line-VWCE").waitFor();
-  await page.getByRole("option", { name: /VWCE/ }).getByText("V mixu").waitFor();
-  await checkStatus.filter({ hasText: "Nástroj s 0 % odeber" }).waitFor();
-  assert.equal(await save.getAttribute("aria-disabled"), "true", "a 0 % line cannot be saved");
-  await page.keyboard.press("Escape");
-  const aaplSlider = page.getByRole("slider", { name: "Váha AAPL" });
-  await aaplSlider.focus();
-  await aaplSlider.press("ArrowLeft");
-  await aaplSlider.press("ArrowLeft");
-  assert.equal(await percentField("AAPL").inputValue(), "30", "the slider moves in whole percents from the keyboard");
-  assert.equal(await aaplSlider.evaluate((element) => getComputedStyle(element).outlineWidth), "3px", "the focused slider shows a 3 px ring");
-  await percentField("hotovosti").fill("30");
-  await percentField("VWCE").fill("50");
-  await checkStatus.filter({ hasText: "Rozděleno 110 % · o 10 % víc" }).waitFor();
-  assert.equal(await save.getAttribute("aria-disabled"), "true", "110 % cannot be saved");
-  await save.click({ force: true });
-  assert.equal(await page.getByRole("dialog").count(), 0, "a blocked save opens nothing");
-  await page.screenshot({ path: `${screenshotDir}/builder-110-1440.png`, fullPage: true });
-  await percentField("VWCE").fill("25");
-  await checkStatus.filter({ hasText: "Rozděleno 85 % · zbývá 15 %" }).waitFor();
-  assert.equal(await save.getAttribute("aria-disabled"), "true", "85 % cannot be saved");
-  await page.screenshot({ path: `${screenshotDir}/builder-85-1440.png`, fullPage: true });
-  await percentField("VWCE").fill("40");
-  await checkStatus.filter({ hasText: "Rozděleno 100 %" }).waitFor();
-  await page.getByText("2 000 Kč z 2 000 Kč").waitFor();
-  assert.equal(await save.getAttribute("aria-disabled"), "false");
-  await targetsAtLeast44(page, ['a[href="/lab/portfolio"]', 'button[aria-label^="Odebrat"]', 'input[type="range"]', 'input[inputmode="numeric"]', "#mix-search", 'button[aria-describedby]']);
-  await responsive(page, "builder", { reloadEachWidth: false });
-
-  // Review (server-planned, nothing written), Escape returns focus, then confirm.
-  const tradesBefore = Number((await sql`select count(*)::int as count from portfolio_trade pt join portfolio p on p.id = pt.portfolio_id where p.user_id = ${userId}`)[0].count);
-  await save.click();
-  const review = page.getByRole("dialog", { name: "Zkontroluj mix" });
-  await review.getByTestId("review-cash").waitFor();
-  await review.getByTestId("review-buy-VWCE").waitFor();
-  await review.getByTestId("review-sell-AAPL").waitFor();
-  assert.match(clean(await review.innerText()), /Rozdělovaná hodnota 2 000 Kč/);
-  assert.equal(Number((await sql`select count(*)::int as count from portfolio_trade pt join portfolio p on p.id = pt.portfolio_id where p.user_id = ${userId}`)[0].count), tradesBefore, "review writes nothing");
-  await page.screenshot({ path: `${screenshotDir}/review-1440.png` });
-  await page.setViewportSize({ width: 320, height: 900 });
-  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-  assert.deepEqual(await overflowing(page, "dialog[open]"), { wide: false, outside: [] }, "review reflows at 320px with 200% text");
-  await page.screenshot({ path: `${screenshotDir}/review-320-200-percent.png` });
-  await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
-  await page.setViewportSize({ width: 390, height: 900 });
-  await page.screenshot({ path: `${screenshotDir}/review-390.png` });
-  await page.keyboard.press("Escape");
-  await review.waitFor({ state: "hidden" });
-  await page.waitForFunction((element) => document.activeElement === element, await save.elementHandle());
-  assert.equal(await save.evaluate((element) => element === document.activeElement), true, "closing the review returns focus to Save");
-  await save.click();
-  await review.getByTestId("review-cash").waitFor();
-  await review.getByRole("button", { name: "Potvrdit a uložit" }).click();
-  await page.waitForURL(/\/lab\/portfolio\?ulozeno=2$/);
-  await page.getByRole("status").filter({ hasText: "Mix uložen" }).filter({ hasText: "Nanečisto proběhly 2 obchody." }).waitFor();
-  await page.setViewportSize({ width: 1440, height: 950 });
-
-  // Saved mix overview (state 3): targets next to real weights, ledger appended, never rewritten.
-  await page.getByRole("heading", { name: "Můj mix", level: 1 }).waitFor();
-  assert.match(clean(await page.locator("main header").innerText()), /Mix uložen .* · rozděleno 2 000 Kč nanečisto/);
-  assert.match(clean(await page.getByTestId("holding-AAPL").innerText()), /cíl 30 %/);
-  assert.match(clean(await page.getByTestId("holding-VWCE").innerText()), /cíl 40 %/);
-  assert.match(clean(await page.getByTestId("holding-cash").innerText()), /cíl 30 %/);
-  assert.match(clean(await page.getByRole("img", { name: /Rozložení portfolia/ }).getAttribute("aria-label")), /Akcie 30,0 %, cíl 30 %; ETF 40,0 %, cíl 40 %; Hotovost 30,0 %, cíl 30 %/);
-  await page.getByText(/Váhy jsou blízko uloženého cíle 30 \/ 40 \/ 30/).waitFor();
-  await coherent("saved mix");
-  assert.equal(await page.getByTestId("portfolio-gain-loss").textContent(), "0 Kč", "rebalancing at unchanged prices is not performance");
-  const ledger = await sql`select pt.side, pt.instrument_symbol, pt.client_idempotency_key from portfolio_trade pt join portfolio p on p.id = pt.portfolio_id where p.user_id = ${userId} and p.closed_at is null order by pt.executed_at, pt.id`;
-  assert.equal(ledger.length, 3, "one single buy plus the two mix trades");
-  assert.equal(ledger.filter(({ client_idempotency_key }) => client_idempotency_key.startsWith("allocation:")).length, 2);
-  assert.equal(Number((await sql`select count(*)::int as count from portfolio_allocation pa join portfolio p on p.id = pa.portfolio_id where p.user_id = ${userId}`)[0].count), 1);
-  await page.getByText("Poslední obchody · 3").click();
-  await page.getByRole("list", { name: "Poslední obchody nanečisto" }).getByText("Prodej AAPL").waitFor();
-  await responsive(page, "overview-mix", { ready: () => page.getByTestId("portfolio-value").waitFor() });
+  // A second purchase from the overview search: an ETF bought on its detail page, one order.
+  const buySearch = page.getByRole("combobox", { name: "Koupit akcii, ETF nebo dluhopis" });
+  await buySearch.fill("vanguard");
+  await page.getByRole("option", { name: /VWCE/ }).click();
+  await page.waitForURL(/\/lab\/instruments\/IE-XETR%3AVWCE$/);
+  await page.getByRole("button", { name: "Koupit VWCE", exact: true }).first().click();
+  const etfOrder = page.getByRole("dialog", { name: "Investovat do VWCE" });
+  await etfOrder.getByRole("heading", { name: "Zvol množství", exact: true }).waitFor();
+  await etfOrder.getByLabel("Množství", { exact: true }).fill("0.2");
+  await etfOrder.getByRole("button", { name: "Zkontrolovat pokyn", exact: true }).click();
+  await etfOrder.getByRole("button", { name: "Potvrdit nákup VWCE", exact: true }).click();
+  await page.getByRole("status").filter({ hasText: "Nákup dokončen" }).getByRole("link", { name: /Zobrazit portfolio/ }).click();
+  await page.waitForURL(/\/lab\/portfolio$/);
+  await page.getByTestId("holding-VWCE").waitFor();
+  const afterEtf = await coherent("two holdings");
+  assert.equal(afterEtf.total, 200_000n, "buying at observed prices moves value from cash to holdings only");
+  assert.equal(clean(await page.getByTestId("portfolio-gain-loss").textContent()), "0 Kč", "two buys at observed prices fabricate no performance");
+  const split = clean(await page.getByRole("img", { name: /Rozložení portfolia/ }).getAttribute("aria-label"));
+  assert.match(split, /^Rozložení portfolia: Akcie 32,4 %, 648,38 Kč; ETF [\d,]+ %, [\d ,]+ Kč; Hotovost [\d,]+ %, [\d ,]+ Kč\.$/);
+  const legend = page.locator('section[aria-labelledby="allocation-title"]');
+  for (const label of ["Akcie", "ETF", "Hotovost"]) await legend.getByText(label, { exact: true }).waitFor();
+  const ledger = await sql`select pt.side, pt.client_idempotency_key from portfolio_trade pt join portfolio p on p.id = pt.portfolio_id where p.user_id = ${userId} and p.closed_at is null order by pt.executed_at, pt.id`;
+  assert.deepEqual(ledger.map(({ side }) => side), ["BUY", "BUY"], "two single orders, nothing planned on the learner's behalf");
+  assert.equal(ledger.filter(({ client_idempotency_key }) => client_idempotency_key.startsWith("allocation:")).length, 0);
+  await page.getByText("Poslední obchody · 2").click();
+  await page.getByRole("list", { name: "Poslední obchody nanečisto" }).getByText("Nákup VWCE").waitFor();
+  await targetsAtLeast44(page, ["#instrument-search"]);
+  await responsive(page, "overview-holdings", { ready: () => page.getByTestId("portfolio-value").waitFor() });
 
   // Selling stays a single-instrument flow on the instrument page; oversell is refused by the server.
   await page.getByTestId("holding-AAPL").getByRole("link").click();
@@ -413,7 +371,7 @@ try {
     values (${randomUUID()}, ${activePortfolioId}, 'US-XNAS:MSFT', 'MSFT', 'Microsoft Corporation', 'equity', 'BUY', '0.1', '200', 'USD', '23.1', 46200, 0, -46200, ${historicTime}, ${historicTime}, 'investi-deterministic', 'investi-education-market-v1', 'synthetic', true, ${randomUUID()})`;
   await page.goto(`${baseURL}/lab/portfolio`);
   await page.getByTestId("holding-MSFT").waitFor();
-  assert.match(clean(await page.getByTestId("holding-MSFT").innerText()), /mimo mix/, "a holding outside the saved mix says so");
+  assert.equal(await page.getByText(/mimo mix|cíl \d/).count(), 0, "holdings carry no targets");
   // MSFT: 0.1 × 212 USD × 22.75 = 482.30 Kč vs 462.00 Kč paid → price +27.72 Kč (at the 23.10 purchase rate), FX −7.42 Kč.
   assert.equal(await page.getByTestId("portfolio-price-effect").textContent(), "+27,72 Kč");
   assert.equal(await page.getByTestId("portfolio-fx-effect").textContent(), "−7,42 Kč");
@@ -427,7 +385,7 @@ try {
   await coherent("attribution");
   await responsive(page, "overview-attribution", { ready: () => page.getByTestId("portfolio-value").waitFor() });
 
-  // Unavailable prices (state 4d): no total, no estimate, only what the ledger knows; the builder is blocked.
+  // Unavailable prices (state 4d): no total, no estimate, only what the ledger knows.
   await sql`insert into portfolio_trade (id, portfolio_id, instrument_id, instrument_symbol, instrument_name, instrument_asset_type, side, quantity, unit_price, quote_currency, fx_rate_to_base, gross_amount_base_minor, fee_base_minor, cash_delta_base_minor, quote_observed_at, executed_at, market_data_provider, market_data_dataset, market_data_kind, market_data_is_deterministic, fx_rate_provider, fx_rate_dataset, fx_rate_kind, fx_rate_is_deterministic, fx_reference_date, fx_rate_retrieved_at, client_idempotency_key)
     values (${randomUUID()}, ${activePortfolioId}, 'FMP:NASDAQ:NVDA', 'NVDA', 'NVIDIA Corporation', 'equity', 'BUY', '0.01', '100', 'USD', '22', 2200, 0, -2200, ${historicTime}, ${historicTime}, 'fmp', 'quote', 'live', false, 'frankfurter', 'ecb-reference', 'reference', false, '2026-09-20', ${historicTime}, ${randomUUID()})`;
   await page.reload();
@@ -441,14 +399,6 @@ try {
   await page.getByRole("heading", { name: "Co víme jistě" }).waitFor();
   await responsive(page, "unavailable", { ready: () => page.getByRole("heading", { name: "Co víme jistě" }).waitFor() });
   const tradesBlocked = (await sql`select count(*)::int as count from portfolio_trade where portfolio_id = ${activePortfolioId}`)[0].count;
-  await page.goto(`${baseURL}/lab/portfolio/mix`);
-  await page.getByRole("heading", { name: "Uprav mix" }).waitFor();
-  await page.getByText("Bez cen všech položek nejde mix spočítat.").waitFor();
-  assert.equal(await page.getByRole("button", { name: /Uložit portfolio/ }).getAttribute("aria-disabled"), "true", "orders needing unavailable data stay disabled");
-  await page.getByRole("button", { name: /Uložit portfolio/ }).click({ force: true });
-  assert.equal(await page.getByRole("dialog").count(), 0);
-  assert.equal((await sql`select count(*)::int as count from portfolio_trade where portfolio_id = ${activePortfolioId}`)[0].count, tradesBlocked, "a blocked mix adds no trade");
-  await page.screenshot({ path: `${screenshotDir}/builder-blocked-1440.png`, fullPage: true });
 
   // Reset: options → confirm (Escape-safe) → a clean generation with all earned capital; history retained.
   await page.goto(`${baseURL}/lab/portfolio`);
@@ -472,15 +422,15 @@ try {
   await page.getByRole("status").filter({ hasText: "Portfolio resetováno" }).waitFor();
   await page.getByRole("heading", { name: "Zkus si investovat nanečisto." }).waitFor();
   assert.equal(await page.getByTestId("portfolio-cash").textContent(), "2 000 Kč", "reset restores all earned capital as cash");
-  await page.waitForFunction(() => document.activeElement?.id === "first-mix-cta");
+  await page.waitForFunction(() => document.activeElement?.id === "first-buy-search");
   const generations = await sql`select id, closed_at from portfolio where user_id = ${userId} order by opened_at`;
   assert.equal(generations.length, 2);
   assert.ok(generations[0].closed_at, "the old generation is closed, not deleted");
   assert.equal((await sql`select count(*)::int as count from portfolio_trade where portfolio_id = ${generations[0].id}`)[0].count, tradesBlocked, "old trades are retained");
-  assert.equal((await sql`select count(*)::int as count from portfolio_allocation where portfolio_id = ${generations[0].id}`)[0].count, 1, "the old mix is retained");
+  assert.equal((await sql`select count(*)::int as count from portfolio_allocation where portfolio_id = ${generations[0].id}`)[0].count, 0, "single orders never write a mix");
   await page.screenshot({ path: `${screenshotDir}/post-reset-1440.png`, fullPage: true });
   assert.deepEqual(errors, [], "Portfolio Lab has no browser errors");
-  console.log("PASS: locked, zero capital, first visit, instrument buy/sell, keyboard mix builder (85/110/100 %), server-planned review, saved mix with targets, price/FX attribution, unavailable prices, reset, 44 px targets, responsive layouts and 200% text. Screenshots:", screenshotDir);
+  console.log("PASS: locked, zero capital, first visit, instrument buy/sell, search → detail → buy, split in koruny, price/FX attribution, unavailable prices, reset, 44 px targets, responsive layouts and 200% text. Screenshots:", screenshotDir);
 } finally {
   await browser.close();
   if (userId) await sql`delete from "user" where id = ${userId}`;

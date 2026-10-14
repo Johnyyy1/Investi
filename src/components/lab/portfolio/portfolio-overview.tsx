@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowDownRight, ArrowLeftRight, ArrowRight, ArrowUpRight, BookOpen, ChartLine, ChartNoAxesColumn, ChevronDown, CircleAlert,
-  CircleCheck, CircleOff, Ellipsis, Hourglass, Info, Minus, Moon, ReceiptText, RotateCcw, SlidersHorizontal, Sparkles,
+  CircleCheck, CircleOff, Ellipsis, Hourglass, Info, Minus, Moon, ReceiptText, RotateCcw, Sparkles,
   TrendingDown, TrendingUp, TriangleAlert, Wallet, X,
 } from "lucide-react";
 import { instrumentDetailHref } from "@/features/instruments/routes";
@@ -15,8 +15,9 @@ import { resetPortfolioAction } from "@/features/portfolio/actions";
 import type { PortfolioView } from "@/features/portfolio/service";
 import { formatDecimal } from "@/lib/formatters";
 import { AllocationDonut } from "./allocation-donut";
+import { InstrumentSearch } from "./instrument-search";
 import {
-  contributionRows, contributionStory, currencyName, dataStatus, driftSentence, fxRate, groupOf, groupOrder, groups, groupSummaries, minor, money,
+  contributionRows, contributionStory, currencyName, dataStatus, fxRate, groupOf, groupOrder, groups, groupSummaries, minor, money,
   percent, quantity, signedMoney, trend, wholeMoney, type DataStatus, type GroupSummary, type Holding,
 } from "./lab-model";
 import styles from "./portfolio-lab.module.css";
@@ -62,22 +63,21 @@ export function PortfolioOverview({ view, notice: initialNotice = null }: { view
   const [resetting, startReset] = useTransition();
   const resetDialog = useRef<HTMLDialogElement>(null);
   const menuButton = useRef<HTMLButtonElement>(null);
-  const editLink = useRef<HTMLAnchorElement>(null);
   const resetKey = useRef<string | null>(null);
   const focusAfterReset = useRef(false);
 
   const status = dataStatus(view);
   const hasHoldings = view.holdings.length > 0;
   const hasCapital = minor(view.earnedPracticeCapitalMinor) > 0n || minor(view.availableCashMinor) > 0n;
-  const firstVisit = !hasHoldings && !view.allocation;
-  const hasHistory = hasHoldings || view.recentActivity.length > 0 || view.allocation !== null;
+  const firstVisit = !hasHoldings && view.recentActivity.length === 0;
+  const hasHistory = hasHoldings || view.recentActivity.length > 0;
   const refresh = () => startRefresh(() => router.refresh());
 
   useEffect(() => {
     // The options menu disappears with the reset; move focus to the new first action instead of losing it.
     if (!focusAfterReset.current || !firstVisit) return;
     focusAfterReset.current = false;
-    document.getElementById("first-mix-cta")?.focus();
+    document.getElementById("first-buy-search")?.focus();
   }, [firstVisit, view.portfolioId]);
 
   function reset() {
@@ -99,9 +99,8 @@ export function PortfolioOverview({ view, notice: initialNotice = null }: { view
     <div className={styles.container}>
       {firstVisit ? null : <header className={styles.header}>
         <div className={styles.eyebrowRow}><p className={styles.eyebrow}>Portfolio Lab · Cvičné portfolio</p>{view.marketDataMode === "sample" ? <span className={styles.sampleTag}>Ukázková data</span> : null}</div>
-        <h1>{view.allocation ? "Můj mix" : "Moje portfolio"}</h1>
+        <h1>Moje portfolio</h1>
         <div className={styles.headerActions}>
-          {hasCapital || hasHoldings ? <Link ref={editLink} href="/lab/portfolio/mix" className={styles.secondary}><SlidersHorizontal size={18} aria-hidden="true" />{view.allocation ? "Upravit" : "Sestavit mix"}</Link> : null}
           {hasHistory ? <div className={styles.menuWrap}>
             <button ref={menuButton} type="button" className={styles.iconButton} aria-label="Možnosti portfolia" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((open) => !open)} onKeyDown={(event) => { if (event.key === "Escape") setMenuOpen(false); }}><Ellipsis size={20} aria-hidden="true" /></button>
             {menuOpen ? <div role="menu" aria-label="Možnosti portfolia" className={styles.menu} onKeyDown={(event) => { if (event.key === "Escape") { setMenuOpen(false); menuButton.current?.focus(); } }}>
@@ -109,10 +108,9 @@ export function PortfolioOverview({ view, notice: initialNotice = null }: { view
             </div> : null}
           </div> : null}
         </div>
-        <p className={styles.meta}>{view.allocation
-          ? <>Mix uložen {dateLabel(view.allocation.createdAt)} · rozděleno <span className={styles.num}>{money(view.allocation.appliedValueMinor)}</span> nanečisto</>
-          : <>Otevřeno {dateLabel(view.openedAt)} · cvičné peníze, nic skutečného</>}</p>
+        <p className={styles.meta}>Otevřeno {dateLabel(view.openedAt)} · cvičné peníze, nic skutečného</p>
       </header>}
+      {firstVisit || (!hasCapital && !hasHoldings) ? null : <div className={styles.buyBar}><InstrumentSearch sample={view.marketDataMode === "sample"} /></div>}
 
       {notice ? <div className={styles.notice} role="status"><CircleCheck size={18} aria-hidden="true" /><div className={styles.noticeText}><strong>{notice.title}</strong><p>{notice.detail}</p></div><button type="button" aria-label="Zavřít potvrzení" onClick={() => setNotice(null)}><X size={18} aria-hidden="true" /></button></div> : null}
 
@@ -129,13 +127,13 @@ export function PortfolioOverview({ view, notice: initialNotice = null }: { view
     <dialog ref={resetDialog} className={styles.dialog} aria-labelledby="reset-title" aria-describedby="reset-description" onCancel={(event) => { if (resetting) event.preventDefault(); }} onClose={() => {
       setResetError(null);
       // The menu item that opened the dialog is gone; return focus to its trigger, also after the browser's own restore.
-      const restore = () => (menuButton.current?.isConnected ? menuButton.current : editLink.current)?.focus();
+      const restore = () => (menuButton.current?.isConnected ? menuButton.current : document.getElementById("first-buy-search"))?.focus();
       restore();
       requestAnimationFrame(restore);
     }}>
       <div className={styles.dialogInner}>
         <h2 id="reset-title">Resetovat portfolio?</h2>
-        <p id="reset-description">Pozice i uložený mix se uzavřou a veškerý získaný cvičný kapitál bude znovu k dispozici jako hotovost. Postup v učení i dřívější obchody zůstanou zaznamenané.</p>
+        <p id="reset-description">Pozice se uzavřou a veškerý získaný cvičný kapitál bude znovu k dispozici jako hotovost. Postup v učení i dřívější obchody zůstanou zaznamenané.</p>
         {resetError ? <p role="alert" className={styles.error}>{resetError}</p> : null}
         <div className={styles.dialogActions}>
           <button type="button" className={styles.secondary} disabled={resetting} onClick={() => resetDialog.current?.close()}>Ponechat portfolio</button>
@@ -150,7 +148,7 @@ function ZeroCapital({ cashMinor }: { cashMinor: string }) {
   return <section className={`${styles.card} ${styles.zero}`} aria-labelledby="zero-capital-title">
     <div className={styles.emptyHead}><p className={styles.sectionLabel}>Tvoje portfolio</p><p className={styles.meta}>Hotovost <strong className={styles.num} data-testid="portfolio-cash">{money(cashMinor)}</strong></p></div>
     <h2 id="zero-capital-title">Získej kapitál učením</h2>
-    <p>Cvičný kapitál dostáváš za dokončené lekce. Až nějaký budeš mít, sestavíš si z něj první mix.</p>
+    <p>Cvičný kapitál dostáváš za dokončené lekce. Až nějaký budeš mít, nakoupíš za něj první akcii, ETF nebo dluhopis.</p>
     <Link href="/learn" className={styles.primary}>Pokračovat v učení<ArrowRight size={18} aria-hidden="true" /></Link>
   </section>;
 }
@@ -178,15 +176,14 @@ function FirstVisit({ view }: { view: PortfolioView }) {
     </section>
     <section className={`${styles.card} ${styles.empty}`} aria-labelledby="empty-title">
       <div className={styles.emptyHead}><p className={styles.sectionLabel}>Tvoje portfolio</p><p className={styles.meta}>Odděleno od XP</p></div>
-      <h2 id="empty-title">Zatím tu nic není. Začni jedním mixem.</h2>
-      <p>Vybereš nástroje, rozdělíš mezi ně kapitál v procentech a mix zkontroluješ. Po uložení Lab nakoupí nanečisto a ukáže, co se s penězi děje.</p>
+      <h2 id="empty-title">Zatím tu nic není. Začni prvním nákupem.</h2>
+      <p>Najdi firmu, fond nebo dluhopis a otevři jeho detail s grafem. Tam zvolíš počet kusů, pokyn zkontroluješ a nakoupíš nanečisto. Koláč pak ukáže, kolik máš v akciích, dluhopisech a v hotovosti.</p>
       <ul className={styles.facts}>
         <li><Wallet size={20} aria-hidden="true" /><strong className={styles.num}>{money(capital)}</strong><span>cvičný kapitál z lekcí, ne tvoje peníze</span></li>
         <li><ChartLine size={20} aria-hidden="true" /><strong>{sample ? "Ukázkové ceny" : "Tržní ceny"}</strong><span>{sample ? "pevná výuková sada, ne tržní data" : "pozorování od poskytovatele, mohou být zpožděná"}</span></li>
         <li><CircleOff size={20} aria-hidden="true" /><strong>Mimo XP</strong><span>zisk ani ztráta body nemění</span></li>
       </ul>
-      <Link id="first-mix-cta" href="/lab/portfolio/mix" className={styles.primary}>Sestavit první mix<ArrowRight size={18} aria-hidden="true" /></Link>
-      <p className={styles.meta}>Asi 3 minuty. Všechno můžeš později změnit.</p>
+      <div className={styles.emptySearch}><InstrumentSearch id="first-buy-search" label="Najdi, co chceš koupit" sample={sample} /></div>
     </section>
     <div className={styles.column}>
       <section className={`${styles.card} ${styles.example}`} aria-labelledby="example-title">
@@ -196,9 +193,9 @@ function FirstVisit({ view }: { view: PortfolioView }) {
       <section className={styles.steps} aria-labelledby="steps-title">
         <h2 id="steps-title" className={styles.sectionLabel}>Jak Lab funguje</h2>
         <ol>
-          <li><span>01</span><h3>Vybereš nástroje</h3><p>Akcie, ETF a dluhopisy z nastaveného zdroje dat.</p></li>
-          <li><span>02</span><h3>Nastavíš váhy</h3><p>Dohromady 100&nbsp;%. Před uložením uvidíš, co se nakoupí.</p></li>
-          <li><span>03</span><h3>Sleduješ, co se děje</h3><p>Ceny přepočtené na koruny {sample ? "ukázkovým" : "referenčním"} kurzem. Nic nepředpovídáme.</p></li>
+          <li><span>01</span><h3>Najdeš nástroj</h3><p>Akcie, ETF a dluhopisy z nastaveného zdroje dat. Detail ukáže cenu, graf a základní údaje.</p></li>
+          <li><span>02</span><h3>Nakoupíš za hotovost</h3><p>Zvolíš počet kusů, i zlomek. Před potvrzením uvidíš odhad ceny v korunách.</p></li>
+          <li><span>03</span><h3>Sleduješ rozložení</h3><p>Kolik máš v akciích, ETF, dluhopisech a hotovosti, přepočteno {sample ? "ukázkovým" : "referenčním"} kurzem. Nic nepředpovídáme.</p></li>
         </ol>
       </section>
     </div>
@@ -314,17 +311,11 @@ function Story({ view, contributions, story }: { view: PortfolioView; contributi
   </section>;
 }
 
-function targetOf(view: PortfolioView, instrumentId: string) {
-  if (!view.allocation) return null;
-  return view.allocation.lines.find((line) => line.instrumentId === instrumentId)?.weightBasisPoints ?? 0;
-}
-
-function HoldingRow({ view, holding }: { view: PortfolioView; holding: Holding }) {
-  const target = targetOf(view, holding.instrumentId);
+function HoldingRow({ holding }: { holding: Holding }) {
   return <li className={styles.row} data-testid={`holding-${holding.symbol}`}>
     <span className={styles.dot} style={{ background: groups[groupOf(holding.assetType)].color }} aria-hidden="true" />
     <div className={styles.rowIdentity}>
-      <p className={styles.rowTop}><span className={styles.chip}>{holding.symbol}</span><span className={styles.num}>{percent(holding.portfolioWeightBasisPoints)}{target === null ? "" : target === 0 ? " · mimo mix" : ` · cíl ${percent(target, { digits: 0 })}`}</span></p>
+      <p className={styles.rowTop}><span className={styles.chip}>{holding.symbol}</span><span className={styles.num}>{percent(holding.portfolioWeightBasisPoints)}</span></p>
       <Link className={styles.rowName} href={instrumentDetailHref(holding.instrumentId)}>{holding.name}<span className="sr-only">: detail, nákup a prodej</span></Link>
     </div>
     <div className={styles.rowValue}>
@@ -342,17 +333,16 @@ function byGroup(holdings: readonly Holding[]) {
 }
 
 function HoldingsCard({ view }: { view: PortfolioView }) {
-  const cashTarget = view.allocation?.cashWeightBasisPoints ?? null;
   const currencies = view.attribution?.currencies ?? [];
   const fxEffect = view.attribution ? minor(view.attribution.fxEffectMinor) : 0n;
   return <section className={`${styles.card} ${styles.holdings}`} aria-labelledby="holdings-title">
     <div className={styles.cardHead}><h2 id="holdings-title">Položky</h2><p className={styles.meta}>v Kč · {fxSourceLabel(view)}</p></div>
     <ul className={styles.rows} aria-label="Položky portfolia">
-      {byGroup(view.holdings).map((holding) => <HoldingRow key={holding.instrumentId} view={view} holding={holding} />)}
+      {byGroup(view.holdings).map((holding) => <HoldingRow key={holding.instrumentId} holding={holding} />)}
       <li className={styles.row} data-testid="holding-cash">
         <span className={styles.dot} style={{ background: groups.cash.color }} aria-hidden="true" />
         <div className={styles.rowIdentity}>
-          <p className={styles.rowTop}><span className={styles.chip}>Kč</span><span className={styles.num}>{percent(view.cashWeightBasisPoints)}{cashTarget === null ? "" : ` · cíl ${percent(cashTarget, { digits: 0 })}`}</span></p>
+          <p className={styles.rowTop}><span className={styles.chip}>Kč</span><span className={styles.num}>{percent(view.cashWeightBasisPoints)}</span></p>
           <p className={styles.rowName}>Hotovost v korunách</p>
         </div>
         <div className={styles.rowValue}><strong className={styles.num}>{money(view.availableCashMinor)}</strong><span className={styles.change}>bez kurzu a výnosu</span></div>
@@ -369,17 +359,16 @@ function HoldingsCard({ view }: { view: PortfolioView }) {
 
 function AllocationCard({ view, rows }: { view: PortfolioView; rows: readonly GroupSummary[] }) {
   const complete = rows.every((row) => row.weightBasisPoints !== null);
-  const sentence = driftSentence(rows);
   const count = view.holdings.length + (minor(view.availableCashMinor) > 0n ? 1 : 0);
   return <section className={`${styles.card} ${styles.allocation}`} aria-labelledby="allocation-title">
     <div className={styles.cardHead}><h2 id="allocation-title">Rozložení</h2><p className={styles.meta}>podíl na celé hodnotě</p></div>
     {complete ? <AllocationDonut
-      label={`Rozložení portfolia: ${rows.map((row) => `${groups[row.group].label} ${percent(row.weightBasisPoints)}${row.targetBasisPoints === null ? "" : `, cíl ${percent(row.targetBasisPoints, { digits: 0 })}`}`).join("; ")}.`}
+      label={`Rozložení portfolia: ${rows.map((row) => `${groups[row.group].label} ${percent(row.weightBasisPoints)}${row.valueMinor === null ? "" : `, ${money(row.valueMinor)}`}`).join("; ")}.`}
       center={`${count} ${count === 1 ? "položka" : count < 5 ? "položky" : "položek"}`}
-      segments={rows.map((row) => ({ id: row.group, label: groups[row.group].label, color: groups[row.group].color, basisPoints: row.weightBasisPoints ?? 0, value: percent(row.weightBasisPoints), detail: row.targetBasisPoints === null ? undefined : `cíl ${percent(row.targetBasisPoints, { digits: 0 })}` }))}
+      segments={rows.map((row) => ({ id: row.group, label: groups[row.group].label, color: groups[row.group].color, basisPoints: row.weightBasisPoints ?? 0, value: percent(row.weightBasisPoints), detail: row.valueMinor === null ? undefined : money(row.valueMinor) }))}
     /> : <p className={styles.meta}>Rozložení ukážeme, až budou známé ceny všech položek.</p>}
     <div className={styles.drift}>
-      <p>{sentence ?? "Mix zatím nemáš uložený. Když ho sestavíš, uvidíš tu vedle skutečných vah i cílové."}</p>
+      <p>Kolik z celé hodnoty máš v akciích, ETF, dluhopisech a v hotovosti. Rozložení se mění s cenami i s každým nákupem a prodejem. Kapitál z nových lekcí přibude do hotovosti.</p>
       <Link className={styles.textLink} href={PORTFOLIO_LESSON_HREF}>Lekce: Portfolio, váhy a diverzifikace<ArrowRight size={16} aria-hidden="true" /></Link>
     </div>
   </section>;
@@ -412,18 +401,17 @@ function Missing({ view, status, refreshing, onRetry }: { view: PortfolioView; s
           <h2 id="missing-title">{partial ? "Některé ceny se teď nenačetly." : "Ceny se teď nenačetly."}</h2>
           <p>Bez cen všech položek nevíme, kolik má portfolio hodnotu. Proto ji neukazujeme a nic neodhadujeme.</p>
           <button type="button" className={styles.primary} onClick={onRetry} disabled={refreshing}>{refreshing ? "Načítám…" : "Načíst znovu"}<RotateCcw size={18} aria-hidden="true" /></button>
-          <p className={styles.meta}>Tvůj mix je v bezpečí. Co víme jistě, je níž.</p>
+          <p className={styles.meta}>Tvoje pozice jsou v bezpečí. Co víme jistě, je níž.</p>
         </section>
       </div>
       <section className={`${styles.card} ${styles.known}`} aria-labelledby="known-title">
         <div className={styles.cardHead}><h2 id="known-title">Co víme jistě</h2><p className={styles.meta}>z uložených obchodů</p></div>
         <ul className={styles.rows}>
           {byGroup(view.holdings).map((holding) => {
-            const target = targetOf(view, holding.instrumentId);
             return <li key={holding.instrumentId} data-testid={`holding-${holding.symbol}`}>
               <span className={styles.dot} style={{ background: groups[groupOf(holding.assetType)].color }} aria-hidden="true" />
               <div className={styles.rowIdentity}><p className={styles.rowTop}><span className={styles.chip}>{holding.symbol}</span><span className={styles.num}>{quantity(holding.quantity)} ks</span></p><Link className={styles.rowName} href={instrumentDetailHref(holding.instrumentId)}>{holding.name}</Link></div>
-              <div><strong className={styles.num}>{target === null ? money(holding.costBasisMinor) : target === 0 ? "mimo mix" : `cíl ${percent(target, { digits: 0 })}`}</strong><span className={styles.num}>{target === null ? "nakoupeno" : `nakoupeno za ${money(holding.costBasisMinor)}`}</span>{holding.marketValueMinor === null ? <span>cena chybí</span> : <span className={styles.num}>teď {money(holding.marketValueMinor)}</span>}</div>
+              <div><strong className={styles.num}>{money(holding.costBasisMinor)}</strong><span>nakoupeno</span>{holding.marketValueMinor === null ? <span>cena chybí</span> : <span className={styles.num}>teď {money(holding.marketValueMinor)}</span>}</div>
             </li>;
           })}
           <li data-testid="holding-cash">

@@ -57,6 +57,10 @@
 .status[data-kind="unavailable"] { background: var(--color-error-tint); border-color: #e3b5a8; color: var(--color-error-ink); }
 .statusRetry { grid-column: 2; justify-self: start; margin-top: 2px; }
 
+/* Buy search: the one entry to investing; it opens an instrument detail. */
+.buyBar { max-width: 720px; margin-top: 20px; }
+.emptySearch { margin-top: 20px; }
+
 /* Overview layout */
 .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 16px; }
 .column { display: grid; gap: 16px; align-content: start; min-width: 0; }

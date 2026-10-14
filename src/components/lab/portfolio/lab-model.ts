@@ -93,26 +93,19 @@ export function dataStatus(view: Pick<PortfolioView, "holdings">): DataStatus {
   return { kind: "fresh", observedAt: all.at(-1) ?? null };
 }
 
-/* ── Groups and target drift ─────────────────────────────────────────────── */
+/* ── Groups ──────────────────────────────────────────────────────────────── */
 
 export interface GroupSummary {
   group: Group;
   valueMinor: bigint | null;
   weightBasisPoints: number | null;
-  targetBasisPoints: number | null;
   priceEffectMinor: bigint | null;
   symbols: string[];
-  /** Held instruments that are not part of the saved mix (target 0 %). */
-  outside: string[];
 }
 
+/** Value and weight per instrument type, cash included. Incomplete valuations stay null. */
 export function groupSummaries(view: PortfolioView): GroupSummary[] {
   const complete = view.valuationComplete && view.portfolioTotalMinor !== null;
-  const targets = new Map<Group, number>();
-  if (view.allocation) {
-    for (const line of view.allocation.lines) targets.set(groupOf(line.assetType), (targets.get(groupOf(line.assetType)) ?? 0) + line.weightBasisPoints);
-    targets.set("cash", view.allocation.cashWeightBasisPoints);
-  }
   const rows = groupOrder.map((group): GroupSummary => {
     const members = group === "cash" ? [] : view.holdings.filter((holding) => groupOf(holding.assetType) === group);
     const valueMinor = group === "cash" ? minor(view.availableCashMinor)
@@ -124,37 +117,11 @@ export function groupSummaries(view: PortfolioView): GroupSummary[] {
       group,
       valueMinor,
       weightBasisPoints,
-      targetBasisPoints: view.allocation ? targets.get(group) ?? 0 : null,
       priceEffectMinor: group === "cash" ? 0n : complete ? members.reduce((sum, holding) => sum + minor(holding.priceEffectMinor ?? "0"), 0n) : null,
       symbols: members.map(({ symbol }) => symbol),
-      outside: view.allocation ? members.filter(({ instrumentId }) => !view.allocation!.lines.some((line) => line.instrumentId === instrumentId)).map(({ symbol }) => symbol) : [],
     };
   });
-  return rows.filter((row) => row.group === "cash" ? minor(view.availableCashMinor) > 0n || (row.targetBasisPoints ?? 0) > 0 : row.symbols.length > 0 || (row.targetBasisPoints ?? 0) > 0);
-}
-
-const DRIFT_TOLERANCE = 50;
-
-/** Explains why weights moved away from the saved targets, using only the observed numbers. */
-export function driftSentence(rows: readonly GroupSummary[]): string | null {
-  const measured = rows.filter((row) => row.weightBasisPoints !== null && row.targetBasisPoints !== null);
-  if (measured.length === 0) return null;
-  const drifts = measured.map((row) => ({ row, drift: row.weightBasisPoints! - row.targetBasisPoints! }));
-  const largest = drifts.reduce((max, item) => Math.abs(item.drift) > Math.abs(max.drift) ? item : max);
-  if (Math.abs(largest.drift) < DRIFT_TOLERANCE) {
-    return `Váhy jsou blízko uloženého cíle ${measured.map((row) => formatDecimal(row.targetBasisPoints! / 100, { maximumFractionDigits: 1 })).join(" / ")}. Lab nic sám nepřerovnává.`;
-  }
-  const { label } = groups[largest.row.group];
-  const actual = percent(largest.row.weightBasisPoints);
-  const target = percent(largest.row.targetBasisPoints, { digits: 0 });
-  if (largest.row.group === "cash" && largest.drift > 0) {
-    return `Hotovost je ${actual} místo cílových ${target}. Nový kapitál z lekcí nebo peníze z prodeje se do mixu samy nerozdělí. Rozdělí je až úprava mixu.`;
-  }
-  const direction = largest.drift > 0 ? "větší" : "menší";
-  const outside = largest.row.outside.length && largest.drift > 0
-    ? ` ${largest.row.outside.join(", ")} ${largest.row.outside.length === 1 ? "v mixu není" : "v mixu nejsou"}, přesto ${largest.row.outside.length === 1 ? "se počítá" : "se počítají"} do celku.`
-    : "";
-  return `${label} mají ${direction} váhu, než je cíl: ${actual} místo ${target}.${outside} Váhy se mění s cenami i s obchody mimo mix a Lab nic sám nepřerovnává.`;
+  return rows.filter((row) => row.group === "cash" ? minor(view.availableCashMinor) > 0n : row.symbols.length > 0);
 }
 
 /* ── What moved the result ───────────────────────────────────────────────── */
@@ -213,84 +180,4 @@ export function contributionStory(view: PortfolioView, contributions: readonly C
     }
   }
   return { headline, sentences };
-}
-
-/* ── Builder ─────────────────────────────────────────────────────────────── */
-
-export interface MixLine {
-  instrumentId: string;
-  symbol: string;
-  name: string;
-  assetType: "equity" | "etf" | "bond";
-  quoteCurrency: string;
-  percent: number;
-}
-
-/** Whole percents that keep the exact sum, by largest remainder. */
-export function wholePercents(basisPoints: readonly number[]) {
-  const floors = basisPoints.map((value) => Math.floor(value / 100));
-  let missing = Math.round(basisPoints.reduce((sum, value) => sum + value, 0) / 100) - floors.reduce((sum, value) => sum + value, 0);
-  const order = basisPoints.map((value, index) => ({ index, remainder: value % 100 })).sort((a, b) => b.remainder - a.remainder || a.index - b.index);
-  for (const { index } of order) {
-    if (missing <= 0) break;
-    floors[index] += 1;
-    missing -= 1;
-  }
-  return floors;
-}
-
-const asLineType = (assetType: string): MixLine["assetType"] => assetType === "bond" || assetType === "etf" ? assetType : "equity";
-
-/** Saved targets when they exist; otherwise today's weights of what is held; otherwise empty. */
-export function initialMix(view: PortfolioView): { lines: MixLine[]; cashPercent: number; source: "saved" | "holdings" | "empty" } {
-  if (view.allocation) {
-    const percents = wholePercents([...view.allocation.lines.map(({ weightBasisPoints }) => weightBasisPoints), view.allocation.cashWeightBasisPoints]);
-    return {
-      source: "saved",
-      cashPercent: percents.at(-1)!,
-      lines: view.allocation.lines.map((line, index) => ({ instrumentId: line.instrumentId, symbol: line.symbol, name: line.name, assetType: line.assetType, quoteCurrency: line.quoteCurrency, percent: percents[index] })),
-    };
-  }
-  if (view.holdings.length > 0 && view.valuationComplete && view.cashWeightBasisPoints !== null) {
-    const percents = wholePercents([...view.holdings.map(({ portfolioWeightBasisPoints }) => Number(portfolioWeightBasisPoints)), Number(view.cashWeightBasisPoints)]);
-    return {
-      source: "holdings",
-      cashPercent: percents.at(-1)!,
-      lines: view.holdings.map((holding, index) => ({ instrumentId: holding.instrumentId, symbol: holding.symbol, name: holding.name, assetType: asLineType(holding.assetType), quoteCurrency: holding.quoteCurrency, percent: percents[index] })),
-    };
-  }
-  return { source: "empty", cashPercent: 0, lines: [] };
-}
-
-export type MixCheck = "empty" | "complete" | "under" | "over" | "zero-line";
-
-export function mixCheck(lines: readonly MixLine[], cashPercent: number): { check: MixCheck; sum: number } {
-  const sum = lines.reduce((total, line) => total + line.percent, cashPercent);
-  if (lines.length === 0) return { check: "empty", sum };
-  if (sum < 100) return { check: "under", sum };
-  if (sum > 100) return { check: "over", sum };
-  if (lines.some(({ percent }) => percent <= 0)) return { check: "zero-line", sum };
-  return { check: "complete", sum };
-}
-
-export function amountForPercent(totalMinor: bigint, percentValue: number) {
-  return (totalMinor * BigInt(Math.max(0, Math.round(percentValue)))) / 100n;
-}
-
-export function allocationInput(lines: readonly MixLine[], cashPercent: number) {
-  return {
-    lines: lines.map(({ instrumentId, percent: value }) => ({ instrumentId, weightBasisPoints: value * 100 })),
-    cashWeightBasisPoints: cashPercent * 100,
-  };
-}
-
-/** Weight given to a newly added line: whatever is still unassigned, never more. */
-export function weightForNewLine(lines: readonly MixLine[], cashPercent: number) {
-  const remaining = 100 - lines.reduce((sum, line) => sum + line.percent, cashPercent);
-  return Math.max(0, remaining);
-}
-
-export function clampPercent(value: number) {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(100, Math.max(0, Math.round(value)));
 }

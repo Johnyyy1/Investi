@@ -2,6 +2,15 @@
 
 Baseline: `feat/progress-redesign` at `6282ac4`. Design source: root `investi-design.pen` read through Pen MCP: `Investi / Portfolio Lab — 390px` (`Py3VW`, states 1–5 in `gK7yl` with their annotations and open-questions note), `Investi / Portfolio Lab — 1440px` (`SqXrk`, heading and notes only), `Investi / Design System` (`V7mUpG`), the guide usage rules and `Investi / Consistency audit` (`t2Wjdv`).
 
+## Update: search-to-buy replaces the weight builder
+
+The slider/percent mix builder was retired at the learner's request. Investing now works like a broker app:
+
+- The overview (and the first-visit card) has one instrument search. Picking a result opens the instrument detail (price, chart, metrics), where the learner buys or sells one order at a time with the existing single-trade flow ("Koupit AAPL", review, confirm).
+- `/lab/portfolio/mix` redirects to `/lab/portfolio`. `MixBuilder` and its styles were removed.
+- The overview no longer shows saved targets, "Můj mix", drift sentences or "mimo mix". The allocation donut shows the actual split per type (Akcie, ETF, Dluhopisy, Hotovost) with the share and its value in Kč.
+- Unchanged on purpose: the `portfolio_allocation` tables, migration `0010`, `executeAllocation` / `reviewAllocation` and their server actions and tests. Existing saved mixes stay in the database for audit. Retiring the unused allocation actions is a separate follow-up.
+
 ## Implemented scope
 
 - **First visit (state 1):** hero, guide bubble that explains a weight with the learner's real capital ("60 % z 2 000 Kč je 1 200 Kč"), the empty-portfolio card with three facts and one CTA, a labelled example split, and "Jak Lab funguje".

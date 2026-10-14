@@ -61,27 +61,21 @@ try {
   await sql`insert into lesson_award (user_id, lesson_id, xp, practice_capital_minor, reward_policy_version, learning_date, time_zone, awarded_at) values (${userId}, ${lessonId}, 60, 200000, 1, '2026-01-17', 'Europe/Prague', ${now})`;
   await sql`insert into progression_unlock (user_id, unlock_id, practice_capital_minor, reason, unlocked_at) values (${userId}, 'PORTFOLIO_LAB', 0, 'test_fixture', ${now})`;
 
-  // First mix while the U.S. market is closed: the builder explains why it cannot buy and stays disabled.
-  await page.goto(`${baseURL}/lab/portfolio/mix`);
-  await page.getByRole("heading", { name: "Sestav svůj první mix" }).waitFor();
-  const search = page.getByRole("combobox", { name: "Přidat nástroj" });
+  // First purchase while the U.S. market is closed: search opens the detail, whose order stays disabled.
+  await page.goto(`${baseURL}/lab/portfolio`);
+  await page.getByRole("heading", { name: "Zkus si investovat nanečisto." }).waitFor();
+  const search = page.getByRole("combobox", { name: "Najdi, co chceš koupit" });
   await search.fill("apple");
   await page.getByRole("option", { name: /AAPL/ }).waitFor();
   await search.press("Enter");
-  const aaplLine = page.getByTestId("mix-line-AAPL");
-  await aaplLine.getByText("Trh je teď zavřený. Nakoupit nebo prodat půjde, až se otevře.").waitFor();
-  await page.getByText("Rozděleno 100 %", { exact: true }).waitFor();
-  await page.getByText("Teď nejde nakoupit: AAPL. Důvod je u položky.").waitFor();
-  const save = page.getByRole("button", { name: /Uložit portfolio/ });
-  assert.equal(await save.getAttribute("aria-disabled"), "true", "orders needing a fresh quote stay disabled");
-  await save.click({ force: true });
-  assert.equal(await page.getByRole("dialog").count(), 0, "no review opens for a closed market");
-  await search.fill("vanguard");
-  await page.getByRole("option", { name: /VWCE/ }).waitFor();
-  await search.press("Enter");
-  await page.getByTestId("mix-line-VWCE").getByText("Poslední cena je zastaralá. Nákup teď nejde.").waitFor();
-  await page.screenshot({ path: `${screenshotDir}/builder-closed-390.png`, fullPage: true });
-  await noOverflow(page, "closed builder");
+  await page.waitForURL(/\/lab\/instruments\/US-XNAS%3AAAPL/);
+  await page.getByRole("heading", { name: "Apple Inc.", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Koupit AAPL" }).first().click();
+  const firstOrder = page.getByRole("dialog", { name: "Investovat do AAPL" });
+  await firstOrder.getByText(/čerstvé tržní pozorování/i).waitFor();
+  assert.equal(await firstOrder.getByRole("button", { name: "Zkontrolovat pokyn", exact: true }).isDisabled(), true, "orders needing a fresh quote stay disabled");
+  await page.screenshot({ path: `${screenshotDir}/first-buy-closed-390.png`, fullPage: true });
+  await noOverflow(page, "closed first buy");
   assert.equal(await tradeCount(), 0, "nothing executes while the market is closed");
 
   // State 4b: the closing reference still values the portfolio, labeled with its session.
@@ -104,7 +98,7 @@ try {
   await page.goto(`${baseURL}/lab/instruments/US-XNAS%3AAAPL`);
   await page.getByRole("heading", { name: "Apple Inc.", exact: true }).waitFor();
   await page.getByText(/Trh zavřen/).first().waitFor();
-  await page.getByRole("button", { name: /Investovat/ }).first().click();
+  await page.getByRole("button", { name: /Koupit/ }).first().click();
   const orderDialog = page.getByRole("dialog", { name: "Investovat do AAPL" });
   await orderDialog.getByText(/čerstvé tržní pozorování/i).waitFor();
   assert.equal(await orderDialog.getByRole("button", { name: "Zkontrolovat pokyn", exact: true }).isDisabled(), true, "closed-market execution is disabled");
@@ -131,7 +125,7 @@ try {
   const [{ cash }] = await sql`select (coalesce((select sum(practice_capital_minor) from lesson_award where user_id = ${userId}), 0) + coalesce((select sum(cash_delta_base_minor) from portfolio_trade where portfolio_id = ${portfolioId}), 0))::text as cash`;
   assert.equal(cash, "57972", "Practice Capital moved only through the two fixture buys");
   assert.deepEqual(errors, [], "closed-market Portfolio Lab has no browser errors");
-  console.log("PASS: closed market (4b) and stale data (4c) keep exact valuations with their as-of labels, disable the mix builder and single orders, add no trade, and leave Practice Capital unchanged.");
+  console.log("PASS: closed market (4b) and stale data (4c) keep exact valuations with their as-of labels, disable orders reached from search and the instrument page, add no trade, and leave Practice Capital unchanged.");
 } finally {
   await browser.close();
   if (userId) await sql`delete from "user" where id = ${userId}`;

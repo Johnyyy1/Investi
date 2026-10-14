@@ -4,12 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { PortfolioView } from "@/features/portfolio/service";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
-vi.mock("@/features/portfolio/actions", () => ({ resetPortfolioAction: vi.fn() }));
+vi.mock("@/features/portfolio/actions", () => ({ resetPortfolioAction: vi.fn(), searchPortfolioInstrumentsAction: vi.fn() }));
 
-import {
-  allocationInput, amountForPercent, contributionRows, contributionStory, dataStatus, driftSentence, groupSummaries, initialMix,
-  mixCheck, weightForNewLine, wholePercents, type MixLine,
-} from "./lab-model";
+import { contributionRows, contributionStory, dataStatus, groupSummaries } from "./lab-model";
 import { PortfolioOverview } from "./portfolio-overview";
 import PortfolioLabError from "@/app/(app)/lab/portfolio/error";
 import PortfolioLabLoading from "@/app/(app)/lab/portfolio/loading";
@@ -59,31 +56,20 @@ describe("market-data status", () => {
   });
 });
 
-describe("groups, targets and drift", () => {
-  const drifted = view({ holdings: [vt, msft, bnd], allocation: saved, availableCashMinor: "99000", cashWeightBasisPoints: "990", portfolioTotalMinor: "1014400" });
+describe("groups", () => {
+  const mixed = view({ holdings: [vt, msft, bnd], allocation: saved, availableCashMinor: "99000", cashWeightBasisPoints: "990", portfolioTotalMinor: "1014400" });
 
-  it("sums real weights and saved targets per instrument type, cash included", () => {
-    const rows = groupSummaries(drifted);
-    expect(rows.map(({ group, weightBasisPoints, targetBasisPoints }) => [group, weightBasisPoints, targetBasisPoints])).toEqual([
-      ["equity", 480, 500], ["etf", 4040, 4000], ["bond", 2970, 4500], ["cash", 990, 1000],
+  it("sums real values and weights per instrument type, cash included, and ignores saved targets", () => {
+    const rows = groupSummaries(mixed);
+    expect(rows.map(({ group, valueMinor, weightBasisPoints }) => [group, valueMinor, weightBasisPoints])).toEqual([
+      ["equity", 49_100n, 480], ["etf", 409_500n, 4040], ["bond", 301_200n, 2970], ["cash", 99_000n, 990],
     ]);
   });
 
-  it("explains the largest drift without inventing a cause", () => {
-    expect(driftSentence(groupSummaries(drifted))).toBe("Dluhopisy mají menší váhu, než je cíl: 29,7 % místo 45 %. Váhy se mění s cenami i s obchody mimo mix a Lab nic sám nepřerovnává.");
-    const close = view({ holdings: [{ ...vt, portfolioWeightBasisPoints: "9000" }], allocation: { ...saved, lines: [{ ...saved.lines[0], weightBasisPoints: 9_000 }] }, cashWeightBasisPoints: "1000" });
-    expect(driftSentence(groupSummaries(close))).toBe("Váhy jsou blízko uloženého cíle 90 / 10. Lab nic sám nepřerovnává.");
-  });
-
-  it("names new cash and holdings outside the mix as such", () => {
-    const cashHeavy = view({
-      holdings: [{ ...vt, portfolioWeightBasisPoints: "5600" }, { ...bnd, portfolioWeightBasisPoints: "2900" }],
-      allocation: { ...saved, lines: [{ ...saved.lines[0], weightBasisPoints: 6_000 }, { ...saved.lines[2], weightBasisPoints: 3_000 }] },
-      cashWeightBasisPoints: "1500",
-    });
-    expect(driftSentence(groupSummaries(cashHeavy))).toMatch(/^Hotovost je 15,0\s% místo cílových 10\s%\. Nový kapitál z lekcí/);
-    const outside = view({ holdings: [{ ...vt, portfolioWeightBasisPoints: "6000" }, { ...msft, portfolioWeightBasisPoints: "3000" }], allocation: { ...saved, cashWeightBasisPoints: 3_000, lines: [{ ...saved.lines[0], weightBasisPoints: 7_000 }] }, cashWeightBasisPoints: "1000" });
-    expect(driftSentence(groupSummaries(outside))).toContain("MSFT v mixu není, přesto se počítá do celku.");
+  it("leaves out empty groups and keeps values unknown while a quote is missing", () => {
+    expect(groupSummaries(view({ holdings: [vt], availableCashMinor: "0", cashWeightBasisPoints: "0" })).map(({ group }) => group)).toEqual(["etf"]);
+    const incomplete = groupSummaries(view({ holdings: [{ ...vt, marketValueMinor: null }], valuationComplete: false, portfolioTotalMinor: null }));
+    expect(incomplete.find(({ group }) => group === "etf")).toMatchObject({ valueMinor: null, weightBasisPoints: null });
   });
 });
 
@@ -111,39 +97,6 @@ describe("what moved the result", () => {
   });
 });
 
-describe("builder arithmetic", () => {
-  const lines: MixLine[] = [
-    { instrumentId: "a", symbol: "A", name: "A", assetType: "etf", quoteCurrency: "USD", percent: 40 },
-    { instrumentId: "b", symbol: "B", name: "B", assetType: "bond", quoteCurrency: "CZK", percent: 30 },
-  ];
-
-  it("reports the 100 %, 85 % and 110 % states and blocks empty or 0 % lines", () => {
-    expect(mixCheck(lines, 30)).toEqual({ check: "complete", sum: 100 });
-    expect(mixCheck(lines, 15)).toEqual({ check: "under", sum: 85 });
-    expect(mixCheck(lines, 40)).toEqual({ check: "over", sum: 110 });
-    expect(mixCheck([], 100).check).toBe("empty");
-    expect(mixCheck([...lines, { ...lines[0], instrumentId: "c", percent: 0 }], 30).check).toBe("zero-line");
-  });
-
-  it("converts whole percents to basis points and amounts in exact minor units", () => {
-    expect(allocationInput(lines, 30)).toEqual({ lines: [{ instrumentId: "a", weightBasisPoints: 4_000 }, { instrumentId: "b", weightBasisPoints: 3_000 }], cashWeightBasisPoints: 3_000 });
-    expect(amountForPercent(333_333n, 33)).toBe(109_999n);
-    expect(weightForNewLine(lines, 10)).toBe(20);
-    expect(weightForNewLine(lines, 40)).toBe(0);
-  });
-
-  it("rounds observed weights to whole percents that still sum to 100", () => {
-    expect(wholePercents([3_240, 3_860, 2_900])).toEqual([32, 39, 29]);
-    expect(wholePercents([3_333, 3_333, 3_334]).reduce((sum, value) => sum + value, 0)).toBe(100);
-  });
-
-  it("starts from the saved mix, else from today's weights, else empty", () => {
-    expect(initialMix(view({ allocation: saved, holdings: [vt] }))).toMatchObject({ source: "saved", cashPercent: 10, lines: [{ symbol: "VT", percent: 40 }, { symbol: "MSFT", percent: 5 }, { symbol: "BND", percent: 45 }] });
-    expect(initialMix(view({ holdings: [{ ...vt, portfolioWeightBasisPoints: "3240" }], cashWeightBasisPoints: "6760" }))).toMatchObject({ source: "holdings", cashPercent: 68, lines: [{ percent: 32 }] });
-    expect(initialMix(view({ holdings: [{ ...vt, marketValueMinor: null }], valuationComplete: false, cashWeightBasisPoints: null }))).toMatchObject({ source: "empty", lines: [] });
-  });
-});
-
 describe("overview states", () => {
   const render = (portfolio: PortfolioView) => renderToStaticMarkup(createElement(PortfolioOverview, { view: portfolio }));
 
@@ -152,6 +105,21 @@ describe("overview states", () => {
     expect(html).toContain("Získej kapitál učením");
     expect(html).toContain('data-testid="portfolio-cash">0 Kč');
     expect(html).not.toContain("Sestavit");
+    expect(html).not.toContain('role="combobox"');
+  });
+
+  it("starts a first purchase from search, not from a weight builder", () => {
+    const html = render(view());
+    expect(html).toContain("Začni prvním nákupem.");
+    expect(html).toMatch(/id="first-buy-search"[^>]*role="combobox"/);
+    expect(html).not.toMatch(/lab\/portfolio\/mix|type="range"|Sestavit/);
+  });
+
+  it("shows the split in koruny next to each share and never a saved target", () => {
+    const html = render(view({ holdings: [vt, bnd], allocation: saved, availableCashMinor: "289300", cashWeightBasisPoints: "2990", portfolioTotalMinor: "1000000" }));
+    expect(html).toMatch(/Rozložení portfolia: ETF 40,4\s%, 4\s095\sKč; Dluhopisy 29,7\s%, 3\s012\sKč; Hotovost 29,9\s%, 2\s893\sKč\./);
+    expect(html).toContain('role="combobox"');
+    expect(html).not.toMatch(/cíl|Můj mix|mimo mix/);
   });
 
   it("explains weights with the learner's real capital and keeps concept poses in their lessons", () => {

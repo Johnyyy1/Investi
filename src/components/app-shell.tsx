@@ -39,7 +39,7 @@ export function AppShell({ children, userName, isDemo = false, needsTimeZone = f
     } catch { setError("Odhlášení se nezdařilo. Zkus to znovu."); setPending(false); }
   }
   // Focused flows render without the shell: lessons, and the mix builder whose sticky save bar replaces the tab bar.
-  if (pathname === "/lab/portfolio/mix" || availableLessons.some((lesson) => pathname === `/learn/${lesson.moduleSlug}/${lesson.slug}`)) return children;
+  if (availableLessons.some((lesson) => pathname === `/learn/${lesson.moduleSlug}/${lesson.slug}`)) return children;
 
   const initial = userName.trim().charAt(0).toUpperCase() || "I";
   return <div className={`min-h-dvh bg-background ${paper ? `investi-theme ${styles.shell}` : ""}`}>
