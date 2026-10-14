@@ -32,6 +32,8 @@
 .skip { position: absolute; z-index: 50; top: 8px; left: 16px; background: var(--surface); padding: 12px; transform: translateY(-200%); }
 .skip:focus { transform: none; }
 .siteHeader { position: relative; z-index: 4; padding-block: 28px; }
+.navBg { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: color-mix(in srgb, var(--paper) 92%, transparent); box-shadow: 0 1px 0 var(--divider), 0 10px 28px #17171710; backdrop-filter: blur(10px); }
+.scrollProgress { position: fixed; z-index: 60; top: 0; left: 0; right: 0; height: 3px; background: var(--teal); transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; }
 .siteHeader .container { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; min-height: 56px; }
 .wordmark { font-family: var(--pen-display), sans-serif; font-size: 2.125rem; letter-spacing: -.05em; font-weight: 800; line-height: 1.35; }
 .topNav { display: flex; gap: 36px; align-items: center; font-size: .9375rem; }
@@ -56,12 +58,12 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 18px; min-height: 54px;
   background: var(--teal); color: #fff !important; padding: 14px 22px; border: 1px solid var(--teal);
   border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; line-height: 1.35;
-  transition: background-color 160ms ease, transform 160ms cubic-bezier(.23, 1, .32, 1);
+  transition: background-color 160ms ease;
 }
 .primaryButton { padding-inline: 24px; min-height: 56px; }
 .textAction { display: inline-flex; align-items: center; min-height: 48px; font-size: 1rem; font-weight: 500; }
 .heroLessonWrap { position: relative; border: 1px solid #cbc9bf; background: var(--surface); border-radius: 12px; box-shadow: 0 12px 24px #1717170c; }
-.heroArt { animation: curiosity-arrives 500ms cubic-bezier(.23, 1, .32, 1) both; position: absolute; right: 8px; top: -238px; width: 256px; height: 260px; object-fit: contain; pointer-events: none; }
+.heroArt { position: absolute; right: 8px; top: -238px; width: 256px; height: 260px; object-fit: contain; pointer-events: none; }
 .lessonBrowserHeader { position: relative; background: var(--surface); border-radius: 12px 12px 0 0; min-height: 78px; display: flex; gap: 16px; align-items: center; justify-content: space-between; border-bottom: 1px solid #ddd9cf; padding: 22px 32px; font-size: .9375rem; color: var(--muted); }
 .lessonBrowserHeader span:nth-child(3) { font-size: .875rem; }
 .lessonBrowserHeader span:last-child { font-size: .75rem; }
@@ -114,7 +116,7 @@
 .courseRow:last-of-type small { color: var(--teal); }
 .rowIcon { color: var(--teal); flex-shrink: 0; width: 20px; display: grid; place-items: center; }
 .courseCard > p { font-size: .8125rem; color: var(--muted); line-height: 1.25; }
-.threeSteps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 56px; border-top: 1px solid var(--divider); margin-top: 40px; padding-top: 22px; }
+.threeSteps { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 56px; border-top: 1px solid var(--divider); margin-top: 40px; padding-top: 22px; }
 .threeSteps > div > span { font-size: .75rem; color: var(--teal); display: block; line-height: 1.25; }
 .threeSteps h3 { font-family: var(--pen-body); font-size: 1rem; margin-block: 8px; line-height: 1.2; font-weight: 600; }
 .threeSteps p { font-size: .875rem; line-height: 1.5; color: var(--muted); }
@@ -214,11 +216,10 @@
 .footer nav a { display: flex; align-items: center; min-height: 44px; }
 @media (hover: hover) and (pointer: fine) {
   .topNav a:hover, .mobileNav a:hover, .textAction:hover, .footer nav a:hover { color: var(--teal); text-decoration: underline; text-underline-offset: 4px; }
-  .primaryButton:hover, .lessonSubmit:not(:disabled):hover, .portfolioSave:hover { background: #1c665e; transform: translateY(-1px); }
+  .primaryButton:hover, .lessonSubmit:not(:disabled):hover, .portfolioSave:hover { background: #1c665e; }
   .answer:hover { border-color: var(--teal); background: #f0f5ed; }
   .landing .secondaryButton:hover { background: #e7f0eb; }
 }
-.primaryButton:active, .lessonSubmit:active, .portfolioSave:active { transform: translateY(0); }
 @media (min-width: 1101px) { .heroLessonMain .lessonBottom { margin-top: 24px; } }
 @media (max-width: 1100px) {
   .container { width: calc(100% - 96px); }
@@ -416,6 +417,18 @@
   .landing a:hover, .landing button:hover { transform: none; }
 }
 
-@keyframes curiosity-arrives { from { opacity: .7; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (min-width: 501px) and (max-width: 800px) { .hero h1 { font-size: min(9.375vw, 4.5rem); } }
+
+/* Motion layer hooks: decorative only, never carry content. */
+.heroLessonContent, .lessonPreview { position: relative; }
+.answer { position: relative; }
+.answerGlow { position: absolute; inset: -4px; border-radius: 12px; border: 2px solid var(--teal2); box-shadow: 0 0 22px #2f8f8355; opacity: 0; pointer-events: none; }
+.demoCursor { position: absolute; z-index: 5; top: 0; left: 0; width: 22px; height: 22px; opacity: 0; visibility: hidden; pointer-events: none; filter: drop-shadow(0 2px 3px #17171733); }
+.demoCursor svg { display: block; }
+.stepsLine { position: absolute; top: -1px; left: 0; right: 0; height: 2px; background: var(--teal); transform: scaleX(0); transform-origin: 0 50%; pointer-events: none; }
+@media (max-width: 500px) { .stepsLine { display: none; } }
+.lessonCompact .answers + .feedback { margin-top: 24px; }
+.totalTick { display: inline-block; width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; color: var(--teal); }
+.shimmerHost { position: relative; overflow: hidden; isolation: isolate; }
+.shimmer { position: absolute; inset: -2px auto -2px 0; width: 45%; z-index: -1; pointer-events: none; background: linear-gradient(100deg, transparent, #ffffff38 45%, #ffffff12 60%, transparent); transform: translateX(-160%) skewX(-18deg); }
