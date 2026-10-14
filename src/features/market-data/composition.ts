@@ -10,13 +10,15 @@ import { FmpClient } from "./fmp/client";
 import { FmpMarketDataProvider } from "./fmp/provider";
 import { FmpEquityFundamentalsProvider } from "./fmp/equity-fundamentals";
 import { FmpEtfAnalyticsProvider } from "./fmp/etf-analytics";
+import type { CnbClientOptions } from "./cnb/client";
+import { CNB_FX_CACHE_MILLISECONDS, createCnbFxProvider } from "./cnb/provider";
 import type { FrankfurterClientOptions } from "./frankfurter/client";
 import { createFrankfurterFxProvider, FRANKFURTER_FX_CACHE_MILLISECONDS } from "./frankfurter/service";
 import { MarketDataError } from "./errors";
 import { MarketDataService, type MarketDataServiceOptions } from "./service";
 
 export type MarketDataProviderName = "deterministic" | "fmp";
-export type FxDataProviderName = "deterministic" | "frankfurter";
+export type FxDataProviderName = "deterministic" | "cnb" | "frankfurter";
 
 export interface MarketDataCompositionOptions extends Omit<MarketDataServiceOptions, "fxProvider"> {
   provider: MarketDataProviderName | string;
@@ -26,6 +28,7 @@ export interface MarketDataCompositionOptions extends Omit<MarketDataServiceOpti
   frankfurterBaseUrl?: string;
   fetch?: FmpClientOptions["fetch"];
   frankfurterFetch?: FrankfurterClientOptions["fetch"];
+  cnbFetch?: CnbClientOptions["fetch"];
 }
 
 /** Pure composition boundary. Environment access is deliberately kept in environment.ts. */
@@ -38,6 +41,7 @@ export function createMarketDataService(options: MarketDataCompositionOptions) {
     frankfurterBaseUrl,
     fetch,
     frankfurterFetch,
+    cnbFetch,
     ...serviceOptions
   } = options;
   const fxProviderName = configuredFxProvider ?? (provider === "deterministic" ? "deterministic" : undefined);
@@ -64,18 +68,21 @@ export function createMarketDataService(options: MarketDataCompositionOptions) {
 
   const fxProvider = fxProviderName === "deterministic"
     ? provider === "deterministic" ? securityProvider : new DeterministicMarketDataProvider(clock)
-    : fxProviderName === "frankfurter"
-      ? createFrankfurterFxProvider({ baseUrl: frankfurterBaseUrl, fetch: frankfurterFetch, clock })
-      : undefined;
+    : fxProviderName === "cnb"
+      ? createCnbFxProvider({ fetch: cnbFetch, clock })
+      : fxProviderName === "frankfurter"
+        ? createFrankfurterFxProvider({ baseUrl: frankfurterBaseUrl, fetch: frankfurterFetch, clock })
+        : undefined;
   if (!fxProvider) {
     throw new MarketDataError("ProviderConfiguration", "The configured FX data provider is not supported.", { fxProvider: fxProviderName });
   }
 
-  const externalData = provider === "fmp" || fxProviderName === "frankfurter";
+  const externalData = provider === "fmp" || fxProviderName === "frankfurter" || fxProviderName === "cnb";
   const cache = serviceOptions.cache ?? (externalData
     ? new InMemoryMarketDataCache({
         clock: () => clock().getTime(),
-        ttls: fxProviderName === "frankfurter" ? { fxMilliseconds: FRANKFURTER_FX_CACHE_MILLISECONDS } : undefined,
+        ttls: fxProviderName === "frankfurter" ? { fxMilliseconds: FRANKFURTER_FX_CACHE_MILLISECONDS }
+          : fxProviderName === "cnb" ? { fxMilliseconds: CNB_FX_CACHE_MILLISECONDS } : undefined,
       })
     : undefined);
   const equityFundamentalsProvider = provider === "deterministic" ? new DeterministicEquityFundamentalsProvider(clock) : new FmpEquityFundamentalsProvider(fmpClient!, clock);

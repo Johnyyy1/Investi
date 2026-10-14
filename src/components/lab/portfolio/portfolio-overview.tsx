@@ -38,6 +38,7 @@ function timeLabel(value: string) {
 function fxSourceLabel(view: PortfolioView) {
   const provider = view.holdings.find(({ fxProvider }) => fxProvider)?.fxProvider ?? null;
   if (view.marketDataMode === "sample" || provider === "investi-deterministic") return "ukázkový kurz";
+  if (provider === "cnb") return "kurz ČNB";
   if (provider?.includes("frankfurter")) return "referenční kurz ECB";
   return "referenční kurz";
 }

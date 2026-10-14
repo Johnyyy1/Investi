@@ -8,7 +8,7 @@ import type { EtfAnalyticsSnapshot } from "@/features/market-data/etf-analytics"
 import { chartPoints, historicalRequest, type ChartRange } from "./history";
 import { priceMetrics, type PriceMetrics } from "./price-metrics";
 
-export type HomeCurrencyReference = { rate: number; referenceDate: string };
+export type HomeCurrencyReference = { rate: number; referenceDate: string; provider: string };
 
 export type InstrumentDetail = {
   instrument: Instrument | null;
@@ -44,8 +44,9 @@ async function loadHomeCurrencyReference(service: MarketDataService, quoteCurren
   try {
     const fx = await service.getFxRate(quoteCurrency, HOME_CURRENCY, observedAt);
     if (!Number.isFinite(fx.rate) || fx.rate <= 0) return { reference: null, message: "Přepočet do korun teď není dostupný." };
-    return { reference: { rate: fx.rate, referenceDate: fx.referenceDate }, message: null };
-  } catch {
+    return { reference: { rate: fx.rate, referenceDate: fx.referenceDate, provider: fx.provenance.provider }, message: null };
+  } catch (error) {
+    console.error("[instrument-detail] CZK rate unavailable", { currency: quoteCurrency, observedAt, error: isMarketDataError(error) ? { code: error.code, message: error.message, context: error.context } : error });
     return { reference: null, message: "Přepočet do korun teď není dostupný. Cena v měně instrumentu zůstává k dispozici." };
   }
 }

@@ -11,11 +11,17 @@ import { allocationExecutionSchema, allocationInputSchema, idempotencySchema, in
 import { executeAllocation, executeTrade, resetActivePortfolio, reviewAllocation } from "./repository";
 import { loadAllocationQuotes, loadInstrumentPreview, loadPortfolioView } from "./service";
 
-function messageFor(error: unknown) {
+function messageFor(error: unknown, context: "trade" | "preview" = "trade") {
+  const message = tradeMessageFor(error);
+  // Nothing was submitted while the order panel is loading, so do not claim a trade was refused.
+  return context === "preview" ? message.replace(/ Obchod nebyl proveden\.$/, "") : message;
+}
+
+function tradeMessageFor(error: unknown) {
   if (error instanceof PortfolioInputError) return error.message;
   if (error instanceof z.ZodError) return "Mix se nepodařilo přečíst. Zkontroluj váhy a zkus to znovu.";
   if (isMarketDataError(error)) {
-    if (error.code === "FxUnavailable") return "Potřebný kurz CZK není dostupný. Obchod nebyl proveden.";
+    if (error.code === "FxUnavailable") return "Teď nemůžeme přepočítat cenu na koruny. Obchod nebyl proveden.";
     if (error.code === "InstrumentNotFound" || error.code === "UnsupportedInstrument") return "Tento instrument není z nastaveného zdroje tržních dat dostupný.";
     if (error.code === "RateLimited") return "Tržní data jsou dočasně omezená. Zkus to za chvíli znovu.";
     if (error.code === "ProviderAuthentication" || error.code === "ProviderConfiguration") return "Tržní data nejsou správně nastavená. Obchod nebyl proveden.";
@@ -53,7 +59,7 @@ export async function loadInstrumentPreviewAction(instrumentId: string) {
     if (!preview) return { ok: false as const, message: "S tímto instrumentem nelze ve vzdělávacím portfoliu obchodovat." };
     return { ok: true as const, preview };
   } catch (error) {
-    return { ok: false as const, message: messageFor(error) };
+    return { ok: false as const, message: messageFor(error, "preview") };
   }
 }
 

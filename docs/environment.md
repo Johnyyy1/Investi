@@ -10,7 +10,7 @@ Use `.env.example` as the template and keep all credential-bearing files ignored
 | `BETTER_AUTH_SECRET` | Required in production | Server authentication secret, at least 32 characters |
 | `BETTER_AUTH_URL` | Required in production | Actual app origin, OAuth callbacks, normalized auth-error redirect |
 | `MARKET_DATA_PROVIDER` | Optional in production | `deterministic` default or explicit `fmp`; no silent fallback |
-| `FX_DATA_PROVIDER` | Optional with deterministic; required with FMP | `deterministic` or `frankfurter` reference FX |
+| `FX_DATA_PROVIDER` | Optional with deterministic; required with FMP | `deterministic`, `cnb` (ČNB daily fixing, recommended) or `frankfurter` reference FX |
 | `FMP_API_KEY` | Required only with FMP | Server-only provider credential |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional in production | Both must be present to enable Google sign-in |
 | `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` | Optional in production | Both must be present to enable Facebook sign-in |

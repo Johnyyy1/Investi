@@ -47,8 +47,9 @@ export class FrankfurterClient {
     this.fetchImplementation = options.fetch ?? fetch;
   }
 
-  async getRate(baseCurrency: string, quoteCurrency: string): Promise<unknown> {
-    const endpoint = `v2/rate/${encodeURIComponent(baseCurrency)}/${encodeURIComponent(quoteCurrency)}`;
+  async getRate(baseCurrency: string, quoteCurrency: string, date?: string): Promise<unknown> {
+    // Without a date Frankfurter answers with today's rate, which is newer than an earlier quote observation.
+    const endpoint = `v2/rate/${encodeURIComponent(baseCurrency)}/${encodeURIComponent(quoteCurrency)}${date ? `?date=${encodeURIComponent(date)}` : ""}`;
     let response: Response;
     try {
       response = await this.fetchImplementation(`${this.baseUrl}/${endpoint}`, {

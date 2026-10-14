@@ -12,9 +12,10 @@ Set `MARKET_DATA_PROVIDER` to one of:
 Set `FX_DATA_PROVIDER` to one of:
 
 - `deterministic` — reproducible educational FX fixtures;
+- `cnb` — Czech National Bank daily fixing (`denni_kurz.txt`). No API key is required. Recommended for live mode.
 - `frankfurter` — Frankfurter API v2 blended reference rates. No API key is required.
 
-The normal local/test configuration explicitly selects `deterministic` for both. Live Portfolio Lab configuration uses `MARKET_DATA_PROVIDER=fmp` and `FX_DATA_PROVIDER=frankfurter`. Selecting FMP without an explicit FX provider or without `FMP_API_KEY` fails during composition. Invalid values fail environment validation. Investi never silently falls back between providers, and deterministic FX is never mixed into FMP mode unless it was explicitly selected. Never prefix the FMP key with `NEXT_PUBLIC_`.
+The normal local/test configuration explicitly selects `deterministic` for both. Live Portfolio Lab configuration uses `MARKET_DATA_PROVIDER=fmp` and `FX_DATA_PROVIDER=cnb`. Selecting FMP without an explicit FX provider or without `FMP_API_KEY` fails during composition. Invalid values fail environment validation. Investi never silently falls back between providers, and deterministic FX is never mixed into FMP mode unless it was explicitly selected. Never prefix the FMP key with `NEXT_PUBLIC_`.
 
 `DETERMINISTIC_MARKET_NOW` is an optional server-only ISO UTC instant for reproducible session-state demos and browser QA. When omitted, deterministic mode keeps its fixed open-session fixture clock. It does not affect FMP or Frankfurter selection.
 
@@ -35,6 +36,12 @@ The adapter currently normalizes:
 - normalized provider errors without using FMP forex for Portfolio Lab.
 
 An FMP instrument ID includes both the provider exchange code and provider symbol, for example `FMP:NASDAQ:AAPL`. Search results retain provider identity and the original provider symbol. A known exchange code is also mapped to a MIC where Investi has a reliable mapping. Profile lookup determines equity versus ETF because the search response does not reliably supply that distinction.
+
+## ČNB FX support
+
+The server-only ČNB adapter (`features/market-data/cnb`) downloads `denni_kurz.txt?date=DD.MM.YYYY` for the calendar day of the requested observation. ČNB answers with the last fixing declared on or before that day, so weekends, holidays and mornings before the ~14:30 Prague declaration resolve to the previous working day's fixing. The file's first line is the declaration date (kept as `referenceDate`); each row is `země|měna|množství|kód|kurz` with a decimal comma, and the rate is divided by `množství` (JPY is quoted per 100, IDR per 1000). Only `X/CZK` pairs are served; other pairs are unavailable rather than triangulated. Responses are reused for one hour (Next fetch revalidation plus the process-local cache). Failures are logged server-side with a `[market-data:cnb]` prefix and surface as unavailable valuations, never as zero.
+
+FX is always requested for the date of the quote observation, not "latest": a rate dated after the observation is rejected by `MarketDataService`, which is why requesting the newest rate for yesterday's closing price used to fail.
 
 ## Frankfurter FX support
 

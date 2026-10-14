@@ -12,7 +12,7 @@ export const env = createEnv({
     FACEBOOK_CLIENT_SECRET: z.string().trim().min(1).optional(),
     DETERMINISTIC_MARKET_NOW: z.string().datetime().optional(),
     FMP_API_KEY: z.string().min(1).optional(),
-    FX_DATA_PROVIDER: z.enum(["deterministic", "frankfurter"]).optional(),
+    FX_DATA_PROVIDER: z.enum(["deterministic", "cnb", "frankfurter"]).optional(),
     MARKET_DATA_PROVIDER: z.enum(["deterministic", "fmp"]).default("deterministic"),
   },
   client: {},

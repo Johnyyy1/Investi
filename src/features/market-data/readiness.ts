@@ -15,7 +15,7 @@ export interface MarketDataReadinessConfiguration {
 /** Safe, side-effect-free diagnostics: configuration and known capabilities only, never credentials or provider URLs. */
 export function inspectMarketDataReadiness(configuration: MarketDataReadinessConfiguration) {
   const supportedSecurityProvider = configuration.securityProvider === "deterministic" || configuration.securityProvider === "fmp";
-  const supportedFxProvider = configuration.fxProvider === "deterministic" || configuration.fxProvider === "frankfurter";
+  const supportedFxProvider = configuration.fxProvider === "deterministic" || configuration.fxProvider === "cnb" || configuration.fxProvider === "frankfurter";
   const securityConfigured = supportedSecurityProvider
     && (configuration.securityProvider !== "fmp" || Boolean(configuration.fmpApiKey?.trim()));
   const fxConfigured = supportedFxProvider;

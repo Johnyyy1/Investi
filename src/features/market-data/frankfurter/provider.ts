@@ -87,7 +87,7 @@ export class FrankfurterFxProvider implements FxRateProvider {
       };
     }
 
-    const parsed = rateSchema.safeParse(await this.client.getRate(baseCurrency, quoteCurrency));
+    const parsed = rateSchema.safeParse(await this.client.getRate(baseCurrency, quoteCurrency, asOf.slice(0, 10)));
     if (!parsed.success) throw malformed("malformed-response");
     const responseBase = parsed.data.base.toLocaleUpperCase("en-US");
     const responseQuote = parsed.data.quote.toLocaleUpperCase("en-US");

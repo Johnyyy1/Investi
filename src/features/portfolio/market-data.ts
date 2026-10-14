@@ -54,11 +54,14 @@ export interface PortfolioHoldingMarketObservation {
 export interface PortfolioInstrumentPreview {
   instrument: Instrument;
   price: string;
-  estimatedUnitCostBaseMinor: string;
+  /** Null when no CZK rate is available; the native price is still shown and buying is blocked. */
+  estimatedUnitCostBaseMinor: string | null;
   quoteObservedAt: UtcTimestamp;
   quoteRetrievedAt: UtcTimestamp;
-  fxReferenceDate: string;
-  fxProvider: string;
+  /** CZK per quote-currency unit as a 12 dp decimal string. */
+  fxRate: string | null;
+  fxReferenceDate: string | null;
+  fxProvider: string | null;
   provider: string;
   dataset: string;
   marketDataMode: PortfolioMarketDataMode;
@@ -141,15 +144,24 @@ export async function loadPortfolioInstrumentPreview(
   const quote = await gateway.service.getQuote(instrumentId);
   assertQuoteMatchesInstrument(instrument, quote);
   if (!quote.usability.usableForValuation) return null;
-  const fx = await gateway.service.getFxRate(quote.currency, "CZK", quote.observedAt);
+  let fx: FxRate | null = null;
+  try {
+    fx = await gateway.service.getFxRate(quote.currency, "CZK", quote.observedAt);
+  } catch (error) {
+    if (!isMarketDataError(error)) throw error;
+    console.error("[portfolio:preview] CZK rate unavailable", { instrumentId, currency: quote.currency, code: error.code, message: error.message, context: error.context });
+  }
+  const priceUnits = priceUnitsFromNumber(quote.price);
+  const fxUnits = fx ? fxUnitsFromNumber(fx.rate) : null;
   return {
     instrument,
-    price: priceToDecimal(priceUnitsFromNumber(quote.price)),
-    estimatedUnitCostBaseMinor: grossBaseMinor(parseQuantity("1"), priceUnitsFromNumber(quote.price), fxUnitsFromNumber(fx.rate)).toString(),
+    price: priceToDecimal(priceUnits),
+    estimatedUnitCostBaseMinor: fxUnits === null ? null : grossBaseMinor(parseQuantity("1"), priceUnits, fxUnits).toString(),
     quoteObservedAt: quote.observedAt,
     quoteRetrievedAt: quote.retrievedAt,
-    fxReferenceDate: fx.referenceDate,
-    fxProvider: fx.provenance.provider,
+    fxRate: fxUnits === null ? null : fxToDecimal(fxUnits),
+    fxReferenceDate: fx?.referenceDate ?? null,
+    fxProvider: fx?.provenance.provider ?? null,
     provider: quote.provenance.provider,
     dataset: quote.provenance.dataset,
     marketDataMode: quote.provenance.isDeterministic ? "sample" : "market",

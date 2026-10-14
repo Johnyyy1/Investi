@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
-import { portfolioDataSourceLabel } from "@/features/portfolio/presentation";
+import { fxRateLabel, portfolioDataSourceLabel } from "@/features/portfolio/presentation";
 import type { InstrumentPreview } from "@/features/portfolio/service";
 import { formatPracticeCapitalMinor } from "@/features/rewards/presentation";
 
@@ -30,7 +30,8 @@ export function BuyReview({ preview, quantity, estimate, availableCash, onBack }
       <dl className="divide-y divide-border px-5 text-small">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-4"><dt className="min-w-0 text-secondary">Množství</dt><dd className="min-w-0 break-words text-right font-bold tabular-nums">{quantityLabel(quantity)}</dd></div>
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-4"><dt className="min-w-0 text-secondary">Pozorovaná referenční cena</dt><dd className="min-w-0 break-words text-right font-bold tabular-nums">{quotePrice(preview.price, preview.instrument.quoteCurrency)}</dd></div>
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-4"><dt className="min-w-0 text-secondary">Odhadovaná hodnota nákupu</dt><dd className="min-w-0 break-words text-right font-bold tabular-nums">{estimate === null ? "—" : formatPracticeCapitalMinor(estimate)}</dd></div>
+        {preview.fxRate && preview.fxReferenceDate && preview.instrument.quoteCurrency !== "CZK" ? <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-4"><dt className="min-w-0 text-secondary">Použitý kurz</dt><dd className="min-w-0 break-words text-right font-bold tabular-nums">{fxRateLabel(preview.fxProvider, preview.fxRate, preview.instrument.quoteCurrency, preview.fxReferenceDate)}</dd></div> : null}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-4"><dt className="min-w-0 text-secondary">Odhadovaná hodnota nákupu v Kč</dt><dd className="min-w-0 break-words text-right font-bold tabular-nums">{estimate === null ? "—" : formatPracticeCapitalMinor(estimate)}</dd></div>
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 py-4"><dt className="min-w-0 text-secondary">Dostupná hotovost</dt><dd className="min-w-0 break-words text-right font-bold tabular-nums">{formatPracticeCapitalMinor(availableCash)}</dd></div>
       </dl>
     </div>

@@ -295,6 +295,22 @@ describe("Portfolio execution and current valuation semantics", () => {
     });
   });
 
+  it("still previews the native price when no CZK rate is available, without an estimate", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const provider = new MutableMarketDataProvider([equity()]);
+    provider.fxError = new MarketDataError("FxUnavailable", "no rate");
+    const preview = await loadPortfolioInstrumentPreview(gateway(provider), FMP_AAPL);
+
+    expect(preview).toMatchObject({ price: expect.stringMatching(/^100(\.0+)?$/), estimatedUnitCostBaseMinor: null, fxRate: null, fxReferenceDate: null });
+    expect(consoleError).toHaveBeenCalledWith("[portfolio:preview] CZK rate unavailable", expect.objectContaining({ code: "FxUnavailable" }));
+    consoleError.mockRestore();
+  });
+
+  it("exposes the rate and its date used for the CZK preview", async () => {
+    const preview = await loadPortfolioInstrumentPreview(gateway(new MutableMarketDataProvider([equity()])), FMP_AAPL);
+    expect(preview).toMatchObject({ fxRate: expect.stringMatching(/^20(\.0+)?$/), fxReferenceDate: "2026-09-18", estimatedUnitCostBaseMinor: "200000" });
+  });
+
   it("keeps a stale supported-market quote out of valuation once a newer session should exist", async () => {
     const provider = new MutableMarketDataProvider([equity()]);
     provider.observedAt = "2026-09-18T14:00:00.000Z";
