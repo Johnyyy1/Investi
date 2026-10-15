@@ -63,7 +63,7 @@ try {
   assert.deepEqual(await db.select().from(lessonProgress).where(eq(lessonProgress.userId, demo)), demoProgress);
   assert.deepEqual(await db.select().from(lessonAward).where(eq(lessonAward.userId, demo)), demoAwards);
   const demoView = await loadPortfolioView(demo);
-  assert.equal(demoView.earnedPracticeCapitalMinor, "500000");
+  assert.equal(demoView.earnedPracticeCapitalMinor, "700000", "5,000 Kč demo access plus the seeded Returns lesson's 2,000 Kč");
   assert.equal(demoView.investmentGainLossMinor, "0", "demo capital is a contribution, not investment performance");
   await requirePortfolioLabUnlock(otherDemo);
   const otherDemoView = await loadPortfolioView(otherDemo);
@@ -76,7 +76,7 @@ try {
   await ensureDemoSeed(demo);
   await requirePortfolioLabUnlock(demo);
   const resetDemo = await loadPortfolioView(demo);
-  assert.equal(resetDemo.availableCashMinor, "500000");
+  assert.equal(resetDemo.availableCashMinor, "700000");
   assert.equal(resetDemo.investmentGainLossMinor, "0");
   assert.equal(resetDemo.holdings.length, 0, "reset and revisit never reseed trades");
   assert.equal((await db.select().from(progressionUnlock).where(eq(progressionUnlock.userId, demo))).length, 1);
@@ -112,12 +112,28 @@ try {
   assert.equal(awardRows.reduce((sum, row) => sum + row.xp, 0), 480);
   assert.equal(unlockRows.length, 1);
   assert.equal(unlockRows[0].practiceCapitalMinor, 500_000n);
-  assert.ok(awardRows.every((row) => row.practiceCapitalMinor === 0n && row.rewardPolicyVersion === 2), "new completions use XP-only policy v2");
-  assert.equal((await loadPracticeCapitalSummary(learner)).earnedPracticeCapitalMinor, 500_000n);
+  assert.ok(awardRows.every((row) => row.rewardPolicyVersion === 3), "new completions use policy v3");
+  assert.ok(awardRows.filter((row) => (required as readonly string[]).includes(row.lessonId)).every((row) => row.practiceCapitalMinor === 0n), "Foundations lessons earn XP only");
+  assert.equal(awardRows.find((row) => row.lessonId === "returns-what-is-a-return")?.practiceCapitalMinor, 200_000n, "a lesson beyond Foundations earns 2,000 Kč, even when completed with the unlock");
+  assert.equal((await loadPracticeCapitalSummary(learner)).earnedPracticeCapitalMinor, 700_000n);
   const view = await loadPortfolioView(learner);
-  assert.equal(view.earnedPracticeCapitalMinor, "500000");
-  assert.equal(view.availableCashMinor, "500000");
+  assert.equal(view.earnedPracticeCapitalMinor, "700000");
+  assert.equal(view.availableCashMinor, "700000");
   assert.equal(view.investmentGainLossMinor, "0", "learning grants are contributions, not return");
+
+  // Critical invariant: a lesson reward after investing adds 2,000 Kč to capital and cash and leaves investment P&L unchanged.
+  await executeTrade(learner, { instrumentId: "US-XNAS:AAPL", quantity: "0.1", side: "BUY", clientIdempotencyKey: randomUUID() });
+  const beforeReward = await loadPortfolioView(learner);
+  await finalCursor(learner, "returns-simple-returns");
+  const lessonRewardResult = await completeLesson(learner, "returns-simple-returns");
+  assert.equal(lessonRewardResult.practiceCapitalAwardedMinor, 200_000n);
+  assert.equal(lessonRewardResult.portfolioLabOpen, true);
+  assert.equal((await completeLesson(learner, "returns-simple-returns")).practiceCapitalAwardedMinor, 0n, "a retry awards no capital");
+  const afterReward = await loadPortfolioView(learner);
+  assert.equal(BigInt(afterReward.earnedPracticeCapitalMinor) - BigInt(beforeReward.earnedPracticeCapitalMinor), 200_000n, "Practice Capital +2,000 Kč");
+  assert.equal(BigInt(afterReward.availableCashMinor) - BigInt(beforeReward.availableCashMinor), 200_000n, "cash +2,000 Kč");
+  assert.notEqual(afterReward.investmentGainLossMinor, null);
+  assert.equal(afterReward.investmentGainLossMinor, beforeReward.investmentGainLossMinor, "investment P&L unchanged");
 
   // Reading a recorded unlock takes no transaction and no row lock, and writes nothing.
   const recordedBefore = await unlockRowsOf(learner);
@@ -129,7 +145,7 @@ try {
     assert.equal(status.unlocked, true);
     assert.equal(status.newlyUnlocked, false);
     assert.equal(status.capitalAwardedMinor, 0n);
-    assert.equal(status.totalXp, 480);
+    assert.equal(status.totalXp, 540, "eight lessons above plus the later Returns lesson");
     assert.ok((await Promise.all(Array.from({ length: 8 }, () => requirePortfolioLabUnlock(learner)))).every((status) => status.unlocked && status.capitalAwardedMinor === 0n));
   } finally { await releaseLearner(); }
   assert.deepEqual(await unlockRowsOf(learner), recordedBefore, "reading a recorded unlock is side-effect-free");
@@ -185,8 +201,9 @@ try {
   assert.equal(repairs.reduce((sum, status) => sum + status.capitalAwardedMinor, completion.unlockCapitalAwardedMinor), 500_000n, "concurrent repair grants exactly once");
   assert.equal(repairs.filter((status) => status.newlyUnlocked).length + (completion.portfolioLabUnlocked ? 1 : 0), 1);
   assert.equal(completion.xpAwarded, 60);
+  assert.equal(completion.practiceCapitalAwardedMinor, 200_000n, "the Returns lesson earns its own 2,000 Kč beside the one unlock grant");
   assert.deepEqual((await unlockRowsOf(unrecorded)).map((row) => [row.reason, row.practiceCapitalMinor]), [["learning_requirements", 500_000n]]);
-  assert.equal((await loadPracticeCapitalSummary(unrecorded)).earnedPracticeCapitalMinor, 500_000n);
+  assert.equal((await loadPracticeCapitalSummary(unrecorded)).earnedPracticeCapitalMinor, 700_000n);
   assert.equal((await loadPortfolioLabUnlock(unrecorded)).capitalAwardedMinor, 0n, "after repair, reads grant nothing");
 
   const legacy = await owner();
@@ -204,11 +221,11 @@ try {
   await finalCursor(legacy, required[1]);
   const mixed = await completeLesson(legacy, required[1]);
   assert.equal(mixed.xpAwarded, 60);
-  assert.equal(mixed.practiceCapitalAwardedMinor, 0n, "subsequent completion follows v2");
+  assert.equal(mixed.practiceCapitalAwardedMinor, 0n, "a Foundations completion under v3 earns XP only");
   const mixedRows = await db.select().from(lessonAward).where(eq(lessonAward.userId, legacy));
   assert.equal(mixedRows.find((row) => row.lessonId === required[0])?.practiceCapitalMinor, 200_000n, "v1 receipt remains unchanged");
-  assert.equal(mixedRows.find((row) => row.lessonId === required[1])?.rewardPolicyVersion, 2, "new receipt records v2");
-  assert.equal((await loadPracticeCapitalSummary(legacy)).earnedPracticeCapitalMinor, 200_000n, "mixed v1/v2 capital preserves only historical amount");
+  assert.equal(mixedRows.find((row) => row.lessonId === required[1])?.rewardPolicyVersion, 3, "new receipt records v3");
+  assert.equal((await loadPracticeCapitalSummary(legacy)).earnedPracticeCapitalMinor, 200_000n, "mixed v1/v3 capital preserves the historical amount");
 
   const backfill = await owner();
   await db.insert(lessonAward).values({ userId: backfill, lessonId: required[1], xp: 60, practiceCapitalMinor: 200_000n, rewardPolicyVersion: 1, learningDate: "2026-09-22", timeZone: "UTC", awardedAt: new Date() });

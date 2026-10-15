@@ -37,6 +37,6 @@ Read-only market-history lesson integration needs a frozen dataset/basis/provena
 
 ## Validation
 
-`npm test` includes helper edge cases, historical observations, authored content/flow integrity, registry, recommendations, and transition tests. `test:log-returns-persistence` covers correct-answer gates, premature completion, concurrent one-time policy-v2 reward, legacy receipts, L4 preservation, replay, and planned-route rejection.
+`npm test` includes helper edge cases, historical observations, authored content/flow integrity, registry, recommendations, and transition tests. `test:log-returns-persistence` covers correct-answer gates, premature completion, concurrent one-time policy-v3 reward (60 XP and 2,000 Kč), legacy receipts, L4 preservation, replay, and planned-route rejection.
 
 With deterministic providers and a fresh local app/database, run `test:log-returns-browser` and `BROWSER_CHANNEL=chrome node scripts/validate-returns-flow.mjs`. These exercise current lessons, formulas/explorers, retries, resume, Previous, completion/review, sign-in/out, keyboard/focus, reduced motion, six widths, and enlarged text. Screenshots go to `/tmp`; they are not repository fixtures.

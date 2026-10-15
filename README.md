@@ -106,4 +106,4 @@ npm run demo:cleanup
 npm run demo:cleanup -- --apply
 ```
 
-See [current product contracts](docs/product-reset.md) for reward, streak, daily-goal, synthetic-data, migration, compatibility, and validation semantics. Current policy v2 grants no capital per lesson; normal learners receive the one-time 5,000 Kč Portfolio Lab unlock after Foundations, while legacy lesson receipts retain their stored capital.
+See [current product contracts](docs/product-reset.md) for reward, streak, daily-goal, synthetic-data, migration, compatibility, and validation semantics. Current policy v3: Foundations lessons earn XP only, finishing Foundations unlocks Portfolio Lab with a one-time 5,000 Kč, and every lesson outside Foundations adds 2,000 Kč; stored receipts keep their original amounts.

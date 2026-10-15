@@ -40,6 +40,7 @@ export async function completeLessonAction(lessonId: string) {
       xpAwarded: reward.xpAwarded,
       totalXp: reward.totalXp,
       portfolioLabUnlocked: reward.portfolioLabUnlocked,
+      portfolioLabOpen: reward.portfolioLabOpen,
       unlockCapitalAwardedMinor: serializePracticeCapitalMinor(reward.unlockCapitalAwardedMinor),
       practiceCapitalAwardedMinor: serializePracticeCapitalMinor(reward.practiceCapitalAwardedMinor),
       earnedPracticeCapitalMinor: serializePracticeCapitalMinor(reward.earnedPracticeCapitalMinor),

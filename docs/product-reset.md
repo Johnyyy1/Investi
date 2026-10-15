@@ -14,11 +14,15 @@ The completion transaction locks the user row, preserves an existing completion 
 
 ## Current reward policy and historical rationale
 
-The committed application uses policy v2: new lesson receipts contain **zero Practice Capital**. Completing all seven Foundations and reaching 420 internal XP creates one Portfolio Lab entitlement with **500000 CZK minor units (5,000 Kč)**. Stored entitlements grandfather existing access. Anonymous demos receive one `demo_access` grant with the same amount, independently of lesson prerequisites. Neither repeated completion nor reset repeats a grant.
+The application uses policy v3, decided by the lesson's module (`lessonReward` in `features/rewards/practice-capital.ts`):
 
-Practice Capital is the sum of authoritative stored lesson receipts **and unlock grants**. Historical v1 lesson receipts retain their original 200000 minor units (2,000 Kč each); their amount is never recalculated from XP. There is no mutable balance counter. These are virtual educational funds, not withdrawable money.
+- A first completion of a **Foundations** lesson earns 60 XP and **zero Practice Capital**.
+- Completing all seven Foundations and reaching 420 XP creates one Portfolio Lab entitlement with **500000 CZK minor units (5,000 Kč)**.
+- A first completion of **any lesson outside Foundations** earns 60 XP and **200000 CZK minor units (2,000 Kč)**, regardless of order. Capital earned before the unlock waits in the entitlement until Portfolio Lab opens.
 
-Some repository agent instructions still describe v1 as the current approved reward policy. This hygiene audit preserves committed runtime/tests and records that discrepancy for a separately authorized product-policy decision.
+Stored entitlements grandfather existing access. Anonymous demos receive one `demo_access` grant with the same 5,000 Kč, independently of lesson prerequisites. Neither repeated completion nor reset repeats a grant or a lesson reward.
+
+Practice Capital is the sum of authoritative stored lesson receipts **and unlock grants**. Every receipt keeps the amount and policy version it was created with: v1 receipts retain 200000 minor units (2,000 Kč each), v2 receipts (XP only, including lessons outside Foundations completed under v2) hold zero, and nothing is backfilled. Amounts are never derived from XP. There is no mutable balance counter. These are virtual educational funds, not withdrawable money. Learning rewards are contributions: they raise Practice Capital and cash, never investment gain or loss.
 
 Historical migrations remain necessary:
 
@@ -37,9 +41,9 @@ A validated IANA timezone is pinned on the profile; demo history uses UTC. Histo
 
 ## Demo identity and operations
 
-Better Auth creates an isolated anonymous user/session. Server initialization verifies anonymous ownership and transactionally seeds a deterministic profile, six completed lessons with matching v2 receipts, and one in-progress lesson. Repeated/concurrent initialization is safe; rollback permits retry. Existing demo mutations are not overwritten on subsequent visits.
+Better Auth creates an isolated anonymous user/session. Server initialization verifies anonymous ownership and transactionally seeds a deterministic profile, six completed lessons with receipts under the current policy, and one in-progress lesson. Repeated/concurrent initialization is safe; rollback permits retry. Existing demo mutations are not overwritten on subsequent visits.
 
-The seed derives 360 XP and a four-day streak from its rows. Its receipts grant zero capital under current policy; the independent one-time demo entitlement grants access and 5,000 Kč. Browser/device identity flags cannot authorize a normal account.
+The seed derives 360 XP and a four-day streak from its rows. Its five Foundations receipts grant zero capital and its one Returns receipt 2,000 Kč under current policy; the independent one-time demo entitlement grants access and 5,000 Kč. Browser/device identity flags cannot authorize a normal account.
 
 Demo sessions start with 24 hours and guest sessions with seven days; Better Auth extends them while they are used. Retention therefore follows sessions, not age: an anonymous identity is removed, with its cascading user-owned data, once it has had no valid session for over a day. A daily Vercel Cron job runs this through `/api/cron/cleanup-anonymous` (protected by `CRON_SECRET`); `demo:cleanup` is the same rule as a dry run, and `demo:cleanup -- --apply` applies it. `test:anonymous-cleanup` covers the rule, cascades, skipped row locks, batching and concurrent runs.
 
