@@ -9,6 +9,7 @@ Use `.env.example` as the template and keep all credential-bearing files ignored
 | `DATABASE_URL` | Required in production and DB tooling | PostgreSQL connection; Compose supplies its internal `db:5432` URL |
 | `BETTER_AUTH_SECRET` | Required in production | Server authentication secret, at least 32 characters |
 | `BETTER_AUTH_URL` | Required in production | Actual app origin, OAuth callbacks, normalized auth-error redirect |
+| `CRON_SECRET` | Required in production for scheduled cleanup | At least 32 characters; Vercel Cron sends it as a bearer token to `/api/cron/cleanup-anonymous`, which refuses every request without it |
 | `MARKET_DATA_PROVIDER` | Optional in production | `deterministic` default or explicit `fmp`; no silent fallback |
 | `FX_DATA_PROVIDER` | Optional with deterministic; required with FMP | `deterministic`, `cnb` (ČNB daily fixing, recommended) or `frankfurter` reference FX |
 | `FMP_API_KEY` | Required only with FMP | Server-only provider credential |
@@ -42,6 +43,7 @@ All browser app URLs must be loopback. Most suites also refuse non-loopback DB U
 | `INSTRUMENT_UNAVAILABLE_TEST_URL`, `INSTRUMENT_UNAVAILABLE_SCREENSHOT_DIR` | Unavailable-history/quote browser runtime/output |
 | `PERSONALIZATION_TEST_URL`, `PERSONALIZATION_SCREENSHOT_DIR` | Personalization/compatibility browser suites |
 | `PERSONALIZATION_QA_DISPOSABLE` | Explicit opt-in; requires dedicated `investi_6a3a_qa` DB |
+| `ANONYMOUS_CLEANUP_QA_DISPOSABLE` | Explicit opt-in for `test:anonymous-cleanup`, which deletes every eligible anonymous identity in its local DB |
 | `PERSONALIZATION_QA_USER_ID`, `PERSONALIZATION_QA_LESSONS` | Internal child fixture harness; scoped QA owner/history mode |
 | `PERSONALIZATION_QA_FOCUS` | Optional focused Settings browser run |
 | `AUTH_TEST_URL`, `AUTH_DISABLED_TEST_URL` | Two auth runtimes, fake enabled providers versus disabled providers; dedicated `investi_6a4_qa` DB |

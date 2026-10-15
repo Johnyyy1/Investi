@@ -5,6 +5,8 @@ export const env = createEnv({
   server: {
     BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.url(),
+    /** Bearer secret Vercel Cron sends to scheduled jobs; without it the cron endpoints refuse every request. */
+    CRON_SECRET: z.string().min(32).optional(),
     DATABASE_URL: z.url(),
     GOOGLE_CLIENT_ID: z.string().trim().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().trim().min(1).optional(),
