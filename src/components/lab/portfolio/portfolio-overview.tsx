@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -172,7 +172,7 @@ function FirstVisit({ view }: { view: PortfolioView }) {
       </div>
       <div className={styles.guideScene}>
         <p className={styles.bubble}>Váha je díl z celku: 60&nbsp;% z <span className={styles.num}>{wholeMoney(capital)}</span> je <span className={styles.num}>{wholeMoney(share(6_000n))}</span>.</p>
-        <Image className={styles.guide} src="/investi-assets/guide/03-explaining.webp" alt="" width={627} height={627} sizes="(min-width: 1024px) 254px, 210px" priority />
+        <GuideImage className={styles.guide} pose="03-explaining" alt="" sizes="(min-width: 1024px) 254px, 210px" priority />
       </div>
     </section>
     <section className={`${styles.card} ${styles.empty}`} aria-labelledby="empty-title">
@@ -395,7 +395,7 @@ function Missing({ view, status, refreshing, onRetry }: { view: PortfolioView; s
       <div className={styles.missing}>
         <div className={styles.missingScene}>
           <p className={styles.bubble}>Hledám nejnovější ceny. Hádat je nebudu.</p>
-          <Image className={styles.guide} src="/investi-assets/guide/20-searching-box.webp" alt="" width={872} height={654} sizes="230px" />
+          <GuideImage className={styles.guide} pose="20-searching-box" alt="" sizes="230px" />
         </div>
         <section className={`${styles.card} ${styles.missingCard}`} aria-labelledby="missing-title">
           <div className={styles.emptyHead}><p className={styles.sectionLabel}>Něco chybí</p><p className={styles.meta}>Tržní data</p></div>

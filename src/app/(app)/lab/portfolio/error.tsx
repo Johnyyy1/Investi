@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import { ArrowRight, RotateCcw } from "lucide-react";
+import { GuideImage } from "@/components/guide-image";
 import styles from "@/components/lab/portfolio/portfolio-lab.module.css";
 
 /** Design System failure spec: no zeros, no stale numbers, no technical detail. */
@@ -11,7 +11,7 @@ export default function PortfolioLabError({ retry }: { error: Error & { digest?:
     <div className={styles.missing}>
       <div className={styles.missingScene}>
         <p className={styles.bubble}>Hledám to. Občas to chvilku trvá.</p>
-        <Image className={styles.guide} src="/investi-assets/guide/20-searching-box.webp" alt="" width={872} height={654} sizes="230px" />
+        <GuideImage className={styles.guide} pose="20-searching-box" alt="" sizes="230px" />
       </div>
       <section className={`${styles.card} ${styles.missingCard}`} aria-labelledby="lab-error-title">
         <div className={styles.emptyHead}><p className={styles.sectionLabel}>Něco chybí</p><p className={styles.meta}>Portfolio Lab</p></div>

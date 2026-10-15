@@ -20,7 +20,7 @@
 .accountHeading { display: flex; align-items: end; min-height: 297px; }
 .accountHeading > div { flex: 1; padding-bottom: 40px; min-width: 0; }
 .accountHeading > div > p:last-child { max-width: 375px; }
-.guide { width: 425px; max-width: 53.125%; height: auto; margin-bottom: -22px; position: relative; pointer-events: none; }
+.guide { width: 425px; max-width: 53.125%; height: auto; position: relative; pointer-events: none; }
 .card { border: 1px solid var(--color-border-card); border-radius: var(--radius-paper-card); background: var(--color-paper-surface); }
 .identity { display: flex; gap: 20px; align-items: center; padding: 28px 28px 24px; border-bottom: 1px solid var(--color-divider); }
 .identity > div { min-width: 0; }
@@ -151,7 +151,7 @@ form > .session { margin-top: 32px; }
   .accountHeading { min-height: 194px; }
   .accountHeading > div { padding-bottom: 20px; min-width: 4.5rem; }
   .accountHeading > div > p:last-child { display: none; }
-  .guide { width: 278px; max-width: min(calc(70% + 38px), calc(100% - 4.5rem + 38px)); margin-left: -38px; margin-bottom: -15px; }
+  .guide { width: 278px; max-width: min(calc(70% + 38px), calc(100% - 4.5rem + 38px)); margin-left: -38px; }
   .identity { padding: 18px 16px; gap: 14px; }
   .identity .avatar { width: 56px; height: 56px; font-size: 1.5rem; }
   .identity h2 { font-size: 1.25rem; line-height: 1.35; }

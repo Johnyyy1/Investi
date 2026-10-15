@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import type { LucideIcon } from "lucide-react";
 import { ArrowRight, BookOpen, ChevronDown, Circle, CircleCheck, CircleDot, Clock3, Info, Layers, LockKeyhole, Receipt, RotateCcw, Scale } from "lucide-react";
@@ -133,8 +133,8 @@ export function ProgressOverview({ summary, unlock, portfolio }: { summary: Summ
   const step = `${summary.position + 1}\u00a0z\u00a0${summary.stepCount}`;
   const definition = progressionUnlocks[PORTFOLIO_LAB_UNLOCK_ID];
   const guide = empty ? undefined : milestone
-    ? { src: "07-small-joy", width: 686, height: 686, line: "Celá kapitola je uložená. Tohle už ti zůstane." }
-    : { src: "18-bookshelf", width: 1448, height: 1086, line: complete ? "Police je plná všeho, co zatím máme. Další knihy chystáme." : "Každá hotová lekce je kniha v polici. Kdykoli si ji můžeš otevřít znovu." };
+    ? { pose: "07-small-joy" as const, line: "Celá kapitola je uložená. Tohle už ti zůstane." }
+    : { pose: "18-bookshelf" as const, line: complete ? "Police je plná všeho, co zatím máme. Další knihy chystáme." : "Každá hotová lekce je kniha v polici. Kdykoli si ji můžeš otevřít znovu." };
   const title = milestone ? `${milestone.chapter.title} máš za sebou.` : complete ? "Všechno, co zatím je, máš za sebou." : empty ? "Tvoje police je zatím prázdná." : firstName ? `Co už umíš, ${firstName}.` : "Co už umíš.";
   const subtitle = milestone ? undefined : complete ? `Všech ${summary.lessons.length} lekcí je hotových. Další kapitolu připravujeme.` : empty ? current ? "Jednu lekci máš rozdělanou. Uložený krok na tebe počká." : "První kniha přibude s první hotovou lekcí. Žádný spěch." : doneSummary(summary.completed.length, model.activeCount);
   const footnote = milestone || empty ? undefined : complete
@@ -153,7 +153,7 @@ export function ProgressOverview({ summary, unlock, portfolio }: { summary: Summ
           {milestone && <p className={styles.milestoneMeta}>{lessonCount(milestone.chapter.lessons.length)}{milestone.completedAt && <> · dokončeno <time dateTime={milestone.completedAt.toISOString()}>{formatDate(milestone.completedAt, { timeZone, weekday: "short" })}</time></>}</p>}
           <p className={styles.stats}><span data-testid="available-progress">{summary.completed.length} {from(summary.lessons.length)} {lessonGenitive(summary.lessons.length)}</span><span aria-hidden="true">·</span><span data-testid="total-xp">{formatDecimal(totalXp)} XP</span><span className={styles.statsNote}>XP nejsou závod. Jsou malá odměna za pochopení.</span></p>
         </div>
-        {guide && <div className={styles.guideWrap}><div className={styles.bubble}><p>{guide.line}</p></div><Image className={styles.guide} src={`/investi-assets/guide/${guide.src}.webp`} width={guide.width} height={guide.height} sizes={milestone ? "(max-width: 767px) 180px, 280px" : "(max-width: 767px) 270px, (max-width: 1199px) 380px, 566px"} alt="" preload /></div>}
+        {guide && <div className={styles.guideWrap}><div className={styles.bubble}><p>{guide.line}</p></div><GuideImage className={styles.guide} pose={guide.pose} sizes={milestone ? "(max-width: 767px) 180px, 280px" : "(max-width: 767px) 270px, (max-width: 1199px) 380px, 566px"} alt="" preload /></div>}
       </header>
 
       {milestone && <Milestone milestone={milestone} next={summary.next} />}

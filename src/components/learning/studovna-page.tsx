@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import { ArrowRight, ArrowRightCircle, BookOpen, ChevronDown, Circle, CircleCheck, Clock3 } from "lucide-react";
 import { getModuleLessons, moduleCatalog } from "@/features/learning/catalog";
@@ -83,7 +83,7 @@ export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; 
     <div className={styles.container}>
       <div className={styles.hero}>
         <header className={styles.greeting}><h1>{complete ? "To je všechno. Zatím." : current || summary.completed.length > 0 ? `Vítej zpátky, ${firstName}.` : `Vítej v investi, ${firstName}.`}</h1><p>{complete ? "Všechny dostupné lekce máš hotové. Kdykoli se můžeš vrátit." : current ? `Jedna rozdělaná lekce, asi ${minutes} minut. Žádný spěch.` : "Jeden malý krok za druhým. Žádný spěch."}</p></header>
-        <div className={styles.guideWrap}><p className={styles.bubble}>{complete ? "Tohle už umíš. Co takhle si to vyzkoušet v Labu?" : current ? `Navážeme tam, kde jsi skončil: ${step.title.toLocaleLowerCase("cs-CZ")}.` : "Nemusíš znát odpovědi předem. Půjdeme společně."}</p><Image className={styles.guide} src={`/investi-assets/guide/${complete ? "07-small-joy" : current ? "08-leaning" : "01-welcome"}.webp`} width={680} height={680} alt="" sizes="(max-width: 767px) 174px, 266px" preload /></div>
+        <div className={styles.guideWrap}><p className={styles.bubble}>{complete ? "Tohle už umíš. Co takhle si to vyzkoušet v Labu?" : current ? `Navážeme tam, kde jsi skončil: ${step.title.toLocaleLowerCase("cs-CZ")}.` : "Nemusíš znát odpovědi předem. Půjdeme společně."}</p><GuideImage className={styles.guide} pose={complete ? "07-small-joy" : current ? "08-leaning" : "01-welcome"} alt="" sizes="(max-width: 767px) 174px, 266px" preload /></div>
         <section className={styles.continueCard} aria-label="Doporučeno pro tebe">
           <div className={styles.continueContent}>
             <div className={styles.lessonContext}><div className={styles.contextRow}><p className={styles.eyebrow}>{complete ? "Všechno hotovo" : current ? "Pokračuj" : "Začni tady"}</p><Link href={`/learn/${learningModule.slug}`} className={styles.contextMeta}>{learningModule.title} · Lekce {lessonIndex} ze {moduleLessons.length}</Link></div><h2>{complete ? "Kurikulum máš za sebou." : lesson.title}</h2>{!complete && <div className={styles.lessonProgress}><div role="progressbar" aria-label="Postup rozpracovanou lekcí" aria-valuenow={summary.position} aria-valuemin={0} aria-valuemax={summary.stepCount}><span style={{ width: `${summary.position / summary.stepCount * 100}%` }} /></div><p>Krok {summary.position + 1} z {summary.stepCount} · zbývá ≈ {minutes} min</p></div>}</div>

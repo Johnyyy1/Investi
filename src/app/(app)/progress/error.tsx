@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import { ArrowRight, RotateCcw } from "lucide-react";
+import { GuideImage } from "@/components/guide-image";
 import paper from "@/components/learning/studovna-page.module.css";
 import styles from "@/components/progress/progress-overview.module.css";
 
@@ -10,7 +10,7 @@ import styles from "@/components/progress/progress-overview.module.css";
 export default function ProgressError({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
   return <main className={styles.page}><div className={styles.container}>
     <section className={styles.failure} aria-labelledby="progress-error-title">
-      <div className={styles.guideWrap}><div className={styles.bubble}><p>Hledám to. Občas to chvilku trvá.</p></div><Image className={styles.guide} src="/investi-assets/guide/20-searching-box.webp" alt="" width={872} height={654} sizes="230px" /></div>
+      <div className={styles.guideWrap}><div className={styles.bubble}><p>Hledám to. Občas to chvilku trvá.</p></div><GuideImage className={styles.guide} pose="20-searching-box" alt="" sizes="230px" /></div>
       <div className={styles.failureCard}>
         <div className={styles.failureHead}><p className={styles.eyebrow}>Něco chybí</p><p className={styles.meta}>Pokrok</p></div>
         <h1 id="progress-error-title">Tvůj pokrok se teď nenačetl.</h1>
