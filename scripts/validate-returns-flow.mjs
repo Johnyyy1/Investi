@@ -30,7 +30,8 @@ try {
     await page.getByRole("textbox", { name: "E-mail", exact: true }).fill(email);
     await page.getByRole("textbox", { name: "Heslo", exact: true }).fill(password);
     await page.getByRole("button", { name: "Přihlásit se", exact: true }).click();
-    await page.getByRole("heading", { name: "Připraven na další krok?", exact: true }).waitFor();
+    await page.waitForURL("**/learn");
+    await page.getByRole("heading", { level: 1, name: "Vítej zpátky, Returns.", exact: true }).waitFor();
   }
   async function signOut() {
     const response = await page.request.post(`${baseURL}/api/auth/sign-out`, { data: {}, headers: { Origin: baseURL } });
@@ -42,13 +43,13 @@ try {
   // Registration now ends onboarding; create the account directly, then onboard as a signed-in learner.
   assert.ok((await page.request.post(`${baseURL}/api/auth/sign-up/email`, { headers: { origin: baseURL }, data: { name: "Returns integration QA", email, password } })).ok());
   await page.goto(`${baseURL}/onboarding`);
-  await finishOnboarding(page);
-  await page.getByRole("heading", { name: "Připraven na další krok?", exact: true }).waitFor();
+  await finishOnboarding(page); // Ends on /learn (Studovna) for a fresh learner.
+  await page.getByRole("heading", { level: 1, name: "Vítej v investi, Returns.", exact: true }).waitFor();
   [{ id: userId }] = await sql`select id from "user" where email = ${email}`;
-  assert.equal(await page.locator(".learning-theme").count(), 1, "Dashboard uses the shared theme");
-  await heading("Připraven na další krok?");
   assert.equal(await page.locator(".learning-theme").count(), 1, "Learn uses the shared theme");
-  await page.locator('a[href="/learn/returns"]').click();
+  // Studovna chapters list lessons directly; the Returns module page has no link from /learn any more.
+  assert.equal(await page.getByRole("list", { name: "Lekce kapitoly Výnosy", exact: true }).locator(`a[href="${route}"]`).count(), 1, "Learn lists the Returns lessons");
+  await page.goto(`${baseURL}/learn/returns`);
   await heading("Výnos a složené zhodnocení");
   assert.equal(await page.getByTestId("module-progress").textContent(), "0 / 5 lekcí dokončeno");
   const compounding = page.getByRole("listitem").filter({ hasText: "Složené a kumulativní výnosy" });
@@ -75,6 +76,9 @@ try {
   await page.getByRole("radio").first().press("Space");
   await page.getByRole("radio").first().press("ArrowDown");
   await page.getByRole("radio").nth(1).press("Tab");
+  // The sticky action bar reads left to right: Předchozí, then the check.
+  assert.equal(await page.getByRole("button", { name: "Předchozí", exact: true }).evaluate((element) => element === document.activeElement), true);
+  await page.keyboard.press("Tab");
   const check = page.getByRole("button", { name: "Zkontrolovat odpověď", exact: true });
   assert.equal(await check.evaluate((element) => element === document.activeElement && element.matches(":focus-visible")), true);
   await check.press("Enter");
