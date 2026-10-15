@@ -1,4 +1,4 @@
-import Image from "next/image";
+import { GuideImage } from "@/components/guide-image";
 import { Suspense } from "react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight, CircleAlert, CircleCheck, History, Info, Minus, Moon, TriangleAlert, type LucideIcon } from "lucide-react";
 import { AppLink as Link } from "@/components/shell/app-link";
@@ -60,10 +60,9 @@ export function LabHub({ unlock, completedLessonIds, view }: { unlock: LabHubUnl
 }
 
 function Guide({ pose, children }: { pose: "hourglass" | "searching"; children: React.ReactNode }) {
-  const image = pose === "hourglass" ? { src: "/investi-assets/guide/21-hourglass.webp", width: 749, height: 562 } : { src: "/investi-assets/guide/20-searching-box.webp", width: 872, height: 654 };
   return <div className={styles.guideStage} data-pose={pose}>
     <p className={styles.bubble}>{children}</p>
-    <Image className={styles.guide} {...image} alt="" sizes="(min-width: 1024px) 406px, 266px" priority />
+    <GuideImage className={styles.guide} pose={pose === "hourglass" ? "21-hourglass" : "20-searching-box"} alt="" sizes="(min-width: 1024px) 406px, 266px" priority />
   </div>;
 }
 

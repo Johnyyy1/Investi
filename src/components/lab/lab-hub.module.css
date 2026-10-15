@@ -13,7 +13,7 @@
 .desktopBreak { display: none; }
 /* Positions follow the Pen guide stages: the figure is centred in a padded artboard, so the image
    overhangs the stage's right edge (clipped by .page) and stands on the card below. */
-.guideStage { position: relative; height: 200px; margin-bottom: -1px; }
+.guideStage { position: relative; height: 200px; }
 .bubble { position: absolute; z-index: 1; top: 22px; left: 0; width: min(218px, calc(100% - 140px)); padding: 12px 14px; border: 1px solid var(--color-paper-border); border-radius: 12px; background: var(--color-paper-surface); font-size: .875rem; line-height: 1.5; }
 .bubble::after { content: ""; position: absolute; top: 22px; right: -8px; width: 14px; height: 14px; border-top: 1px solid var(--color-paper-border); border-right: 1px solid var(--color-paper-border); background: inherit; transform: rotate(45deg); }
 .guide { position: absolute; right: -66px; bottom: 0; width: 266px; height: auto; max-width: none; }

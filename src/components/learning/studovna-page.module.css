@@ -1,15 +1,16 @@
 .page { min-height: 100dvh; }
 .container { max-width: 1440px; margin-inline: auto; padding: 72px 64px 40px; }
 .eyebrow { color: var(--color-action); font-size: .75rem; line-height: 1.2; font-weight: 600; letter-spacing: .083em; text-transform: uppercase; }
-.hero { position: relative; }
-.greeting { max-width: 640px; margin-bottom: 64px; }
+.hero { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); }
+.greeting { grid-area: 1 / 1; max-width: 640px; margin-bottom: 64px; }
 .greeting h1 { font-size: 4rem; line-height: 1.05; letter-spacing: -.036em; font-weight: 600; overflow-wrap: anywhere; }
 .greeting p { margin-top: 14px; font-size: 1.125rem; color: var(--color-text-secondary); }
-.guideWrap { position: absolute; right: 12px; top: -59px; width: 578px; pointer-events: none; }
-.guide { position: absolute; top: 0; right: 0; width: 266px; height: 266px; object-fit: contain; }
-.bubble { position: absolute; top: 32px; left: 0; width: 322px; padding: 16px 20px; font-size: .9375rem; line-height: 1.5; border: 1px solid var(--color-paper-border); border-radius: 12px; background: var(--color-paper-surface); }
+/* A zero-height strip at the bottom of the greeting row, i.e. on the card's top edge: the guide stands on it. */
+.guideWrap { grid-area: 1 / 1; align-self: end; justify-self: end; position: relative; z-index: 1; width: 578px; height: 0; margin-right: 12px; pointer-events: none; }
+.guide { position: absolute; right: 0; bottom: 0; width: 266px; height: 266px; object-fit: contain; }
+.bubble { position: absolute; top: -214px; left: 0; width: 322px; padding: 16px 20px; font-size: .9375rem; line-height: 1.5; border: 1px solid var(--color-paper-border); border-radius: 12px; background: var(--color-paper-surface); }
 .bubble::after { content: ""; position: absolute; top: 30px; right: -7px; width: 12px; height: 12px; transform: rotate(45deg); background: var(--color-paper-surface); border-top: 1px solid var(--color-paper-border); border-right: 1px solid var(--color-paper-border); }
-.continueCard { display: grid; grid-template-columns: minmax(0,1fr) 392px; min-height: 575px; border: 1px solid var(--color-border-card); border-radius: 12px; background: var(--color-paper-surface); box-shadow: var(--shadow-paper-card); }
+.continueCard { grid-area: 2 / 1; display: grid; grid-template-columns: minmax(0,1fr) 392px; min-height: 575px; border: 1px solid var(--color-border-card); border-radius: 12px; background: var(--color-paper-surface); box-shadow: var(--shadow-paper-card); }
 .continueContent { display: flex; flex-direction: column; min-width: 0; padding: 36px 40px; }
 .lessonContext { display: flex; flex-direction: column; gap: 12px; }
 .contextRow { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; }
@@ -126,9 +127,9 @@
   .container { padding: 56px 40px 40px; }
   .greeting { max-width: 58%; }
   .greeting h1 { font-size: 3rem; }
-  .guideWrap { width: 40%; top: -32px; right: 0; }
-  .guide { width: 210px; height: 210px; right: -8px; top: 0; }
-  .bubble { width: 200px; left: -20px; top: -10px; font-size: .8125rem; padding: 12px 14px; }
+  .guideWrap { width: 40%; margin-right: 0; }
+  .guide { width: 210px; height: 210px; right: -8px; }
+  .bubble { width: 200px; left: -20px; top: -205px; font-size: .8125rem; padding: 12px 14px; }
   .continueCard { grid-template-columns: minmax(0,1fr) 280px; }
   .continueContent { padding: 28px; }
   .lessonContext h2 { font-size: 2rem; }
@@ -147,7 +148,7 @@
   .curriculumHeading h2 { font-size: 2rem; }
 }
 @media (min-width: 768px) and (max-width: 899px) {
-  .guide { top: 30px; }
+  .bubble { top: -235px; }
   .continueCard { grid-template-columns: minmax(0,1fr); }
   .recap { display: flex; border-left: 0; border-top: 1px solid var(--color-paper-border); border-radius: 0 0 12px 12px; }
   .recapContent { display: grid !important; grid-template-columns: 1fr 1fr; min-height: auto; }
@@ -158,12 +159,15 @@
 }
 @media (max-width: 767px) {
   .container { padding: 20px 20px 48px; }
-  .greeting { max-width: none; margin-bottom: 140px; }
+  .greeting { grid-area: auto; }
+  .continueCard { grid-area: auto; }
+  .greeting { max-width: none; margin-bottom: 0; }
   .greeting h1 { font-size: 2.5rem; line-height: 1.05; }
   .greeting p { margin-top: 10px; font-size: .9375rem; }
-  .guideWrap { top: auto; bottom: auto; right: 0; width: 100%; transform: translateY(-140px); }
-  .guide { top: -11px; right: -8px; width: 174px; height: 174px; }
-  .bubble { top: 4px; left: 0; width: 200px; padding: 12px 14px; font-size: .875rem; }
+  /* Stacked: the bubble stays in flow as text grows and the guide stands on the card right below. */
+  .guideWrap { grid-area: auto; justify-self: stretch; width: auto; height: auto; min-height: 8.75rem; margin-right: 0; padding-bottom: 3rem; }
+  .guide { right: -8px; width: 174px; height: 174px; }
+  .bubble { position: relative; top: 4px; left: 0; width: min(200px, 100%); padding: 12px 14px; font-size: .875rem; }
   .bubble::after { top: 24px; }
   .continueCard { display: block; min-height: 0; }
   .continueContent { padding: 20px 20px 18px; }
@@ -232,7 +236,7 @@
 @media (max-width: 359px) {
   .container { padding-inline: 16px; }
   .bubble { width: 170px; }
-  .guide { width: 150px; height: 150px; top: 16px; }
+  .guide { width: 150px; height: 150px; }
   .continueContent { padding-inline: 16px; }
   .chapterHead { gap: 10px; }
   .lessonRow { padding-inline: 8px; gap: 10px; }
@@ -240,13 +244,6 @@
 .planContext { margin-top: 40px; max-width: 65ch; color: var(--color-text-muted); font-size: .875rem; }
 .planContext summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--color-action); font-weight: 600; }
 .planContext details p { margin-top: 8px; }
-/* Keep the guide's message in flow as text grows, reserving the card edge. */
-@media (max-width: 767px) {
-  .greeting { margin-bottom: 0; }
-  .guideWrap { position: relative; transform: none; min-height: 8.75rem; padding-bottom: 3rem; }
-  .bubble { position: relative; width: min(200px, 100%); }
-  .guide { top: auto; bottom: -24px; }
-}
 .answer input { appearance: none; border: 1.5px solid var(--color-control-outline); border-radius: 50%; background: var(--color-paper-surface); }
 .answer input:checked { border-color: var(--color-action); }
 .page :where(h1,h2,h3,p,a,span) { overflow-wrap: anywhere; }

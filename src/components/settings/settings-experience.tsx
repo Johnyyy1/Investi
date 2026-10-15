@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -86,7 +86,7 @@ export function SettingsExperience(props: Props) {
           <Link href="/settings" className={styles.back}><ArrowLeft size={18} aria-hidden="true" />Nastavení</Link>
           <header className={account ? styles.accountHeading : styles.heading}>
             <div><p className={styles.eyebrow}>{account || section === "goal" ? "PROFIL" : "NASTAVENÍ"}</p><h1 ref={heading} tabIndex={-1}>{section === "goal" && preferenceEditing ? "Změnit cíl nebo úroveň" : section === "security" ? "Přihlášení a zabezpe\u00adčení" : active?.label ?? "Účet"}</h1>{account && <p>Kdo jsi, čemu se chceš naučit a jak dlouhé lekce ti sedí.</p>}</div>
-            {account && <Image src="/investi-assets/guide/17-reading-armchair.webp" width={850} height={638} alt="" priority sizes="(max-width: 767px) 240px, 425px" className={styles.guide} />}
+            {account && <GuideImage pose="17-reading-armchair" alt="" priority sizes="(max-width: 767px) 240px, 425px" className={styles.guide} />}
           </header>
           <div hidden={!account}><Identity identity={identity} accounts={props.initialAccounts} onDirtyChange={setNameDirty} />
             {identity.guest && <div className={styles.demoNote}><Info size={20} aria-hidden="true" /><div><h2>Pokrok zatím není uložený</h2><p>Učíš se jako host. Lekce a plán zůstanou jen v tomhle prohlížeči, dokud si nevytvoříš účet. <Link href="/onboarding/save">Uložit pokrok</Link></p></div></div>}

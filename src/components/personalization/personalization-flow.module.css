@@ -19,7 +19,8 @@
 .guideZone { display: flex; align-items: flex-start; justify-content: flex-end; min-height: 200px; position: relative; gap: 16px; }
 .bubble { position: relative; max-width: 320px; margin-top: 44px; padding: 14px 18px; border: 1px solid var(--color-paper-border); border-radius: 8px; background: var(--color-paper-surface); font-size: .9375rem; line-height: 1.5; text-wrap: pretty; }
 .bubble::after { content: ""; position: absolute; right: -5px; top: 22px; width: 8px; height: 8px; background: var(--color-paper-surface); border-top: 1px solid var(--color-paper-border); border-right: 1px solid var(--color-paper-border); transform: rotate(45deg); }
-.guide { width: 216px; height: 216px; flex-shrink: 0; object-fit: contain; align-self: flex-end; margin-bottom: -16px; margin-right: -56px; pointer-events: none; }
+/* Sized by width so wide poses keep their real height and every pose stands on the card below. */
+.guide { width: 216px; height: auto; flex-shrink: 0; align-self: flex-end; margin-right: -56px; pointer-events: none; }
 .questionCard { position: relative; background: var(--color-paper-surface); border: 1px solid var(--color-border-card); border-radius: var(--radius-paper-card); box-shadow: var(--shadow-paper-card); padding: 32px 32px 28px; animation: step-enter 240ms var(--onboarding-ease-out); }
 .eyebrow { color: var(--color-action); font-size: .75rem; font-weight: 600; letter-spacing: .083em; text-transform: uppercase; line-height: 1.5; }
 .questionTitle { font-size: 2.5rem; line-height: 1.1; margin-top: 16px; text-wrap: balance; }
@@ -85,7 +86,7 @@
   .column { margin-top: 8px; }
   .guideZone { min-height: 100px; padding-top: 0; gap: 10px; align-items: flex-start; }
   .bubble { flex: 1; max-width: none; margin-top: 16px; padding: 10px 12px; font-size: .8125rem; }
-  .guide { width: 112px; height: 112px; margin-right: -12px; margin-bottom: -12px; }
+  .guide { width: 112px; margin-right: -12px; }
   .questionCard { padding: 22px 16px 16px; }
   .questionTitle { font-size: 1.75rem; line-height: 1.16; margin-top: 12px; }
   .diagnosticTitle { font-size: 1.5rem; line-height: 1.25; }
@@ -111,7 +112,7 @@
   .choiceMark { justify-self: end; }
   .choice input { top: auto; bottom: 12px; right: 8px; transform: none; }
   .guideZone { gap: 8px; }
-  .guide { width: 80px; height: 80px; margin-right: 0; }
+  .guide { width: 80px; margin-right: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .flow *, .flow *::before, .flow *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -121,7 +122,7 @@
 .planTitle { font-size: 4rem; line-height: 1.05; margin-top: 8px; }
 .planSubtitle { font-size: 1.125rem; line-height: 1.5; margin-top: 12px; color: var(--color-text-muted); }
 .planColumn .guideZone { min-height: 148px; padding-top: 0; }
-.planColumn .guide { width: 164px; height: 164px; margin-right: -36px; }
+.planColumn .guide { width: 164px; margin-right: -36px; }
 .firstLesson { position: relative; padding: 28px; border: 1px solid var(--color-border-card); border-radius: var(--radius-paper-card); background: var(--color-paper-surface); box-shadow: var(--shadow-paper-card); }
 .lessonMeta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
 .lessonMeta > span { color: var(--color-text-muted); font-size: .8125rem; }
@@ -167,7 +168,7 @@
   .planTitle { font-size: 2rem; line-height: 1.1; }
   .planSubtitle { font-size: .9375rem; margin-top: 8px; }
   .planColumn .guideZone { min-height: 118px; }
-  .planColumn .guide { width: 128px; height: 128px; margin-right: -12px; }
+  .planColumn .guide { width: 128px; margin-right: -12px; }
   .firstLesson { padding: 20px 16px; }
   .lessonTitle { font-size: 1.75rem; }
   .lessonSummary { margin-top: 20px; font-size: .9375rem; }
@@ -183,7 +184,7 @@
 }
 @container onboarding (width < 14em) {
   .planTitle, .lessonTitle { hyphens: auto; }
-  .planColumn .guide { width: 80px; height: 80px; margin-right: 0; }
+  .planColumn .guide { width: 80px; margin-right: 0; }
   .sessionList li { flex-direction: column; gap: 4px; }
   .chapter > summary { flex-wrap: wrap; }
   .chapterText { flex-basis: calc(100% - 64px); }

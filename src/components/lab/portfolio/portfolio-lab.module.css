@@ -169,7 +169,7 @@ a.rowName:hover { color: var(--color-action); text-decoration: underline; text-u
 .hero { position: relative; margin-top: 12px; }
 .hero h1 { margin-top: 10px; max-width: 14ch; font-size: 2.375rem; line-height: 1.04; letter-spacing: -.04em; }
 .heroCopy > p { margin-top: 12px; max-width: 34rem; font-size: 1rem; line-height: 1.5; color: var(--color-text-secondary); }
-.guideScene { position: relative; display: grid; justify-items: center; margin-top: 18px; margin-bottom: -2px; }
+.guideScene { position: relative; display: grid; justify-items: center; margin-top: 18px; }
 .bubble { position: relative; justify-self: start; max-width: 262px; padding: 12px 14px; border: 1px solid var(--color-paper-border); border-radius: 12px; background: var(--color-paper-surface); font-size: .875rem; line-height: 1.45; }
 .bubble::after { content: ""; position: absolute; bottom: -7px; left: 156px; width: 12px; height: 12px; transform: rotate(45deg); background: var(--color-paper-surface); border-right: 1px solid var(--color-paper-border); border-bottom: 1px solid var(--color-paper-border); }
 .guide { width: 210px; height: auto; margin-top: 8px; }
@@ -202,7 +202,8 @@ a.rowName:hover { color: var(--color-action); text-decoration: underline; text-u
 
 /* Data unavailable (state 4d) */
 .missing { display: grid; gap: 16px; }
-.missingScene { display: grid; justify-items: center; }
+/* The guide stands on the card right below: cancel the stack gap above it. */
+.missingScene { display: grid; justify-items: center; margin-bottom: -16px; }
 .missingScene .bubble::after { left: 120px; }
 .missingCard { padding: 20px 20px 18px; }
 .missingCard h2 { margin-top: 10px; font-size: 1.5625rem; line-height: 1.15; letter-spacing: -.032em; }
