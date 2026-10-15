@@ -42,7 +42,8 @@
     "test:settings": "node scripts/validate-settings.mjs",
     "test:request-isolation": "node scripts/validate-request-isolation.mjs",
     "test:navigation-feedback": "node scripts/validate-navigation-feedback.mjs",
-    "bench:navigation": "node scripts/benchmark-navigation.mjs"
+    "bench:navigation": "node scripts/benchmark-navigation.mjs",
+    "test:prepared-statements": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-prepared-statements.mts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.3",
