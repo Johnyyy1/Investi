@@ -122,22 +122,20 @@ export function hoverLift(el: HTMLElement) {
 }
 
 /**
- * Soft light sweep across a button. `el` is the full-size [data-shimmer] layer inside its (overflow-hidden) host.
- * Plays on hover (fine pointers) and, with data-shimmer="idle", every few seconds while the host is on screen.
+ * Soft light sweep across a button on hover (fine pointers only). `el` is the full-size [data-shimmer] layer inside
+ * its overflow-hidden host. At rest the layer sits fully off the left edge, so an idle button never shows the band.
  */
-export function sheen(el: HTMLElement, { idle, hover }: { idle: boolean; hover: boolean }) {
+export function sheen(el: HTMLElement) {
   const host = el.parentElement;
   if (!host) return () => {};
-  const sweep = gsap.fromTo(el, { xPercent: -100 }, {
-    xPercent: 100, duration: 0.95, ease: "power1.inOut",
-    ...(idle
-      ? { delay: 1.2, repeat: -1, repeatDelay: 5, scrollTrigger: { trigger: host, start: "top 92%", end: "bottom top", toggleActions: "play pause resume pause" } }
-      : { paused: true }),
-  });
-  // Restart only when the band is off the button, so a hover never cuts a running sweep short.
-  const enter = () => { const x = Number(gsap.getProperty(el, "xPercent")); if (x <= -100 || x >= 100) sweep.restart(); };
-  if (hover) host.addEventListener("pointerenter", enter);
-  return () => host.removeEventListener("pointerenter", enter);
+  // x: 0 overrides the CSS translateX(-100%) fallback, which GSAP would otherwise parse into px and add to xPercent.
+  const rest = { x: 0, xPercent: -100 };
+  gsap.set(el, rest);
+  const sweep = gsap.to(el, { xPercent: 100, duration: 0.95, ease: "power1.inOut", paused: true, onComplete: () => { gsap.set(el, rest); } });
+  // Never cut a running sweep short: a new hover only starts one once the band is back at rest.
+  const enter = () => { if (!sweep.isActive()) sweep.restart(); };
+  host.addEventListener("pointerenter", enter);
+  return () => { host.removeEventListener("pointerenter", enter); sweep.kill(); gsap.set(el, rest); };
 }
 
 /** Press micro-interaction: squash on press, small overshoot on release. */

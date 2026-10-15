@@ -63,7 +63,7 @@
   transition: background-color 180ms ease, border-color 180ms ease;
 }
 .primaryButton { padding-inline: 24px; min-height: 56px; }
-.primaryButton svg, .lessonSubmit svg { flex-shrink: 0; transition: transform 240ms cubic-bezier(.2, .7, .2, 1); }
+.primaryButton svg { flex-shrink: 0; transition: transform 240ms cubic-bezier(.2, .7, .2, 1); }
 .textAction { display: inline-flex; align-items: center; min-height: 48px; font-size: 1rem; font-weight: 500; }
 /* Underline that draws in from the left on hover, instead of a text-decoration jump. */
 .topNav a:not(:last-child), .textAction, .footer nav a {
@@ -81,8 +81,8 @@
 .heroLessonMain { padding: 40px; min-height: 438px; border-radius: 0 0 0 12px; }
 .heroLessonMain .lessonDisclosure, .heroLessonMain .lessonMeta, .heroLessonMain .lessonTrack { display: none; }
 .lessonQuestion { font-size: 2.625rem; line-height: 1.15; letter-spacing: -.033em; margin-bottom: 24px !important; }
-.answers { display: grid; gap: 24px; }
-.answer { min-height: 72px; background: var(--surface); border: 1px solid #7b7b70; border-radius: 8px; text-align: left; display: flex; align-items: center; gap: 12px; padding: 20px 22px; font-size: 1.125rem !important; line-height: 1.55 !important; cursor: pointer; color: var(--ink); transition: background-color 160ms ease, border-color 160ms ease; }
+.answers { display: grid; gap: 24px; list-style: none; margin: 0; padding: 0; }
+.answer { min-height: 72px; background: var(--surface); border: 1px solid #7b7b70; border-radius: 8px; text-align: left; display: flex; align-items: center; gap: 12px; padding: 20px 22px; font-size: 1.125rem !important; line-height: 1.55 !important; color: var(--ink); transition: background-color 160ms ease, border-color 160ms ease; }
 .answer > span:first-child { font-size: .8125rem; font-weight: 600; color: var(--muted); flex-shrink: 0; }
 .answer > span:nth-child(2) { flex: 1; }
 .answer svg { flex-shrink: 0; color: var(--teal); }
@@ -93,8 +93,8 @@
 .feedback h3.feedbackWrong, .asideFeedback h3.feedbackWrong { color: var(--wrong); }
 .lessonBottom { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; }
 .sampleReward { color: var(--teal); font-size: .875rem; font-weight: 600; }
-.lessonSubmit { max-width: 100%; flex-wrap: wrap; }
-.lessonSubmit:disabled { cursor: not-allowed; background: #e4e5dc; border-color: #e4e5dc; color: #50554b !important; }
+.lessonSubmit { max-width: 100%; flex-wrap: wrap; cursor: default; user-select: none; }
+.lessonSubmit[data-disabled] { background: #e4e5dc; border-color: #e4e5dc; color: #50554b !important; }
 .heroInlineFeedback { display: none; }
 .heroLessonAside { padding: 32px; min-height: 438px; background: #eff1e9; border-left: 1px solid #ddd9cf; border-radius: 0 0 12px 0; }
 .heroLessonAside .demoEyebrow { font-size: .6875rem; }
@@ -232,9 +232,8 @@
   .mobileNav a:hover { color: var(--teal); text-decoration: underline; text-underline-offset: 4px; }
   .topNav a:not(:last-child):hover, .textAction:hover, .footer nav a:hover { color: var(--teal); background-size: 100% 1px; }
   .topNav a:last-child:hover { background: var(--teal); border-color: var(--teal); color: #fff; }
-  .primaryButton:hover, .lessonSubmit:not(:disabled):hover, .portfolioSave:hover { background: #1c665e; border-color: #1c665e; }
-  .primaryButton:hover svg, .lessonSubmit:not(:disabled):hover svg { transform: translateX(4px); }
-  .answer:hover { border-color: var(--teal); background: #f0f5ed; }
+  .primaryButton:hover, .portfolioSave:hover { background: #1c665e; border-color: #1c665e; }
+  .primaryButton:hover svg { transform: translateX(4px); }
   .landing .secondaryButton:hover { background: #e7f0eb; border-color: var(--teal); }
 }
 @media (min-width: 1101px) { .heroLessonMain .lessonBottom { margin-top: 24px; } }

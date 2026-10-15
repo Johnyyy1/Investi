@@ -19,9 +19,9 @@ export const initInteractions: SectionInit = ({ root, c }) => {
   // GSAP owns transform on these elements, so the CSS transform transition would fight it.
   $$(root, "[data-lift], [data-magnetic], [data-press]").forEach(el => { el.style.transitionProperty = "background-color, border-color, color"; });
   $$(root, "[data-press]").forEach(el => cleanups.push(pressFeedback(el)));
-  $$(root, "[data-shimmer]").forEach(el => cleanups.push(sheen(el, { idle: el.dataset.shimmer === "idle", hover: c.fine })));
   if (c.fine) {
     $$(root, "[data-lift]").forEach(el => cleanups.push(hoverLift(el)));
+    $$(root, "[data-shimmer]").forEach(el => cleanups.push(sheen(el)));
     if (c.desktop) $$(root, "[data-magnetic]").forEach(el => cleanups.push(magnetic(el)));
   }
   return () => cleanups.forEach(fn => fn());

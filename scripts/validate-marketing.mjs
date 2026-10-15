@@ -170,12 +170,12 @@ try {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("about:blank");
     await page.goto(`${baseURL}/#portfolio-lab`);
-    await compactLesson().locator('[data-answer="A"][aria-pressed="true"]').waitFor();
+    await compactLesson().locator('[data-answer="A"][data-selected]').waitFor();
     assert.equal(await page.locator("main > section").count(), 6, `${width}px: deep link renders the landing`);
   }
   checks.push("Deep link below the lesson demos renders the landing and plays the compact demo at desktop and mobile widths.");
   // From load, reduced motion leaves both previews in their server-rendered state; with motion the landing resets
-  // them and replays a scripted answer, so the deterministic interaction checks below run without it.
+  // them and replays a scripted answer, so the deterministic checks below run without it.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(baseURL);
@@ -183,23 +183,17 @@ try {
   assert.equal(await page.getByRole("link", { name: "Přejít k obsahu" }).evaluate(element => element === document.activeElement), true);
   await page.keyboard.press("Enter");
   assert.equal(await page.locator("main").evaluate(element => element === document.activeElement), true);
-  assert.equal(await button(lesson(), "Pokračovat").evaluate(element => getComputedStyle(element).transitionDuration), "0s");
+  assert.equal(await button(portfolio(), "Uložit portfolio").evaluate(element => getComputedStyle(element).transitionDuration), "0s");
   assert.equal(await page.locator('img[src*="curiosity"]').evaluate(element => getComputedStyle(element).animationName), "none");
   const writes = [];
   page.on("request", request => { if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method())) writes.push(request.url()); });
+  // The lesson previews are read-only illustrations: nothing inside them is focusable or clickable.
   for (const scope of [lesson(), compactLesson()]) {
-    await button(scope, "Pokračovat").click();
-    const answers = scope.getByRole("group", { name: "Odpověď na ukázkovou otázku" }).getByRole("button");
-    await page.waitForFunction(element => element === document.activeElement, await answers.first().elementHandle());
-    assert.equal(await button(scope, "Vyber odpověď").isDisabled(), true);
-    await answers.first().press("Enter");
-    await button(scope, "Zkontrolovat odpověď").click();
-    await scope.getByRole("status").filter({ hasText: "Ještě ne." }).waitFor();
-    await button(scope, "Pokračovat").click();
-    await answers.last().click();
-    await button(scope, "Zkontrolovat odpověď").click();
-    await scope.getByRole("status").filter({ hasText: "Přesně." }).waitFor();
+    const demo = scope.locator("[data-lesson-demo]");
+    assert.equal(await demo.locator("button, a[href], input, [tabindex]").count(), 0, "Lesson preview has no controls");
+    await demo.getByRole("status").filter({ hasText: "Přesně." }).first().waitFor();
   }
+  await lesson().locator('[data-answer="B"][data-selected]').waitFor(); // the compact card shows only the explanation once answered
   assert.deepEqual(await mix(), [60, 30, 10]);
   for (const [name, value] of [["Akcie", "40"], ["Dluhopisy", "100"], ["Hotovost", "100"], ["Akcie", "100"], ["Dluhopisy", "25"]]) {
     await portfolio().getByRole("slider", { name, exact: true }).fill(value); await mix();
@@ -212,7 +206,7 @@ try {
   assert.deepEqual(await mix(), [60, 30, 10]);
   assert.deepEqual(writes, [], "Marketing interactions perform no network mutation");
   assert.equal((await (await context.request.get(`${baseURL}/api/auth/get-session`)).json()), null, "Previews never create an anonymous identity");
-  checks.push("Both independent lessons: initial answer, retry focus, disabled submit, incorrect/correct feedback. Three keyboard/pointer allocation controls keep 100%; save/reset remains local; no mutation request or session creation.");
+  checks.push("Both lesson previews are read-only (no controls) and show the answered state. Three keyboard/pointer allocation controls keep 100%; save/reset remains local; no mutation request or session creation.");
   await page.emulateMedia({ reducedMotion: "no-preference" });
   for (const [label, path, heading] of [["Začít se učit", "/onboarding", "Co se chceš naučit?"], ["Přihlásit se", "/sign-in", "Vítej zpět"]]) {
     await page.goto(baseURL);
@@ -257,9 +251,6 @@ try {
   }
   const before = await snapshot(owner);
   await page.goto(baseURL);
-  await button(lesson(), "Pokračovat").click();
-  await lesson().getByRole("button", { name: /Aby výsledek/ }).click();
-  await button(lesson(), "Zkontrolovat odpověď").click();
   await portfolio().getByRole("slider", { name: "Akcie", exact: true }).fill("40");
   await button(portfolio(), "Uložit portfolio").click();
   assert.deepEqual(await snapshot(owner), before, "Authenticated previews preserve exact lesson, reward, trade and generation records");
