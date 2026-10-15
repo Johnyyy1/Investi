@@ -19,14 +19,14 @@ export const initProgress: SectionInit = ({ root, c, inContext }) => {
   const calm = items.filter(i => i !== next);
   gsap.set(calm, { autoAlpha: 0, y: 20 });
   if (next) gsap.set(next, { autoAlpha: 0, y: 28 });
-  if (art) gsap.set(art, { autoAlpha: 0, y: 30 });
+  if (art) gsap.set(art, { autoAlpha: 0 }); // fade only: illustrations never move
   if (count) count.textContent = "0";
 
   ScrollTrigger.create({
     trigger: card, start: "top 78%", once: true,
     onEnter: () => inContext(() => {
       const tl = gsap.timeline({ defaults: { ease: EASE.enter } });
-      if (art) tl.to(art, { autoAlpha: 1, y: 0, duration: 1.2 }, 0);
+      if (art) tl.to(art, { autoAlpha: 1, duration: 1, ease: "power1.out" }, 0);
       if (count) tl.add(countUp(count, Number(count.dataset.countTo), { duration: 2, ease: "power2.out" }), 0.2);
       tl.to(calm, { autoAlpha: 1, y: 0, duration: 0.9, stagger: 0.15 }, 0.35);
       if (next) tl.to(next, { autoAlpha: 1, y: 0, duration: 1.1, ease: EASE.enterLong }, 0.9)

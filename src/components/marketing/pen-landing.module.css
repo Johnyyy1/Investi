@@ -40,7 +40,7 @@
 .wordmark { font-family: var(--pen-display), sans-serif; font-size: 2.125rem; letter-spacing: -.05em; font-weight: 800; line-height: 1.35; }
 .topNav { display: flex; gap: 36px; align-items: center; font-size: .9375rem; }
 .topNav a { display: inline-flex; align-items: center; min-height: 48px; }
-.topNav a:last-child { border: 1px solid #c6c3ba; border-radius: 8px; padding-inline: 20px; }
+.topNav a:last-child { border: 1px solid #c6c3ba; border-radius: 8px; padding-inline: 20px; font-weight: 500; transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease; }
 .mobileActions { display: none; }
 .mobileNav summary { list-style: none; cursor: pointer; display: grid; place-items: center; width: 44px; height: 48px; }
 .mobileNav summary::-webkit-details-marker { display: none; }
@@ -60,10 +60,16 @@
   display: inline-flex; align-items: center; justify-content: center; gap: 18px; min-height: 54px;
   background: var(--teal); color: #fff !important; padding: 14px 22px; border: 1px solid var(--teal);
   border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; line-height: 1.35;
-  transition: background-color 160ms ease;
+  transition: background-color 180ms ease, border-color 180ms ease;
 }
 .primaryButton { padding-inline: 24px; min-height: 56px; }
+.primaryButton svg, .lessonSubmit svg { flex-shrink: 0; transition: transform 240ms cubic-bezier(.2, .7, .2, 1); }
 .textAction { display: inline-flex; align-items: center; min-height: 48px; font-size: 1rem; font-weight: 500; }
+/* Underline that draws in from the left on hover, instead of a text-decoration jump. */
+.topNav a:not(:last-child), .textAction, .footer nav a {
+  background: linear-gradient(currentColor, currentColor) 0 calc(50% + .78em) / 0 1px no-repeat;
+  transition: background-size 260ms cubic-bezier(.2, .7, .2, 1), color 180ms ease;
+}
 .heroLessonWrap { position: relative; border: 1px solid #cbc9bf; background: var(--surface); border-radius: 12px; box-shadow: 0 12px 24px #1717170c; }
 .heroArt { position: absolute; right: 8px; top: -238px; width: 256px; height: 260px; object-fit: contain; pointer-events: none; }
 .lessonBrowserHeader { position: relative; background: var(--surface); border-radius: 12px 12px 0 0; min-height: 78px; display: flex; gap: 16px; align-items: center; justify-content: space-between; border-bottom: 1px solid #ddd9cf; padding: 22px 32px; font-size: .9375rem; color: var(--muted); }
@@ -223,10 +229,13 @@
 .footer nav { display: flex; gap: 24px; font-size: .8125rem; }
 .footer nav a { display: flex; align-items: center; min-height: 44px; }
 @media (hover: hover) and (pointer: fine) {
-  .topNav a:hover, .mobileNav a:hover, .textAction:hover, .footer nav a:hover { color: var(--teal); text-decoration: underline; text-underline-offset: 4px; }
-  .primaryButton:hover, .lessonSubmit:not(:disabled):hover, .portfolioSave:hover { background: #1c665e; }
+  .mobileNav a:hover { color: var(--teal); text-decoration: underline; text-underline-offset: 4px; }
+  .topNav a:not(:last-child):hover, .textAction:hover, .footer nav a:hover { color: var(--teal); background-size: 100% 1px; }
+  .topNav a:last-child:hover { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .primaryButton:hover, .lessonSubmit:not(:disabled):hover, .portfolioSave:hover { background: #1c665e; border-color: #1c665e; }
+  .primaryButton:hover svg, .lessonSubmit:not(:disabled):hover svg { transform: translateX(4px); }
   .answer:hover { border-color: var(--teal); background: #f0f5ed; }
-  .landing .secondaryButton:hover { background: #e7f0eb; }
+  .landing .secondaryButton:hover { background: #e7f0eb; border-color: var(--teal); }
 }
 @media (min-width: 1101px) { .heroLessonMain .lessonBottom { margin-top: 24px; } }
 @media (max-width: 1100px) {
@@ -439,4 +448,4 @@
 .lessonCompact .answers + .feedback { margin-top: 24px; }
 .totalTick { display: inline-block; width: 14px; height: 14px; margin-right: 6px; vertical-align: -2px; color: var(--teal); }
 .shimmerHost { position: relative; overflow: hidden; isolation: isolate; }
-.shimmer { position: absolute; inset: -2px auto -2px 0; width: 45%; z-index: -1; pointer-events: none; background: linear-gradient(100deg, transparent, #ffffff38 45%, #ffffff12 60%, transparent); transform: translateX(-160%) skewX(-18deg); }
+.shimmer { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: linear-gradient(105deg, transparent 32%, #ffffff10 41%, #ffffff33 50%, #ffffff10 59%, transparent 68%); transform: translateX(-100%); }

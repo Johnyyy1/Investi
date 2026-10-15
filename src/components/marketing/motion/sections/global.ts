@@ -1,5 +1,5 @@
 import { gsap, ScrollTrigger, EASE } from "@/lib/gsap";
-import { $, $$, hoverLift, magnetic, pressFeedback } from "../utils";
+import { $, $$, hoverLift, magnetic, pressFeedback, sheen } from "../utils";
 import type { SectionInit } from "../types";
 
 /** Thin scroll-progress bar at the top of the viewport (scrubbed, transform only). */
@@ -13,12 +13,13 @@ export const initScrollProgress: SectionInit = ({ root }) => {
   });
 };
 
-/** Hover lift, magnetic pull and press feedback. Hover effects run on fine pointers only. */
+/** Hover lift, magnetic pull, button sheen and press feedback. Hover effects run on fine pointers only. */
 export const initInteractions: SectionInit = ({ root, c }) => {
   const cleanups: Array<() => void> = [];
   // GSAP owns transform on these elements, so the CSS transform transition would fight it.
   $$(root, "[data-lift], [data-magnetic], [data-press]").forEach(el => { el.style.transitionProperty = "background-color, border-color, color"; });
   $$(root, "[data-press]").forEach(el => cleanups.push(pressFeedback(el)));
+  $$(root, "[data-shimmer]").forEach(el => cleanups.push(sheen(el, { idle: el.dataset.shimmer === "idle", hover: c.fine })));
   if (c.fine) {
     $$(root, "[data-lift]").forEach(el => cleanups.push(hoverLift(el)));
     if (c.desktop) $$(root, "[data-magnetic]").forEach(el => cleanups.push(magnetic(el)));

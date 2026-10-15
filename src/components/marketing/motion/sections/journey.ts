@@ -27,12 +27,12 @@ export const initJourney: SectionInit = ({ root, c, inContext }) => {
   gsap.set(statuses, { autoAlpha: 0 });
   gsap.set(draws, { drawSVG: "0%" });
   if (progress) gsap.set(progress, { scaleX: 0, transformOrigin: "0% 50%" });
-  if (art && c.desktop) gsap.set(art, { autoAlpha: 0, y: 48 });
+  if (art && c.desktop) gsap.set(art, { autoAlpha: 0 }); // fade only: illustrations never move
   ScrollTrigger.create({
     trigger: wrap, start: c.mobile ? "top 85%" : "top 78%", once: true,
     onEnter: () => inContext(() => {
       const tl = gsap.timeline({ defaults: { ease: EASE.enter } });
-      if (art && c.desktop) tl.to(art, { autoAlpha: 1, y: 0, duration: 1.1, ease: EASE.enterLong }, 0);
+      if (art && c.desktop) tl.to(art, { autoAlpha: 1, duration: 1, ease: "power1.out" }, 0);
       if (progress) tl.to(progress, { scaleX: 1, duration: 1.2, ease: EASE.scrub }, 0.2);
       tl.to(rows, { autoAlpha: 1, y: 0, duration: DUR.revealShort, stagger: DUR.card }, 0.15);
       rows.forEach((row, i) => {
