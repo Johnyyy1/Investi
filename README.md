@@ -76,6 +76,7 @@ npm run typecheck
 npm run lint
 npm run build
 npm run test:persistence
+ANONYMOUS_CLEANUP_QA_DISPOSABLE=1 npm run test:anonymous-cleanup
 npm run test:migration
 npm run test:curriculum-seed
 npm run test:portfolio-persistence
@@ -92,15 +93,17 @@ BROWSER_CHANNEL=chrome node scripts/validate-design-system.mjs
 
 Run migrations and seed on a disposable local QA database, with `DATABASE_URL` and local auth/provider settings explicitly exported. Re-run `db:seed` followed by `test:curriculum-seed` to verify idempotence. Personalization upgrade QA additionally requires a fresh database and explicit opt-in; see [onboarding](docs/onboarding.md). Browser suites create and remove only their own local disposable identities. Screenshots are written under `/tmp`, never the repository.
 
-## Demo retention
+## Anonymous identity retention
 
-Anonymous demo sessions expire after 24 hours. Their database identities may remain until cleanup. Preview or apply the bounded cleanup with:
+Demos and guests are anonymous Better Auth identities without a password or provider account. A demo session starts with 24 hours and a guest session with seven days; Better Auth extends a session while it is used. Once every session of an anonymous identity has expired, nobody can sign in to it again.
+
+A daily Vercel Cron job (`vercel.json`) calls `/api/cron/cleanup-anonymous`, which removes anonymous identities that have had no valid session for over a day (and were created over a day ago). Deleting the user cascades its sessions, profile, progress, receipts, unlocks, portfolios and trades; saved accounts and shared curriculum/market data are never touched. Rows locked by a guest claim or lesson completion are skipped and retried by the next run. The endpoint requires `Authorization: Bearer $CRON_SECRET` and refuses every request when `CRON_SECRET` is not set, so set it in the Vercel project for production.
+
+The operator command applies the same rule and needs only `DATABASE_URL`:
 
 ```bash
 npm run demo:cleanup
 npm run demo:cleanup -- --apply
 ```
-
-Only users explicitly marked `is_anonymous = true` and older than seven days are eligible; cascading foreign keys remove their sessions, profile, progress, and award receipts.
 
 See [current product contracts](docs/product-reset.md) for reward, streak, daily-goal, synthetic-data, migration, compatibility, and validation semantics. Current policy v2 grants no capital per lesson; normal learners receive the one-time 5,000 Kč Portfolio Lab unlock after Foundations, while legacy lesson receipts retain their stored capital.
