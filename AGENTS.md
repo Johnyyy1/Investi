@@ -336,21 +336,34 @@ Do not change lesson completion semantics while doing visual work.
 
 9. Practice Capital
 
-Practice Capital replaced visible XP as the user-facing learning reward.
+Practice Capital is the spendable learning reward for Portfolio Lab. XP measures learning progress and gates the Portfolio Lab unlock.
 
 Reward policy
 
-Current approved policy:
+Current approved policy (reward policy v3):
 
-first eligible lesson completion
+first completion of a Foundations lesson
+= XP only
+= 0 Practice Capital
+
+completing all Foundations lessons and reaching the XP goal
+= one-time Portfolio Lab unlock grant
+= 500000 CZK minor units
+= 5,000 Kč Practice Capital
+
+first completion of any lesson outside Foundations
 = 200000 CZK minor units
 = 2,000 Kč Practice Capital
 
+The lesson reward follows the lesson's module, not completion order: a lesson outside Foundations completed before the unlock still earns 2,000 Kč, which becomes usable once Portfolio Lab opens.
+
 Review / repeated completion:
 
-0 additional Practice Capital
+0 additional XP or Practice Capital
 
-Legacy XP may still exist internally for compatibility, but Practice Capital must never be derived from XP.
+Stored receipts keep the amount and policy version they were created with (v1: 2,000 Kč per lesson; v2: XP only) and are never recalculated or backfilled.
+
+Practice Capital must never be derived from XP.
 
 Source of truth
 

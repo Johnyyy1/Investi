@@ -75,7 +75,8 @@ try {
   assert.equal(xp.total, 360);
   const receipts = await sql`select practice_capital_minor, reward_policy_version from lesson_award where user_id = ${userId}`;
   assert.equal(receipts.length, 6);
-  assert.ok(receipts.every((receipt) => BigInt(receipt.practice_capital_minor) === 0n && receipt.reward_policy_version === 2));
+  assert.ok(receipts.every((receipt) => receipt.reward_policy_version === 3));
+  assert.equal(receipts.reduce((sum, receipt) => sum + BigInt(receipt.practice_capital_minor), 0n), 200_000n, "the seeded Returns lesson carries 2,000 Kč");
   const [grant] = await sql`select practice_capital_minor from progression_unlock where user_id = ${userId} and unlock_id = 'PORTFOLIO_LAB'`;
   assert.equal(BigInt(grant.practice_capital_minor), 500_000n);
   await page.getByRole("region", { name: "Doporučeno pro tebe", exact: true }).waitFor();

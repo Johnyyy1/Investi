@@ -38,15 +38,16 @@ try {
   }
   const results = await Promise.all([completeLesson(userId, lessonId), completeLesson(userId, lessonId)]);
   assert.equal(results.reduce((sum, result) => sum + result.xpAwarded, 0), 60, "concurrent completion grants XP once");
-  assert.equal(results.reduce((sum, result) => sum + result.practiceCapitalAwardedMinor, 0n), 0n);
+  assert.equal(results.reduce((sum, result) => sum + result.practiceCapitalAwardedMinor, 0n), 200_000n, "concurrent completion grants 2,000 Kč once");
   assert.ok(results.every((result) => !result.nextHref.includes("checkpoint")));
   const receipts = await awards();
   assert.equal(receipts.length, 2);
   assert.deepEqual(receipts.find((award) => award.lessonId === "returns-comparing"), previousAwards[0]);
-  assert.equal(receipts.find((award) => award.lessonId === lessonId)?.rewardPolicyVersion, 2);
+  assert.equal(receipts.find((award) => award.lessonId === lessonId)?.rewardPolicyVersion, 3);
+  assert.equal(receipts.find((award) => award.lessonId === lessonId)?.practiceCapitalMinor, 200_000n);
   const completed = await progress();
   assert.equal(completed[0].status, "completed");
-  assert.equal((await loadPracticeCapitalSummary(userId)).earnedPracticeCapitalMinor, 200_000n);
+  assert.equal((await loadPracticeCapitalSummary(userId)).earnedPracticeCapitalMinor, 400_000n, "legacy v1 receipt plus the new v3 lesson reward");
   await markLessonInProgress(userId, lessonId);
   await saveLessonProgress(userId, { lessonId, status: "in_progress", lastPosition: 0 });
   const replay = await completeLesson(userId, lessonId);
@@ -55,7 +56,7 @@ try {
   assert.deepEqual(await progress(), completed, "review preserves completion, timestamps and cursor");
   assert.deepEqual(await awards(), receipts, "review preserves receipts");
   assert.deepEqual(await db.select().from(lessonProgress).where(and(eq(lessonProgress.userId, userId), eq(lessonProgress.lessonId, "returns-comparing"))), previousProgress);
-  console.log("PASS: L5 persisted gates, concurrent one-time 60 XP v2 completion, replay, legacy receipt and L4 preservation, planned lesson rejection.");
+  console.log("PASS: L5 persisted gates, concurrent one-time 60 XP + 2,000 Kč v3 completion, replay, legacy receipt and L4 preservation, planned lesson rejection.");
 } finally {
   await db.delete(user).where(eq(user.id, userId));
   const client = (globalThis as unknown as { client?: { end: () => Promise<void> } }).client;

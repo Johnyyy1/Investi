@@ -3,13 +3,14 @@ import { demoSeed } from "./seed";
 import { getGamification } from "@/features/gamification/domain";
 import { getLearnerSummary } from "@/features/learning/learner-summary";
 import { availableLessons } from "@/features/learning/catalog";
-import { getPracticeCapitalSummary, LESSON_PRACTICE_CAPITAL_MINOR, REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
+import { getPracticeCapitalSummary, lessonReward } from "@/features/rewards/practice-capital";
 it("creates a consistent populated lesson history and real reward ledger", () => {
   const now = new Date("2026-09-09T00:01:00Z");
   const seed = demoSeed(now);
   expect(getGamification(seed.awards, now, "UTC", 20)).toMatchObject({ totalXp: 360, streak: 4, todayCompleted: 1, dailyTarget: 2 });
-  expect(getPracticeCapitalSummary(seed.awards)).toEqual({ earnedPracticeCapitalMinor: BigInt(0) });
-  expect(seed.awards.every((award) => award.practiceCapitalMinor === LESSON_PRACTICE_CAPITAL_MINOR && award.rewardPolicyVersion === REWARD_POLICY_VERSION)).toBe(true);
+  // Policy v3 like any learner: Foundations receipts are XP only; the one Returns lesson adds 2,000 Kč.
+  expect(seed.awards.every((award) => award.practiceCapitalMinor === lessonReward(award.lessonId).practiceCapitalMinor && award.rewardPolicyVersion === 3)).toBe(true);
+  expect(getPracticeCapitalSummary(seed.awards)).toEqual({ earnedPracticeCapitalMinor: 200_000n });
   expect(seed.progress.filter((row) => row.status === "completed").map((row) => row.lessonId)).toEqual(seed.awards.map((row) => row.lessonId));
   expect(seed.awards.every((award) => award.awardedAt <= now)).toBe(true);
   expect(seed.progress.every((row) => availableLessons.some((lesson) => lesson.id === row.lessonId))).toBe(true);

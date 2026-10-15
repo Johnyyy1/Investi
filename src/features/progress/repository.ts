@@ -6,7 +6,7 @@ import { type SaveLessonProgress, saveLessonProgressSchema } from "./schemas";
 import { validateCompletion, validateMove } from "./transition";
 import { getGamification, learningDate, LESSON_XP } from "@/features/gamification/domain";
 import { getLearnerSummary } from "@/features/learning/learner-summary";
-import { getPracticeCapitalSummary, LESSON_PRACTICE_CAPITAL_MINOR, REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
+import { getPracticeCapitalSummary, lessonReward } from "@/features/rewards/practice-capital";
 import { ensurePortfolioLabUnlockInTransaction } from "@/features/progression/repository";
 
 export async function saveLessonProgress(userId: string, input: SaveLessonProgress, answers?: Record<string, string>) {
@@ -48,8 +48,8 @@ export async function completeLesson(userId: string, lessonId: string) {
         userId,
         lessonId,
         xp: LESSON_XP,
-        practiceCapitalMinor: LESSON_PRACTICE_CAPITAL_MINOR,
-        rewardPolicyVersion: REWARD_POLICY_VERSION,
+        // Server-determined by the lesson's module; the client never supplies an amount.
+        ...lessonReward(lessonId),
         learningDate: learningDate(now, timeZone),
         timeZone,
         awardedAt: now,
@@ -67,6 +67,7 @@ export async function completeLesson(userId: string, lessonId: string) {
       lessonXp: awards.find((award) => award.lessonId === lessonId)?.xp ?? 0,
       totalXp: awards.reduce((sum, award) => sum + award.xp, 0),
       portfolioLabUnlocked: unlock.newlyUnlocked,
+      portfolioLabOpen: unlock.unlocked,
       unlockCapitalAwardedMinor: unlock.capitalAwardedMinor,
       practiceCapitalAwardedMinor,
       earnedPracticeCapitalMinor: getPracticeCapitalSummary(awards, grants.map((grant) => grant.amount)).earnedPracticeCapitalMinor,

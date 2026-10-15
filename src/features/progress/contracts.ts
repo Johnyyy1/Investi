@@ -7,6 +7,8 @@ export type CompletionRewardPresentation = {
   xpAwarded: number;
   totalXp: number;
   portfolioLabUnlocked: boolean;
+  /** Whether the learner can use Practice Capital now; capital earned before the unlock waits for it. */
+  portfolioLabOpen: boolean;
   unlockCapitalAwardedMinor: SerializedPracticeCapitalMinor;
   practiceCapitalAwardedMinor: SerializedPracticeCapitalMinor;
   earnedPracticeCapitalMinor: SerializedPracticeCapitalMinor;

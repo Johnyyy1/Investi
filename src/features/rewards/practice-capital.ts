@@ -1,12 +1,32 @@
+import { curriculumLessons } from "@/features/learning/catalog";
+import { FOUNDATIONS_MODULE_ID } from "@/features/lessons/foundations/manifest";
+
 /**
- * Reward policy v2: a first lesson completion earns XP only. Historical v1
- * receipts retain their stored Practice Capital amount and remain authoritative.
+ * Reward policy v3, by module and independent of completion order:
+ * - a first completion of a Foundations lesson earns XP only;
+ * - finishing Foundations with the XP goal unlocks Portfolio Lab with a one-time grant (progression/unlocks.ts);
+ * - a first completion of any lesson outside Foundations adds 2,000 Kč of Practice Capital. Capital earned
+ *   before the unlock waits in the entitlement and becomes usable once the Lab opens.
+ * Stored receipts keep the amount and version they were created with and are never recalculated:
+ * v1 receipts hold 2,000 Kč per lesson, v2 receipts hold none.
  */
 export const LEGACY_REWARD_POLICY_VERSION = 1;
 export const XP_ONLY_REWARD_POLICY_VERSION = 2;
-export const LESSON_PRACTICE_CAPITAL_MINOR = BigInt(0);
-export const REWARD_POLICY_VERSION = XP_ONLY_REWARD_POLICY_VERSION;
+export const MODULE_REWARD_POLICY_VERSION = 3;
+export const REWARD_POLICY_VERSION = MODULE_REWARD_POLICY_VERSION;
+/** Per first completion of a lesson outside Foundations under policy v3. */
+export const LESSON_PRACTICE_CAPITAL_MINOR = BigInt(200_000);
 export const LEGACY_LESSON_PRACTICE_CAPITAL_MINOR = BigInt(200_000);
+
+/** The receipt amount and policy version for a first completion of this lesson. */
+export function lessonReward(lessonId: string) {
+  const lesson = curriculumLessons.find((entry) => entry.id === lessonId);
+  if (!lesson) throw new Error(`Unknown lesson: ${lessonId}`);
+  return {
+    practiceCapitalMinor: lesson.moduleId === FOUNDATIONS_MODULE_ID ? BigInt(0) : LESSON_PRACTICE_CAPITAL_MINOR,
+    rewardPolicyVersion: REWARD_POLICY_VERSION,
+  };
+}
 
 export type PracticeCapitalAward = {
   lessonId: string;

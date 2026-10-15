@@ -27,8 +27,9 @@ try {
   await Promise.all([ensureDemoSeed(a, now), ensureDemoSeed(a, now), ensureDemoSeed(b, now)]);
   const getAwards = (id: string) => db.select().from(lessonAward).where(eq(lessonAward.userId, id));
   assert.equal((await getAwards(a)).length, 6);
-  assert.equal((await loadPracticeCapitalSummary(a)).earnedPracticeCapitalMinor, BigInt(0));
-  assert.ok((await getAwards(a)).every((award) => award.practiceCapitalMinor === BigInt(0) && award.rewardPolicyVersion === 2));
+  // Policy v3: the five Foundations receipts are XP only; the seeded Returns lesson carries 2,000 Kč.
+  assert.equal((await loadPracticeCapitalSummary(a)).earnedPracticeCapitalMinor, 200_000n);
+  assert.ok((await getAwards(a)).every((award) => award.rewardPolicyVersion === 3 && award.practiceCapitalMinor === (award.lessonId.startsWith("returns-") ? 200_000n : 0n)));
   await assert.rejects(() => ensureDemoSeed(normal, now));
   assert.equal((await getAwards(normal)).length, 0);
   constraint = `${prefix}_failure`;
@@ -47,10 +48,10 @@ try {
   const [one, two] = await Promise.all([completeLesson(a, "foundations-risk-reward"), completeLesson(a, "foundations-risk-reward")]);
   assert.equal(one.xpAwarded + two.xpAwarded, 60);
   assert.equal(one.practiceCapitalAwardedMinor + two.practiceCapitalAwardedMinor, BigInt(0));
-  assert.equal((await loadPracticeCapitalSummary(a)).earnedPracticeCapitalMinor, 500_000n, "concurrent demo completion grants demo access once, with no lesson capital");
+  assert.equal((await loadPracticeCapitalSummary(a)).earnedPracticeCapitalMinor, 700_000n, "concurrent demo completion grants demo access once (5,000 Kč) beside the seeded Returns reward (2,000 Kč); the Foundations lesson adds none");
   assert.equal((await getAwards(a)).length, 7);
   assert.equal((await getAwards(b)).length, 6);
-  assert.equal((await loadPracticeCapitalSummary(b)).earnedPracticeCapitalMinor, BigInt(0), "new demo identities receive no lesson capital");
+  assert.equal((await loadPracticeCapitalSummary(b)).earnedPracticeCapitalMinor, 200_000n, "a new demo carries only its seeded Returns reward until demo access is recorded");
   const [completedBeforeReview] = await db.select().from(lessonProgress).where(eq(lessonProgress.userId, a));
   const capitalBeforeReview = (await loadPracticeCapitalSummary(a)).earnedPracticeCapitalMinor;
   const review = await completeLesson(a, completedBeforeReview.lessonId);
@@ -68,7 +69,7 @@ try {
   const [profile] = await db.select().from(learningProfile).where(eq(learningProfile.userId, normal));
   assert.deepEqual(profile.goals, []); assert.deepEqual(profile.interests, []);
   assert.equal(profile.timeZone, "Europe/Prague");
-  console.log("PASS: real DB atomic XP-only v2 receipts, review and concurrent idempotence, completedAt preservation, demo ownership/isolation, concurrent seed idempotence, seed rollback/retry, server progression validation, stale onboarding protection, pinned timezone.");
+  console.log("PASS: real DB atomic policy-v3 receipts, review and concurrent idempotence, completedAt preservation, demo ownership/isolation, concurrent seed idempotence, seed rollback/retry, server progression validation, stale onboarding protection, pinned timezone.");
 } finally {
   if (constraint) await sql.unsafe(`ALTER TABLE lesson_award DROP CONSTRAINT IF EXISTS "${constraint}"`);
   for (const id of ids) await db.delete(user).where(eq(user.id, id));

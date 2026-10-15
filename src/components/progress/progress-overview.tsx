@@ -8,6 +8,7 @@ import { LESSON_XP } from "@/features/gamification/domain";
 import type { PortfolioLedgerSummary } from "@/features/portfolio/ledger-summary";
 import type { evaluateUnlock } from "@/features/progression/unlocks";
 import { PORTFOLIO_LAB_UNLOCK_ID, progressionUnlocks } from "@/features/progression/unlocks";
+import { LESSON_PRACTICE_CAPITAL_MINOR } from "@/features/rewards/practice-capital";
 import { formatPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { czechPlural, formatCount, formatDate, formatDecimal } from "@/lib/formatters";
 import { progressModel, type LessonStatus, type OutcomeIcon, type ProgressSummary } from "./progress-model";
@@ -191,7 +192,7 @@ export function ProgressOverview({ summary, unlock, portfolio }: { summary: Summ
         <PortfolioCard summary={summary} unlock={unlock} portfolio={portfolio} model={model} timeZone={timeZone} />
       </div>
 
-      <details className={styles.explanation}><summary>Jak funguje pokrok<ChevronDown size={18} aria-hidden="true" /></summary><p>První dokončení lekce přidá {LESSON_XP} XP. XP měří učení a nedají se utratit. Portfolio Lab se odemkne po dokončení všech {definition.prerequisiteLessonIds.length} lekcí Základů investování a získání {formatDecimal(definition.xpRequired)} XP. Odemčení jednorázově přidá {formatPracticeCapitalMinor(definition.rewardPracticeCapitalMinor)} cvičného kapitálu. Opakování lekce další XP ani kapitál nepřidává.</p><p>Cvičný kapitál je vzdělávací vklad do Portfolio Labu. Nejsou to skutečné peníze ani investiční výnos.</p></details>
+      <details className={styles.explanation}><summary>Jak funguje pokrok<ChevronDown size={18} aria-hidden="true" /></summary><p>První dokončení lekce přidá {LESSON_XP} XP. XP měří učení a nedají se utratit. Portfolio Lab se odemkne po dokončení všech {definition.prerequisiteLessonIds.length} lekcí Základů investování a získání {formatDecimal(definition.xpRequired)} XP. Odemčení jednorázově přidá {formatPracticeCapitalMinor(definition.rewardPracticeCapitalMinor)} cvičného kapitálu. Každé první dokončení lekce mimo Základy přidá {formatPracticeCapitalMinor(LESSON_PRACTICE_CAPITAL_MINOR)}; když ji dokončíš dřív, kapitál počká na odemčení. Opakování lekce další XP ani kapitál nepřidává.</p><p>Cvičný kapitál je vzdělávací vklad do Portfolio Labu. Nejsou to skutečné peníze ani investiční výnos.</p></details>
 
       <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi — Studovna">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link></div></footer>
     </div>

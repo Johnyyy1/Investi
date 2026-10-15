@@ -1,5 +1,5 @@
 import { learningDate, LESSON_XP, shiftDate } from "@/features/gamification/domain";
-import { LESSON_PRACTICE_CAPITAL_MINOR, REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
+import { lessonReward } from "@/features/rewards/practice-capital";
 import { lessonSteps } from "@/features/progress/transition";
 
 /** Relative to the session's UTC calendar day, with the same content and history each time. */
@@ -17,8 +17,8 @@ export function demoSeed(now: Date) {
     return {
       lessonId,
       xp: LESSON_XP,
-      practiceCapitalMinor: LESSON_PRACTICE_CAPITAL_MINOR,
-      rewardPolicyVersion: REWARD_POLICY_VERSION,
+      // The current policy, as for any learner: the seeded Returns lesson carries 2,000 Kč.
+      ...lessonReward(lessonId),
       learningDate: date,
       timeZone: "UTC",
       awardedAt,
