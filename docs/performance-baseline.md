@@ -22,6 +22,8 @@ External market data (FMP quotes, ČNB FX) adds another measured ~320 ms + ~110 
 
 **Phase 3 (bottleneck #1) is done:** the ~300 ms client floor is gone when the server is fast. Route-level `loading.tsx` boundaries on the main routes were replaced by one persistent boundary in the `(app)` layout plus a `useLinkStatus` pending indicator. At +0 ms, navigation went from 321 to 40 ms. When the server is slower than the floor, navigation is 2–5 % slower than before on the data routes. See "Phase 3: client navigation floor".
 
+**Phase 4 (bottleneck #2) is evaluated, not shipped:** `prepare: false` stays. `prepare: true` alone changes nothing (Drizzle's `unsafe()` calls are never prepared); forcing named prepared statements halves server time at +30 ms RTT locally, but Neon pooler compatibility is unverified and PgBouncer serves stale plans after a column-type migration. See "Phase 4: prepared statements".
+
 ## What is measured, and how the layers are separated
 
 | Layer | Metric | Source |
@@ -477,3 +479,69 @@ Requires `cacheComponents` and `partialPrefetching`, which this phase excludes. 
 - `test:instrument-browser-unavailable` fails identically on the baseline build in this environment ("old quote is labeled stale"). It depends on the deterministic market clock. With `DETERMINISTIC_MARKET_NOW=2026-01-20T15:00:00Z` that assertion passes on the new build, and the run stops at a later history-range check that also depends on the clock (not checked on the baseline with that clock). The stale-data labels on the instrument page are covered by `test:portfolio-browser-closed`, which passes.
 
 Benchmark additions (`scripts/benchmark-navigation.mjs`): `urlMs`, `pendingMs`, `rscEndMs` (Resource Timing end of the navigation response), and navigation/prefetch RSC request counts per navigation.
+
+## Phase 4: prepared statements (measured 2026-10-14)
+
+Addresses bottleneck #2. **Decision: keep `prepare: false`.** No runtime, schema, migration, auth, pool or deployment change. Added: `npm run test:prepared-statements` (`scripts/validate-prepared-statements.mts`), the check that must pass on a disposable Neon branch before this is revisited.
+
+### Connection configuration
+
+- `.env` points at a Neon **pooled** endpoint (`-pooler` hostname, `sslmode`/`channel_binding` set). It was not connected to: it may be production. Vercel's env vars were not inspected (no CLI access), so deployed/local equivalence is unverified.
+- `scripts/vercel-build.mjs` runs `drizzle-kit migrate` with the same `DATABASE_URL` as the runtime, i.e. migrations go through the transaction pooler. Neon lists schema migrations as a direct-connection use case. Minimal compatible option (not done, needs a Vercel env change and approval): optional `DATABASE_URL_UNPOOLED` read by `drizzle.config.ts`, falling back to `DATABASE_URL`.
+- Neon (docs, 2026-10): PgBouncer in `pool_mode=transaction`, protocol-level prepared statements supported "as of PgBouncer 1.22.0", `max_prepared_statements=1000`, settings not user-configurable, no admin console. The running PgBouncer version is not stated.
+- postgres.js 3.4.9 defaults: `max: 10`, `idle_timeout: null`, `max_lifetime` 30–60 min, `fetch_types: true`. Statement cache is per connection and reset on reconnect; it retries once on `FetchPreparedStatement` / `RevalidateCachedQuery`.
+
+### Finding 1: `prepare: true` alone is a no-op here
+
+Drizzle (`drizzle-orm/postgres-js/session.js`) runs every statement through `client.unsafe(query, params)`, and postgres.js's `unsafe` sets `prepare: false` per query unless told otherwise. The client option only gates it. Measured: variant B (`postgres(url, { prepare: true })`) is identical to A in every microbenchmark cell. Real prepared statements need a wrapper that passes `{ prepare: true }` to `unsafe` on the client and on `begin`/`savepoint` transaction clients (variant **C**, the version in `validate-prepared-statements.mts`).
+
+### Round trips per operation (+30 ms RTT, one connection, median)
+
+| Operation | A `prepare: false` | C prepared |
+| --- | --- | --- |
+| New connection + first query | 4.6 RTT | 4.6 RTT |
+| First run of a statement on a reused connection | 2.2 | 2.2 |
+| Repeated parameterised statement | 2.2 | **1.1** |
+| Query without parameters (simple protocol) | 1.1 | 1.1 |
+| Transaction (BEGIN, FOR UPDATE, SELECT, COMMIT), first / repeated | 6.7 / 6.7 | 6.7 / **4.5** |
+
+Identical direct and through local PgBouncer 1.26.1 (transaction mode, `max_prepared_statements=1000`). Setup cost is per connection and per statement shape; C only saves on reuse.
+
+### Navigation (production build, warm, median / p95 ms; server = `serverPageMs`)
+
+One experimental build for both variants, runs interleaved A, C per RTT, n=15 warm, 3 cold, disposable local Postgres 15 through `pg-latency-proxy.mjs`. A repeat of A at +30 at the end was 2–3 % faster than the first A run (drift bound).
+
+| Route | RTT | Navigation A → C | Server A → C | Hard-load TTFB A → C |
+| --- | --- | --- | --- | --- |
+| `/learn` | +0 | 38.7 → 39.1 | 8.2 → 7.3 | 7.4 → 9.2 |
+| | +10 | 158.2 / 188.1 → 106.0 / 137.7 | 126.2 → 66.3 | 77.8 → 42.3 |
+| | +30 | 385.9 / 414.6 → **220.5 / 241.4** | 338.4 → **172.5** | 203.4 → 104.4 |
+| | +60 | 675.0 / 690.2 → 357.8 / 434.5 | 638.1 → 323.9 | 388.6 → 196.0 |
+| `/progress` | +30 | 387.3 / 388.6 → 220.9 / 255.8 | 336.0 → 173.9 | 202.5 → 104.3 |
+| | +60 | 684.8 / 702.1 → 369.7 / 497.1 | 638.0 → 323.2 | 389.3 → 195.0 |
+| `/lab` | +30 | 239.9 / 252.0 → 136.0 / 137.7 | 203.6 → 103.3 | 201.7 → 103.0 |
+| | +60 | 419.9 / 423.7 → 225.3 / 287.5 | 382.9 → 193.6 | 387.5 → 194.1 |
+| `/lab/portfolio` | +30 | 372.0 / 388.2 → 205.2 / 223.7 | 336.6 → 170.4 | 201.0 → 103.3 |
+| | +60 | 659.3 / 675.9 → 355.1 / 376.3 | 630.8 → 320.6 | 386.3 → 196.8 |
+
+Through local PgBouncer at +30: `/learn` 373.2 → 218.1 navigation, 334.0 → 174.2 server; other routes match the direct runs within 3 %. Query counts unchanged. C's p95 at +60 is wider (first statement use on a newly opened pool connection). At +0 nothing changes.
+
+**Concurrent requests** (4 users × 4 parallel RSC requests to `/learn`, 6 rounds, +30 ms through PgBouncer, two runs each): A median 1097 / 1084 ms (p95 1232 / 1224), C 225 / 219 ms (p95 379 / 370), 0 errors, peak 10 backend connections in both (the pool max). Under `prepare: false` a describe-first query holds its connection until it completes, so a saturated pool queues; prepared queries pipeline.
+
+### Compatibility (local PgBouncer 1.26.1, transaction mode, server pool of 2 shared by 40 client connections)
+
+Local PgBouncer is a stand-in, **not proof of Neon compatibility**.
+
+- **Pass (C):** concurrent reads, `FOR UPDATE` transactions, savepoints, rollbacks, varying `IN` list shapes, exact `BigInt` totals beyond 2^53, PgBouncer `RECONNECT`, `ADD COLUMN`, client reconnects and restarts. No "prepared statement already exists / does not exist" errors.
+- **All persistence suites pass under C through PgBouncer:** `test:persistence`, `test:migration`, `test:portfolio-persistence` (buy/sell/reward concurrency), `test:portfolio-allocation`, `test:portfolio-migration`, `test:portfolio-closed-market`, `test:progression-persistence` (exactly-once unlock), `test:personalization-persistence`, `test:curriculum-seed`, `test:log-returns-persistence`.
+- **Fail (C only, through PgBouncer):** after `ALTER COLUMN … TYPE` on a selected column, `cached plan must not change result type` for that statement (3 and ~2,000 failures in two 14 s runs; 0 direct, 0 with A). PgBouncer shares the server-side statement by query text, so postgres.js's single re-prepare retry hits the same stale plan, and Neon offers no `RECONNECT`. Production migrations run in `vercel-build` against live traffic, so a type-changing migration could break reads until Neon's server connections recycle (lifetime unknown).
+- **Pre-existing, unrelated to this choice:** terminating backends under heavy load crashes the Node process with an uncaught `TypeError: Cannot read properties of null (reading 'write')` in postgres.js `nextWrite` (A 6/6 direct, 5/6 through PgBouncer; C 6/6 and 6/6; 40 workers, kill after 3 s). Neon compute restarts close connections the same way. Worth a separate fix (upstream report or driver upgrade).
+
+### Before enabling prepared statements in production
+
+1. Run `PREPARED_TEST_DATABASE_URL=<disposable Neon branch pooler URL> PREPARED_TEST_CONFIRM_DISPOSABLE=1 npm run test:prepared-statements` (refuses the `DATABASE_URL` endpoint, prints no credentials); all asserted checks must pass, and read the reported schema-change behaviour.
+2. Measure the real Vercel↔Neon RTT (`INVESTI_PERF_DEBUG=1` on a preview) to size the gain; it is ~RTT × (statements on the critical path) on warm connections only.
+3. Decide a migration policy for type changes (expand → backfill → cutover, never in-place `ALTER TYPE` on read columns), or key statement text per deployment (e.g. a `/* deployment id */` prefix) so a new deployment never reuses old server-side plans.
+4. Then the change is the wrapper in `src/db/index.ts` (keep the dev singleton); rollback is restoring `prepare: false` / removing the wrapper and redeploying, no data or schema involved.
+
+Not changed: pool size, `idle_timeout`, `max_lifetime` (no evidence they are wrong for Vercel; a short `idle_timeout` would also discard the statement cache), auth, transactions, locking, rewards.

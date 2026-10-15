@@ -126,22 +126,27 @@ export function prepareCompactDemo({ root }: Pick<SectionContext, "root">) {
 export function armCompactDemo(ctx: SectionContext, card: HTMLElement) {
   const { inContext } = ctx;
   const cursor = $(card, "[data-demo-cursor]")!;
-  const glowB = $(card, '[data-answer="B"] [data-answer-glow]')!;
+  // Answers are looked up lazily: when the demo is armed, the card may still show the revealed state without them.
+  const glowB = () => $(card, '[data-answer="B"] [data-answer-glow]')!;
   let tl: gsap.core.Timeline | undefined;
   let removeStop: (() => void) | undefined;
   const finish = () => {
     tl?.kill();
     gsap.set(cursor, { autoAlpha: 0 });
-    gsap.set(glowB, { autoAlpha: 0 });
+    gsap.set(glowB(), { autoAlpha: 0 });
     gsap.set($(card, '[data-answer="A"]'), { x: 0 });
     removeStop?.();
   };
 
   const play = () => inContext(() => {
+    // Commit the unanswered question before measuring: a revealed compact card (server render, or a learner's
+    // own answer) hides the answers, and the deferred reset from prepareCompactDemo may not have rendered yet.
+    send(card, { answer: null, revealed: false });
     const answerA = () => $(card, '[data-answer="A"]')!;
     const answerB = () => $(card, '[data-answer="B"]')!;
     const submit = () => $(card, "[data-submit]");
     const feedback = () => $(card, "[data-feedback]")!;
+    const glow = glowB();
     const host = card.getBoundingClientRect();
     const a = answerA().getBoundingClientRect();
     gsap.set(cursor, { x: a.left - host.left + a.width * 0.9, y: a.top - host.top + a.height + 120, autoAlpha: 0, scale: 1 });
@@ -161,12 +166,14 @@ export function armCompactDemo(ctx: SectionContext, card: HTMLElement) {
     // The mistake: a small, quick shake. Then the explanation arrives and the right answer is highlighted.
     tl.to(answerA(), { keyframes: { x: [0, -9, 8, -6, 4, -2, 0] }, duration: 0.55, ease: "power1.inOut" }, "+=0.12")
       .add(() => expand(feedback(), 16), "+=0.1")
-      .fromTo(glowB, { autoAlpha: 0, scale: 0.97 }, { autoAlpha: 1, scale: 1, duration: 0.7, ease: EASE.reward }, "<0.35")
+      .fromTo(glow, { autoAlpha: 0, scale: 0.97 }, { autoAlpha: 1, scale: 1, duration: 0.7, ease: EASE.reward }, "<0.35")
       .to(answerB(), { scale: 1.015, duration: 0.5, ease: EASE.reward }, "<")
-      .to(glowB, { autoAlpha: 0.35, duration: 0.8, yoyo: true, repeat: 3, ease: "sine.inOut" })
-      .to(glowB, { autoAlpha: 0, duration: 0.8 })
+      .to(glow, { autoAlpha: 0.35, duration: 0.8, yoyo: true, repeat: 3, ease: "sine.inOut" })
+      .to(glow, { autoAlpha: 0, duration: 0.8 })
       .to(answerB(), { scale: 1, duration: 0.5 }, "<");
   });
 
-  ScrollTrigger.create({ trigger: card, start: "top 70%", once: true, onEnter: play });
+  // When the card is already past its start (deep link, restored scroll, media-query re-run), create() fires onEnter
+  // synchronously inside React's layout effect, where the reset above cannot render yet. Start on the next frame instead.
+  ScrollTrigger.create({ trigger: card, start: "top 70%", once: true, onEnter: () => requestAnimationFrame(() => { if (!ctx.isCancelled()) play(); }) });
 }
