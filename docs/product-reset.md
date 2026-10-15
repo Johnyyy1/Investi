@@ -41,7 +41,7 @@ Better Auth creates an isolated anonymous user/session. Server initialization ve
 
 The seed derives 360 XP and a four-day streak from its rows. Its receipts grant zero capital under current policy; the independent one-time demo entitlement grants access and 5,000 Kč. Browser/device identity flags cannot authorize a normal account.
 
-Demo sessions start with 24 hours and guest sessions with seven days; Better Auth extends them while they are used. Retention therefore follows sessions, not age: an anonymous identity is removed, with its cascading user-owned data, once it has had no valid session for over a day. A daily Vercel Cron job runs this through `/api/cron/cleanup-anonymous` (protected by `CRON_SECRET`); `demo:cleanup` is the same rule as a dry run, and `demo:cleanup -- --apply` applies it. `test:anonymous-cleanup` covers the rule, cascades, skipped row locks, batching and concurrent runs.
+A demo is one-time: its session ends 24 hours after it started, because the session update hook caps every Better Auth refresh at that end (`demoSessionExpiry`); a demo extended before this cap ends on its next request. Guest sessions last seven days and extend while used. `test:demo-session` covers both against a running server. Retention follows sessions, not age: an anonymous identity is removed, with its cascading user-owned data, once it has had no valid session for over a day. A daily Vercel Cron job runs this through `/api/cron/cleanup-anonymous` (protected by `CRON_SECRET`); `demo:cleanup` is the same rule as a dry run, and `demo:cleanup -- --apply` applies it. `test:anonymous-cleanup` covers the rule, cascades, skipped row locks, batching and concurrent runs.
 
 ## Labs
 

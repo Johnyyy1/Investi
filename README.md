@@ -95,7 +95,7 @@ Run migrations and seed on a disposable local QA database, with `DATABASE_URL` a
 
 ## Anonymous identity retention
 
-Demos and guests are anonymous Better Auth identities without a password or provider account. A demo session starts with 24 hours and a guest session with seven days; Better Auth extends a session while it is used. Once every session of an anonymous identity has expired, nobody can sign in to it again.
+Demos and guests are anonymous Better Auth identities without a password or provider account. A demo is one-time: its session lasts a fixed 24 hours from the start and using it never extends that. A guest session lasts seven days and, like an account's, extends while it is used. Once every session of an anonymous identity has expired, nobody can sign in to it again.
 
 A daily Vercel Cron job (`vercel.json`) calls `/api/cron/cleanup-anonymous`, which removes anonymous identities that have had no valid session for over a day (and were created over a day ago). Deleting the user cascades its sessions, profile, progress, receipts, unlocks, portfolios and trades; saved accounts and shared curriculum/market data are never touched. Rows locked by a guest claim or lesson completion are skipped and retried by the next run. The endpoint requires `Authorization: Bearer $CRON_SECRET` and refuses every request when `CRON_SECRET` is not set, so set it in the Vercel project for production.
 

@@ -30,6 +30,7 @@
     "test:portfolio-browser-closed": "node scripts/validate-portfolio-closed-market.mjs",
     "test:instrument-browser-unavailable": "node scripts/validate-instrument-unavailable.mjs",
     "test:anonymous-cleanup": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-anonymous-cleanup.mts",
+    "test:demo-session": "node scripts/validate-demo-session.mjs",
     "test:guest-claim": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-guest-claim.mts",
     "test:portfolio-migration": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-portfolio-migration.mts",
     "test:progression-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-progression-persistence.mts",
