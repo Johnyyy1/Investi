@@ -138,10 +138,18 @@ try {
   const before = await sql`select * from lesson_progress where user_id=${id} order by lesson_id`;
   const awards = await sql`select * from lesson_award where user_id=${id} order by lesson_id`;
   await root().getByRole("link", { name: /^Zopakovat celou lekci/ }).first().click();
+  await page.waitForURL(`**${href(foundation[0])}`);
   await page.getByText("Lekce už je dokončena. Opakování uložený postup nezmění.", { exact: true }).waitFor();
-  await page.getByRole("radio").first().check();
+  // Spoření vs. investování: concepts → one question → summary.
+  await page.getByRole("button", { name: "Pokračovat", exact: true }).click();
+  await page.getByRole("heading", { name: "Peníze v obálce", exact: true }).waitFor();
+  await page.getByLabel("Koupím si za ně o něco méně.", { exact: true }).check();
   await page.getByRole("button", { name: "Zkontrolovat odpověď", exact: true }).click();
-  await page.getByRole("button", { name: /^(Pokračovat|Zkusit znovu)$/ }).click();
+  await page.getByRole("heading", { name: "Správně", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Pokračovat", exact: true }).click();
+  await page.getByRole("heading", { name: "Lekce hotová", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Dokončit opakování", exact: true }).click();
+  await page.getByRole("heading", { name: "Opakování dokončeno", exact: true }).waitFor();
   await page.waitForTimeout(500);
   assert.deepEqual(await sql`select * from lesson_progress where user_id=${id} order by lesson_id`, before, "review leaves saved progress intact");
   assert.deepEqual(await sql`select * from lesson_award where user_id=${id} order by lesson_id`, awards, "review awards nothing");
