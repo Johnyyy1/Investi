@@ -165,16 +165,26 @@ try {
   }
   checks.push("Six original assets and all six sections; responsive/text-200% reflow, no overflow/clipping/unintentional split words; natural Czech heading hyphenation; mobile menu keyboard, Escape, focus return and touch targets.");
   await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
+  // Landing below the lesson triggers (deep link, restored scroll) fires them on creation; the compact demo must still play.
+  for (const width of [1440, 800, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("about:blank");
+    await page.goto(`${baseURL}/#portfolio-lab`);
+    await compactLesson().locator('[data-answer="A"][aria-pressed="true"]').waitFor();
+    assert.equal(await page.locator("main > section").count(), 6, `${width}px: deep link renders the landing`);
+  }
+  checks.push("Deep link below the lesson demos renders the landing and plays the compact demo at desktop and mobile widths.");
+  // From load, reduced motion leaves both previews in their server-rendered state; with motion the landing resets
+  // them and replays a scripted answer, so the deterministic interaction checks below run without it.
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(baseURL);
   await page.keyboard.press("Tab");
   assert.equal(await page.getByRole("link", { name: "Přejít k obsahu" }).evaluate(element => element === document.activeElement), true);
   await page.keyboard.press("Enter");
   assert.equal(await page.locator("main").evaluate(element => element === document.activeElement), true);
-  await page.emulateMedia({ reducedMotion: "reduce" });
   assert.equal(await button(lesson(), "Pokračovat").evaluate(element => getComputedStyle(element).transitionDuration), "0s");
   assert.equal(await page.locator('img[src*="curiosity"]').evaluate(element => getComputedStyle(element).animationName), "none");
-  await page.emulateMedia({ reducedMotion: "no-preference" });
   const writes = [];
   page.on("request", request => { if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method())) writes.push(request.url()); });
   for (const scope of [lesson(), compactLesson()]) {
@@ -203,6 +213,7 @@ try {
   assert.deepEqual(writes, [], "Marketing interactions perform no network mutation");
   assert.equal((await (await context.request.get(`${baseURL}/api/auth/get-session`)).json()), null, "Previews never create an anonymous identity");
   checks.push("Both independent lessons: initial answer, retry focus, disabled submit, incorrect/correct feedback. Three keyboard/pointer allocation controls keep 100%; save/reset remains local; no mutation request or session creation.");
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   for (const [label, path, heading] of [["Začít se učit", "/sign-up", "Vytvořit účet"], ["Přihlásit se", "/sign-in", "Vítej zpět"]]) {
     await page.goto(baseURL);
     await page.getByRole("link", { name: label, exact: true }).first().click();
@@ -221,7 +232,8 @@ try {
   }
   for (const [anchor, target] of [["Jak to funguje", "#jak-to-funguje"], ["Portfolio Lab", "#portfolio-lab"]]) {
     await page.goto(baseURL); await page.getByRole("navigation", { name: "Hlavní navigace", exact: true }).getByRole("link", { name: anchor, exact: true }).click();
-    assert.equal(new URL(page.url()).hash, target);
+    // With motion, anchors smooth-scroll and update the hash once they land.
+    await page.waitForURL(url => url.hash === target);
   }
   await page.setViewportSize({ width: 390, height: 900 });
   await page.goto(baseURL); await page.getByLabel("Navigační menu").click();
