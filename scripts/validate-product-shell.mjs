@@ -34,7 +34,7 @@ try {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${label}: ${width}px overflow`);
       assert.equal(await page.locator("h1:visible").count(), 1, `${label}: one page heading`);
       const nav = page.getByRole("navigation", { name: width < 1024 ? "Mobilní navigace" : "Hlavní navigace" });
-      assert.deepEqual(await nav.getByRole("link").allTextContents(), ["Učení", ["learn", "progress", "settings", "backtesting"].includes(label) && width >= 1024 ? "Portfolio Lab" : "Lab", "Pokrok"]);
+      assert.deepEqual(await nav.getByRole("link").allTextContents(), ["Učení", "Lab", "Pokrok"]);
       const active = nav.locator('[aria-current="page"]');
       assert.equal(await active.count(), activeHref ? 1 : 0);
       if (activeHref) assert.equal(await active.getAttribute("href"), activeHref);
@@ -92,7 +92,7 @@ try {
   await page.goto(`${baseURL}/lab`);
   await heading("Co se stane, když…");
   await layouts("lab", "/lab");
-  await page.getByRole("link", { name: /Otevřít Backtesting Lab/ }).click();
+  await page.getByRole("link", { name: /Nastavit pokus/ }).click();
   await button("Spustit backtest").click();
   const finalValue = page.getByTestId("metric-konečná-hodnota");
   await finalValue.waitFor();

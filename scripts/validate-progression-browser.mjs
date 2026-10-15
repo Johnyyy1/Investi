@@ -68,12 +68,16 @@ try {
   await page.getByTestId("total-xp").filter({ hasText: "0 XP" }).waitFor();
   await page.screenshot({ path: `${screenshotDir}/progress-zero-1440.png`, fullPage: true });
   await page.goto(`${baseURL}/lab`);
-  await page.getByText(/Zamčeno · dokonči Základy investování · 0 \/ 420 XP/).waitFor();
+  await page.getByRole("heading", { name: "Otevře se po Základech investování" }).waitFor();
+  assert.equal(await page.getByText("0 / 7 lekcí Základů").count(), 1);
+  assert.equal(await page.getByRole("link", { name: /Otevřít další lekci/ }).getAttribute("href"), "/learn/investing-foundations/why-invest");
+  assert.equal(await page.getByRole("link", { name: /Nastavit pokus/ }).getAttribute("href"), "/lab/backtesting", "Backtesting stays open while Portfolio Lab is locked");
   const labNav = page.getByRole("navigation", { name: "Hlavní navigace" }).getByRole("link", { name: /Lab/ });
   assert.equal(await labNav.getAttribute("href"), "/lab", "locked Lab navigation remains clickable");
   await labNav.focus();
   await labNav.press("Enter");
-  await page.getByRole("link", { name: "Zobrazit podmínky odemčení" }).click();
+  await page.waitForURL(`${baseURL}/lab`);
+  await page.goto(`${baseURL}/lab/portfolio`);
   await page.getByRole("heading", { name: "Portfolio Lab", exact: true }).waitFor();
   assert.equal(await page.getByText("0 / 420 XP").count(), 1);
   assert.equal(await page.getByText("0 / 7 lekcí").count(), 1);
