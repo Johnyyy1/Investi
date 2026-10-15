@@ -6,7 +6,7 @@ import { anonymous } from "better-auth/plugins/anonymous";
 import { eq } from "drizzle-orm";
 import { ensureDemoSeed } from "@/features/demo/repository";
 import { claimGuestLearning, deleteDemoIdentity } from "@/features/guest/repository";
-import { DEMO_SESSION_MS, GUEST_KIND_HEADER, GUEST_SESSION_MS, isGuestIdentity } from "@/features/guest/identity";
+import { DEMO_SESSION_MS, demoSessionExpiry, GUEST_KIND_HEADER, GUEST_SESSION_MS, isDemoIdentity, isGuestIdentity } from "@/features/guest/identity";
 import { nextCookies } from "better-auth/next-js";
 
 import { db } from "@/db";
@@ -41,6 +41,12 @@ export const auth = betterAuth({
       if (isGuestIdentity(owner)) return { data: { ...session, expiresAt: new Date(Date.now() + GUEST_SESSION_MS) } };
       await ensureDemoSeed(owner.id);
       return { data: { ...session, expiresAt: new Date(Date.now() + DEMO_SESSION_MS) } };
+    } }, update: { before: async (data, ctx) => {
+      // A refresh runs with the session it refreshes in context. A demo keeps its fixed end; returning
+      // false instead would make Better Auth treat the refresh as failed and sign the demo out early.
+      const current = ctx?.context.session;
+      if (!data.expiresAt || !current || !isDemoIdentity(current.user as { isAnonymous?: boolean | null; anonymousKind?: string | null })) return { data };
+      return { data: { ...data, expiresAt: demoSessionExpiry(new Date(current.session.createdAt), new Date(data.expiresAt)) } };
     } } },
   },
   plugins: [anonymous({
