@@ -48,13 +48,6 @@ function moveTo(host: HTMLElement, target: () => HTMLElement | null, dx = 0, dy 
 const press = (tl: gsap.core.Timeline, cursor: HTMLElement, at: string | number) =>
   tl.to(cursor, { scale: 0.82, duration: 0.1, ease: "power2.out" }, at).to(cursor, { scale: 1, duration: 0.25, ease: EASE.enter });
 
-function stopOnInteraction(root: HTMLElement, onStop: () => void) {
-  const stop = () => { root.removeEventListener("pointerdown", stop); root.removeEventListener("keydown", stop); onStop(); };
-  root.addEventListener("pointerdown", stop);
-  root.addEventListener("keydown", stop);
-  return () => { root.removeEventListener("pointerdown", stop); root.removeEventListener("keydown", stop); };
-}
-
 /**
  * Hero lesson card: a ghost cursor picks answer B, checks it, the feedback panel expands, "+20 XP" pops
  * with a small burst and the lesson progress fills. It ends on the same state the page server-renders.
@@ -72,14 +65,10 @@ export function armHeroDemo(ctx: SectionContext, card: HTMLElement) {
   const { inContext } = ctx;
   const cursor = $(card, "[data-demo-cursor]")!;
   const progress = $(card, "[data-lesson-progress]")!;
-  let tl: gsap.core.Timeline | undefined;
-  let removeStop: (() => void) | undefined;
-
+  // The preview is read-only, so the script always runs to its end state; nothing the visitor does can interrupt it.
   const finish = () => {
-    tl?.kill();
     gsap.set(cursor, { autoAlpha: 0 });
     gsap.set(progress, { scaleX: 1 });
-    removeStop?.();
   };
 
   const play = () => inContext(() => {
@@ -90,8 +79,7 @@ export function armHeroDemo(ctx: SectionContext, card: HTMLElement) {
     const start = answerB()!.getBoundingClientRect();
     const host = card.getBoundingClientRect();
     gsap.set(cursor, { x: start.left - host.left + start.width * 0.8, y: start.top - host.top + start.height + 90, autoAlpha: 0, scale: 1 });
-    tl = gsap.timeline({ onComplete: finish });
-    removeStop = stopOnInteraction(card, finish);
+    const tl = gsap.timeline({ onComplete: finish });
     tl.to(cursor, { autoAlpha: 1, duration: 0.3 })
       .to(cursor, { ...moveTo(card, answerB, -60, 4), duration: 1, ease: EASE.scrub }, "<")
       .add(() => send(card, { answer: "B", revealed: false }), "+=0.18");
@@ -128,19 +116,15 @@ export function armCompactDemo(ctx: SectionContext, card: HTMLElement) {
   const cursor = $(card, "[data-demo-cursor]")!;
   // Answers are looked up lazily: when the demo is armed, the card may still show the revealed state without them.
   const glowB = () => $(card, '[data-answer="B"] [data-answer-glow]')!;
-  let tl: gsap.core.Timeline | undefined;
-  let removeStop: (() => void) | undefined;
   const finish = () => {
-    tl?.kill();
     gsap.set(cursor, { autoAlpha: 0 });
     gsap.set(glowB(), { autoAlpha: 0 });
     gsap.set($(card, '[data-answer="A"]'), { x: 0 });
-    removeStop?.();
   };
 
   const play = () => inContext(() => {
-    // Commit the unanswered question before measuring: a revealed compact card (server render, or a learner's
-    // own answer) hides the answers, and the deferred reset from prepareCompactDemo may not have rendered yet.
+    // Commit the unanswered question before measuring: a revealed compact card (the server render) hides the answers,
+    // and the deferred reset from prepareCompactDemo may not have rendered yet.
     send(card, { answer: null, revealed: false });
     const answerA = () => $(card, '[data-answer="A"]')!;
     const answerB = () => $(card, '[data-answer="B"]')!;
@@ -150,8 +134,7 @@ export function armCompactDemo(ctx: SectionContext, card: HTMLElement) {
     const host = card.getBoundingClientRect();
     const a = answerA().getBoundingClientRect();
     gsap.set(cursor, { x: a.left - host.left + a.width * 0.9, y: a.top - host.top + a.height + 120, autoAlpha: 0, scale: 1 });
-    tl = gsap.timeline({ onComplete: finish });
-    removeStop = stopOnInteraction(card, finish);
+    const tl = gsap.timeline({ onComplete: finish });
     tl.to(cursor, { autoAlpha: 1, duration: 0.3 })
       .to(cursor, { ...moveTo(card, answerA, -80, 4), duration: 1, ease: EASE.scrub }, "<")
       .add(() => send(card, { answer: "A", revealed: false }), "+=0.18");

@@ -34,7 +34,7 @@ export function PenLanding() {
               <a className={styles.textAction} href="#jak-to-funguje">Jak to funguje</a>
             </div>
           </div>
-          <div className={styles.heroLessonWrap} data-hero-card role="group" aria-label="Interaktivní ukázka; nezapisuje pokrok ani neuděluje XP">
+          <div className={styles.heroLessonWrap} data-hero-card role="group" aria-label="Ukázka lekce; nezapisuje pokrok ani neuděluje XP">
             <Image className={styles.heroArt} data-hero-art src="/marketing/v14-curiosity-cropped.png" alt="" aria-hidden="true" width={620} height={628} sizes="(max-width: 500px) 98px, (max-width: 1100px) 194px, 256px" preload />
             <div className={styles.lessonBrowserHeader}><span className={styles.smallWordmark}>investi!</span><span>Základy investování / Portfolio, váhy a diverzifikace</span><span>Lekce 7 ze 7 · ≈ 10 min</span><span>Ukázka lekce</span></div>
             <LessonPreview hero />
@@ -96,7 +96,7 @@ export function PenLanding() {
         </div>
       </section>
       <section className={styles.closing} aria-labelledby="closing-title">
-        <div className={styles.container}><Image className={styles.closingArt} data-closing-art src="/marketing/generated-19.webp" alt="" aria-hidden="true" width={1200} height={896} sizes="(max-width: 500px) 300px, (max-width: 780px) 500px, 360px" /><SplitHeading id="closing-title" mode="chars">Zvědavost stačí.<br/>Začni první lekcí.</SplitHeading><p data-reveal data-reveal-delay="0.3">Nemusíš mít všechno nastudované.<br/> Právě od toho je tu investi.</p><div className={styles.closingActions} data-reveal data-reveal-delay="0.4"><Link href="/onboarding" prefetch={false} className={`${styles.primaryButton} ${styles.shimmerHost}`} data-lift data-press {...magneticProps}>Začít se učit <ArrowRight aria-hidden="true" size={18}/><span className={styles.shimmer} data-shimmer="idle" aria-hidden="true"/></Link><DemoButton compact className={styles.demoButtonWrap} buttonClassName={styles.secondaryButton}/></div></div>
+        <div className={styles.container}><Image className={styles.closingArt} data-closing-art src="/marketing/generated-19.webp" alt="" aria-hidden="true" width={1200} height={896} sizes="(max-width: 500px) 300px, (max-width: 780px) 500px, 360px" /><SplitHeading id="closing-title" mode="chars">Zvědavost stačí.<br/>Začni první lekcí.</SplitHeading><p data-reveal data-reveal-delay="0.3">Nemusíš mít všechno nastudované.<br/> Právě od toho je tu investi.</p><div className={styles.closingActions} data-reveal data-reveal-delay="0.4"><Link href="/onboarding" prefetch={false} className={`${styles.primaryButton} ${styles.shimmerHost}`} data-lift data-press {...magneticProps}>Začít se učit <ArrowRight aria-hidden="true" size={18}/><span className={styles.shimmer} data-shimmer aria-hidden="true"/></Link><DemoButton compact className={styles.demoButtonWrap} buttonClassName={styles.secondaryButton}/></div></div>
       </section>
     </main>
     <footer className={styles.footer} data-footer><div className={styles.container}><Link href="/" className={styles.wordmark}>investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><nav aria-label="Patička"><a href="#jak-to-funguje">Jak to funguje</a><Link href="/sign-in" prefetch={false}>Přihlásit se</Link></nav></div></footer>

@@ -32,14 +32,16 @@ export function MobileNavigation() {
 
 const reasoning = "Když jedna investice klesne, nemusí stejně reagovat všechny ostatní. Diverzifikace ale není záruka proti ztrátě.";
 
-/** Independent illustrative state: no lesson engine, auth, storage, or mutations. */
+/**
+ * Read-only illustration of a lesson step: no lesson engine, auth, storage, or mutations, and nothing to click.
+ * On the landing the motion layer plays a scripted answer through LESSON_DEMO_EVENT; without motion it stays on
+ * the server-rendered answered state.
+ */
 export function LessonPreview({ compact = false, hero = false }: { compact?: boolean; hero?: boolean }) {
   const [answer, setAnswer] = useState<"A" | "B" | null>("B");
   const [revealed, setRevealed] = useState(true);
   const [hold, setHold] = useState(false);
-  const firstAnswer = useRef<HTMLButtonElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
-  // The landing motion layer replays a scripted answer through these events; no persistence, same state as a real click.
   // Layout effect: the listener must exist before the parent motion layer's layout effect dispatches its first reset.
   useLayoutEffect(() => {
     const el = rootRef.current;
@@ -56,39 +58,34 @@ export function LessonPreview({ compact = false, hero = false }: { compact?: boo
   const feedbackTitle = correct
     ? "Přesně. Rozkládáš závislost, ne rušíš riziko."
     : "Ještě ne. Diverzifikace riziko neruší.";
-  function retry() {
-    setAnswer(null);
-    setRevealed(false);
-    setHold(false);
-    requestAnimationFrame(() => firstAnswer.current?.focus());
-  }
   const feedback = <><h3 className={correct ? undefined : styles.feedbackWrong}>{feedbackTitle}</h3><p>{reasoning}</p></>;
-  return <div ref={rootRef} data-lesson-demo={hero ? "hero" : compact ? "compact" : "base"} className={hero ? styles.heroLessonContent : styles.lessonPreview} role="group" aria-label="Interaktivní ukázka; nezapisuje pokrok ani neuděluje XP">
+  return <div ref={rootRef} data-lesson-demo={hero ? "hero" : compact ? "compact" : "base"} className={hero ? styles.heroLessonContent : styles.lessonPreview} role="group" aria-label="Ukázka lekce; nezapisuje pokrok ani neuděluje XP">
     <div className={`${styles.lessonCard} ${compact ? styles.lessonCompact : styles.heroLessonMain}`}>
       <p className={styles.lessonDisclosure}>Ukázka lekce · ilustrační odpověď</p>
       <div className={styles.lessonMeta}><span>Portfolio, váhy a diverzifikace</span><span>≈ 10 min</span></div>
       <p className={styles.lessonTrack}>ZÁKLADY INVESTOVÁNÍ · Lekce 7 ze 7</p>
       {(!compact || !revealed || hold) && <>
         <h3 className={styles.lessonQuestion}>Proč rozdělit peníze mezi více investic?</h3>
-        <div className={styles.answers} role="group" aria-label="Odpověď na ukázkovou otázku">
-          {(["A", "B"] as const).map(key => <button ref={key === "A" ? firstAnswer : undefined} key={key} type="button"
-            className={`${styles.answer} ${answer === key ? styles.answerSelected : ""} ${answer === key && revealed && key !== "B" ? styles.answerWrong : ""}`} data-lift
-            aria-pressed={answer === key} data-answer={key} onClick={() => { setAnswer(key); setRevealed(false); setHold(false); }}>
+        <ul className={styles.answers} aria-label="Ukázkové odpovědi">
+          {(["A", "B"] as const).map(key => <li key={key}
+            className={`${styles.answer} ${answer === key ? styles.answerSelected : ""} ${answer === key && revealed && key !== "B" ? styles.answerWrong : ""}`}
+            data-answer={key} data-selected={answer === key ? "" : undefined}>
             <span>{key}</span><span>{key === "A" ? "Aby jejich hodnota nemohla klesnout." : "Aby výsledek nezávisel na jedné investici."}</span>
+            {answer === key && <span className={styles.visuallyHidden}>{revealed ? (key === "B" ? " · vybráno, správně" : " · vybráno, chybně") : " · vybráno"}</span>}
             {answer === key && revealed && (key === "B"
               ? <CircleCheck size={18} aria-hidden="true"/>
               : <CircleX size={18} aria-hidden="true"/>)}
             <i className={styles.answerGlow} data-answer-glow aria-hidden="true"/>
-          </button>)}
-        </div>
+          </li>)}
+        </ul>
       </>}
       {revealed && <div className={`${styles.feedback} ${hero ? styles.heroInlineFeedback : ""}`} role="status" data-feedback>{feedback}</div>}
       <div className={styles.lessonBottom}>
         <span className={styles.sampleReward} data-xp>{revealed && correct ? "+20 XP" : "Ukázka bez zápisu"}<span className={styles.visuallyHidden}> · pouze ilustrační, neuděluje skutečné XP</span></span>
-        <button type="button" className={styles.lessonSubmit} data-lift data-press data-submit disabled={!answer}
-          onClick={revealed ? retry : () => setRevealed(true)}>
+        {/* Looks like the lesson's submit button so the scripted cursor has a target; it is not a control. */}
+        <span className={styles.lessonSubmit} data-submit data-disabled={answer ? undefined : ""} aria-hidden="true">
           {revealed ? "Pokračovat" : answer ? "Zkontrolovat odpověď" : "Vyber odpověď"}<ArrowRight size={18} aria-hidden="true"/>
-        </button>
+        </span>
       </div>
     </div>
     {hero && <aside className={styles.heroLessonAside}>

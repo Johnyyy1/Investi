@@ -4,7 +4,7 @@ import type { SectionInit } from "../types";
 
 /**
  * Final CTA: heading chars use the shared SplitHeading; the illustration fades in once in place (it never moves).
- * The primary button's sheen is driven by initInteractions via [data-shimmer].
+ * The primary button's hover sheen is driven by initInteractions via [data-shimmer].
  */
 export const initClosing: SectionInit = ({ root }) => {
   const art = $(root, "[data-closing-art]");
