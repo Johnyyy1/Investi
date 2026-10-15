@@ -1,6 +1,6 @@
 export const FOUNDATIONS_MODULE_ID = "module-investing-foundations";
 export const foundationsLessons = [
-  { id: "foundations-why-invest", slug: "why-invest", title: "Spoření vs. investování", summary: "Propoj dostupnost peněz, stabilitu a nejistotu s časovým horizontem.", estimatedMinutes: 7, status: "available" },
+  { id: "foundations-why-invest", slug: "why-invest", title: "Spoření vs. investování", summary: "Proč peníze v obálce časem ztrácejí hodnotu a co s tím má investování.", estimatedMinutes: 5, status: "available" },
   { id: "foundations-stocks", slug: "stocks", title: "Akcie a vlastnictví firmy", summary: "Propoj počet akcií, tržní cenu a hodnotu pozice.", estimatedMinutes: 8, status: "available" },
   { id: "foundations-etfs-indexes", slug: "etfs-and-indexes", title: "ETF a indexy", summary: "Rozliš tržní ukazatel od fondu, do kterého lze investovat.", estimatedMinutes: 7, status: "available" },
   { id: "foundations-bonds-cash", slug: "bonds-and-cash", title: "Hotovost a dluhopisy", summary: "Pochop likviditu, půjčování, kupón, splatnost a riziko.", estimatedMinutes: 8, status: "available" },

@@ -49,6 +49,19 @@
 .textLink { text-decoration: underline; display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
 .disclosure { font-size: .8125rem; color: var(--color-text-muted); text-align: center; margin-top: 32px; }
 .spinner { animation: spin 1s linear infinite; }
+.accountHint { color: var(--color-text-secondary); font-size: .875rem; text-align: right; }
+.accountLink { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; color: var(--color-ink); text-decoration: underline; }
+.authFields { margin-top: 24px; }
+.saveStats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 24px; padding-block: 16px; border-block: 1px solid var(--color-divider); }
+.saveStats > div { display: flex; flex-direction: column-reverse; gap: 4px; min-width: 0; }
+.saveStats dd { font-family: var(--font-investi-manrope), sans-serif; font-size: 1.75rem; font-weight: 600; line-height: 1.1; color: var(--color-ink); }
+.saveStats dd svg { color: var(--color-action); }
+.saveStats dt { color: var(--color-text-muted); font-size: .8125rem; overflow-wrap: anywhere; }
+.saveLater { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--color-divider); text-align: center; color: var(--color-text-muted); font-size: .8125rem; }
+.saveLater p { margin-top: 4px; }
+.authHeader { display: flex; align-items: center; max-width: 1312px; margin: 0 auto; min-height: 56px; }
+.authFooter { margin-top: 24px; text-align: center; color: var(--color-text-secondary); font-size: .9375rem; }
+.authDemo { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--color-divider); }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes step-enter { from { transform: translateY(8px); } to { transform: translateY(0); } }
 @media (hover: hover) and (pointer: fine) {
@@ -66,7 +79,7 @@
   .header { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 12px; }
   .brand { font-size: 1.5rem; }
   .headerAction { grid-column: 2; grid-row: 1; }
-  .quiet { font-size: .75rem; max-width: 100%; }
+  .quiet, .accountHint { font-size: .75rem; max-width: 100%; }
   .progressRow { grid-column: 1 / -1; grid-row: 2; min-height: 44px; gap: 14px; }
   .back { font-size: .8125rem; }
   .column { margin-top: 8px; }

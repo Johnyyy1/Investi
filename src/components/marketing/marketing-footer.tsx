@@ -16,7 +16,7 @@ const footerGroups = [
     title: "Účet",
     links: [
       { href: "/sign-in", label: "Přihlásit se" },
-      { href: "/sign-up", label: "Začít se učit" },
+      { href: "/onboarding", label: "Začít se učit" },
     ],
   },
 ] as const;

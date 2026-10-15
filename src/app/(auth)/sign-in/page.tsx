@@ -6,18 +6,21 @@ import { SocialSignIn } from "@/components/auth/social-sign-in";
 import { authProviderAvailability } from "@/lib/auth";
 import { getSocialAuthErrorMessage } from "@/lib/social-auth-error";
 import { getCurrentUser } from "@/lib/session";
+import { isGuestIdentity } from "@/features/guest/identity";
 
 export const metadata = { title: "Přihlášení" };
 
 export default async function AuthPage({ searchParams }: {
   searchParams: Promise<{ error?: string | string[] }>;
 }) {
-  if (await getCurrentUser()) redirect("/learn");
+  // A guest signs in here to move their learning into an existing account; other sessions are already in.
+  const user = await getCurrentUser();
+  if (user && !isGuestIdentity(user)) redirect("/learn");
   const { error } = await searchParams;
   const errorCode = Array.isArray(error) ? error[0] : error;
   return (
-    <AuthLayout title="Vítej zpět" description="Přihlas se a naváž tam, kde jsi skončil."
-      footer={<>Jsi v investi poprvé? <Link href="/sign-up" className="font-semibold text-ql-link underline underline-offset-4">Vytvořit účet</Link></>}>
+    <AuthLayout title="Vítej zpět" description="Přihlas se a naváž tam, kde jsi skončil." guide="Rád tě zase vidím. Tvůj plán i pokrok na tebe čekají."
+      footer={<>Jsi v investi poprvé? <Link href="/onboarding" className="font-semibold text-ql-link underline underline-offset-4">Začít se učit</Link></>}>
       <SocialSignIn providers={authProviderAvailability} mode="sign-in" initialError={errorCode !== undefined ? getSocialAuthErrorMessage(errorCode) : undefined} />
       <SignInForm />
     </AuthLayout>

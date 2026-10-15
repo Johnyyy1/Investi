@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { perfMeasure } from "@/lib/perf";
 import { portfolio, portfolioAllocation, portfolioAllocationLine, portfolioTrade, user } from "@/db/schema";
 import { readPracticeCapitalEntitlementMinor as entitlement } from "@/features/rewards/repository";
+import { isDemoIdentity, isGuestIdentity } from "@/features/guest/identity";
 import type { Currency } from "@/features/market-data/contracts";
 import { planAllocation, validateAllocation, type AllocationInput, type AllocationPlan } from "./allocation";
 import { foldTrades, type LedgerTrade } from "./domain";
@@ -96,12 +97,14 @@ async function demoObservations() {
 export async function getOrCreateActivePortfolio(userId: string) {
   const existing = await activePortfolio(db, userId);
   if (existing) return existing;
-  const [owner] = await db.select({ isAnonymous: user.isAnonymous }).from(user).where(eq(user.id, userId));
+  const [owner] = await db.select({ isAnonymous: user.isAnonymous, anonymousKind: user.anonymousKind }).from(user).where(eq(user.id, userId));
   if (!owner) throw new PortfolioInputError("PortfolioUnavailable", "Portfolio se nepodařilo otevřít.");
-  const seedObservations = owner.isAnonymous ? await demoObservations() : [];
+  // Guests save an account before they get a portfolio, so a guest claim never has trades to move.
+  if (isGuestIdentity(owner)) throw new PortfolioInputError("PortfolioUnavailable", "Portfolio Lab otevřeš, až si uložíš účet.");
+  const seedObservations = isDemoIdentity(owner) ? await demoObservations() : [];
 
   return db.transaction(async (tx) => {
-    const [lockedOwner] = await tx.select({ isAnonymous: user.isAnonymous }).from(user).where(eq(user.id, userId)).for("update");
+    const [lockedOwner] = await tx.select({ isAnonymous: user.isAnonymous, anonymousKind: user.anonymousKind }).from(user).where(eq(user.id, userId)).for("update");
     if (!lockedOwner) throw new PortfolioInputError("PortfolioUnavailable", "Portfolio se nepodařilo otevřít.");
     const current = await activePortfolio(tx, userId);
     if (current) return current;
@@ -112,7 +115,7 @@ export async function getOrCreateActivePortfolio(userId: string) {
       resetFromPortfolioId: null, resetIdempotencyKey: null, openingCapitalMinor,
     };
     await tx.insert(portfolio).values(created);
-    if (lockedOwner.isAnonymous && seedObservations.length > 0) {
+    if (isDemoIdentity(lockedOwner) && seedObservations.length > 0) {
       const seeds = seedObservations.map((observation, index) => tradeValues(created.id, observation, "BUY", `demo-seed-v1-${index + 1}`, now));
       const total = seeds.reduce((sum, trade) => sum - trade.cashDeltaBaseMinor, 0n);
       if (total <= openingCapitalMinor) await tx.insert(portfolioTrade).values(seeds);

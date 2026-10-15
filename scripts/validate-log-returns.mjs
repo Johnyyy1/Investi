@@ -47,11 +47,9 @@ async function layout(label, screenshots = false) {
 }
 const titles = ["Deset nahoru, deset dolů", "Proč jednoduché výnosy nesčítáme", "Seznam se s logaritmickým výnosem", "Převeď výnos tam a zpět", "Od násobení ke sčítání", "Blízko neznamená stejně", "Spoj dvě období správně", "Shrň si to"];
 try {
-  await page.goto(`${baseURL}/sign-up`);
-  await page.getByRole("textbox", { name: "Jméno", exact: true }).fill("Log returns QA");
-  await page.getByRole("textbox", { name: "E-mail", exact: true }).fill(email);
-  await page.getByRole("textbox", { name: "Heslo", exact: true }).fill(randomUUID());
-  await button("Vytvořit účet").click();
+  // Registration now ends onboarding; create the account directly, then onboard as a signed-in learner.
+  assert.ok((await page.request.post(`${baseURL}/api/auth/sign-up/email`, { headers: { origin: baseURL }, data: { name: "Log returns QA", email, password: randomUUID() } })).ok());
+  await page.goto(`${baseURL}/onboarding`);
   await finishOnboarding(page);
   [{ id: userId }] = await sql`select id from "user" where email = ${email}`;
   // Fixture: predecessors completed; L4 and L5 are completed through the UI below.

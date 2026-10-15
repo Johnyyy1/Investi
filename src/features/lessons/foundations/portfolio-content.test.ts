@@ -17,7 +17,18 @@ describe("Foundations learning experience integrity", () => {
     ]);
   });
 
-  it.each(foundationsContent.map((lesson) => [lesson.id, lesson] as const))("gives %s two mastery checks, a Lab bridge, and a summary", (id, lesson) => {
+  it("keeps the first lesson to one concept, one question and a summary", () => {
+    const lesson = foundationsContent[0];
+    const steps = getGuidedSteps(lesson);
+    expect(lesson.id).toBe("foundations-why-invest");
+    expect(steps).toHaveLength(3);
+    expect(steps.flatMap((step) => step.blocks)).toEqual(lesson.blocks);
+    expect(lesson.blocks.filter((block) => block.type === "multipleChoiceQuestion")).toHaveLength(1);
+    expect(lesson.blocks.filter((block) => block.type === "lessonSummary")).toHaveLength(1);
+    expect(foundationsSteps[lesson.id]).toHaveLength(3);
+  });
+
+  it.each(foundationsContent.slice(1).map((lesson) => [lesson.id, lesson] as const))("gives %s two mastery checks, a Lab bridge, and a summary", (id, lesson) => {
     const steps = getGuidedSteps(lesson);
     expect(steps.flatMap((step) => step.blocks)).toEqual(lesson.blocks);
     expect(steps.filter((step) => step.kind === "mastery")).toHaveLength(2);

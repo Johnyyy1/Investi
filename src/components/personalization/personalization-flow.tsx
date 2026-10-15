@@ -6,14 +6,18 @@ import { ArrowRight, LoaderCircle } from "lucide-react";
 import { completePersonalizationAction, retakeDiagnosticAction, skipPersonalizationAction } from "@/features/personalization/actions";
 import type { PersonalizedPreferences } from "@/features/personalization/profile";
 import { type PersonalizationDraft, type PublicQuestion, restoreDraft } from "@/features/personalization/draft";
+import { GUEST_KIND_HEADER } from "@/features/guest/identity";
+import { authClient } from "@/lib/auth-client";
 import { questionTitles } from "@/features/personalization/presentation";
 import { PreferenceFields } from "./preference-fields";
 import { OnboardingChoice } from "./onboarding-choice";
 import { OnboardingGuide, OnboardingHeader, type GuidePose } from "./onboarding-frame";
 import styles from "./personalization-flow.module.css";
 
-export function PersonalizationFlow({ initialPreferences, questions, version, draftKey, retake = false }: {
-  initialPreferences: PersonalizedPreferences; questions: readonly PublicQuestion[]; version: string; draftKey: string; retake?: boolean;
+/** Guests answer without an account. Their answers are saved to a guest identity that then sees the plan and
+ * the first lesson; the account comes after that lesson (/onboarding/save) and takes the guest's learning over. */
+export function PersonalizationFlow({ initialPreferences, questions, version, draftKey, retake = false, guest = false }: {
+  initialPreferences: PersonalizedPreferences; questions: readonly PublicQuestion[]; version: string; draftKey: string; retake?: boolean; guest?: boolean;
 }) {
   const router = useRouter();
   const [draft, setDraft] = useState<PersonalizationDraft>({ preferences: initialPreferences, step: retake ? 4 : 0, question: -1, answers: {} });
@@ -26,9 +30,13 @@ export function PersonalizationFlow({ initialPreferences, questions, version, dr
   const moved = useRef(false);
   useEffect(() => {
     let saved: PersonalizationDraft | null = null;
-    try { saved = restoreDraft(sessionStorage.getItem(draftKey), questions); } catch { /* Storage can be disabled. */ }
+    try {
+      saved = restoreDraft(sessionStorage.getItem(draftKey), questions);
+      // A signed-in draft without a session means the session expired mid-onboarding: sign back in to it.
+      if (!saved && guest && Object.keys(sessionStorage).some((key) => key !== draftKey && /^investi-personalization-v1:.+:initial$/.test(key))) { router.replace("/sign-in"); return; }
+    } catch { /* Storage can be disabled. */ }
     restoreTransition(() => { if (saved) setDraft({ ...saved, step: retake ? 4 : saved.step }); setReady(true); });
-  }, [draftKey, questions, retake]);
+  }, [draftKey, questions, retake, guest, router]);
   useEffect(() => {
     if (ready) { try { sessionStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* The form still works without local recovery. */ } }
   }, [draft, draftKey, ready]);
@@ -41,6 +49,8 @@ export function PersonalizationFlow({ initialPreferences, questions, version, dr
     busy.current = true; setError(undefined); setSignIn(false);
     startTransition(async () => {
       try {
+        // The guest identity is created only now, so browsing the questions never creates a database user.
+        if (guest && !(await ensureGuestSession())) { setError("Plán se nepodařilo připravit. Odpovědi tu zůstaly, zkus to znovu."); return; }
         const diagnostic = { version, answers: draft.answers };
         const result = await (skip ? skipPersonalizationAction({}) : retake ? retakeDiagnosticAction(diagnostic) : completePersonalizationAction({ preferences: draft.preferences, diagnostic }));
         if (!result.ok) { setError(result.message); setSignIn("signIn" in result && result.signIn === true); return; }
@@ -64,8 +74,8 @@ export function PersonalizationFlow({ initialPreferences, questions, version, dr
   const guide = guideResponse(draft, current);
   const helper = ["Vyber, co sedí nejvíc. Podle toho poskládáme začátek.", "Vyber libovolný počet témat. Zájmy můžeš doplnit i později.", "Zkušenosti jsou tvůj pohled. Krátké otázky nám pak pomohou upřesnit začátek.", "Jde o přibližné tempo jednoho sezení. Kdykoli si můžeš dát pauzu."][draft.step];
   return <main className={`investi-theme ${styles.flow}`}>
-    <OnboardingHeader progress={ready ? progress : 0} disabled={pending || !ready} back={canBack ? () => move(draft.step === 4 && draft.question >= 0 ? { question: draft.question - 1 } : { step: draft.step - 1 }) : undefined}
-      trailing={retake ? <Link className={styles.quiet} href="/settings">Zpět do nastavení</Link> : <button type="button" className={styles.quiet} disabled={pending || !ready} onClick={() => submit(true)}>Přeskočit personalizaci</button>} />
+    <OnboardingHeader progress={ready ? progress : 0} disabled={pending || !ready} brandHref={guest ? "/" : undefined} back={canBack ? () => move(draft.step === 4 && draft.question >= 0 ? { question: draft.question - 1 } : { step: draft.step - 1 }) : undefined}
+      trailing={guest ? <p className={styles.accountHint}>Už máš účet? <Link className={styles.accountLink} href="/sign-in">Přihlásit se</Link></p> : retake ? <Link className={styles.quiet} href="/settings">Zpět do nastavení</Link> : <button type="button" className={styles.quiet} disabled={pending || !ready} onClick={() => submit(true)}>Přeskočit personalizaci</button>} />
     {!ready ? <div className={styles.column}><OnboardingGuide pose="02-thinking">Načítám tvé předvolby…</OnboardingGuide></div> : <div className={styles.column}>
       <OnboardingGuide pose={pending ? "21-hourglass" : error ? "05-shrug" : guide.pose}>{pending ? "Skládám tvůj plán a ukládám odpovědi. Ještě chvilku…" : error ? "Odpovědi tu zůstaly. Až budeš připravený, zkus je uložit znovu." : guide.text}</OnboardingGuide>
       <form onReset={(event) => event.preventDefault()} onSubmit={(event) => { event.preventDefault(); next(); }} aria-busy={pending} aria-describedby={error ? "personalization-error" : undefined}>
@@ -87,6 +97,14 @@ export function PersonalizationFlow({ initialPreferences, questions, version, dr
       <p className={styles.disclosure}>Vzdělávání, ne investiční doporučení.</p>
     </div>}
   </main>;
+}
+
+/** Reuses a guest session whose creation response was lost; a retry must not create a second guest. */
+async function ensureGuestSession() {
+  const current = await authClient.getSession();
+  if (current.data) return true;
+  const created = await authClient.signIn.anonymous({ fetchOptions: { headers: { [GUEST_KIND_HEADER]: "guest" } } });
+  return !created.error;
 }
 
 /** Presentation only: no answer key, scoring, or recommendation decisions in the client. */

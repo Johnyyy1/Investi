@@ -11,7 +11,7 @@ export function Hero() {
         <h1 id="hero-title" className={styles.heroTitle}><span>Uč se investovat</span> <span>praxí.</span></h1>
         <p className={styles.heroCopy}>Interaktivní lekce, portfolio experimenty a backtesty —<br className={styles.desktopBreak} /> od první akcie po kvantitativní investování.</p>
         <div className={styles.heroActions}>
-          <Link href="/sign-up" prefetch={false} className={`${styles.button} ${styles.primaryButton}`}>Začít se učit <ArrowRight aria-hidden="true" /></Link>
+          <Link href="/onboarding" prefetch={false} className={`${styles.button} ${styles.primaryButton}`}>Začít se učit <ArrowRight aria-hidden="true" /></Link>
           <DemoButton compact className={styles.demo} buttonClassName={`${styles.button} ${styles.demoButton}`} />
         </div>
       </div>

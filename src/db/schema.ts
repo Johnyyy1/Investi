@@ -34,9 +34,14 @@ export const user = pgTable("user", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   isAnonymous: boolean("is_anonymous").notNull().default(false),
+  /** Anonymous identities only: "guest" learns before saving an account, "demo" gets seeded sample data.
+   * NULL on anonymous rows created before this column means demo. */
+  anonymousKind: text("anonymous_kind"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull(),
-});
+}, (table) => [
+  check("user_anonymous_kind_check", sql`${table.anonymousKind} is null or (${table.isAnonymous} and ${table.anonymousKind} in ('demo', 'guest'))`),
+]);
 
 export const session = pgTable(
   "session",

@@ -13,14 +13,20 @@ const mastery = (title: string, block: LessonBlock): AuthoredStep => ({ title, k
 const bridge = (content: string): LessonBlock => ({ id: "lab-bridge", type: "labBridge", title: "Kde to využiješ", content });
 const summary = (content: string): LessonBlock => ({ id: "summary", type: "lessonSummary", title: "Shrnutí lekce", content });
 
+/** Pen "První mini-lekce": one concept, one question, then done. Also the guest's first lesson before saving an account. */
 const whyInvest: AuthoredStep[] = [
-  { title: "Nejdřív vyber nástroj, až potom řeš výnos", blocks: [question("opening", "Peníze budeš potřebovat za tři měsíce. Co je nejdůležitější?", ["Snadný přístup a stabilita", "Co nejvyšší dlouhodobý růst", "Vlastnit co nejvíc různých investic"], 0, "Peníze na blízký výdaj mají být hlavně dostupné a stabilní. Hodnota investice může klesnout právě ve chvíli, kdy ji potřebuješ.", "Krátký horizont nedává moc času na zotavení z poklesu trhu. Začni tím, kdy budeš peníze potřebovat, ne nejvyšším možným výnosem.")] },
-  { title: "Spoření a investování řeší jiné potřeby", blocks: [paragraph("tools", "Spoření drží peníze snadno dostupné a nominálně poměrně stabilní. Při investování je vkládáš do aktiv, jejichž hodnota může růst i klesat, s cílem dosáhnout budoucího růstu nebo příjmu."), concept("uncertainty", "Růst lze očekávat, ne zaručit", "Dlouhý horizont dává nejistým výsledkům více času, ale zisk nezaručí. Peníze na příští nájem mají jiný úkol než peníze, které nebudeš potřebovat 15 let.")] },
-  { title: "Porovnej dva časové horizonty", blocks: [figure("horizon", "time-horizon-explorer", "Kdy budeš peníze potřebovat?", "Porovnej blízký výdaj s penězi určenými na vzdálenější budoucnost. Jde o princip plánování, ne o osobní investiční doporučení.")] },
-  { title: "Kupní síla se může měnit", blocks: [{ id: "inflation-example", type: "workedExample", title: "Částka se nezměnila, nákup zdražil", steps: [{ label: "Hotovost", value: "1 000 Kč" }, { label: "Stejný nákup po zdražení", value: "1 050 Kč" }], conclusion: "Na účtu je stále 1 000 Kč, ale stejný nákup už za ně nepořídíš. Hotovost má nízké kolísání nominální hodnoty, přesto čelí riziku ztráty kupní síly." }] },
-  mastery("Ověření znalostí · krátký horizont", question("mastery-horizon", "Jak nejlépe popsat peníze na nájem splatný za tři měsíce?", ["Dlouhodobý kapitál, který může přijmout nejistotu trhu", "Peníze na blízký výdaj, u kterých je důležitá likvidita a stabilita", "Peníze, jejichž kupní síla se nemůže změnit"], 1, "U známého blízkého výdaje jsou likvidita a stabilita obzvlášť důležité.", "Nájem je blízký závazek. Pokles trhu před splatností by mohl způsobit, že potřebná částka nebude včas k dispozici.")),
-  mastery("Ověření znalostí · dlouhý horizont", question("mastery-guarantee", "Co mění horizont 15 let?", ["Zaručuje kladný investiční výnos", "Odstraňuje inflační riziko", "Dává nejistému výsledku více času, ale zisk nezaručuje"], 2, "Více času může usnadnit zvládání výkyvů a umožnit složené zhodnocení. Ztráta je však stále možná.", "Čas mění podmínky, ne záruku. Investice může prodělat i během dlouhého období.")),
-  { title: "Použij každý nástroj pro správný účel", blocks: [bridge("V Portfolio Labu uvidíš hotovost vedle investic. Snadno tak rozlišíš dostupné peníze od kapitálu vystaveného pohybu cen."), summary("Spoření dává přednost dostupnosti a nominální stabilitě. Investování přijímá nejistotu výměnou za možnost budoucího růstu nebo příjmu. Časový horizont a inflace vysvětlují, proč tyto nástroje nejsou zaměnitelné.")] },
+  { title: "Spoření vs. investování", blocks: [
+    concept("saving", "Spoření", "Peníze odkládáš stranou. Jsou po ruce a v bezpečí. Rostou jen málo — úrok často nestačí na to, co všechno zdraží."),
+    concept("investing", "Investování", "Peníze vložíš do firem nebo dluhopisů. Můžou růst i klesat. Nic není zaručeno."),
+    concept("inflation", "Ještě jedna věc", "Když všechno zdraží, koupíš za stejné peníze méně. Tomu se říká inflace."),
+  ] },
+  { title: "Peníze v obálce", blocks: [
+    paragraph("envelope", "Máš 10 000 Kč v obálce. Během roku všechno trochu zdraží."),
+    question("envelope-question", "Co to znamená pro tvých 10 000 Kč?", ["Nic. Pořád je to 10 000 Kč, koupím za ně stejně.", "Koupím si za ně o něco méně.", "Peněz v obálce přibude."], 1,
+      "Přesně. Číslo stejné, hodnota menší. Tomu se říká inflace. Investování je jeden ze způsobů, jak se jí bránit. Jistotu ale nedává.",
+      "Skoro. Číslo na obálce se nezmění, to máš pravdu. Jenže když věci zdraží, koupíš si za stejných 10 000 Kč míň."),
+  ] },
+  { title: "Lekce hotová", blocks: [summary("Spoření drží peníze po ruce, ale inflace jim bere kupní sílu. Investování může růst i klesat a jistotu nedává. Tohle je hlavní důvod, proč lidé vůbec investují. Ne aby zbohatli přes noc.")] },
 ];
 
 const stocks: AuthoredStep[] = [

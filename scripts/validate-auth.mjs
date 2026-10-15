@@ -45,19 +45,23 @@ async function reflow() {
   assert.deepEqual(broken, [], "arbitrary word breaks");
 }
 try {
-  for (const mode of ["sign-in", "sign-up"]) {
+  // Registration is the last onboarding step now; /sign-up only forwards there.
+  await page.goto(`${baseURL}/sign-up`); await page.waitForURL("**/onboarding");
+  // OAuth errors return to the save step, which sends a visitor without a guest session back to onboarding.
+  await page.goto(`${baseURL}/sign-up?error=access_denied`); await page.waitForURL((url) => url.pathname === "/onboarding");
+  for (const mode of ["sign-in"]) {
     await page.goto(`${disabledURL}/${mode}`);
     assert.equal(await page.getByRole("button", { name: /Pokračovat přes/ }).count(), 0);
     assert.ok(await page.getByLabel("E-mail", { exact: true }).isVisible());
     await page.goto(`${baseURL}/${mode}`);
     assert.equal(await page.getByRole("button", { name: /Pokračovat přes/ }).count(), 2);
-    assert.ok(await page.getByRole("img", { name: "investi", exact: true }).evaluate((img) => img.complete && img.naturalWidth > 0));
+    assert.equal(await page.getByRole("link", { name: "investi · úvodní stránka", exact: true }).getAttribute("href"), "/");
     for (const width of [1440, 390, 320]) {
       await page.setViewportSize({ width, height: 1000 }); await reflow();
       if (process.env.AUTH_SKIP_SCREENSHOTS !== "1" && width !== 320) await page.screenshot({ path: `${output}/${mode}-${width}.png`, fullPage: true });
     }
     await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; }); await reflow();
-    if (process.env.AUTH_SKIP_SCREENSHOTS !== "1" && mode === "sign-up") await page.screenshot({ path: `${output}/sign-up-320-text-200.png`, fullPage: true });
+    if (process.env.AUTH_SKIP_SCREENSHOTS !== "1" && mode === "sign-in") await page.screenshot({ path: `${output}/sign-in-320-text-200.png`, fullPage: true });
     await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
   }
   await page.setViewportSize({ width: 390, height: 844 });
@@ -70,7 +74,7 @@ try {
   assert.ok(await page.getByRole("button", { name: /Pokračovat přes Google/ }).evaluate((e) => e.getBoundingClientRect().height >= 44));
 
   for (const provider of ["google", "facebook"]) {
-    const mode = provider === "google" ? "sign-in" : "sign-up";
+    const mode = "sign-in";
     await page.goto(`${baseURL}/${mode}`);
     let destination, requestBody, count = 0, release;
     const gate = new Promise((resolve) => { release = resolve; });
@@ -116,12 +120,9 @@ try {
 
   await page.goto(`${baseURL}/learn`); assert.equal(new URL(page.url()).pathname, "/sign-in");
   const email = `auth-qa-${randomUUID()}@example.com`, password = randomUUID();
-  await page.goto(`${baseURL}/sign-up`);
-  await page.getByLabel("Jméno", { exact: true }).fill("Jana");
-  await page.getByLabel("E-mail", { exact: true }).fill(email);
-  await page.getByLabel("Heslo", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "Vytvořit účet", exact: true }).click();
-  await page.waitForURL("**/onboarding");
+  // The onboarding save step posts the same Better Auth sign-up; its UI is covered by validate-onboarding-redesign.
+  assert.ok((await page.request.post(`${baseURL}/api/auth/sign-up/email`, { headers: { origin: baseURL }, data: { name: "Jana", email, password } })).ok());
+  await page.goto(`${baseURL}/learn`); await page.waitForURL("**/onboarding");
   const [{ id }] = await sql`select id from "user" where email = ${email}`; ids.push(id);
   assert.equal((await sql`select * from lesson_award where user_id = ${id}`).length, 0);
   assert.equal((await sql`select * from lesson_progress where user_id = ${id}`).length, 0);

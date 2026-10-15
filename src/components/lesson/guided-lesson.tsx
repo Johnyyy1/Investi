@@ -21,8 +21,10 @@ import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, Leaf, RotateCcw } fro
 
 const primaryClassName = "min-h-[52px] min-w-0 flex-1 whitespace-nowrap border-action px-3 font-semibold shadow-none motion-safe:hover:translate-y-0 disabled:border-track disabled:bg-track disabled:text-text-disabled disabled:opacity-100 min-[420px]:px-6 md:flex-none";
 
-export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref }: {
+export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref, guest = false }: {
   lesson: AuthoredLesson; initialStatus: "not_started" | "in_progress" | "completed"; initialPosition: number; initialCompletedLessons: number; initialLearningMomentum: LearningMomentum; initialEarnedPracticeCapitalMinor: SerializedPracticeCapitalMinor; nextHref: string;
+  /** A guest's finished lesson leads to saving an account first (Pen onboarding step 6). */
+  guest?: boolean;
 }) {
   const router = useRouter();
   const learningModule = getModuleBySlug(lesson.moduleSlug)!;
@@ -112,14 +114,14 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
       <div className={cn("mx-auto flex w-full min-w-0 flex-col gap-5 md:gap-7", wide && !finished ? "max-w-[1040px]" : "max-w-[760px]")}>
         {error ? <p role="alert" className="flex items-start gap-2 rounded-paper-control bg-error-tint px-4 py-3 text-[15px]/[23px] text-error-ink"><CircleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" />{error}</p> : null}
         {finished ? <div className="overflow-hidden rounded-paper-card border border-border-card bg-paper-surface shadow-paper-card">
-          <CompletionScreen autoFocusAction title={review ? "Opakování dokončeno" : "Lekce dokončena"} description={lesson.title} xpAwarded={reward?.xpAwarded} practiceCapitalAwardedMinor={reward && reward.practiceCapitalAwardedMinor !== "0" ? reward.practiceCapitalAwardedMinor : undefined} actionLabel={reward?.portfolioLabUnlocked ? "Otevřít Portfolio Lab" : reward?.allComplete ? "Prozkoumat Lab" : "Další lekce"} onContinue={() => { router.push(reward?.portfolioLabUnlocked ? "/lab/portfolio" : reward?.nextHref ?? nextHref); router.refresh(); }}>
+          <CompletionScreen autoFocusAction title={review ? "Opakování dokončeno" : "Lekce dokončena"} description={lesson.title} xpAwarded={reward?.xpAwarded} practiceCapitalAwardedMinor={reward && reward.practiceCapitalAwardedMinor !== "0" ? reward.practiceCapitalAwardedMinor : undefined} actionLabel={guest ? "Ulož si, co už víš" : reward?.portfolioLabUnlocked ? "Otevřít Portfolio Lab" : reward?.allComplete ? "Prozkoumat Lab" : "Další lekce"} onContinue={() => { router.push(guest ? "/onboarding/save" : reward?.portfolioLabUnlocked ? "/lab/portfolio" : reward?.nextHref ?? nextHref); router.refresh(); }}>
             {reward?.portfolioLabUnlocked && <p className="mt-5 text-ql-body font-bold text-action" role="status">Portfolio Lab odemčen · +{formatPracticeCapitalMinor(reward.unlockCapitalAwardedMinor)} virtuálního kapitálu</p>}
             {reward && reward.xpAwarded > 0 && !reward.portfolioLabUnlocked && <p className="mt-4 text-ql-small text-text-secondary">Virtuální kapitál získáš po dokončení základů a odemčení Portfolio Labu.</p>}
             {review && <p className="mt-4 text-ql-small text-text-secondary">Opakováním si znalost upevníš. Další XP ani virtuální kapitál se nepřipisují.</p>}
             <div className="mt-7 rounded-paper-card border border-paper-border bg-paper-surface p-5 text-left"><LearningStats stats={reward?.learningMomentum ?? initialLearningMomentum} earnedPracticeCapitalMinor={reward?.earnedPracticeCapitalMinor ?? initialEarnedPracticeCapitalMinor} goal /></div>
             {reward && !reward.allComplete && !reward.portfolioLabUnlocked && <p className="mt-6 text-ql-small text-text-secondary">Další na řadě: {reward.nextTitle}</p>}
           </CompletionScreen>
-          <div className="flex flex-wrap justify-center gap-2 border-t border-divider px-6 py-4"><LearningLink variant="ghost" className="text-ink hover:bg-paper-muted" href="/learn"><ArrowLeft aria-hidden="true" className="size-4" />Zpět na Učení</LearningLink><LearningLink variant="ghost" className="text-ink hover:bg-paper-muted" href={moduleHref}>Zobrazit modul</LearningLink><p className="sr-only" data-testid="completion-progress">Počet dokončených dostupných lekcí v modulu {learningModule.title}: {completedLessons} · Uloženo k účtu</p></div>
+          <div className="flex flex-wrap justify-center gap-2 border-t border-divider px-6 py-4"><LearningLink variant="ghost" className="text-ink hover:bg-paper-muted" href="/learn"><ArrowLeft aria-hidden="true" className="size-4" />Zpět na Učení</LearningLink><LearningLink variant="ghost" className="text-ink hover:bg-paper-muted" href={moduleHref}>Zobrazit modul</LearningLink><p className="sr-only" data-testid="completion-progress">Počet dokončených dostupných lekcí v modulu {learningModule.title}: {completedLessons} · {guest ? "Uloženo v tomto prohlížeči" : "Uloženo k účtu"}</p></div>
         </div> : <article key={position} className="flex min-w-0 flex-col gap-5 md:gap-7" aria-labelledby="step-title">
           {review ? <p className="flex items-center gap-2 text-sm text-text-muted"><CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-action" /><span>Lekce už je dokončena. Opakování uložený postup nezmění.</span></p> : null}
           <div className="flex flex-col gap-2 md:gap-2.5">

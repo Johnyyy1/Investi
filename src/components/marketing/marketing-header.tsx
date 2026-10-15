@@ -56,7 +56,7 @@ export function MarketingHeader() {
       </nav>
       <div className={styles.headerActions}>
         <Link href="/sign-in" prefetch={false} className={styles.signIn}>Přihlásit se</Link>
-        <Link href="/sign-up" prefetch={false} className={`${styles.button} ${styles.primaryButton}`}>Začít se učit <ArrowRight aria-hidden="true" /></Link>
+        <Link href="/onboarding" prefetch={false} className={`${styles.button} ${styles.primaryButton}`}>Začít se učit <ArrowRight aria-hidden="true" /></Link>
       </div>
       <details className={styles.mobileMenu}>
         <summary aria-label="Navigační menu"><Menu aria-hidden="true" /><span>Menu</span></summary>
@@ -66,7 +66,7 @@ export function MarketingHeader() {
             return <Link key={href} href={href} prefetch={false} aria-current={active ? "page" : undefined}>{label}</Link>;
           })}
           <Link href="/sign-in" prefetch={false}>Přihlásit se</Link>
-          <Link href="/sign-up" prefetch={false}>Začít se učit <ArrowRight aria-hidden="true" /></Link>
+          <Link href="/onboarding" prefetch={false}>Začít se učit <ArrowRight aria-hidden="true" /></Link>
         </nav>
       </details>
     </div>

@@ -89,6 +89,7 @@ export function SettingsExperience(props: Props) {
             {account && <Image src="/investi-assets/guide/17-reading-armchair.webp" width={850} height={638} alt="" priority sizes="(max-width: 767px) 240px, 425px" className={styles.guide} />}
           </header>
           <div hidden={!account}><Identity identity={identity} accounts={props.initialAccounts} onDirtyChange={setNameDirty} />
+            {identity.guest && <div className={styles.demoNote}><Info size={20} aria-hidden="true" /><div><h2>Pokrok zatím není uložený</h2><p>Učíš se jako host. Lekce a plán zůstanou jen v tomhle prohlížeči, dokud si nevytvoříš účet. <Link href="/onboarding/save">Uložit pokrok</Link></p></div></div>}
             {identity.demo && <div className={styles.demoNote}><Info size={20} aria-hidden="true" /><div><h2>Soukromý cvičný profil</h2><p>Demo používá samostatný účet a je dostupné 24 hodin. Cvičné peníze nejsou skutečné. Tvůj postup je uložený u této demo identity.</p></div></div>}
           </div>
           <div className={account ? styles.overviewPreferences : undefined} hidden={!account && section !== "goal"}>
@@ -125,7 +126,7 @@ function Identity({ identity, accounts, onDirtyChange }: { identity: SettingsIde
   const trigger = useRef<HTMLButtonElement>(null);
   useEffect(() => { onDirtyChange(name !== savedName); }, [name, savedName, onDirtyChange]);
   useEffect(() => { if (editing) input.current?.focus(); }, [editing]);
-  const methods = identity.demo ? "Anonymní demo" : accounts ? [accounts.credential && "E-mail a heslo", accounts.google && "Google", accounts.facebook && "Facebook"].filter(Boolean).join(", ") || "Žádný připojený způsob" : "Údaje se nepodařilo načíst";
+  const methods = identity.demo ? "Anonymní demo" : identity.guest ? "Zatím bez účtu" : accounts ? [accounts.credential && "E-mail a heslo", accounts.google && "Google", accounts.facebook && "Facebook"].filter(Boolean).join(", ") || "Žádný připojený způsob" : "Údaje se nepodařilo načíst";
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (lock.current) return;
@@ -142,7 +143,7 @@ function Identity({ identity, accounts, onDirtyChange }: { identity: SettingsIde
   return <div className={styles.card}>
     <div className={styles.identity}><span className={styles.avatar} aria-hidden="true">{savedName.trim().charAt(0).toUpperCase() || "I"}</span><div><h2>{savedName}</h2><p>Od {identity.since} · {identity.completed} z {identity.total} lekcí</p></div></div>
     <dl className={styles.rows}><div><dt>Jméno</dt><dd>{editing ? <form noValidate onSubmit={save} onReset={(event) => event.preventDefault()} className={styles.nameForm}><label htmlFor="display-name" className="sr-only">Jméno</label><input ref={input} id="display-name" autoComplete="name" value={name} disabled={pending} aria-invalid={message && !message.ok || undefined} aria-describedby={message && !message.ok ? "name-message" : "name-hint"} onChange={(event) => { setName(event.target.value); setMessage(undefined); }} /><p id="name-hint" className={styles.hint}>1–80 znaků. E-mail se nezmění.</p><div className={styles.actions}><Button type="submit" loading={pending} className={styles.primary}>{pending ? "Ukládám…" : "Uložit jméno"}</Button><Button className={styles.secondary} variant="secondary" disabled={pending} onClick={() => { setName(savedName); setEditing(false); setMessage(undefined); requestAnimationFrame(() => trigger.current?.focus()); }}>Zrušit</Button></div></form> : savedName}</dd>{!editing && <button ref={trigger} type="button" className={styles.textButton} onClick={() => { setEditing(true); setMessage(undefined); }}>Upravit</button>}</div>
-      {!identity.demo && <div><dt>E-mail</dt><dd>{identity.email}</dd></div>}
+      {!identity.demo && !identity.guest && <div><dt>E-mail</dt><dd>{identity.email}</dd></div>}
       <div><dt>Přihlášení</dt><dd>{methods}</dd><Link href="/settings?section=security" className={styles.textButton}>Změnit<span className="sr-only"> způsob přihlášení</span></Link></div>
     </dl>
     {message && <p id="name-message" className={message.ok ? styles.status : styles.error} role={message.ok ? "status" : "alert"}>{message.text}</p>}

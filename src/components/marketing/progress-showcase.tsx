@@ -18,7 +18,7 @@ export function ProgressShowcase() {
         <p className={styles.progressEyebrow}>POKROK</p>
         <h2 id="progress-showcase-title">Udrž si rytmus.<span>Sleduj, jak rosteš.</span></h2>
         <p className={styles.progressDescription}>Krátké lekce se sčítají. Udrž si rytmus, získej XP, odemkni Portfolio Lab a sleduj, jak rostou tvé znalosti.</p>
-        <Link href="/sign-up" prefetch={false} className={`${styles.button} ${styles.primaryButton} ${styles.progressCta}`}>Začít se učit <ArrowRight aria-hidden="true" /></Link>
+        <Link href="/onboarding" prefetch={false} className={`${styles.button} ${styles.primaryButton} ${styles.progressCta}`}>Začít se učit <ArrowRight aria-hidden="true" /></Link>
       </div>
 
       <div className={styles.progressScene} data-testid="progress-showcase-demo">

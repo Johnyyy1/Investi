@@ -23,10 +23,12 @@ function ProviderIcon({ provider }: { provider: Provider }) {
   );
 }
 
-export function SocialSignIn({ providers, mode, initialError }: {
+export function SocialSignIn({ providers, mode, initialError, callbackURL = "/learn", errorCallbackURL = `/${mode}` }: {
   providers: AuthProviderAvailability;
   mode: "sign-in" | "sign-up";
   initialError?: string;
+  callbackURL?: string;
+  errorCallbackURL?: string;
 }) {
   const [pending, setPending] = useState<Provider>();
   const [error, setError] = useState(initialError);
@@ -47,8 +49,8 @@ export function SocialSignIn({ providers, mode, initialError }: {
     try {
       const result = await authClient.signIn.social({
         provider,
-        callbackURL: "/learn",
-        errorCallbackURL: `/${mode}`,
+        callbackURL,
+        errorCallbackURL,
       });
       if (!result.error) return; // Keep locked until Better Auth's redirect leaves the page.
       setError(getSocialAuthErrorMessage(result.error.code ?? ""));
