@@ -85,32 +85,26 @@ try {
   await assertResponsive(page, "01-foundations-overview", [1440]);
 
   await page.getByRole("button", { name: "Začít lekci", exact: true }).first().click();
-  await page.getByRole("heading", { name: "Nejdřív vyber nástroj, až potom řeš výnos", exact: true }).waitFor();
+  await page.getByRole("heading", { level: 2, name: "Spoření vs. investování", exact: true }).waitFor();
   await page.screenshot({ path: `${screenshotDir}/02-saving-vs-investing-1440.png`, fullPage: true });
+  await continueTo(page, "Peníze v obálce");
 
   // Keyboard-only wrong answer → explanation → retry → correct answer.
-  await page.getByLabel("Co nejvyšší dlouhodobý růst", { exact: true }).focus();
-  await page.getByLabel("Co nejvyšší dlouhodobý růst", { exact: true }).press("Space");
+  await page.getByLabel("Nic. Pořád je to 10 000 Kč, koupím za ně stejně.", { exact: true }).focus();
+  await page.getByLabel("Nic. Pořád je to 10 000 Kč, koupím za ně stejně.", { exact: true }).press("Space");
   await page.getByRole("button", { name: "Zkontrolovat odpověď", exact: true }).focus();
   await page.getByRole("button", { name: "Zkontrolovat odpověď", exact: true }).press("Enter");
   await page.getByRole("heading", { name: "Zkus to ještě jednou", exact: true }).waitFor();
   await page.screenshot({ path: `${screenshotDir}/06-incorrect-retry-state-1440.png`, fullPage: true });
   await page.getByRole("button", { name: "Zkusit znovu", exact: true }).press("Enter");
-  await page.getByLabel("Snadný přístup a stabilita", { exact: true }).press("Space");
+  await page.getByLabel("Koupím si za ně o něco méně.", { exact: true }).press("Space");
   await page.getByRole("button", { name: "Zkontrolovat odpověď", exact: true }).press("Enter");
   await page.getByRole("heading", { name: "Správně", exact: true }).waitFor();
   await page.getByRole("button", { name: "Pokračovat", exact: true }).press("Enter");
-  await page.getByRole("heading", { name: "Spoření a investování řeší jiné potřeby", exact: true }).waitFor();
-  await continueTo(page, "Porovnej dva časové horizonty");
+  await page.getByRole("heading", { name: "Lekce hotová", exact: true }).waitFor();
   await page.reload();
-  await page.getByRole("heading", { name: "Porovnej dva časové horizonty", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Lekce hotová", exact: true }).waitFor();
   assert.equal((await sql`select last_position from lesson_progress where user_id = ${userId} and lesson_id = 'foundations-why-invest'`)[0].last_position, 2);
-  await continueTo(page, "Kupní síla se může měnit");
-  await continueTo(page, "Ověření znalostí · krátký horizont");
-  await answerChoice(page, "Peníze na blízký výdaj, u kterých je důležitá likvidita a stabilita");
-  await page.getByRole("heading", { name: "Ověření znalostí · dlouhý horizont", exact: true }).waitFor();
-  await answerChoice(page, "Dává nejistému výsledku více času, ale zisk nezaručuje");
-  await page.getByRole("heading", { name: "Použij každý nástroj pro správný účel", exact: true }).waitFor();
   await completeLesson(page, 60);
   await page.screenshot({ path: `${screenshotDir}/07-lesson-complete-60xp-1440.png`, fullPage: true });
 
@@ -198,7 +192,7 @@ try {
 
   await page.getByRole("button", { name: "Otevřít Portfolio Lab", exact: true }).click();
   await page.getByTestId("portfolio-cash").filter({ hasText: /5\s000\sKč/ }).waitFor();
-  assert.equal(await page.getByRole("link", { name: /Sestavit/ }).count() > 0, true, "Unlocked portfolio has a build-mix action");
+  await page.getByRole("combobox", { name: "Najdi, co chceš koupit", exact: true }).waitFor();
   await page.screenshot({ path: `${screenshotDir}/11-unlocked-portfolio-1440.png`, fullPage: true });
 
   await page.goto(`${baseURL}/learn/investing-foundations`);
@@ -211,13 +205,9 @@ try {
   const beforeReview = (await sql`select coalesce(sum(xp), 0)::int as xp, count(*)::int as receipts from lesson_award where user_id = ${userId}`)[0];
   await page.goto(`${baseURL}/learn/investing-foundations/why-invest`);
   await page.getByText("Lekce už je dokončena. Opakování uložený postup nezmění.", { exact: true }).waitFor();
-  await answerChoice(page, "Snadný přístup a stabilita");
-  await continueTo(page, "Porovnej dva časové horizonty");
-  await continueTo(page, "Kupní síla se může měnit");
-  await continueTo(page, "Ověření znalostí · krátký horizont");
-  await answerChoice(page, "Peníze na blízký výdaj, u kterých je důležitá likvidita a stabilita");
-  await answerChoice(page, "Dává nejistému výsledku více času, ale zisk nezaručuje");
-  await page.getByRole("heading", { name: "Použij každý nástroj pro správný účel", exact: true }).waitFor();
+  await continueTo(page, "Peníze v obálce");
+  await answerChoice(page, "Koupím si za ně o něco méně.");
+  await page.getByRole("heading", { name: "Lekce hotová", exact: true }).waitFor();
   await page.getByRole("button", { name: "Dokončit opakování", exact: true }).click();
   await page.getByRole("heading", { name: "Opakování dokončeno", exact: true }).waitFor();
   await page.getByText("Opakováním si znalost upevníš. Další XP ani virtuální kapitál se nepřipisují.", { exact: true }).waitFor();

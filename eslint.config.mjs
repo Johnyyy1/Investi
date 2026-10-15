@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Separate local Vite project; not part of investi.
     "fine-details/**",
+    // Local agent worktrees: full copies of the repository with their own build output.
+    ".claude/**",
   ]),
 ]);
 
