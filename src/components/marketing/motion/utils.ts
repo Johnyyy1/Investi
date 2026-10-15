@@ -121,6 +121,25 @@ export function hoverLift(el: HTMLElement) {
   return () => { el.removeEventListener("pointerenter", enter); el.removeEventListener("pointerleave", leave); };
 }
 
+/**
+ * Soft light sweep across a button. `el` is the full-size [data-shimmer] layer inside its (overflow-hidden) host.
+ * Plays on hover (fine pointers) and, with data-shimmer="idle", every few seconds while the host is on screen.
+ */
+export function sheen(el: HTMLElement, { idle, hover }: { idle: boolean; hover: boolean }) {
+  const host = el.parentElement;
+  if (!host) return () => {};
+  const sweep = gsap.fromTo(el, { xPercent: -100 }, {
+    xPercent: 100, duration: 0.95, ease: "power1.inOut",
+    ...(idle
+      ? { delay: 1.2, repeat: -1, repeatDelay: 5, scrollTrigger: { trigger: host, start: "top 92%", end: "bottom top", toggleActions: "play pause resume pause" } }
+      : { paused: true }),
+  });
+  // Restart only when the band is off the button, so a hover never cuts a running sweep short.
+  const enter = () => { const x = Number(gsap.getProperty(el, "xPercent")); if (x <= -100 || x >= 100) sweep.restart(); };
+  if (hover) host.addEventListener("pointerenter", enter);
+  return () => host.removeEventListener("pointerenter", enter);
+}
+
 /** Press micro-interaction: squash on press, small overshoot on release. */
 export function pressFeedback(el: HTMLElement) {
   const down = () => { if (!(el as HTMLButtonElement).disabled) gsap.to(el, { scale: 0.96, duration: 0.12, ease: "power2.out", overwrite: "auto" }); };
