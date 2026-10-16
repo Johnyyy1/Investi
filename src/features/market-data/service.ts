@@ -107,29 +107,32 @@ export class MarketDataService {
         queryLength: normalized.length,
       });
     }
+    const key = JSON.stringify([this.provider.providerId, normalized]);
     return this.loadCached(
-      `search:${JSON.stringify([normalized])}`,
-      () => this.cache.getSearch(normalized),
-      (value) => this.cache.setSearch(normalized, value),
+      `search:${key}`,
+      () => this.cache.getSearch(key),
+      (value) => this.cache.setSearch(key, value),
       () => this.call("search", this.provider, () => this.provider.searchInstruments(normalized)),
     );
   }
 
   async getInstrumentMetadata(instrumentId: InstrumentId) {
+    const key = JSON.stringify([this.provider.providerId, instrumentId]);
     return this.loadCached(
-      `instrument:${JSON.stringify([instrumentId])}`,
-      () => this.cache.getInstrument(instrumentId),
-      (value) => this.cache.setInstrument(instrumentId, value),
+      `instrument:${key}`,
+      () => this.cache.getInstrument(key),
+      (value) => this.cache.setInstrument(key, value),
       () => this.call("metadata", this.provider, () => this.provider.getInstrumentMetadata(instrumentId)),
     );
   }
 
   async getQuote(instrumentId: InstrumentId): Promise<Quote> {
     const instrument = await this.getInstrumentMetadata(instrumentId);
+    const key = JSON.stringify([this.provider.providerId, instrumentId]);
     const observation = await this.loadCached(
-      `quote:${JSON.stringify([instrumentId])}`,
-      () => this.cache.getQuote(instrumentId),
-      (value) => this.cache.setQuote(instrumentId, value),
+      `quote:${key}`,
+      () => this.cache.getQuote(key),
+      (value) => this.cache.setQuote(key, value),
       async () => {
         const value = await this.call("quote", this.provider, () => this.provider.getQuote(instrumentId));
         this.validateQuote(value);
@@ -156,6 +159,7 @@ export class MarketDataService {
   async getHistoricalPrices(request: HistoricalPriceRequest) {
     this.validateHistoricalRequest(request);
     const key = JSON.stringify([
+      this.provider.providerId,
       request.instrumentId,
       request.startDate,
       request.endDate,
@@ -193,7 +197,7 @@ export class MarketDataService {
 
   async getCorporateActions(request: CorporateActionsRequest) {
     validateDateRange(request.startDate, request.endDate);
-    const key = JSON.stringify([request.instrumentId, request.startDate, request.endDate]);
+    const key = JSON.stringify([this.provider.providerId, request.instrumentId, request.startDate, request.endDate]);
     return this.loadCached(
       `corporate-actions:${key}`,
       () => this.cache.getCorporateActions(key),

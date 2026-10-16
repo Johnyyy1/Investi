@@ -46,6 +46,7 @@
     "test:request-isolation": "node scripts/validate-request-isolation.mjs",
     "test:navigation-feedback": "node scripts/validate-navigation-feedback.mjs",
     "bench:navigation": "node scripts/benchmark-navigation.mjs",
+    "test:market-data-cache": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-market-data-cache.mts",
     "test:prepared-statements": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-prepared-statements.mts"
   },
   "dependencies": {

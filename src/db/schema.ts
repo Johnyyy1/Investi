@@ -306,3 +306,23 @@ export const portfolioAllocationLine = pgTable("portfolio_allocation_line", {
   check("portfolio_allocation_line_asset_type_check", sql`${table.instrumentAssetType} in ('equity', 'etf', 'bond')`),
   check("portfolio_allocation_line_currency_check", sql`${table.quoteCurrency} in ('CZK', 'USD', 'EUR')`),
 ]);
+
+/**
+ * Shared, cross-instance cache of normalized market data (instrument metadata, quotes, history,
+ * fundamentals, ETF datasets, FX). Purely derived from providers and safe to truncate at any time.
+ * It is not user-owned, so it never cascades with user deletion. Rows past expires_at are never
+ * served and are purged opportunistically; format_version retires rows written by older code.
+ */
+export const marketDataCache = pgTable("market_data_cache", {
+  family: text("family").notNull(),
+  cacheKey: text("cache_key").notNull(),
+  formatVersion: integer("format_version").notNull(),
+  value: jsonb("value").$type<unknown>().notNull(),
+  storedAt: timestamp("stored_at", { withTimezone: true }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.family, table.cacheKey] }),
+  index("market_data_cache_expires_at_idx").on(table.expiresAt),
+  check("market_data_cache_expiry_check", sql`${table.expiresAt} > ${table.storedAt}`),
+  check("market_data_cache_key_length_check", sql`length(${table.cacheKey}) <= 512`),
+]);
