@@ -36,7 +36,7 @@ export function PenLanding() {
             </div>
           </div>
           <div className={styles.heroLessonWrap} data-hero-card role="group" aria-label="Ukázka lekce; nezapisuje pokrok ani neuděluje XP">
-            <Image className={styles.heroArt} data-hero-art src="/marketing/v14-curiosity-cropped.png" alt="" aria-hidden="true" width={620} height={628} sizes="(max-width: 500px) 98px, (max-width: 1100px) 194px, 256px" preload />
+            <Image className={styles.heroArt} data-hero-art src="/marketing/v14-curiosity-cropped.webp" alt="" aria-hidden="true" width={512} height={519} sizes="(max-width: 500px) 98px, (max-width: 1100px) 194px, 256px" preload />
             <div className={styles.lessonBrowserHeader}><span className={styles.smallWordmark}>investi!</span><span>Základy investování / Portfolio, váhy a diverzifikace</span><span>Lekce 7 ze 7 · ≈ 10 min</span><span>Ukázka lekce</span></div>
             <LessonPreview hero />
           </div>
@@ -51,11 +51,11 @@ export function PenLanding() {
           <div data-journey-pin>
           <div className={styles.journeyContent}>
             <div className={styles.journeyIllustration} aria-hidden="true" data-journey-art>
-              <Image src="/marketing/v14-discovery-edge.png" alt="" width={685} height={1065} sizes="(max-width: 780px) 250px, (max-width: 1100px) 302px, 397px" />
+              <Image src="/marketing/v14-discovery-edge.webp" alt="" width={685} height={1065} sizes="(max-width: 780px) 250px, (max-width: 1100px) 302px, 397px" />
             </div>
             <div className={styles.courseCard} data-lift data-lift-card data-course-card>
-              <Image className={styles.discoveryGripTop} src="/marketing/v14-discovery-top-grip.png" alt="" aria-hidden="true" width={136} height={86} />
-              <Image className={styles.discoveryGripSide} src="/marketing/v14-discovery-side-grip.png" alt="" aria-hidden="true" width={97} height={115} />
+              <Image className={styles.discoveryGripTop} src="/marketing/v14-discovery-top-grip.webp" alt="" aria-hidden="true" width={136} height={86} />
+              <Image className={styles.discoveryGripSide} src="/marketing/v14-discovery-side-grip.webp" alt="" aria-hidden="true" width={97} height={115} />
               <span className={styles.cardOverline}>Ukázka kurzu · ilustrační průchod</span>
               <div className={styles.courseHeader}><h3>Základy investování</h3><span>3 / 7</span></div>
               <div className={styles.courseProgress}><span data-course-progress/></div>
@@ -84,7 +84,7 @@ export function PenLanding() {
         <div className={styles.container}>
           <p className={styles.eyebrow} data-reveal="fade">TVŮJ POKROK</p><SplitHeading id="progress-title">Rostou znalosti. Ne tlak.</SplitHeading>
           <div className={styles.progressLayout}>
-            <div className={styles.progressImage} aria-hidden="true" data-progress-art><Image src="/marketing/v14-steady-understanding.png" alt="" width={1174} height={654} sizes="(max-width: 780px) calc(100vw - 48px), (max-width: 1100px) 400px, 570px" /></div>
+            <div className={styles.progressImage} aria-hidden="true" data-progress-art><Image src="/marketing/v14-steady-understanding.webp" alt="" width={1174} height={654} sizes="(max-width: 780px) calc(100vw - 48px), (max-width: 1100px) 400px, 570px" /></div>
             <div className={styles.progressCard} data-progress-card>
               <span className={styles.cardOverline}>Ukázka pokroku · ilustrační stav</span>
               <div className={styles.progressReward}><strong><CountUp to={60}/> XP</strong><div><p>3 dokončené lekce</p><small>Ukázková odměna za učení.</small></div></div>
@@ -97,7 +97,7 @@ export function PenLanding() {
         </div>
       </section>
       <section className={styles.closing} aria-labelledby="closing-title">
-        <div className={styles.container}><Image className={styles.closingArt} data-closing-art src="/marketing/generated-19.webp" alt="" aria-hidden="true" width={1200} height={896} sizes="(max-width: 500px) 300px, (max-width: 780px) 500px, 360px" /><SplitHeading id="closing-title" mode="chars">Zvědavost stačí.<br/>Začni první lekcí.</SplitHeading><p data-reveal data-reveal-delay="0.3">Nemusíš mít všechno nastudované.<br/> Právě od toho je tu investi.</p><div className={styles.closingActions} data-reveal data-reveal-delay="0.4"><Link href="/onboarding" prefetch={false} className={`${styles.primaryButton} ${styles.shimmerHost}`} data-lift data-press {...magneticProps}>Začít se učit <ArrowRight aria-hidden="true" size={18}/><span className={styles.shimmer} data-shimmer aria-hidden="true"/></Link><DemoButton compact className={styles.demoButtonWrap} buttonClassName={styles.secondaryButton}/></div></div>
+        <div className={styles.container}><Image className={styles.closingArt} data-closing-art src="/marketing/generated-19.webp" alt="" aria-hidden="true" width={1000} height={747} sizes="(max-width: 500px) 300px, (max-width: 780px) 500px, 360px" /><SplitHeading id="closing-title" mode="chars">Zvědavost stačí.<br/>Začni první lekcí.</SplitHeading><p data-reveal data-reveal-delay="0.3">Nemusíš mít všechno nastudované.<br/> Právě od toho je tu investi.</p><div className={styles.closingActions} data-reveal data-reveal-delay="0.4"><Link href="/onboarding" prefetch={false} className={`${styles.primaryButton} ${styles.shimmerHost}`} data-lift data-press {...magneticProps}>Začít se učit <ArrowRight aria-hidden="true" size={18}/><span className={styles.shimmer} data-shimmer aria-hidden="true"/></Link><DemoButton compact className={styles.demoButtonWrap} buttonClassName={styles.secondaryButton}/></div></div>
       </section>
     </main>
     <footer className={styles.footer} data-footer><div className={styles.container}><Link href="/" className={styles.wordmark}>investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><nav aria-label="Patička"><a href="#jak-to-funguje">Jak to funguje</a><Link href="/sign-in" prefetch={false}>Přihlásit se</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href} prefetch={false}>{link.label}</Link>)}</nav></div></footer>

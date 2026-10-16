@@ -148,7 +148,7 @@ try {
     "Peníze jsou vážné.Učení nemusí být.", "Malé kroky.Velké souvislosti.", "Jedna otázka.O jedno aha víc.",
     "Vlastní nápady.Cvičné peníze.", "Rostou znalosti. Ne tlak.", "Zvědavost stačí.Začni první lekcí.",
   ]);
-  const expectedAssets = ["v14-curiosity-cropped.png", "v14-discovery-edge.png", "v14-discovery-top-grip.png", "v14-discovery-side-grip.png", "v14-steady-understanding.png", "generated-19.webp"];
+  const expectedAssets = ["v14-curiosity-cropped.webp", "v14-discovery-edge.webp", "v14-discovery-top-grip.webp", "v14-discovery-side-grip.webp", "v14-steady-understanding.webp", "generated-19.webp"];
   await settle();
   assert.equal(await page.locator('img[src*="marketing"]').count(), 6);
   for (const asset of expectedAssets) {
