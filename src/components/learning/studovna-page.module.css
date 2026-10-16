@@ -121,7 +121,7 @@
 .footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px; margin-top: 112px; border-top: 1px solid var(--color-paper-border); padding-top: 28px; }
 .wordmark { font-family: var(--font-investi-manrope), sans-serif; font-size: 1.875rem; font-weight: 800; letter-spacing: -.05em; line-height: 1.2; }
 .footer p, .footer > div { color: var(--color-text-muted); font-size: .8125rem; }
-.footer > div { display: flex; gap: 24px; }
+.footer > div { display: flex; flex-wrap: wrap; column-gap: 24px; }
 .footer a { display: inline-flex; align-items: center; min-height: 44px; }
 @media (max-width: 1199px) and (min-width: 768px) {
   .container { padding: 56px 40px 40px; }

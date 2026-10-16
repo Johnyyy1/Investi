@@ -90,6 +90,11 @@ jobs:
       - run: npm run test:progression-persistence
       - run: npm run test:log-returns-persistence
       - run: npm run test:guest-claim
+      # Deletes every session in the database that expired more than 30 days ago.
+      - name: npm run test:account-deletion
+        run: npm run test:account-deletion
+        env:
+          ACCOUNT_DATA_QA_DISPOSABLE: "1"
       # Last: it deletes every unreachable anonymous identity in the database.
       - name: npm run test:anonymous-cleanup
         run: npm run test:anonymous-cleanup

@@ -27,7 +27,7 @@ export function AuthLayout({ title, description, guide, children, footer }: {
         </section>
         <p className={styles.authFooter}>{footer}</p>
         <DemoButton className={styles.authDemo} buttonClassName="w-full border-transparent bg-transparent text-secondary shadow-none hover:border-transparent hover:bg-surface-muted" />
-        <p className={styles.disclosure}>Vzdělávání, ne investiční doporučení.</p>
+        <p className={styles.disclosure}>Vzdělávání, ne investiční doporučení. <Link href="/privacy">Ochrana osobních údajů</Link> · <Link href="/terms">Podmínky použití</Link></p>
       </div>
     </main>
   );

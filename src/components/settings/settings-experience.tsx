@@ -14,6 +14,8 @@ import type { PersonalizedPreferences } from "@/features/personalization/profile
 import { sessionLabels } from "@/features/personalization/presentation";
 import { SettingsPreferences } from "./settings-preferences";
 import { PortfolioReset } from "./portfolio-reset";
+import { AccountData } from "./account-data";
+import { legalLinks } from "@/components/legal/legal-links";
 import { displayNameSchema, settingsSections, type SettingsIdentity, type SettingsSection } from "./settings-model";
 import styles from "./settings.module.css";
 
@@ -22,6 +24,7 @@ type Props = {
   personalized: boolean; hasDiagnostic: boolean; providers: AuthProviderAvailability;
   initialAccounts: LinkedAccountState | null; initialError?: string;
   portfolioUnlocked: boolean; timeZone: string; earnedCapital: string;
+  deletion: { hasPassword: boolean | null; fresh: boolean; reopen: boolean };
 };
 
 export function SettingsExperience(props: Props) {
@@ -79,7 +82,7 @@ export function SettingsExperience(props: Props) {
           <h1>Profil a nastavení</h1>
           <Link href="/settings?section=account" className={styles.profileLink}><span className={styles.avatar} aria-hidden="true">{identity.name.trim().charAt(0).toUpperCase() || "I"}</span><span><strong>{identity.name}</strong><small>{identity.demo ? "Soukromý cvičný profil · 24 hodin" : `${identity.completed} z ${identity.total} lekcí`}</small></span><ChevronRight size={18} aria-hidden="true" /></Link>
           {["PROFIL", "NASTAVENÍ", "ÚČET"].map((group) => <div className={styles.mobileGroup} key={group}><p className={styles.groupLabel}>{group}</p>{settingsSections.filter((item) => item.group === group && item.id !== "account").map(({ id, label, icon: Icon }) => <Link key={id} href={`/settings?section=${id}`} className={styles.listRow}><Icon size={20} aria-hidden="true" /><span>{label}</span>{id === "goal" ? <small>{sessionLabels[initialPreferences.preferredSessionMinutes]}</small> : id === "format" ? <small>Čeština · Kč</small> : null}<ChevronRight size={18} aria-hidden="true" /></Link>)}</div>)}
-          <div className={styles.mobileGroup}>{signOutButton}{signOutError && <p role="alert" className={styles.error}>{signOutError}</p>}</div><p className={styles.hint}>Vzdělávání, ne investiční doporučení.</p>
+          <div className={styles.mobileGroup}>{signOutButton}{signOutError && <p role="alert" className={styles.error}>{signOutError}</p>}</div><p className={styles.hint}>Vzdělávání, ne investiční doporučení. {legalLinks.map((link, index) => <span key={link.href}>{index > 0 && " · "}<Link href={link.href} className={styles.inlineLink}>{link.label}</Link></span>)}</p>
         </div>
 
         <div className={section === null ? styles.defaultDetail : styles.detail}>
@@ -104,12 +107,13 @@ export function SettingsExperience(props: Props) {
             <div className={styles.card}><dl className={styles.rows}><div><dt>Jazyk</dt><dd>Čeština</dd></div><div><dt>Formát čísel a dat</dt><dd>cs-CZ · 1 234,50 Kč</dd></div><div><dt>Časové pásmo učení</dt><dd>{props.timeZone}</dd></div><div><dt>Cvičný kapitál</dt><dd>CZK · česká koruna</dd></div></dl></div><p className={styles.hint}>Ceny nástrojů v Portfolio Lab uvádíme v původní měně. Hodnotu portfolia přepočítáváme do korun.</p>
           </section>
           <section hidden={section !== "portfolio"} className={styles.section} aria-labelledby="portfolio-settings-title"><div className={styles.sectionHead}><h2 id="portfolio-settings-title">Cvičné portfolio</h2><p>Učení v praxi s penězi, které nejsou skutečné.</p></div><PortfolioReset unlocked={props.portfolioUnlocked} earnedCapital={props.earnedCapital} /><Link className={styles.textLink} href="/lab/portfolio">Otevřít Portfolio Lab<ArrowRight size={18} aria-hidden="true" /></Link></section>
+          <div hidden={section !== "data"}><AccountData saved={!identity.demo && !identity.guest} guest={Boolean(identity.guest)} hasPassword={props.deletion.hasPassword} fresh={props.deletion.fresh} reopenDeletion={props.deletion.reopen} accounts={props.initialAccounts} providers={props.providers} /></div>
           <div hidden={section !== "security"}><AccountSecurity providers={props.providers} initialError={props.initialError} initialAccounts={props.initialAccounts} paper /></div>
           {props.initialError && section !== "security" && <p role="alert" className={styles.error}>{props.initialError} <Link className={styles.textLink} href="/settings?section=security">Zkontrolovat přihlášení</Link></p>}
         </div>
       </div>
     </div>
-    <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi — Studovna">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link></div></footer>
+    <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi — Studovna">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
     <dialog ref={signOutDialog} className={styles.dialog} aria-labelledby="unsaved-title" aria-describedby="unsaved-description" onCancel={(event) => { if (signingOut) event.preventDefault(); }} onClose={() => signOutTrigger.current?.focus()}><h2 id="unsaved-title">Máš neuložené změny</h2><p id="unsaved-description">Odhlášením ztratíš rozepsané změny nastavení. Už uložené předvolby, lekce a portfolio zůstanou.</p>{signOutError && <p role="alert" className={styles.error}>{signOutError}</p>}<div className={styles.actions}><Button variant="secondary" className={styles.secondary} disabled={signingOut} autoFocus onClick={() => signOutDialog.current?.close()}>Zůstat v nastavení</Button><Button className={styles.primary} loading={signingOut} onClick={() => void signOut()}>Odhlásit se</Button></div></dialog>
   </main>;
 }

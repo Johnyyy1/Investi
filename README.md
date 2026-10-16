@@ -82,6 +82,7 @@ npm run typecheck
 npm run lint
 npm run build
 npm run test:persistence
+ACCOUNT_DATA_QA_DISPOSABLE=1 npm run test:account-deletion
 ANONYMOUS_CLEANUP_QA_DISPOSABLE=1 npm run test:anonymous-cleanup
 npm run test:migration
 npm run test:curriculum-seed
@@ -90,6 +91,7 @@ npm run test:portfolio-migration
 npm run test:progression-persistence
 npm run test:log-returns-persistence
 npm run test:product
+LEGAL_TEST_URL=http://localhost:3000 npm run test:legal-browser
 BROWSER_CHANNEL=chrome node scripts/validate-foundations.mjs
 BROWSER_CHANNEL=chrome node scripts/validate-returns-flow.mjs
 BROWSER_CHANNEL=chrome npm run test:log-returns-browser
@@ -103,7 +105,11 @@ Run migrations and seed on a disposable local QA database, with `DATABASE_URL` a
 
 Demos and guests are anonymous Better Auth identities without a password or provider account. A demo is one-time: its session lasts a fixed 24 hours from the start and using it never extends that. A guest session lasts seven days and, like an account's, extends while it is used. Once every session of an anonymous identity has expired, nobody can sign in to it again.
 
-A daily Vercel Cron job (`vercel.json`) calls `/api/cron/cleanup-anonymous`, which removes anonymous identities that have had no valid session for over a day (and were created over a day ago). Deleting the user cascades its sessions, profile, progress, receipts, unlocks, portfolios and trades; saved accounts and shared curriculum/market data are never touched. Rows locked by a guest claim or lesson completion are skipped and retried by the next run. The endpoint requires `Authorization: Bearer $CRON_SECRET` and refuses every request when `CRON_SECRET` is not set, so set it in the Vercel project for production.
+A daily Vercel Cron job (`vercel.json`) calls `/api/cron/cleanup-anonymous`, which removes anonymous identities that have had no valid session for over a day (and were created over a day ago). Deleting the user cascades its sessions, profile, progress, receipts, unlocks, portfolios and trades; saved accounts and shared curriculum/market data are never touched. Rows locked by a guest claim or lesson completion are skipped and retried by the next run. The endpoint requires `Authorization: Bearer $CRON_SECRET` and refuses every request when `CRON_SECRET` is not set, so set it in the Vercel project for production. The same job then deletes session rows (with their IP address and user agent) for every identity once they expired more than 30 days ago (`deleteExpiredSessions`).
+
+## Personal data
+
+A saved account downloads its data from Settings → Moje data (`GET /api/account/export`, session owner only, rate limited per user): profile, sign-in methods without secrets, sessions, learning profile, progress, reward receipts, unlocks, portfolio generations with trades and target mixes, with money in minor units and decimals as exact strings. The same screen deletes the account through Better Auth's `/delete-user`; a guard in `src/lib/auth.ts` requires the password for password accounts, a sign-in from the last 10 minutes for Google/Facebook-only accounts, refuses guests and demos (the cleanup above removes those), and limits attempts per user. The user row cascades everything the user owns; shared curriculum, market data and rate-limit counters stay. `/privacy` and `/terms` are linked from every footer and the sign-up step; the operator's identity and contact in `src/components/legal/legal-page.tsx` must be filled in and the texts reviewed before they are relied on.
 
 The operator command applies the same rule and needs only `DATABASE_URL`:
 

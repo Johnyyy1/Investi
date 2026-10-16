@@ -2,9 +2,11 @@ import "server-only";
 
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth/minimal";
-import { APIError, createAuthMiddleware, getIP } from "better-auth/api";
+import { APIError, createAuthMiddleware, getIP, getSessionFromCtx } from "better-auth/api";
 import { anonymous } from "better-auth/plugins/anonymous";
 import { eq } from "drizzle-orm";
+import { accountDeletionRefusal } from "@/features/account/deletion";
+import { hasPasswordCredential } from "@/features/account/repository";
 import { ensureDemoSeed } from "@/features/demo/repository";
 import { claimGuestLearning, deleteDemoIdentity } from "@/features/guest/repository";
 import { DEMO_SESSION_MS, demoSessionExpiry, GUEST_KIND_HEADER, GUEST_SESSION_MS, isDemoIdentity, isGuestIdentity } from "@/features/guest/identity";
@@ -15,15 +17,36 @@ import * as schema from "@/db/schema";
 import { env } from "@/lib/env";
 import { createSocialAuthConfig } from "@/lib/auth-providers";
 import { rateLimiter } from "@/features/rate-limit";
-import { authIpRules, DEMO_CREATION_IP_RULE, NO_TRUSTED_IP_SUBJECT, normalizeAccountSubject, SIGN_IN_ACCOUNT_RULE, type RateLimitBucket } from "@/features/rate-limit/policy";
+import { ACCOUNT_DELETION_USER_RULE, authIpRules, DEMO_CREATION_IP_RULE, NO_TRUSTED_IP_SUBJECT, normalizeAccountSubject, SIGN_IN_ACCOUNT_RULE, type RateLimitBucket } from "@/features/rate-limit/policy";
 
 const socialAuth = createSocialAuthConfig(env);
 export const authProviderAvailability = socialAuth.availability;
 
-/** Limits Better Auth's per-IP rules cannot express: per account for passwords, and seeded demos per IP. */
+/** Session, password and freshness requirements for /delete-user, on top of Better Auth's own checks. */
+async function guardAccountDeletion(ctx: Parameters<Parameters<typeof createAuthMiddleware>[0]>[0]) {
+  const current = await getSessionFromCtx(ctx);
+  // Better Auth's session middleware answers an unauthenticated request with its own 401.
+  if (!current) return null;
+  const body = (ctx.body ?? {}) as { password?: unknown; token?: unknown };
+  const refusal = accountDeletionRefusal({
+    isAnonymous: current.user.isAnonymous === true,
+    hasPassword: await hasPasswordCredential(current.user.id),
+    passwordProvided: typeof body.password === "string" && body.password.length > 0,
+    tokenProvided: body.token !== undefined,
+    sessionCreatedAt: new Date(current.session.createdAt),
+  });
+  if (refusal) throw new APIError(refusal === "ANONYMOUS_IDENTITY" ? "FORBIDDEN" : "BAD_REQUEST", { message: "Account deletion was refused.", code: refusal });
+  return { scope: "auth:delete-account", subject: current.user.id, rule: ACCOUNT_DELETION_USER_RULE } satisfies RateLimitBucket;
+}
+
+/** Limits Better Auth's per-IP rules cannot express: per account for passwords, seeded demos per IP and
+ * account-deletion confirmations per user, which are checked first. */
 const authAttemptLimits = createAuthMiddleware(async (ctx) => {
   const buckets: RateLimitBucket[] = [];
-  if (ctx.path === "/sign-in/email") {
+  if (ctx.path === "/delete-user") {
+    const bucket = await guardAccountDeletion(ctx);
+    if (bucket) buckets.push(bucket);
+  } else if (ctx.path === "/sign-in/email") {
     const account = normalizeAccountSubject((ctx.body as { email?: unknown } | undefined)?.email);
     if (account) buckets.push({ scope: "auth:sign-in-account", subject: account, rule: SIGN_IN_ACCOUNT_RULE });
   } else if (ctx.path === "/sign-in/anonymous" && ctx.headers?.get(GUEST_KIND_HEADER) !== "guest") {
@@ -43,7 +66,12 @@ export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", schema }),
   emailAndPassword: { enabled: true },
-  user: { additionalFields: { anonymousKind: { type: "string", required: false, input: false } } },
+  user: {
+    additionalFields: { anonymousKind: { type: "string", required: false, input: false } },
+    // Deleting the user row cascades every learner-owned row; shared curriculum and market data stay.
+    // guardAccountDeletion adds the password and fresh-sign-in requirements.
+    deleteUser: { enabled: true },
+  },
   socialProviders: socialAuth.socialProviders,
   // Preserve Better Auth's verified-email linking safeguards; no trusted-provider override.
   onAPIError: { errorURL: new URL("/sign-in", env.BETTER_AUTH_URL).href },

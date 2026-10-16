@@ -12,6 +12,7 @@ import { LESSON_PRACTICE_CAPITAL_MINOR } from "@/features/rewards/practice-capit
 import { formatPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { czechPlural, formatCount, formatDate, formatDecimal } from "@/lib/formatters";
 import { progressModel, type LessonStatus, type OutcomeIcon, type ProgressSummary } from "./progress-model";
+import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./progress-overview.module.css";
 
 type Summary = ProgressSummary & {
@@ -194,7 +195,7 @@ export function ProgressOverview({ summary, unlock, portfolio }: { summary: Summ
 
       <details className={styles.explanation}><summary>Jak funguje pokrok<ChevronDown size={18} aria-hidden="true" /></summary><p>První dokončení lekce přidá {LESSON_XP} XP. XP měří učení a nedají se utratit. Portfolio Lab se odemkne po dokončení všech {definition.prerequisiteLessonIds.length} lekcí Základů investování a získání {formatDecimal(definition.xpRequired)} XP. Odemčení jednorázově přidá {formatPracticeCapitalMinor(definition.rewardPracticeCapitalMinor)} cvičného kapitálu. Každé první dokončení lekce mimo Základy přidá {formatPracticeCapitalMinor(LESSON_PRACTICE_CAPITAL_MINOR)}; když ji dokončíš dřív, kapitál počká na odemčení. Opakování lekce další XP ani kapitál nepřidává.</p><p>Cvičný kapitál je vzdělávací vklad do Portfolio Labu. Nejsou to skutečné peníze ani investiční výnos.</p></details>
 
-      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi — Studovna">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link></div></footer>
+      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi — Studovna">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
     </div>
   </main>;
 }

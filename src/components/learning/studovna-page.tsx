@@ -10,6 +10,7 @@ import { reasonLabels, contextLabels, scaffoldLabels } from "@/features/personal
 import { ResponsiveDisclosure } from "./responsive-disclosure";
 import { StudovnaQuestion } from "./studovna-question";
 import { blockDescription, chapterTitle, PLANNED_CHAPTER_TITLE, portfolioComposition, studovnaLesson, type LearnerSummary } from "./studovna-model";
+import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./studovna-page.module.css";
 
 type Chapter = (typeof moduleCatalog)[number];
@@ -99,7 +100,7 @@ export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; 
       </div>
       <section className={styles.planContext} aria-label="Tvůj studijní plán"><p>{recommendationReason}</p>{recommendedLesson && <Link className={styles.recommendedLink} href={`/learn/${recommendedLesson.moduleSlug}/${recommendedLesson.slug}`}>Doporučená lekce: {recommendedLesson.title}<ArrowRight size={16} aria-hidden="true" /></Link>}<details><summary>Jak si rozvrhnout učení</summary><p>{contextLabels[summary.recommendation.exampleContext]}</p><p>{scaffoldLabels[summary.recommendation.scaffoldLevel]}</p>{summary.recommendation.splitLessonAcrossSessions && <p>Lekci si můžeš rozdělit do více sezení. Uložený postup tě dovede zpět.</p>}</details></section>
       {!summary.profile?.personalizedOnboardingCompletedAt && summary.user && <PersonalizationPrompt userId={summary.user.id} />}
-      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi — Studovna">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link></div></footer>
+      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi — Studovna">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
     </div>
   </main>;
 }

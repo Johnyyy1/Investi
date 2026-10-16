@@ -229,7 +229,7 @@
 .footer .container { border-top: 1px solid var(--divider); padding-top: 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .footer .wordmark { font-size: 1.875rem; }
 .footer p { font-size: .8125rem; color: var(--muted); }
-.footer nav { display: flex; gap: 24px; font-size: .8125rem; }
+.footer nav { display: flex; flex-wrap: wrap; column-gap: 24px; font-size: .8125rem; }
 .footer nav a { display: flex; align-items: center; min-height: 44px; }
 @media (hover: hover) and (pointer: fine) {
   .mobileNav a:hover { color: var(--teal); text-decoration: underline; text-underline-offset: 4px; }
@@ -412,7 +412,7 @@
   .landing .secondaryButton { min-height: 44px; font-size: .875rem; }
   .footer .container { flex-direction: column; align-items: flex-start; gap: 16px; }
   .footer p { font-size: .75rem; }
-  .footer nav { gap: 24px; }
+  .footer nav { column-gap: 24px; }
 }
 @media (max-width: 374px) {
   .hero h1 { font-size: 2.75rem; }

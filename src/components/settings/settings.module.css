@@ -103,7 +103,8 @@ form > .session { margin-top: 32px; }
 .dialog .error { color: var(--color-error-ink); }
 .footer { display: flex; gap: 24px; justify-content: space-between; align-items: center; border-top: 1px solid var(--color-paper-border); margin-top: 96px; padding-top: 28px; font-size: .8125rem; }
 .footer p { color: var(--color-text-muted); }
-.footer > div { display: flex; gap: 24px; }
+.footer > div { display: flex; flex-wrap: wrap; column-gap: 24px; justify-content: flex-end; }
+.inlineLink { color: var(--color-action); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .footer a { display: inline-flex; align-items: center; min-height: 44px; }
 .wordmark { font-family: var(--font-investi-manrope), sans-serif; font-size: 1.875rem; font-weight: 800; letter-spacing: -.05em; }
 @media (hover: hover) and (pointer: fine) {
@@ -182,3 +183,7 @@ form > .session { margin-top: 32px; }
 }
 @media (max-width: 359px) { .page { padding-inline: 16px; } }
 @media (prefers-reduced-motion: reduce) { .page *, .page *::before, .page *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
+.passwordField { margin-top: 24px; }
+.passwordField label { display: block; margin-bottom: 8px; font-size: .9375rem; font-weight: 600; color: var(--color-ink); }
+.passwordField input { display: block; width: 100%; border: 1px solid var(--color-control-outline); border-radius: var(--radius-paper-control); background: var(--color-paper-surface); color: var(--color-ink); font-size: 1rem; min-height: 48px; padding: 10px 14px; }
+.passwordField input[aria-invalid] { border-color: var(--color-error-ink); }

@@ -47,6 +47,8 @@ All browser app URLs must be loopback. Most suites also refuse non-loopback DB U
 | `INSTRUMENT_UNAVAILABLE_TEST_URL`, `INSTRUMENT_UNAVAILABLE_SCREENSHOT_DIR` | Unavailable-history/quote browser runtime/output |
 | `PERSONALIZATION_TEST_URL`, `PERSONALIZATION_SCREENSHOT_DIR` | Personalization/compatibility browser suites |
 | `PERSONALIZATION_QA_DISPOSABLE` | Explicit opt-in; requires dedicated `investi_6a3a_qa` DB |
+| `ACCOUNT_DATA_QA_DISPOSABLE` | Explicit opt-in for `test:account-deletion`, whose session-retention step deletes every session in its local DB that expired over 30 days ago |
+| `LEGAL_TEST_URL` | Running server for `test:legal-browser` |
 | `ANONYMOUS_CLEANUP_QA_DISPOSABLE` | Explicit opt-in for `test:anonymous-cleanup`, which deletes every eligible anonymous identity in its local DB |
 | `PERSONALIZATION_QA_USER_ID`, `PERSONALIZATION_QA_LESSONS` | Internal child fixture harness; scoped QA owner/history mode |
 | `PERSONALIZATION_QA_FOCUS` | Optional focused Settings browser run |

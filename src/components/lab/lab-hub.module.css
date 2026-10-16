@@ -103,6 +103,7 @@
 /* Footer */
 .footer { display: grid; gap: 12px; margin-top: 64px; padding-top: 28px; border-top: 1px solid var(--color-paper-border); color: var(--color-text-muted); font-size: .8125rem; line-height: 1.45; }
 .footerLogo { color: var(--color-ink); font-family: var(--font-investi-manrope), sans-serif; font-size: 1.625rem; font-weight: 800; line-height: 1; letter-spacing: -.05em; }
+.footerLinks { display: flex; flex-wrap: wrap; column-gap: 24px; }
 .footer a { justify-self: start; display: inline-flex; align-items: center; min-height: 44px; color: var(--color-ink); }
 .footer a:hover { text-decoration: underline; text-underline-offset: 3px; }
 

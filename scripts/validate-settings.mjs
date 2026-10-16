@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import postgres from 'postgres';
 import { chromium } from 'playwright';
 const baseURL = process.env.SETTINGS_TEST_URL;
@@ -60,7 +60,7 @@ try {
   await sql`insert into learning_profile(user_id,experience_level,goals,interests,daily_goal_minutes,time_zone,onboarding_completed_at) values(${user.id},'BASIC','{CONFIDENCE}','{}',10,'Europe/Prague',now())`;
   const before = await snapshot(user.id);
   if (process.env.SETTINGS_QA_FOCUS === 'visual') {
-    for (const section of ['', 'account', 'goal', 'format', 'learning', 'security', 'portfolio']) {
+    for (const section of ['', 'account', 'goal', 'format', 'learning', 'security', 'portfolio', 'data']) {
       await go(section); await matrix(section ? `final-${section}` : 'final-overview');
     }
     await go('goal'); await page.getByRole('button', { name: 'Změnit cíl nebo úroveň…' }).click(); await matrix('final-editor');
@@ -138,6 +138,9 @@ try {
     await go('security');
     await page.getByRole('button', { name: 'Zkusit načíst znovu', exact: true }).waitFor();
     assert.equal(await page.getByRole('status').filter({ hasText: 'Načítám způsoby' }).count(), 0);
+    await go('data'); await root().getByRole('heading', { name: 'Smazání teď nejde připravit' }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Smazat účet…' }).count(), 0, 'no deletion while sign-in methods are unknown');
+    await go('security'); await page.getByRole('button', { name: 'Zkusit načíst znovu', exact: true }).waitFor();
   } finally { await sql`alter table settings_qa_account_unavailable rename to account`; }
   await page.getByRole('button', { name: 'Zkusit načíst znovu', exact: true }).click();
   await page.getByRole('heading', { name: 'Způsoby přihlášení', exact: true }).waitFor();
@@ -210,6 +213,38 @@ try {
   assert.equal(demoAfter.portfolio.filter((p) => p.closed_at === null).length, 1);
   assert.equal(demoAfter.portfolio.length, demoBefore.portfolio.length + 1);
   console.log('PASS: isolated demo identity, real reset failure/retry, modal focus and immutable learning/reward/trade history.');
+  await go('data'); await root().getByRole('heading', { name: 'Tento profil se smaže sám' }).waitFor();
+  assert.equal(await page.getByRole('button', { name: 'Smazat účet…' }).count(), 0, 'a demo has no account to delete');
+
+  // Moje data: owner-only export download, then the deletion dialog and a real deletion.
+  const owner = { email: `settings-delete-${randomUUID()}@example.com`, password: randomUUID() };
+  assert.ok((await context.request.post(`${baseURL}/api/auth/sign-up/email`, { headers: { origin: baseURL }, data: { name: 'Mazání QA', ...owner } })).ok());
+  const { user: deletable } = await (await context.request.get(`${baseURL}/api/auth/get-session`)).json(); ids.push(deletable.id);
+  await sql`insert into learning_profile(user_id,experience_level,goals,interests,daily_goal_minutes,time_zone,onboarding_completed_at) values(${deletable.id},'BASIC','{CONFIDENCE}','{}',10,'Europe/Prague',now())`;
+  await go('data'); await matrix('data');
+  const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Stáhnout data' }).click()]);
+  assert.match(download.suggestedFilename(), /^investi-moje-data-\d{4}-\d{2}-\d{2}\.json$/);
+  const exported = JSON.parse(await readFile(await download.path(), 'utf8'));
+  assert.equal(exported.user.email, owner.email); assert.equal(exported.learningProfile.dailyGoalMinutes, 10);
+  await page.getByRole('status').filter({ hasText: 'se stahuje' }).waitFor();
+  const deleteTrigger = page.getByRole('button', { name: 'Smazat účet…' });
+  await deleteTrigger.click(); const confirmDelete = page.getByRole('dialog', { name: 'Smazat účet natrvalo?' }); await confirmDelete.waitFor();
+  assert.ok(await confirmDelete.getByRole('button', { name: 'Ponechat účet' }).evaluate((button) => button === document.activeElement), 'the safe choice is focused first');
+  await page.keyboard.press('Escape'); await confirmDelete.waitFor({ state: 'hidden' });
+  assert.ok(await deleteTrigger.evaluate((button) => button === document.activeElement), 'focus returns to the trigger');
+  await deleteTrigger.click();
+  await confirmDelete.getByRole('button', { name: 'Smazat účet natrvalo' }).click();
+  await confirmDelete.getByRole('alert').filter({ hasText: 'Pro smazání účtu zadej své heslo.' }).waitFor();
+  assert.ok(await confirmDelete.getByLabel('Heslo k účtu').evaluate((input) => input === document.activeElement));
+  await confirmDelete.getByLabel('Heslo k účtu').fill('wrong-password-123'); await confirmDelete.getByRole('button', { name: 'Smazat účet natrvalo' }).click();
+  await confirmDelete.getByRole('alert').filter({ hasText: 'Heslo nesouhlasí' }).waitFor();
+  assert.equal((await sql`select id from "user" where id=${deletable.id}`).length, 1, 'a wrong password deletes nothing');
+  for (const width of [390, 1440]) { await page.setViewportSize({ width, height: 900 }); await settle(); await page.screenshot({ path: `${output}/data-delete-dialog-${width}.png`, animations: 'disabled' }); }
+  await confirmDelete.getByLabel('Heslo k účtu').fill(owner.password); await confirmDelete.getByRole('button', { name: 'Smazat účet natrvalo' }).click();
+  await page.waitForURL('**/sign-in?account=deleted'); await page.getByRole('status').filter({ hasText: 'Účet je smazaný' }).waitFor();
+  assert.equal((await sql`select id from "user" where id=${deletable.id}`).length, 0);
+  assert.equal(await (await context.request.get(`${baseURL}/api/auth/get-session`)).json(), null);
+  console.log('PASS: data export download, deletion dialog focus/Escape/password errors and a real account deletion that signs the learner out.');
   assert.deepEqual(errors, []);
   console.log(`PASS: responsive screenshots at 320/390/768/1024/1440 and 200% text. Artifacts: ${output}`);
   }

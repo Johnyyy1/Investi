@@ -49,6 +49,8 @@
 .error { margin-top: 24px; padding: 14px 16px; background: var(--color-error-tint); border-radius: 8px; color: var(--color-error-ink); }
 .textLink { text-decoration: underline; display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
 .disclosure { font-size: .8125rem; color: var(--color-text-muted); text-align: center; margin-top: 32px; }
+.disclosure a, .consent a { color: var(--color-ink); font-weight: 600; text-decoration: underline; }
+.consent { margin-top: 16px; font-size: .8125rem; line-height: 1.5; color: var(--color-text-secondary); text-align: center; }
 .spinner { animation: spin 1s linear infinite; }
 .accountHint { color: var(--color-text-secondary); font-size: .875rem; text-align: right; }
 .accountLink { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; color: var(--color-ink); text-decoration: underline; }
