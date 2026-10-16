@@ -35,6 +35,7 @@ export default async function InstrumentPage({ params, searchParams }: { params:
     loadInstrumentDetail(portfolioMarketData.service, instrumentId, range, env.MARKET_DATA_PROVIDER === "deterministic" ? new Date(env.DETERMINISTIC_MARKET_NOW ?? FIXTURE_RETRIEVED_AT) : new Date()),
     loadPortfolioView(user.id),
   ]);
+  if (detail.instrumentMissing) notFound();
   return <PageFrame width="wide" className="max-w-[80rem] pt-6 pb-28 sm:pt-7 sm:pb-10 lg:pt-8">
     <Link href="/lab/portfolio" className="inline-flex min-h-11 items-center text-small font-semibold text-primary-hover">← Portfolio Lab</Link>
     {detail.instrument ? <InstrumentDetailView instrument={detail.instrument} quote={detail.quote ? {

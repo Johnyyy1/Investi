@@ -181,7 +181,7 @@ try {
   assert.deepEqual(await snapshot(), completed, "full replay preserves all receipts and persisted progress");
   await page.goto(`${baseURL}/learn/returns/returns-checkpoint`);
   // Next streams notFound with HTTP 200 after headers have been sent.
-  await heading("Tato stránka není k dispozici");
+  await heading("Tahle lekce zatím není k dispozici");
   assert.ok(await page.locator('meta[name="robots"][content="noindex"]').count() >= 1);
   assert.equal(await page.locator("#step-title").count(), 0);
   assert.equal((await sql`select * from lesson_progress where user_id = ${userId} and lesson_id = 'returns-checkpoint'`).length, 0);

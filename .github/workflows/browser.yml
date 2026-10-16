@@ -96,6 +96,12 @@ jobs:
         env:
           BACKTEST_TEST_URL: ${{ env.APP_URL }}
           BACKTEST_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/backtesting
+      - name: Not-found pages
+        if: ${{ !cancelled() }}
+        run: npm run test:not-found-browser
+        env:
+          NOT_FOUND_TEST_URL: ${{ env.APP_URL }}
+          NOT_FOUND_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/not-found
       - name: Marketing
         if: ${{ !cancelled() }}
         run: node scripts/validate-marketing.mjs

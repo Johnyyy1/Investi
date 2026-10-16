@@ -48,7 +48,7 @@ try {
   await page.screenshot({ path: `${screenshotDir}/history-unavailable-320-200-percent.png`, fullPage: true });
 
   await page.goto(`${baseURL}/lab/instruments/FMP%3ANASDAQ%3AA%25ZZ`);
-  await page.getByRole("heading", { name: "Tato stránka není k dispozici" }).waitFor();
+  await page.getByRole("heading", { name: "Tenhle instrument jsme nenašli" }).waitFor();
   assert.equal(await page.getByRole("heading", { name: "Apple Inc." }).count(), 0, "malformed encoded provider identity never renders instrument data");
   assert.deepEqual(errors, [], "partial and invalid detail states have no browser errors");
   console.log("PASS: stale quote retains history, unavailable range has no fabricated chart, invalid route renders not-found, and 320px/200% text has no overflow. Screenshots:", screenshotDir);

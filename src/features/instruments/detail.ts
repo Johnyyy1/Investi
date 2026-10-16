@@ -17,6 +17,8 @@ export type InstrumentDetail = {
   quoteMessage: string | null;
   historyMessage: string | null;
   metadataMessage: string | null;
+  /** The source does not know this identity (as opposed to being unreachable), so the route is a 404. */
+  instrumentMissing: boolean;
   startDate: string;
   endDate: string;
   historyPartial: boolean;
@@ -55,7 +57,7 @@ export async function loadInstrumentDetail(service: MarketDataService, instrumen
   const request = historicalRequest(instrumentId, range, now);
   let instrument: Instrument;
   try { instrument = await service.getInstrumentMetadata(instrumentId); }
-  catch (error) { return { instrument: null, quote: null, points: [], metadataMessage: safeMessage(error, "instrument"), quoteMessage: null, historyMessage: null, startDate: request.startDate, endDate: request.endDate, historyPartial: false, metrics: null, homeCurrency: null, homeCurrencyMessage: null, fundamentals: null, fundamentalsMessage: null, etfAnalytics: null, etfAnalyticsMessage: null }; }
+  catch (error) { return { instrument: null, quote: null, points: [], metadataMessage: safeMessage(error, "instrument"), instrumentMissing: isMarketDataError(error) && (error.code === "InstrumentNotFound" || error.code === "UnsupportedInstrument"), quoteMessage: null, historyMessage: null, startDate: request.startDate, endDate: request.endDate, historyPartial: false, metrics: null, homeCurrency: null, homeCurrencyMessage: null, fundamentals: null, fundamentalsMessage: null, etfAnalytics: null, etfAnalyticsMessage: null }; }
 
   const [quoteResult, historyResult, fundamentalsResult, etfResult] = await Promise.allSettled([
     service.getQuote(instrumentId),
@@ -73,6 +75,7 @@ export async function loadInstrumentDetail(service: MarketDataService, instrumen
     quote,
     points,
     metadataMessage: null,
+    instrumentMissing: false,
     quoteMessage: quote ? null : safeMessage(quoteResult.status === "rejected" ? quoteResult.reason : null, "quote"),
     historyMessage: points.length ? null : safeMessage(historyResult.status === "rejected" ? historyResult.reason : null, "history"),
     startDate: request.startDate,

@@ -76,6 +76,15 @@ describe("instrument detail loading", () => {
     const detail = await loadInstrumentDetail(createDeterministicMarketDataService(), "FMP:NASDAQ:AAPL", "1Y", now);
     expect(detail.instrument).toBeNull();
     expect(detail.metadataMessage).toMatch(/není.*k dispozici/);
+    expect(detail.instrumentMissing).toBe(true);
+  });
+  it("keeps an unreachable source distinct from an unknown instrument", async () => {
+    const service = createDeterministicMarketDataService();
+    vi.spyOn(service, "getInstrumentMetadata").mockRejectedValue(new MarketDataError("ProviderUnavailable", "upstream failure"));
+    const detail = await loadInstrumentDetail(service, "US-XNAS:AAPL", "1Y", now);
+    expect(detail.instrument).toBeNull();
+    expect(detail.instrumentMissing).toBe(false);
+    expect(detail.metadataMessage).toMatch(/není.*k dispozici/);
   });
   it("derives price-only metrics from the loaded closes", async () => {
     const detail = await loadInstrumentDetail(createDeterministicMarketDataService(), "US-XNAS:AAPL", "1Y", now);
