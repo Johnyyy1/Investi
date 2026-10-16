@@ -29,6 +29,8 @@
     "test:portfolio-browser": "node scripts/validate-portfolio-lab.mjs",
     "test:portfolio-browser-closed": "node scripts/validate-portfolio-closed-market.mjs",
     "test:instrument-browser-unavailable": "node scripts/validate-instrument-unavailable.mjs",
+    "test:account-deletion": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-account-deletion.mts",
+    "test:legal-browser": "node scripts/validate-legal-pages.mjs",
     "test:anonymous-cleanup": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-anonymous-cleanup.mts",
     "test:demo-session": "node scripts/validate-demo-session.mjs",
     "test:guest-claim": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-guest-claim.mts",

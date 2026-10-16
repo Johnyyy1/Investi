@@ -5,6 +5,7 @@ import { AppLink as Link } from "@/components/shell/app-link";
 import type { PortfolioView } from "@/features/portfolio/service";
 import { backtestPreview, labLessonRows, nextFoundationsLesson } from "./lab-hub-model";
 import { dataStatus, fxRate, groups, groupSummaries, minor, percent, signedMoney, trend, wholeMoney, type DataStatus } from "./portfolio/lab-model";
+import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./lab-hub.module.css";
 
 /** /lab hub from Pen "Investi / Lab hub — 1440px" (iByrw) and "— 390px" (YZnok), states 1–4.
@@ -54,7 +55,7 @@ export function LabHub({ unlock, completedLessonIds, view }: { unlock: LabHubUnl
     <footer className={styles.footer}>
       <p className={styles.footerLogo}>investi!</p>
       <p>Výukový model. Nejde o investiční doporučení ani odhad budoucího výnosu.</p>
-      <Link href="/settings">Nastavení</Link>
+      <div className={styles.footerLinks}><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div>
     </footer>
   </main>;
 }

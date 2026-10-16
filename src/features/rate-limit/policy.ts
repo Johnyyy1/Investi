@@ -43,6 +43,10 @@ export const authIpRules = {
 export const SIGN_IN_ACCOUNT_RULE: RateLimitRule = { window: 15 * MINUTE, max: 10 };
 /** Seeded demo identities (DB writes + an open Portfolio Lab) created from one IP. */
 export const DEMO_CREATION_IP_RULE: RateLimitRule = { window: HOUR, max: 20 };
+/** Password guesses through the account-deletion confirmation, per signed-in user. */
+export const ACCOUNT_DELETION_USER_RULE: RateLimitRule = { window: 15 * MINUTE, max: 5 };
+/** Full personal-data exports per user; each one reads every row the user owns. */
+export const ACCOUNT_EXPORT_USER_RULE: RateLimitRule = { window: HOUR, max: 10 };
 
 export type MarketDataFamily = "search" | "instrument-preview" | "allocation-quotes" | "instrument-detail";
 

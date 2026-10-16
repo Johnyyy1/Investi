@@ -1,4 +1,4 @@
-import { BookOpen, ChartPie, Globe, ShieldCheck, Target, UserRound } from "lucide-react";
+import { BookOpen, ChartPie, FileDown, Globe, ShieldCheck, Target, UserRound } from "lucide-react";
 import { z } from "zod";
 
 export const settingsSections = [
@@ -8,6 +8,7 @@ export const settingsSections = [
   { id: "portfolio", label: "Portfolio Lab", icon: ChartPie, group: "NASTAVENÍ" },
   { id: "learning", label: "Učení", icon: BookOpen, group: "NASTAVENÍ" },
   { id: "security", label: "Přihlášení a zabezpečení", icon: ShieldCheck, group: "ÚČET" },
+  { id: "data", label: "Moje data", icon: FileDown, group: "ÚČET" },
 ] as const;
 export type SettingsSection = typeof settingsSections[number]["id"];
 export type SettingsIdentity = { name: string; email: string; demo: boolean; guest?: boolean; since: string; completed: number; total: number };

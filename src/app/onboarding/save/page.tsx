@@ -38,12 +38,13 @@ export default async function SaveProgressPage({ searchParams }: { searchParams:
           <SocialSignIn providers={authProviderAvailability} mode="sign-up" initialError={errorCode !== undefined ? getSocialAuthErrorMessage(errorCode) : undefined} callbackURL="/learn" errorCallbackURL="/onboarding/save" />
           <SignUpForm redirectTo="/learn" />
         </div>
+        <p className={styles.consent}>Vytvořením účtu souhlasíš s <Link href="/terms">podmínkami použití</Link>. Jak zacházíme s tvými údaji, popisují <Link href="/privacy">zásady ochrany osobních údajů</Link>.</p>
         <div className={styles.saveLater}>
           <Link className={styles.textLink} href="/learn">Teď ne</Link>
           <p>Pokrok zatím zůstane jen v tomhle prohlížeči. Když ho vymažeš nebo přejdeš na jiné zařízení, můžeš o něj přijít.</p>
         </div>
       </section>
-      <p className={styles.disclosure}>Vzdělávání, ne investiční doporučení.</p>
+      <p className={styles.disclosure}>Vzdělávání, ne investiční doporučení. <Link href="/privacy">Ochrana osobních údajů</Link> · <Link href="/terms">Podmínky použití</Link></p>
     </div>
   </main>;
 }
