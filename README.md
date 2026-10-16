@@ -1,6 +1,6 @@
 # investi
 
-Learn investing by doing. The authenticated product is organized around three destinations: **Learn**, **Lab**, and **Progress**. Twelve guided lessons are currently available across Investing Foundations and Returns & Compounding, with persisted lesson position, transactional first-completion rewards, and focused interactive exercises.
+Learn investing by doing. The authenticated product is organized around three destinations: **Learn**, **Lab**, and **Progress**. Guided lessons are organized into modules (Investing Foundations, Returns & Compounding, …), with persisted lesson position, transactional first-completion rewards, and focused interactive exercises. The lesson catalog in `src/features/learning/catalog.ts` lists what is published.
 
 ## Architecture
 
@@ -35,7 +35,7 @@ Learn investing by doing. The authenticated product is organized around three de
    npm run dev
    ```
 
-`db:seed` is idempotent. Apply all committed migrations through `0009_brainy_madame_masque.sql`; the current code requires reward receipts, portfolio/trade and unlock ledgers, and the additive personalization fields. Historical migrations and their metadata must remain intact.
+`db:seed` is idempotent. Apply every committed migration in `drizzle/` (`npm run db:migrate` applies the pending ones in order); the application code assumes the full chain. Historical migrations and their metadata must remain intact.
 
 ## Optional social sign-in
 
@@ -74,32 +74,83 @@ GitHub Actions runs the gates automatically. `.github/workflows/ci.yml` runs on 
 
 Locally, run `npx next typegen` once on a fresh checkout before `npm run typecheck` (`next dev` and `next build` also generate the types).
 
-Static gates run independently. Database/browser checks require a local disposable QA database and a fresh app runtime; `validate-design-system.mjs` specifically requires development mode:
-
-```bash
-npm test
-npm run typecheck
-npm run lint
-npm run build
-npm run test:persistence
-ACCOUNT_DATA_QA_DISPOSABLE=1 npm run test:account-deletion
-ANONYMOUS_CLEANUP_QA_DISPOSABLE=1 npm run test:anonymous-cleanup
-npm run test:migration
-npm run test:curriculum-seed
-npm run test:portfolio-persistence
-npm run test:portfolio-migration
-npm run test:progression-persistence
-npm run test:log-returns-persistence
-npm run test:product
-LEGAL_TEST_URL=http://localhost:3000 npm run test:legal-browser
-BROWSER_CHANNEL=chrome node scripts/validate-foundations.mjs
-BROWSER_CHANNEL=chrome node scripts/validate-returns-flow.mjs
-BROWSER_CHANNEL=chrome npm run test:log-returns-browser
-BROWSER_CHANNEL=chrome npm run test:portfolio-browser
-BROWSER_CHANNEL=chrome node scripts/validate-design-system.mjs
-```
+Static gates run independently. Database and browser suites require a local disposable QA database and a fresh app runtime; see [Scripts and test suites](#scripts-and-test-suites) for the full list.
 
 Run migrations and seed on a disposable local QA database, with `DATABASE_URL` and local auth/provider settings explicitly exported. Re-run `db:seed` followed by `test:curriculum-seed` to verify idempotence. Personalization upgrade QA additionally requires a fresh database and explicit opt-in; see [onboarding](docs/onboarding.md). Browser suites create and remove only their own local disposable identities. Screenshots are written under `/tmp`, never the repository.
+
+## Scripts and test suites
+
+Every suite below is an npm script in `package.json` unless it is written as `node scripts/…`. "CI" marks what GitHub Actions runs: `ci.yml` on every pull request, `browser.yml` nightly.
+
+**App and database**
+
+| Script | Purpose |
+| --- | --- |
+| `dev`, `build`, `start` | Next.js development server, production build, production server |
+| `vercel-build` | Production deploys on Vercel: applies pending migrations, then `next build` |
+| `db:migrate`, `db:seed` | Apply committed migrations; seed the curriculum (idempotent) |
+| `db:generate`, `db:studio` | Generate a new migration from the Drizzle schema; open Drizzle Studio |
+
+**Static gates** (no database, all in CI)
+
+| Script | Purpose |
+| --- | --- |
+| `lint`, `typecheck` | ESLint; `tsc --noEmit` (run `npx next typegen` first on a fresh checkout) |
+| `test`, `test:watch` | Vitest unit tests: domain, accounting, lesson content, components |
+
+**Database suites** (need `DATABASE_URL` pointing at a disposable local database that is migrated and seeded)
+
+| Script | Covers | CI |
+| --- | --- | --- |
+| `test:curriculum-seed` | Seed idempotence and lesson publication/order | ✓ |
+| `test:migration` | Practice Capital receipt migrations | ✓ |
+| `test:portfolio-migration` | Portfolio schema migrations | ✓ |
+| `test:persistence` | Progress, completion and reward receipts | ✓ |
+| `test:portfolio-persistence` | Trades, generations, reset, exact accounting, concurrency | ✓ |
+| `test:portfolio-allocation` | Target-mix execution and rebalancing | ✓ |
+| `test:portfolio-closed-market` | Orders and valuations while the market is closed | ✓ |
+| `test:progression-persistence` | Portfolio Lab unlock, demo access grant and row-lock concurrency | ✓ |
+| `test:log-returns-persistence` | Returns module answers, completion and rewards | ✓ |
+| `test:guest-claim` | Guest → account claim | ✓ |
+| `test:market-data-cache` | Shared Postgres market-data cache | ✓ |
+| `test:rate-limit` | Shared rate limits | ✓ |
+| `test:account-deletion` | Account deletion, data export, session retention (needs `ACCOUNT_DATA_QA_DISPOSABLE=1`) | ✓ |
+| `test:anonymous-cleanup` | Anonymous identity cleanup (needs `ANONYMOUS_CLEANUP_QA_DISPOSABLE=1`) | ✓ |
+| `test:personalization-persistence` | Onboarding profile and recommendations (needs `PERSONALIZATION_QA_DISPOSABLE=1`, see [onboarding](docs/onboarding.md)) | |
+| `test:prepared-statements` | Prepared-statement compatibility of a pooler endpoint (see [performance baseline](docs/performance-baseline.md)) | |
+
+**Browser suites** (Playwright; need a fresh running server on a disposable database. Each suite reads its base URL from a `*_TEST_URL` variable listed in [environment settings](docs/environment.md); `BROWSER_CHANNEL=chrome` uses installed Chrome)
+
+| Script | Covers | CI |
+| --- | --- | --- |
+| `test:product` | Product shell and Backtesting | ✓ |
+| `test:foundations-browser` | Foundations lessons | ✓ |
+| `test:portfolio-browser` | Portfolio Lab | ✓ |
+| `test:progression-browser` | Unlock progression | ✓ |
+| `test:backtesting-browser` | Backtesting Lab | ✓ |
+| `node scripts/validate-marketing.mjs` | Landing page | ✓ |
+| `test:log-returns-browser`, `node scripts/validate-returns-flow.mjs` | Returns module | |
+| `test:portfolio-browser-closed` | Closed/stale market states (server started with `DETERMINISTIC_MARKET_NOW`) | |
+| `test:instrument-browser-unavailable` | Unavailable instrument history/quotes | |
+| `test:studovna` | Learn page | |
+| `test:onboarding-redesign` | Guest onboarding | |
+| `test:personalization-browser`, `test:personalization-compatibility` | Personalization and legacy accounts | |
+| `test:settings` | Settings and linked accounts | |
+| `test:legal-browser` | Privacy and terms pages | |
+| `test:demo-session` | Demo and guest session lifetimes | |
+| `test:request-isolation` | Request-scoped memoization across users | |
+| `test:navigation-feedback` | Client navigation feedback | |
+| `node scripts/validate-auth.mjs` | Social sign-in with fake providers (see [authentication](docs/authentication.md)) | |
+| `node scripts/validate-progress.mjs` | Progress page | |
+| `node scripts/validate-design-system.mjs` | Design system (requires `npm run dev`) | |
+
+**Operator and diagnostics**
+
+| Script | Purpose |
+| --- | --- |
+| `demo:cleanup` | Dry run of the anonymous identity cleanup; `-- --apply` applies it |
+| `smoke:fmp` | Manual smoke test of the live FMP market-data adapter |
+| `bench:navigation` | Client navigation benchmark (see [performance baseline](docs/performance-baseline.md)) |
 
 ## Anonymous identity retention
 

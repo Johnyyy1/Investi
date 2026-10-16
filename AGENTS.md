@@ -336,11 +336,11 @@ Do not change lesson completion semantics while doing visual work.
 
 9. Practice Capital
 
-Practice Capital is the spendable learning reward for Portfolio Lab. XP measures learning progress and gates the Portfolio Lab unlock.
+Practice Capital is the spendable learning reward for Portfolio Lab. XP measures learning progress, stays visible to the learner, and gates the Portfolio Lab unlock. Whether XP stays visible is an open product decision (issue #35); until it is decided, do not hide XP or remove it from the unlock condition.
 
 Reward policy
 
-Current approved policy (reward policy v3):
+Current approved policy (reward policy v3). The code is the source of truth for the amounts and the XP goal: lessonReward in src/features/rewards/practice-capital.ts and the unlock definition in src/features/progression/unlocks.ts. docs/product-reset.md records the history.
 
 first completion of a Foundations lesson
 = XP only
@@ -367,7 +367,7 @@ Practice Capital must never be derived from XP.
 
 Source of truth
 
-Practice Capital is derived from authoritative lesson reward receipts.
+Practice Capital is derived from authoritative lesson reward receipts plus recorded progression unlock grants (the Portfolio Lab unlock and the demo access grant).
 
 Do not create a mutable user balance counter unless architecture is deliberately changed later.
 
@@ -387,6 +387,7 @@ Important definitions
 
 Earned Practice Capital
 = sum of legitimate Practice Capital receipts
++ sum of recorded unlock grants
 
 Cash
 = contributed capital

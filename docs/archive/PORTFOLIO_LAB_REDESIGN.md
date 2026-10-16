@@ -26,7 +26,7 @@ The slider/percent mix builder was retired at the learner's request. Investing n
 
 The ledger stays append-only, and every price, FX rate, cash amount, value and gain is still derived on the server from receipts, trades and observations. Two additive pieces were needed:
 
-1. **Target mixes** (`portfolio_allocation`, `portfolio_allocation_line`, migration `0010`). This is user intent that the trade ledger cannot represent, and the Pen's "cíl 40 %", drift explanation and "Upravit" depend on it. It is append-only, generation-scoped and holds no money. See [portfolio-lab](portfolio-lab.md#target-mixes).
+1. **Target mixes** (`portfolio_allocation`, `portfolio_allocation_line`, migration `0010`). This is user intent that the trade ledger cannot represent, and the Pen's "cíl 40 %", drift explanation and "Upravit" depend on it. It is append-only, generation-scoped and holds no money. See [portfolio-lab](../portfolio-lab.md#target-mixes).
 2. **Mix execution and review** (`executeAllocation` / `reviewAllocation`). Running one buy per line from the client would be non-atomic, and it would size quantities from client-side prices. Instead the server plans every trade from one set of fresh execution observations under the existing learner lock. It only appends ordinary trades and does not change the fold, valuation, rewards, reset or the single-trade path.
 
 The price/FX attribution is a read-only projection with exact integer arithmetic; its parts sum to the investment gain/loss. Rewards remain contributions: a reward raises cash and cash weight, never gain. Missing quotes keep the total, weights, gain and attribution `null`.
