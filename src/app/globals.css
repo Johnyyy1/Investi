@@ -1,6 +1,5 @@
 @import "tailwindcss";
-@import "../styles/learning-tokens.css";
-@import "../styles/paper-tokens.css";
+@import "../styles/tokens.css";
 
 html { -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
 html, body { min-height: 100%; background: var(--color-background); }
@@ -16,17 +15,16 @@ button, a, [role="button"] {
   input, textarea, select { font-size: 16px; }
 }
 
-.investi-range, .ql-range { appearance: none; background: transparent; }
-.investi-range:focus, .ql-range:focus { outline: 3px solid var(--color-primary-hover); outline-offset: 3px; }
-.investi-range::-webkit-slider-runnable-track, .ql-range::-webkit-slider-runnable-track { height: 6px; background: var(--color-border-strong); border-radius: var(--radius-pill); }
-.investi-range::-webkit-slider-thumb, .ql-range::-webkit-slider-thumb { appearance: none; margin-top: -8px; width: 22px; height: 22px; border-radius: 50%; background: var(--color-primary); border: 3px solid var(--color-surface); box-shadow: 0 0 0 1px var(--color-primary-hover); transition: transform var(--motion-micro) var(--ease-standard); }
-.investi-range::-moz-range-track, .ql-range::-moz-range-track { height: 6px; background: var(--color-border-strong); border-radius: var(--radius-pill); }
-.investi-range::-moz-range-thumb, .ql-range::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--color-primary); border: 3px solid var(--color-surface); box-shadow: 0 0 0 1px var(--color-primary-hover); }
-.investi-range:disabled, .ql-range:disabled { cursor: not-allowed; opacity: .55; }
+.investi-range { appearance: none; background: transparent; }
+.investi-range:focus-visible { outline: 3px solid var(--color-foreground); outline-offset: 4px; }
+.investi-range::-webkit-slider-runnable-track { height: 6px; background: var(--color-track); border-radius: var(--radius-pill); }
+.investi-range::-webkit-slider-thumb { appearance: none; margin-top: -8px; width: 22px; height: 22px; border-radius: 50%; background: var(--color-primary); border: 3px solid var(--color-surface); box-shadow: 0 0 0 1px var(--color-primary-hover); transition: transform var(--motion-micro) var(--ease-standard); }
+.investi-range::-moz-range-track { height: 6px; background: var(--color-border-strong); border-radius: var(--radius-pill); }
+.investi-range::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--color-primary); border: 3px solid var(--color-surface); box-shadow: 0 0 0 1px var(--color-primary-hover); }
+.investi-range:disabled { cursor: not-allowed; opacity: .55; }
 
 @media (hover: hover) and (pointer: fine) {
-  .investi-range:not(:disabled):hover::-webkit-slider-thumb,
-  .ql-range:not(:disabled):hover::-webkit-slider-thumb { transform: scale(1.06); }
+  .investi-range:not(:disabled):hover::-webkit-slider-thumb { transform: scale(1.06); }
 }
 
 /* KaTeX ships unlayered CSS, so the lesson formula reset must be unlayered too. */

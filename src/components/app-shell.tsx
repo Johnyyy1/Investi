@@ -7,7 +7,8 @@ import { initializeTimeZoneAction } from "@/features/gamification/actions";
 import { availableLessons } from "@/features/learning/catalog";
 import { authClient } from "@/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Surface } from "@/components/ui/surface";
 import { AppLink as Link } from "./shell/app-link";
 import { MobileNav } from "./shell/mobile-nav";
@@ -28,7 +29,6 @@ export function AppShell({ children, userName, isDemo = false, isGuest = false, 
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const activeId = activeNavigationId(pathname);
-  const paper = pathname === "/learn" || pathname === "/progress" || pathname === "/settings" || pathname === "/lab" || pathname === "/lab/portfolio" || pathname === "/lab/backtesting" || pathname.startsWith("/lab/instruments/");
   useEffect(() => { if (needsTimeZone) void initializeTimeZoneAction(Intl.DateTimeFormat().resolvedOptions().timeZone); }, [needsTimeZone]);
   async function signOut() {
     setPending(true); setError(undefined);
@@ -43,7 +43,7 @@ export function AppShell({ children, userName, isDemo = false, isGuest = false, 
 
   const displayName = isDemo ? "Demo" : isGuest ? "Host" : userName;
   const initial = displayName.trim().charAt(0).toUpperCase() || "I";
-  return <NavigationStatusProvider>{(navigating) => <div className={`min-h-dvh bg-background ${paper ? `investi-theme ${styles.shell}` : ""}`}>
+  return <NavigationStatusProvider>{(navigating) => <div className={`min-h-dvh bg-background ${styles.shell}`}>
     <a href="#main-content" className="sr-only z-50 rounded-control bg-surface p-4 shadow-elevation-2 focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Přeskočit na obsah</a>
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95">
       <div className="mx-auto flex min-h-20 max-w-6xl items-center justify-between gap-3 px-4 min-[375px]:px-5 sm:px-8 lg:px-10">
@@ -73,7 +73,7 @@ export function AppShell({ children, userName, isDemo = false, isGuest = false, 
             <div className="px-3 pt-3 pb-4">
               <div className="flex flex-wrap items-center gap-3"><span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-control bg-primary-soft font-bold text-primary-hover">{initial}</span><div className="min-w-24 flex-1"><p className="truncate text-small font-bold text-foreground">{isGuest ? "Host" : userName}</p><p className="mt-0.5 break-words text-microcopy leading-tight text-secondary">{isDemo ? "Soukromý cvičný profil" : isGuest ? "Pokrok je zatím jen v tomhle prohlížeči" : "Student investi"}</p></div></div>
               {isDemo ? <Badge tone="primary" className="mt-3">Dostupný 24 hodin</Badge> : null}
-              {isGuest ? <Link href="/onboarding/save" className="mt-3 flex min-h-12 items-center justify-center rounded-control bg-primary px-3 text-small font-bold text-primary-foreground">Uložit pokrok</Link> : null}
+              {isGuest ? <Link href="/onboarding/save" className={cn(buttonVariants({ size: "compact" }), "mt-3 w-full")}>Uložit pokrok</Link> : null}
             </div>
             <div className="border-t border-border pt-2">
               <Link href="/settings" className="flex min-h-12 items-center gap-3 rounded-control px-3 text-small font-semibold text-foreground transition-colors duration-[var(--motion-micro)] hover:bg-surface-muted"><Settings aria-hidden="true" className="size-[18px] text-secondary" />Nastavení</Link>
@@ -86,6 +86,6 @@ export function AppShell({ children, userName, isDemo = false, isGuest = false, 
       </div>
     </header>
     <div id="main-content" tabIndex={-1} aria-busy={navigating || undefined} className="min-h-[calc(100dvh-5rem)] pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
-    <MobileNav activeId={activeId} portfolioLabLocked={portfolioLabLocked} paper={paper} />
+    <MobileNav activeId={activeId} portfolioLabLocked={portfolioLabLocked} />
   </div>}</NavigationStatusProvider>;
 }

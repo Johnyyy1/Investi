@@ -21,6 +21,8 @@ import {
   percent, quantity, signedMoney, trend, wholeMoney, type DataStatus, type GroupSummary, type Holding,
 } from "./lab-model";
 import styles from "./portfolio-lab.module.css";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const PORTFOLIO_LESSON_HREF = "/learn/investing-foundations/your-first-portfolio";
 const TIME_ZONE = "Europe/Prague";
@@ -137,8 +139,8 @@ export function PortfolioOverview({ view, notice: initialNotice = null }: { view
         <p id="reset-description">Pozice se uzavřou a veškerý získaný cvičný kapitál bude znovu k dispozici jako hotovost. Postup v učení i dřívější obchody zůstanou zaznamenané.</p>
         {resetError ? <p role="alert" className={styles.error}>{resetError}</p> : null}
         <div className={styles.dialogActions}>
-          <button type="button" className={styles.secondary} disabled={resetting} onClick={() => resetDialog.current?.close()}>Ponechat portfolio</button>
-          <button type="button" className={styles.danger} disabled={resetting} aria-busy={resetting || undefined} onClick={reset}>{resetting ? "Resetuji…" : "Resetovat portfolio"}</button>
+          <button type="button" className={buttonVariants({ variant: "secondary", size: "compact" })} disabled={resetting} onClick={() => resetDialog.current?.close()}>Ponechat portfolio</button>
+          <button type="button" className={buttonVariants({ variant: "danger", size: "compact" })} disabled={resetting} aria-busy={resetting || undefined} onClick={reset}>{resetting ? "Resetuji…" : "Resetovat portfolio"}</button>
         </div>
       </div>
     </dialog>
@@ -150,7 +152,7 @@ function ZeroCapital({ cashMinor }: { cashMinor: string }) {
     <div className={styles.emptyHead}><p className={styles.sectionLabel}>Tvoje portfolio</p><p className={styles.meta}>Hotovost <strong className={styles.num} data-testid="portfolio-cash">{money(cashMinor)}</strong></p></div>
     <h2 id="zero-capital-title">Získej kapitál učením</h2>
     <p>Cvičný kapitál dostáváš za dokončené lekce. Až nějaký budeš mít, nakoupíš za něj první akcii, ETF nebo dluhopis.</p>
-    <Link href="/learn" className={styles.primary}>Pokračovat v učení<ArrowRight size={18} aria-hidden="true" /></Link>
+    <Link href="/learn" className={cn(buttonVariants(), styles.primary)}>Pokračovat v učení<ArrowRight size={18} aria-hidden="true" /></Link>
   </section>;
 }
 
@@ -401,7 +403,7 @@ function Missing({ view, status, refreshing, onRetry }: { view: PortfolioView; s
           <div className={styles.emptyHead}><p className={styles.sectionLabel}>Něco chybí</p><p className={styles.meta}>Tržní data</p></div>
           <h2 id="missing-title">{partial ? "Některé ceny se teď nenačetly." : "Ceny se teď nenačetly."}</h2>
           <p>Bez cen všech položek nevíme, kolik má portfolio hodnotu. Proto ji neukazujeme a nic neodhadujeme.</p>
-          <button type="button" className={styles.primary} onClick={onRetry} disabled={refreshing}>{refreshing ? "Načítám…" : "Načíst znovu"}<RotateCcw size={18} aria-hidden="true" /></button>
+          <button type="button" className={cn(buttonVariants(), styles.primary)} onClick={onRetry} disabled={refreshing}>{refreshing ? "Načítám…" : "Načíst znovu"}<RotateCcw size={18} aria-hidden="true" /></button>
           <p className={styles.meta}>Tvoje pozice jsou v bezpečí. Co víme jistě, je níž.</p>
         </section>
       </div>

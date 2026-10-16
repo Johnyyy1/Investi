@@ -16,7 +16,7 @@ export const LEGAL_UPDATED_AT = "16. října 2026";
 export type LegalSection = { id: string; title: string; body: ReactNode };
 
 export function LegalPage({ title, intro, sections }: { title: string; intro: ReactNode; sections: readonly LegalSection[] }) {
-  return <div className={`investi-theme ${styles.page}`}>
+  return <div className={styles.page}>
     <header className={styles.header}><Link className={styles.brand} href="/" aria-label="investi · úvodní stránka">investi!</Link></header>
     <main className={styles.main}>
       <article className={styles.article} aria-labelledby="legal-title">

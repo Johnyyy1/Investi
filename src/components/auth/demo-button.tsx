@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CirclePlay } from "lucide-react";
-import { LearningButton } from "@/components/learning/learning-button";
+import { Button } from "@/components/ui/button";
 
 export function DemoButton({ compact = false, className, buttonClassName }: { compact?: boolean; className?: string; buttonClassName?: string }) {
   const [pending, setPending] = useState(false);
@@ -23,9 +23,9 @@ export function DemoButton({ compact = false, className, buttonClassName }: { co
       router.replace("/learn"); router.refresh();
     } catch { setError("Demo se nepodařilo otevřít. Zkus to znovu."); setPending(false); }
   }
-  return <div className={className ?? "mt-6 border-t border-ql-border pt-6"}>
-    <LearningButton variant="secondary" loading={pending} onClick={() => void explore()} className={buttonClassName ?? "w-full"}>{compact && !pending && <CirclePlay aria-hidden="true" />}{pending ? "Otevírám demo…" : "Vyzkoušet demo"}{!compact && <ArrowRight aria-hidden="true" className="size-4" />}</LearningButton>
-    {!compact && <p className="mt-3 text-center text-ql-small text-ql-secondary">Začni se soukromým cvičným profilem.</p>}
-    {error && <p role="alert" className="mt-3 text-ql-small text-ql-danger-ink">{error}</p>}
+  return <div className={className ?? "mt-6 border-t border-border pt-6"}>
+    <Button variant="secondary" loading={pending} onClick={() => void explore()} className={buttonClassName ?? "w-full"}>{compact && !pending && <CirclePlay aria-hidden="true" />}{pending ? "Otevírám demo…" : "Vyzkoušet demo"}{!compact && <ArrowRight aria-hidden="true" className="size-4" />}</Button>
+    {!compact && <p className="mt-3 text-center text-small text-secondary">Začni se soukromým cvičným profilem.</p>}
+    {error && <p role="alert" className="mt-3 text-small text-danger-ink">{error}</p>}
   </div>;
 }

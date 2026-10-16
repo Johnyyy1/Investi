@@ -36,7 +36,7 @@ async function layouts(state) {
     const nav = page.getByRole("navigation", { name: width < 1024 ? "Mobilní navigace" : "Hlavní navigace" });
     assert.equal(await nav.getByRole("link").count(), 3, "existing navigation preserved");
     assert.equal(await nav.locator('[aria-current="page"]').getAttribute("href"), "/lab");
-    assert.ok(await page.locator("main").evaluate((element) => getComputedStyle(element).fontFamily.includes("Nunito")), "Nunito Sans retained");
+    assert.ok(await page.locator("main").evaluate((element) => getComputedStyle(element).fontFamily.includes("Inter")), "Backtesting uses the shared Inter UI font");
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `${output}/${state}-${width}.png`, fullPage: true, animations: "disabled" });
   }

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
-import { LearningTheme } from "@/components/learning/learning-theme";
+import { fontVariables } from "@/styles/fonts";
+import "katex/dist/katex.min.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,12 +14,12 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F8F6F0" },
-    { media: "(prefers-color-scheme: dark)", color: "#102D4C" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f2e8" },
+    { media: "(prefers-color-scheme: dark)", color: "#171717" },
   ],
 };
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // The CSP nonce is per request, so no page may be prerendered with nonce-less scripts.
   await connection();
-  return <html lang="cs"><body><LearningTheme>{children}</LearningTheme></body></html>;
+  return <html lang="cs" className={fontVariables}><body><div className="investi-theme min-h-screen">{children}</div></body></html>;
 }

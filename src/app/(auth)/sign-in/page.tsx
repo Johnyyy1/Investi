@@ -20,7 +20,7 @@ export default async function AuthPage({ searchParams }: {
   const errorCode = Array.isArray(error) ? error[0] : error;
   return (
     <AuthLayout title="Vítej zpět" description="Přihlas se a naváž tam, kde jsi skončil." guide="Rád tě zase vidím. Tvůj plán i pokrok na tebe čekají."
-      footer={<>Jsi v investi poprvé? <Link href="/onboarding" className="font-semibold text-ql-link underline underline-offset-4">Začít se učit</Link></>}>
+      footer={<>Jsi v investi poprvé? <Link href="/onboarding" className="font-semibold text-primary underline underline-offset-4">Začít se učit</Link></>}>
       {account === "deleted" && <p role="status" className="mb-5 rounded-control border border-border bg-surface p-4 text-small text-secondary">Účet je smazaný i se všemi daty.</p>}
       <SocialSignIn providers={authProviderAvailability} mode="sign-in" initialError={errorCode !== undefined ? getSocialAuthErrorMessage(errorCode) : undefined} />
       <SignInForm />

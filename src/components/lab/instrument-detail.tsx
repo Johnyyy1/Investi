@@ -171,8 +171,8 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points, 
       <div className="min-w-0"><p className="text-microcopy font-bold uppercase tracking-[0.12em] text-primary-hover">Z učení</p><h2 id="learning-hook-heading" className="mt-2 text-section-title font-bold">Rozumíš tomuhle grafu?</h2>
         <ul className="mt-5 grid gap-3 text-small leading-relaxed">
           <li className="flex gap-3"><span aria-hidden="true" className="mt-2 inline-block h-0.5 w-6 shrink-0 bg-primary" /><span>Čára: zavírací cena v jednotlivých dnech, v {priceCurrency}.</span></li>
-          <li className="flex gap-3"><span aria-hidden="true" className="mt-2 inline-block h-3 w-6 shrink-0 rounded-sm bg-butter-tint" /><span>Žlutý pruh: největší propad období, pokud byl v datech.</span></li>
-          <li className="flex gap-3"><span aria-hidden="true" className="mt-2 inline-block h-0.5 w-6 shrink-0 border-t border-dashed border-control" /><span>Přerušovaná čára: cena na začátku vybraného období.</span></li>
+          <li className="flex gap-3"><span aria-hidden="true" className="mt-2 inline-block h-3 w-6 shrink-0 rounded-sm bg-warning-soft" /><span>Žlutý pruh: největší propad období, pokud byl v datech.</span></li>
+          <li className="flex gap-3"><span aria-hidden="true" className="mt-2 inline-block h-0.5 w-6 shrink-0 border-t border-dashed border-border-strong" /><span>Přerušovaná čára: cena na začátku vybraného období.</span></li>
         </ul>
       </div>
       <div className="min-w-0 self-start rounded-panel bg-surface-muted p-5">

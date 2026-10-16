@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { LearningChart } from "@/components/learning/learning-chart";
-import { LearningButton } from "@/components/learning/learning-button";
+import { Button } from "@/components/ui/button";
 import { ConceptCard } from "@/components/learning/concept-card";
 import { absoluteChange, simpleReturn } from "@/features/finance/returns";
 import { historicalPriceReturns } from "@/features/finance/historical-price-returns";
@@ -46,27 +46,27 @@ export function PriceSeriesExplorer() {
   const currentChange = absoluteChange(previous.price, current.price);
   const observation = returns[activePeriod];
   const currentReturn = observation.returnValue;
-  const selectPeriod = (index: number) => <LearningButton variant="ghost" className="min-h-11 px-3" aria-label={`Prohlédnout období ${index + 1}`} aria-pressed={index === activePeriod} onClick={() => setActivePeriod(index)}>Prohlédnout</LearningButton>;
+  const selectPeriod = (index: number) => <Button variant="ghost" className="min-h-11 px-3" aria-label={`Prohlédnout období ${index + 1}`} aria-pressed={index === activePeriod} onClick={() => setActivePeriod(index)}>Prohlédnout</Button>;
 
   return <section aria-label="Průzkumník výnosů za období" className="min-w-0 space-y-6">
-    <p className="text-ql-small text-ql-secondary">Ukázková cenová řada · pevná data pro výuku · leden 2026 · CZK</p>
+    <p className="text-small text-secondary">Ukázková cenová řada · pevná data pro výuku · leden 2026 · CZK</p>
     <LearningChart data={prices.map((point) => ({ label: point.label, value: point.price }))} title="Cenová data" description="100 → 103 → 101 → 106. Ceny jsou úrovně při čtyřech po sobě jdoucích pozorováních." valueLabel="Cena" formatValue={formatPrice} yDomain={[95, 110]} />
     <div>
-      <h3 className="text-ql-title font-semibold">Výnosová data</h3>
+      <h3 className="text-card-title font-semibold">Výnosová data</h3>
       <p className="mt-2 font-semibold">{prices.length} ceny → {returns.length} výnosy · N cen → N−1 výnosů</p>
       <ol aria-label="Řada výnosů" className="mt-3 flex flex-wrap gap-x-6 gap-y-2 tabular-nums">
-        {returns.map((observation, index) => <li key={index}>R{["₁", "₂", "₃"][index]}: {formatReturn(observation.returnValue)} <span className="text-ql-small text-ql-secondary">(≈ {decimalFormat.format(observation.returnValue)})</span></li>)}
+        {returns.map((observation, index) => <li key={index}>R{["₁", "₂", "₃"][index]}: {formatReturn(observation.returnValue)} <span className="text-small text-secondary">(≈ {decimalFormat.format(observation.returnValue)})</span></li>)}
       </ol>
-      <p className="mt-2 text-ql-small text-ql-secondary">Každý výnos vzniká z jedné sousední dvojice dostupných cen. Výpočty používají nezaokrouhlené desetinné výnosy; zaokrouhlení patří jen do zobrazení.</p>
+      <p className="mt-2 text-small text-secondary">Každý výnos vzniká z jedné sousední dvojice dostupných cen. Výpočty používají nezaokrouhlené desetinné výnosy; zaokrouhlení patří jen do zobrazení.</p>
     </div>
-    <div className="hidden rounded-ql-md border border-ql-border md:block">
-      <table className="w-full text-left text-ql-small">
+    <div className="hidden rounded-control border border-border md:block">
+      <table className="w-full text-left text-small">
         <caption className="sr-only">Pozorované ceny a výnosy z předchozí ceny</caption>
-        <thead className="bg-ql-subtle"><tr>{["Pozorování", "Cena", "Změna", "Výnos", "Období"].map((label) => <th key={label} scope="col" className="p-3 font-semibold">{label}</th>)}</tr></thead>
+        <thead className="bg-surface-muted"><tr>{["Pozorování", "Cena", "Změna", "Výnos", "Období"].map((label) => <th key={label} scope="col" className="p-3 font-semibold">{label}</th>)}</tr></thead>
         <tbody>{prices.map((point, index) => {
           const periodIndex = index - 1;
-          return <tr key={point.label} className={`border-t border-ql-border ${periodIndex === activePeriod ? "bg-ql-blue-50" : ""}`}>
-            <th scope="row" className="p-3 font-semibold">{point.label}<span className="block font-normal text-ql-secondary">{formatDate(point.date)}</span></th>
+          return <tr key={point.label} className={`border-t border-border ${periodIndex === activePeriod ? "bg-primary-soft" : ""}`}>
+            <th scope="row" className="p-3 font-semibold">{point.label}<span className="block font-normal text-secondary">{formatDate(point.date)}</span></th>
             <td className="p-3 tabular-nums">{formatPrice(point.price)}</td>
             <td className="p-3 tabular-nums">{index === 0 ? "—" : formatChange(absoluteChange(prices[index - 1].price, point.price))}</td>
             <td className="p-3 tabular-nums">{index === 0 ? "Nedefinovaný" : formatReturn(returns[periodIndex].returnValue)}</td>
@@ -75,11 +75,11 @@ export function PriceSeriesExplorer() {
         })}</tbody>
       </table>
     </div>
-    <ol aria-label="Ceny a sousední dvojice" className="divide-y divide-ql-border md:hidden">
-      {prices.map((point, index) => <li key={point.label} className={`py-4 ${index - 1 === activePeriod ? "bg-ql-blue-50" : ""}`}>
+    <ol aria-label="Ceny a sousední dvojice" className="divide-y divide-border md:hidden">
+      {prices.map((point, index) => <li key={point.label} className={`py-4 ${index - 1 === activePeriod ? "bg-primary-soft" : ""}`}>
         <p className="font-semibold">{point.label} · {formatDate(point.date)} · Cena {formatPrice(point.price)}</p>
-        {index === 0 ? <p className="mt-2 text-ql-small">Výnos: nedefinovaný — chybí předchozí cena.</p> : <>
-          <p className="mt-2 text-ql-small">Dvojice {prices[index - 1].label} → {point.label}: {formatPrice(prices[index - 1].price)} → {formatPrice(point.price)}</p>
+        {index === 0 ? <p className="mt-2 text-small">Výnos: nedefinovaný — chybí předchozí cena.</p> : <>
+          <p className="mt-2 text-small">Dvojice {prices[index - 1].label} → {point.label}: {formatPrice(prices[index - 1].price)} → {formatPrice(point.price)}</p>
           <p className="mt-2 tabular-nums">Změna {formatChange(absoluteChange(prices[index - 1].price, point.price))} · Výnos {formatReturn(returns[index - 1].returnValue)}</p>
           <div className="mt-2">{selectPeriod(index - 1)}</div>
         </>}
@@ -87,11 +87,11 @@ export function PriceSeriesExplorer() {
     </ol>
     <div aria-live="polite"><ConceptCard title={`${previous.label} → ${current.label}`}>
       <p>{formatPrice(observation.startClose)} → {formatPrice(observation.endClose)}</p>
-      <p className="mt-2 text-ql-small text-ql-secondary">{formatDate(observation.startDate)} → {formatDate(observation.endDate)} · {observation.elapsedCalendarDays === 1 ? "1 kalendářní den" : `${observation.elapsedCalendarDays} kalendářní dny`}</p>
-      {observation.gapClassification === "unknown" ? <p className="mt-2 text-ql-small">Jde o sousední dostupná pozorování s odstupem více dnů. Bez burzovního kalendáře nevíme, zda některá obchodní pozorování chybí. Ceny mezi nimi nedoplňujeme.</p> : null}
+      <p className="mt-2 text-small text-secondary">{formatDate(observation.startDate)} → {formatDate(observation.endDate)} · {observation.elapsedCalendarDays === 1 ? "1 kalendářní den" : `${observation.elapsedCalendarDays} kalendářní dny`}</p>
+      {observation.gapClassification === "unknown" ? <p className="mt-2 text-small">Jde o sousední dostupná pozorování s odstupem více dnů. Bez burzovního kalendáře nevíme, zda některá obchodní pozorování chybí. Ceny mezi nimi nedoplňujeme.</p> : null}
       <p className="mt-3">Předchozí cena {formatPrice(previous.price)} je jmenovatel. Změna je {formatChange(currentChange)} a výnos je {formatReturn(currentReturn)}.</p>
     </ConceptCard></div>
-    <div className="border-t border-ql-border pt-4">
+    <div className="border-t border-border pt-4">
       <h3 className="font-semibold">Nulový výnos není chybějící výnos</h3>
       <p className="mt-2">Samostatný příklad: 100 → 100 znamená {formatReturn(simpleReturn(100, 100))}. Máme dvě pozorované ceny a jsou stejné.</p>
       <p className="mt-2">U první ceny P₀ předchozí pozorování chybí, proto výnos není definovaný. Nulu sem nedoplňujeme.</p>

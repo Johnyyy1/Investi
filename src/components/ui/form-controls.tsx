@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
-export const controlClassName = "min-h-12 w-full min-w-0 rounded-control border border-control bg-surface px-4 text-body text-foreground shadow-elevation-0 transition-[background-color,border-color,box-shadow] duration-[var(--motion-micro)] ease-[var(--ease-standard)] placeholder:text-secondary hover:border-border-strong focus-visible:border-primary-hover disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-secondary aria-invalid:border-danger-ink";
+export const controlClassName = "min-h-12 w-full min-w-0 rounded-control border border-border-strong bg-surface px-4 text-body text-foreground shadow-elevation-0 transition-[background-color,border-color,box-shadow] duration-[var(--motion-micro)] ease-[var(--ease-standard)] placeholder:text-secondary hover:border-border-strong focus-visible:border-primary-hover disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-secondary aria-invalid:border-danger-ink";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input {...props} className={cn(controlClassName, className)} />;

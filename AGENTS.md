@@ -132,7 +132,7 @@ KaTeX
 
 Lucide
 
-Nunito Sans
+Manrope + Inter (next/font)
 
 Local PostgreSQL has historically used Docker and host port 5433.
 
@@ -188,27 +188,29 @@ The product should feel roughly:
 
 Core palette
 
-Warm White: #F8F6F0
+The palette lives in src/styles/tokens.css as semantic roles; DESIGN.md and docs/design-system.md describe them. The anchors:
 
-Investi Blue: #2498F3
+Paper (background): #F7F2E8
 
-Deep Blue: #1667B2
+Surface: #FFFCF7
 
-Navy: #17324A
+Ink (foreground): #171717
 
-Pale Blue: #DFF2FF
+Action Teal (primary): #236F66
 
-Investi Green: #42C98A
+Graphic Teal (progress): #2F8F83
 
-Warm Accent: #FFB85C
+Soft Teal (primary-soft): #E6F0E9
 
-Data Dark: #102D4C
+Butter (warning): #F1C75B
 
-Prefer existing semantic design tokens rather than hard-coded colors.
+Error Ink (danger): #A63D28
+
+Use the semantic tokens; do not hard-code colors. There is one primary action style everywhere: the shared Button component (src/components/ui/button.tsx).
 
 Typography
 
-Use Nunito Sans.
+Use Manrope for headings and Inter for UI and reading text, through the font tokens (--font-display, --font-sans). Do not add another UI font.
 
 Marketing can be expressive and large.
 

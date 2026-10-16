@@ -7,6 +7,7 @@ import { backtestPreview, labLessonRows, nextFoundationsLesson } from "./lab-hub
 import { dataStatus, fxRate, groups, groupSummaries, minor, percent, signedMoney, trend, wholeMoney, type DataStatus } from "./portfolio/lab-model";
 import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./lab-hub.module.css";
+import { buttonVariants } from "@/components/ui/button";
 
 /** /lab hub from Pen "Investi / Lab hub — 1440px" (iByrw) and "— 390px" (YZnok), states 1–4.
  * The portfolio needs live quotes, so its card and the guide stream in; everything else renders at once. */
@@ -85,7 +86,7 @@ function CardHeading({ id, eyebrow, title }: { id?: string; eyebrow: string; tit
 
 function Action({ href, primary, label, note }: { href: string; primary?: boolean; label: string; note: string }) {
   return <div className={styles.actionRow}>
-    <Link href={href} className={primary ? styles.primary : styles.secondary}>{label}<ArrowRight size={18} aria-hidden="true" /></Link>
+    <Link href={href} className={buttonVariants({ variant: primary ? "primary" : "secondary" })}>{label}<ArrowRight size={18} aria-hidden="true" /></Link>
     <p>{note}</p>
   </div>;
 }
@@ -232,7 +233,7 @@ function BacktestingCard() {
       <h3 className={styles.question}>Mix 60 / 30 / 10, nebo jen akcie?</h3>
       <svg className={styles.sparkline} viewBox="0 0 532 72" preserveAspectRatio="none" role="img" aria-label="Náhled dvou cest stejným obdobím 2020–2021 na syntetických datech">
         <line x1="0" x2="532" y1={preview.paths.baseline} y2={preview.paths.baseline} stroke="var(--color-divider)" strokeWidth="1" vectorEffect="non-scaling-stroke" />
-        <path d={preview.paths.benchmark} fill="none" stroke="var(--color-text-secondary)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+        <path d={preview.paths.benchmark} fill="none" stroke="var(--color-secondary)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
         <path d={preview.paths.strategy} fill="none" stroke="var(--color-viz-equity)" strokeWidth="2.25" vectorEffect="non-scaling-stroke" />
       </svg>
       <div className={styles.chartLegend}>

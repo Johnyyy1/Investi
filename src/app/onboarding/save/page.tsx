@@ -22,7 +22,7 @@ export default async function SaveProgressPage({ searchParams }: { searchParams:
   const lessons = summary.completed.length;
   const xp = summary.gamification?.totalXp ?? 0;
   const capital = summary.practiceCapital.earnedPracticeCapitalMinor;
-  return <main className={`investi-theme ${styles.flow}`}>
+  return <main className={styles.flow}>
     <OnboardingHeader progress={1} back="/learn" trailing={<p className={styles.accountHint}>Už máš účet? <Link className={styles.accountLink} href="/sign-in">Přihlásit se</Link></p>} />
     <div className={styles.column}>
       <OnboardingGuide pose="07-small-joy">{lessons > 0 ? "Plán i první lekce jsou hotové. Ulož si je, ať o ně nepřijdeš." : "Plán je hotový. Ulož si ho, ať o něj nepřijdeš."}</OnboardingGuide>

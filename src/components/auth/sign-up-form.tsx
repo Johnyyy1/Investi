@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LearningButton } from "@/components/learning/learning-button";
+import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/learning/text-input";
 import { authClient } from "@/lib/auth-client";
 import { getAuthErrorMessage } from "@/lib/auth-error";
@@ -31,7 +31,7 @@ export function SignUpForm({ redirectTo = "/onboarding" }: { redirectTo?: string
     <TextInput label="Jméno" type="text" name="name" autoComplete="name" placeholder="Tvoje jméno" required />
     <TextInput label="E-mail" type="email" name="email" autoComplete="email" placeholder="ty@example.com" required />
     <TextInput label="Heslo" type="password" name="password" autoComplete="new-password" minLength={8} required hint="Použij alespoň 8 znaků." />
-    {errorMessage ? <p className="text-ql-small text-ql-danger-ink" role="alert">{errorMessage}</p> : null}
-    <LearningButton className="w-full" type="submit" loading={isSubmitting}>{isSubmitting ? "Vytvářím účet…" : "Vytvořit účet"}</LearningButton>
+    {errorMessage ? <p className="text-small text-danger-ink" role="alert">{errorMessage}</p> : null}
+    <Button className="w-full" type="submit" loading={isSubmitting}>{isSubmitting ? "Vytvářím účet…" : "Vytvořit účet"}</Button>
   </form>;
 }

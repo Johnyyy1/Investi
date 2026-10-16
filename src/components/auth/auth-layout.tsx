@@ -13,7 +13,7 @@ export function AuthLayout({ title, description, guide, children, footer }: {
   footer: ReactNode;
 }) {
   return (
-    <main className={`investi-theme ${styles.flow}`}>
+    <main className={styles.flow}>
       <header className={styles.authHeader}>
         <Link className={styles.brand} href="/" aria-label="investi · úvodní stránka">investi!</Link>
       </header>
