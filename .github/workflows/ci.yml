@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  # CI never talks to a live provider: every check runs on deterministic sample data.
+  MARKET_DATA_PROVIDER: deterministic
+  FX_DATA_PROVIDER: deterministic
+
+jobs:
+  static:
+    name: Lint, typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SKIP_ENV_VALIDATION: "true"
+      # Placeholders so module-level config (auth origin, DB client) can load during `next build`.
+      # Nothing connects to this database and the secret signs nothing.
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_ci
+      BETTER_AUTH_SECRET: ci-only-placeholder-secret-not-used-anywhere-0123456789
+      BETTER_AUTH_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # PageProps/LayoutProps and route types live in .next/types; a clean checkout has none.
+      - name: Generate Next.js route types
+        run: npx next typegen
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  persistence:
+    name: Database, persistence and concurrency
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: investi_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d investi_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Disposable service container; the suites refuse any non-loopback database.
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_ci
+      BETTER_AUTH_SECRET: ci-only-placeholder-secret-not-used-anywhere-0123456789
+      BETTER_AUTH_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run test:curriculum-seed
+      - run: npm run test:migration
+      - run: npm run test:portfolio-migration
+      - run: npm run test:persistence
+      - run: npm run test:portfolio-persistence
+      - run: npm run test:portfolio-allocation
+      - run: npm run test:portfolio-closed-market
+      - run: npm run test:progression-persistence
+      - run: npm run test:log-returns-persistence
+      - run: npm run test:guest-claim
+      # Last: it deletes every unreachable anonymous identity in the database.
+      - name: npm run test:anonymous-cleanup
+        run: npm run test:anonymous-cleanup
+        env:
+          ANONYMOUS_CLEANUP_QA_DISPOSABLE: "1"

@@ -29,7 +29,9 @@ type QuoteView = { price: number; observedAt: string; status: QuoteUsabilityStat
 type Holding = PortfolioView["holdings"][number];
 type HomeCurrency = { rate: number; referenceDate: string; provider: string } | null;
 
-function dateTime(value: string) { return new Intl.DateTimeFormat("cs-CZ", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)); }
+// A fixed zone keeps server (UTC) and browser renders identical, so hydration never sees a different time.
+const TIME_ZONE = "Europe/Prague";
+function dateTime(value: string) { return new Intl.DateTimeFormat("cs-CZ", { timeZone: TIME_ZONE, dateStyle: "medium", timeStyle: "short" }).format(new Date(value)); }
 function nativePrice(value: number, currency: string) { return `${new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 8 }).format(value)} ${currency}`; }
 function quantity(value: string) { return new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 8 }).format(Number(value)); }
 const assetTypeLabels: Record<Instrument["assetType"], string> = {

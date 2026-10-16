@@ -1,0 +1,114 @@
+name: Browser suites
+
+on:
+  schedule:
+    # Nightly, 02:30 UTC.
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+  # Changes to this workflow prove themselves on their own PR.
+  pull_request:
+    paths: [.github/workflows/browser.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: "1"
+  MARKET_DATA_PROVIDER: deterministic
+  FX_DATA_PROVIDER: deterministic
+  DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_ci
+  BETTER_AUTH_SECRET: ci-only-placeholder-secret-not-used-anywhere-0123456789
+  BETTER_AUTH_URL: http://localhost:3104
+  # ubuntu-latest ships Google Chrome, the channel the suites launch by default.
+  BROWSER_CHANNEL: chrome
+  APP_URL: http://localhost:3104
+  SCREENSHOTS: ${{ github.workspace }}/browser-screenshots
+
+jobs:
+  browser:
+    name: Playwright suites against next start
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: investi_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d investi_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run build
+      - name: Start production server
+        run: |
+          nohup npx next start -p 3104 > next-start.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            curl -sf -o /dev/null "$APP_URL/" && exit 0
+            sleep 1
+          done
+          cat next-start.log
+          exit 1
+      - name: Product shell
+        if: ${{ !cancelled() }}
+        run: npm run test:product
+        env:
+          PRODUCT_TEST_URL: ${{ env.APP_URL }}
+          PRODUCT_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/product
+      - name: Foundations
+        if: ${{ !cancelled() }}
+        run: npm run test:foundations-browser
+        env:
+          FOUNDATIONS_TEST_URL: ${{ env.APP_URL }}
+          FOUNDATIONS_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/foundations
+      - name: Portfolio Lab
+        if: ${{ !cancelled() }}
+        run: npm run test:portfolio-browser
+        env:
+          PORTFOLIO_TEST_URL: ${{ env.APP_URL }}
+          PORTFOLIO_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/portfolio
+      - name: Progression
+        if: ${{ !cancelled() }}
+        run: npm run test:progression-browser
+        env:
+          PORTFOLIO_TEST_URL: ${{ env.APP_URL }}
+          PROGRESSION_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/progression
+      - name: Backtesting
+        if: ${{ !cancelled() }}
+        run: npm run test:backtesting-browser
+        env:
+          BACKTEST_TEST_URL: ${{ env.APP_URL }}
+          BACKTEST_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/backtesting
+      - name: Marketing
+        if: ${{ !cancelled() }}
+        run: node scripts/validate-marketing.mjs
+        env:
+          MARKETING_TEST_URL: ${{ env.APP_URL }}
+          MARKETING_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/marketing
+      - name: Upload screenshots and server log
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-suites-${{ github.run_id }}
+          path: |
+            browser-screenshots/
+            next-start.log
+          retention-days: 7
+          if-no-files-found: ignore

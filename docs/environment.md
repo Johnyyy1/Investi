@@ -23,7 +23,11 @@ Use `.env.example` as the template and keep all credential-bearing files ignored
 
 ## Infrastructure/development settings
 
-`POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` initialize Docker Compose PostgreSQL. `APP_PORT` changes the published app port (default 3000); set `BETTER_AUTH_URL` to the matching origin. Compose does not expose the DB port. The example host URL uses the historically separate local PostgreSQL instance on port 5433; adjust it for your actual host database. `NEXT_TELEMETRY_DISABLED` is a Next.js opt-out set in Docker. These are active infrastructure settings, not application feature flags.
+`POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB` initialize Docker Compose PostgreSQL. `APP_PORT` changes the published app port (default 3000); set `BETTER_AUTH_URL` to the matching origin. Compose does not expose the DB port. The example host URL uses the historically separate local PostgreSQL instance on port 5433; adjust it for your actual host database. `NEXT_TELEMETRY_DISABLED` is a Next.js opt-out set in Docker. These are active infrastructure settings, not application feature flags. The `Dockerfile` is for local development only: it runs `npm run dev` as root against a bind-mounted tree, so never ship it as a production image.
+
+## CI settings
+
+GitHub Actions (`.github/workflows/`) sets `MARKET_DATA_PROVIDER` and `FX_DATA_PROVIDER` to `deterministic`, and placeholder `DATABASE_URL`, `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL` values. The static job also sets `SKIP_ENV_VALIDATION=true` and never connects to a database; the persistence and browser jobs point `DATABASE_URL` at a disposable loopback PostgreSQL service container. CI holds no real secrets.
 
 ## Test-only settings
 

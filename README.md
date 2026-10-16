@@ -43,6 +43,8 @@ Google and Facebook can be enabled independently with server-only credential pai
 
 ## Docker
 
+The `Dockerfile` and `compose.yaml` are a **local development stack only**: the image runs `npm run dev` (Next.js development mode) as root with the source tree bind-mounted. Never use it as a production image; production deploys go through Vercel (`vercel-build`).
+
 Prerequisites: Docker Desktop (or Docker Engine with the Compose plugin). On first use, create an ignored Compose environment file and replace both placeholder secrets with locally generated values:
 
 ```bash
@@ -67,6 +69,10 @@ docker compose run --rm app npm run db:seed
 Stop the stack with `docker compose down`. PostgreSQL data remains in the named `postgres_data` volume across stops and rebuilds. To remove containers and the persisted development database deliberately, run `docker compose down --volumes`.
 
 ## Verification
+
+GitHub Actions runs the gates automatically. `.github/workflows/ci.yml` runs on every pull request and every push to `main`: one job generates Next.js route types (`next typegen`, which a clean checkout needs before `tsc`) and runs lint, typecheck, unit tests and build; a second job migrates and seeds a disposable PostgreSQL service container and runs the persistence, migration and concurrency suites. `.github/workflows/browser.yml` runs the Playwright browser suites nightly (and on demand) against `next start`. Both use deterministic sample data. `main` requires both CI jobs to pass before merging.
+
+Locally, run `npx next typegen` once on a fresh checkout before `npm run typecheck` (`next dev` and `next build` also generate the types).
 
 Static gates run independently. Database/browser checks require a local disposable QA database and a fresh app runtime; `validate-design-system.mjs` specifically requires development mode:
 

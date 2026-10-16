@@ -1,3 +1,5 @@
+# Local development image only (see README "Docker"): runs `next dev` as root.
+# Do not use it as a production image.
 FROM node:24-bookworm-slim
 
 WORKDIR /app
