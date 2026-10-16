@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { ChevronDown, LockKeyhole, LogOut, Settings } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -49,7 +48,7 @@ export function AppShell({ children, userName, isDemo = false, isGuest = false, 
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95">
       <div className="mx-auto flex min-h-20 max-w-6xl items-center justify-between gap-3 px-4 min-[375px]:px-5 sm:px-8 lg:px-10">
         <Link href="/learn" className="flex min-h-12 w-[112px] shrink-0 items-center" aria-label="investi — Učení">
-          {paper ? <span className={styles.wordmark}>investi!</span> : <Image src="/brand/investi-logo.png" alt="investi" width={2172} height={724} sizes="112px" loading="eager" className="h-auto w-full" />}
+          <span className={styles.wordmark}>investi!</span>
         </Link>
 
         <nav aria-label="Hlavní navigace" className="hidden items-center gap-1 rounded-button border border-border bg-surface p-1 shadow-elevation-1 lg:flex">

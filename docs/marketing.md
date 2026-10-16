@@ -1,12 +1,10 @@
 # Marketing surface
 
-The public landing page lives in `src/app/(marketing)` and remains public for signed-in users. Its layout scopes display fonts and the marketing CSS module. The header, hero, journey, product showcases, final call to action, and footer share the current brand assets. Product screens use the quieter shared design system.
+The public landing page lives in `src/app/(marketing)` and remains public for signed-in users. `PenLanding` (`src/components/marketing/pen-landing.tsx`) renders it; its layout scopes the Manrope/Inter display fonts and `pen-landing.module.css`, and the GSAP/Lenis motion layer lives in `src/components/marketing/motion`. The brand is the typeset `investi!` wordmark, shared with auth, onboarding, legal pages and the app shell; there is no raster logo. Product screens use the quieter shared design system.
 
 Sign-up/sign-in actions use the existing authentication routes. Protected Learn/Lab links retain authentication gates and disable speculative lab prefetch. Explore demo uses the existing anonymous identity and server seed; it does not share a login or overwrite an existing demo portfolio. Mobile navigation uses native `details` semantics.
 
-`PortfolioShowcase` directly renders `portfolio-pie.webp` with responsive `next/image` sizing. The 60/30/10 allocation is a static illustration without slider semantics, and example outcomes retain their educational disclosure. Hero/final-CTA scenery is decorative; chart-shaped imagery is never represented as live market data. The unused earlier pie wrapper has been retired.
-
-The supplied `investi brand identity.png` remains a design reference rather than a runtime image. Runtime artwork has traced component references. Nunito/Caveat display fonts stay scoped to marketing; product typography uses Nunito Sans. Bright brand fills require readable navy/deep-blue text rather than blindly applying white body text.
+Landing illustrations live in `public/marketing` as WebP, sized to about twice their largest rendered width (q≈75) and served through `next/image`. Re-export new artwork the same way rather than committing full-resolution PNGs; the brand design source is `investi-design.pen`, not a file in `public/`. Example outcomes retain their educational disclosure, and illustrations are never represented as live market data. Display fonts stay scoped to marketing; product typography uses the shared theme fonts. Bright brand fills require readable navy/deep-blue text rather than blindly applying white body text.
 
 Semantic sections, one H1, skip link, visible focus, responsive disclosure navigation, pending/error demo feedback, and reduced-motion styles are part of the current contract. Text must reflow when enlarged.
 

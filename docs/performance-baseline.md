@@ -576,3 +576,53 @@ Production build, disposable local Postgres 15 through `pg-latency-proxy.mjs` at
 Known trade-off: closing the tab or reloading within the save window (about 0.4 s at +30 ms RTT) can lose the last step's cursor, and the lesson then reopens one step earlier. No answers or rewards are affected.
 
 Not measured: the real Vercel↔Neon RTT. To check on a preview, use `INVESTI_PERF_DEBUG=1` and DevTools: the click-to-step time no longer depends on it, but the settle time does.
+
+## Phase 6: landing page assets and first load (measured 2026-10-16, issue #45)
+
+### Assets
+
+`public/` went from 13.2 MB to 0.98 MB (tracked files).
+
+- The PNG logo (`investi-logo.png`, 2172×724, 413 KB) is gone. Its last live use was the app shell on the two routes outside the paper theme (`/learn/[moduleSlug]`, `/lab/portfolio/mix`). They now show the typeset `investi!` wordmark that the paper shell, auth, onboarding, legal pages and the landing already use, so there is one wordmark and no image request.
+- The pre-`PenLanding` landing (`hero`, `final-cta`, `journey-intro`, `marketing-header`/`-footer`, `product-showcases` and the three showcases, `marketing.module.css`) had no importers. It is deleted with the nine brand images only it used (cloud, clouds, hill, sun, mascot-hero, portfolio-pie, flame/gold/books icons, 7.3 MB together). `investi brand identity.png` (1.4 MB, unused and publicly served) is deleted too. `investi-design.pen` is the design source.
+- Live illustrations were re-encoded as WebP q75 at about 2× their largest rendered width: the landing art 3.0 MB → 278 KB, `growing-coin.webp` (rendered at 48 px) 1254 px/919 KB → 96 px/3 KB. The guide poses in `public/investi-assets` were already small, are byte-for-byte copies recorded in `manifest.json`, and were left alone.
+
+### Landing first load (`/`, production build, local `next start`)
+
+Transfer by type, Playwright with a fresh context (KB, compressed):
+
+| | Document | CSS | JS | Fonts | Images | Total |
+| --- | --- | --- | --- | --- | --- | --- |
+| Before, 390 px | 15 | 45 | 237 | 202 | 7 | 507 |
+| After, 390 px | 15 | 45 | 224 | 202 | 5 | 493 |
+| Before, 1440 px | 15 | 45 | 237 | 202 | 75 | 575 |
+| After, 1440 px | 15 | 45 | 224 | 202 | 66 | 554 |
+
+`next/image` already served small variants and lazy-loads the art below the fold, so the source-file savings barely show here. The 13 KB JS saving is the better-auth client: `DemoButton` now imports it when it is clicked.
+
+JS chunks on `/` (gzip): `react-dom` 72 KB, Next runtime 45 KB, GSAP + ScrollTrigger + SplitText + Lenis 64 KB, the rest under 10 KB each. Motion (`motion/react`) is not on the landing. It is used only by the lesson and gamification components. GSAP and Lenis are imported only from `src/components/marketing/motion`, so no product route loads them. Fonts: Inter latin + latin-ext (48 + 84 KB, variable), Manrope latin + latin-ext (25 + 15 KB), and Nunito Sans latin (31 KB), which the root layout preloads for the app although the landing does not use it.
+
+### Lighthouse 13.5.0, mobile (simulated throttling), 5 runs each
+
+| | Performance | FCP | LCP | TBT | CLS | Speed Index | Byte weight |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Before (`origin/main` @ `9915199`) | 85 (85–86) | 1.4 s | 4.3 s | 30 ms | 0 | 2.0 s | 516 KB |
+| After | 86 (all runs) | 1.4 s | 4.2 s | 40 ms | 0 | 1.9 s | 500 KB |
+
+The ≥ 90 target is not reached. What limits it:
+
+- The LCP element is the hero `<h1>` span. The observed (unthrottled) LCP is about 1.5 s, because the hero intro hides the title before first paint and `split.revert()` re-inserts the span when the timeline ends. That is not what costs the score, though. A throwaway build without the title intro brought the observed LCP to about 50 ms, and the simulated LCP stayed at 4.3 s and the score at 85.
+- Lighthouse's simulation charges LCP for every request started before it. Here that is 202 KB of preloaded fonts and 224 KB of JS on a 1.6 Mbps link, so only cutting early bytes moves LCP.
+
+Follow-ups that would cut early bytes. Each one is a design or platform decision, so none of them is in this change:
+
+1. Don't preload Nunito Sans on the landing (31 KB). Its `next/font` instance lives in the root layout's `LearningTheme`, so this means moving the product fonts into the product layouts.
+2. Reconsider Inter as the landing body font, or its full variable axis (132 KB with latin-ext). Czech text needs latin-ext.
+3. Load the GSAP/Lenis layer (64 KB) after first paint. Today the intro sets its hidden states in JS before first paint when the chunks arrive early. Loading the layer later would show the content and then hide it, so the intro would have to change with it.
+
+### Reproduce
+
+```bash
+npm run build && npx next start -p 3462
+npx -y lighthouse@13.5.0 http://localhost:3462/ --only-categories=performance --form-factor=mobile --chrome-flags="--headless=new"
+```

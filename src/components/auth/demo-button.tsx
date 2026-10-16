@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, CirclePlay } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
 import { LearningButton } from "@/components/learning/learning-button";
 
 export function DemoButton({ compact = false, className, buttonClassName }: { compact?: boolean; className?: string; buttonClassName?: string }) {
@@ -12,6 +11,8 @@ export function DemoButton({ compact = false, className, buttonClassName }: { co
   async function explore() {
     setPending(true); setError(undefined);
     try {
+      // Loaded on click so the auth client stays out of the landing page's first-load JS.
+      const { authClient } = await import("@/lib/auth-client");
       // Recover a successful creation whose response was lost, without seeding twice.
       const current = await authClient.getSession();
       if (!current.data) {
