@@ -1,6 +1,6 @@
 import "server-only";
 
-import { InMemoryMarketDataCache } from "./cache";
+import { TieredMarketDataCache, type SharedMarketDataCacheStore } from "./cache";
 import { FIXTURE_RETRIEVED_AT } from "./deterministic/fixtures";
 import { DeterministicMarketDataProvider } from "./deterministic/provider";
 import { DeterministicEquityFundamentalsProvider } from "./deterministic/fundamentals";
@@ -29,6 +29,8 @@ export interface MarketDataCompositionOptions extends Omit<MarketDataServiceOpti
   fetch?: FmpClientOptions["fetch"];
   frankfurterFetch?: FrankfurterClientOptions["fetch"];
   cnbFetch?: CnbClientOptions["fetch"];
+  /** Cross-instance layer behind the process-local cache; only used when external providers are configured. */
+  sharedCache?: SharedMarketDataCacheStore;
 }
 
 /** Pure composition boundary. Environment access is deliberately kept in environment.ts. */
@@ -42,6 +44,7 @@ export function createMarketDataService(options: MarketDataCompositionOptions) {
     fetch,
     frankfurterFetch,
     cnbFetch,
+    sharedCache,
     ...serviceOptions
   } = options;
   const fxProviderName = configuredFxProvider ?? (provider === "deterministic" ? "deterministic" : undefined);
@@ -79,8 +82,9 @@ export function createMarketDataService(options: MarketDataCompositionOptions) {
 
   const externalData = provider === "fmp" || fxProviderName === "frankfurter" || fxProviderName === "cnb";
   const cache = serviceOptions.cache ?? (externalData
-    ? new InMemoryMarketDataCache({
+    ? new TieredMarketDataCache({
         clock: () => clock().getTime(),
+        shared: sharedCache,
         ttls: fxProviderName === "frankfurter" ? { fxMilliseconds: FRANKFURTER_FX_CACHE_MILLISECONDS }
           : fxProviderName === "cnb" ? { fxMilliseconds: CNB_FX_CACHE_MILLISECONDS } : undefined,
       })

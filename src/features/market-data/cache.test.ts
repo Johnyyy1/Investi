@@ -126,8 +126,8 @@ describe("in-process market-data cache", () => {
     const unique = [...new Set(cache.keys)];
     expect(unique).toHaveLength(2);
     expect(unique.map((key) => JSON.parse(key))).toEqual([
-      [AAPL, "2026-01-05", "2026-01-16", "daily", "UTC", "raw"],
-      [AAPL, "2026-01-06", "2026-01-16", "daily", "UTC", "raw"],
+      ["investi-deterministic", AAPL, "2026-01-05", "2026-01-16", "daily", "UTC", "raw"],
+      ["investi-deterministic", AAPL, "2026-01-06", "2026-01-16", "daily", "UTC", "raw"],
     ]);
   });
 });

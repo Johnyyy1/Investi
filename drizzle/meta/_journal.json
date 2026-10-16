@@ -92,6 +92,13 @@
       "when": 1792012127838,
       "tag": "0012_shorten_first_lesson",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792137647263,
+      "tag": "0013_market_data_cache",
+      "breakpoints": true
     }
   ]
 }
