@@ -129,6 +129,7 @@ Every suite below is an npm script in `package.json` unless it is written as `no
 | `test:progression-browser` | Unlock progression | ✓ |
 | `test:backtesting-browser` | Backtesting Lab | ✓ |
 | `node scripts/validate-marketing.mjs` | Landing page | ✓ |
+| `test:not-found-browser` | 404 pages: unmatched URL, lesson, instrument | ✓ |
 | `test:log-returns-browser`, `node scripts/validate-returns-flow.mjs` | Returns module | |
 | `test:portfolio-browser-closed` | Closed/stale market states (server started with `DETERMINISTIC_MARKET_NOW`) | |
 | `test:instrument-browser-unavailable` | Unavailable instrument history/quotes | |
