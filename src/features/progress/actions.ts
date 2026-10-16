@@ -17,7 +17,6 @@ export async function markLessonStartedAction(lessonId: string) {
     if (!user) return { ok: false, message: "Relace skončila. Přihlas se znovu a ulož postup." };
     await markLessonInProgress(user.id, lessonIdSchema.parse(lessonId));
     revalidatePath("/learn", "layout");
-    revalidatePath("/dashboard");
     revalidatePath("/progress");
     revalidatePath("/lab/portfolio");
     return { ok: true };
@@ -33,7 +32,6 @@ export async function completeLessonAction(lessonId: string) {
     const reward = await completeLesson(user.id, lessonIdSchema.parse(lessonId));
     const completedLessons = await getModuleProgress(user.id, availableLessons.find((lesson) => lesson.id === lessonId)!.moduleId);
     revalidatePath("/learn", "layout");
-    revalidatePath("/dashboard");
     revalidatePath("/progress");
     revalidatePath("/lab", "layout");
     const presentationReward: CompletionRewardPresentation = {
@@ -55,7 +53,12 @@ export async function completeLessonAction(lessonId: string) {
   }
 }
 
-/** Uses the existing progress row; this is a cursor, not a second progress store. */
+/**
+ * Uses the existing progress row; this is a cursor, not a second progress store.
+ * It deliberately revalidates nothing: any revalidation in a Server Action re-renders the page being
+ * viewed (the lesson itself) into the response, so every step would re-render the whole lesson.
+ * Overviews pick up the cursor on their next navigation; the lesson refreshes the router when it is left.
+ */
 export async function saveLessonPositionAction(lessonId: string, position: number, answers?: Record<string, string>) {
   try {
     const user = await getCurrentUser();
@@ -64,9 +67,6 @@ export async function saveLessonPositionAction(lessonId: string, position: numbe
     const lastPosition = z.number().int().min(0).max(getStepDefinitions(id).length - 1).parse(position);
     const attempt = answers === undefined ? undefined : z.record(z.string().max(100), z.string().max(100)).refine((value) => Object.keys(value).length <= 10).parse(answers);
     await saveLessonProgress(user.id, { lessonId: id, status: "in_progress", lastPosition }, attempt);
-    revalidatePath("/learn", "layout");
-    revalidatePath("/dashboard");
-    revalidatePath("/progress");
     return { ok: true };
   } catch {
     return { ok: false, message: "Tvé místo se nepodařilo uložit. Zkus to znovu." };

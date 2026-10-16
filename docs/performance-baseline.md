@@ -545,3 +545,34 @@ Local PgBouncer is a stand-in, **not proof of Neon compatibility**.
 4. Then the change is the wrapper in `src/db/index.ts` (keep the dev singleton); rollback is restoring `prepare: false` / removing the wrapper and redeploying, no data or schema involved.
 
 Not changed: pool size, `idle_timeout`, `max_lifetime` (no evidence they are wrong for Vercel; a short `idle_timeout` would also discard the statement cache), auth, transactions, locking, rewards.
+
+## Phase 5: lesson step latency (measured 2026-10-16, issue #44)
+
+Every Continue/Previous in a guided lesson waited for `saveLessonPositionAction` before the next step appeared.
+
+### Measurement
+
+Production build, disposable local Postgres 15 through `pg-latency-proxy.mjs` at +30 ms RTT. A fresh learner alternates Continue and Previous on the first two steps of `why-invest` (n=20 each). Time runs from `click()` to the next step's heading being in the DOM, measured in the page. "Settled" also waits for the save.
+
+| Variant | Continue painted, median / p95 | Previous painted | Save settled | Statements per step | Action response |
+| --- | --- | --- | --- | --- | --- |
+| Before (save, then revalidate `/learn` layout, `/dashboard`, `/progress`) | 429 / 430 ms | 429 / 430 | = painted | 16 | 12.6 KB (re-rendered lesson) |
+| No revalidation, UI still waits | 428 / 429 | 428 / 430 | = painted | 7 | 73 B |
+| **No revalidation, step advances at once (shipped)** | **6 / 7** | **5 / 6** | 420 / 425 | 7 | 73 B |
+
+- Any `revalidatePath` in a Server Action re-renders the page being viewed into the action response. Next 16.4's `revalidatePath` marks the action as revalidated without checking the path ("TODO: only revalidate if the path matches"). So each step also ran the lesson page's 9 read queries on the server.
+- Dropping it did not shorten the wait by itself: the client receives the action result before the re-rendered tree streams. What remains is the save's own round trips: session (2 statements) plus the `FOR UPDATE` transaction (5), about 14 RTT under `prepare: false`.
+- `/dashboard` only redirects to `/learn`; no action revalidates it any more.
+
+### What changed
+
+- `saveLessonPositionAction` revalidates nothing.
+- `GuidedLesson` shows the next step immediately. `lesson-save-queue.ts` saves the moves one at a time in click order (the server accepts a move only from its current cursor). When a save fails, the moves queued behind it are dropped and the learner returns to the unsaved step. The answer that earned the move is kept, and the error is shown with Continue focused as the retry.
+- Completion first waits for the queue, so `completeLessonAction` still requires the saved last step. Completion semantics and rewards are unchanged.
+- Back/Forward reuses cached pages regardless of staleness. Without a revalidation, it could reopen the lesson at an old starting step, and the next save would move the cursor backwards. When the lesson unmounts after any save, it waits for the queue and calls `router.refresh()`, which drops that cache. After a completion it skips this, because the completion action already revalidates. A link out of a lesson therefore costs one extra fetch of the destination page, instead of a lesson re-render per step.
+- The second click of a double click is ignored, so it cannot skip the step that just appeared.
+- `main[data-save-state]` (`saving` / `idle`) lets browser suites wait for the save before reading the database or reloading.
+
+Known trade-off: closing the tab or reloading within the save window (about 0.4 s at +30 ms RTT) can lose the last step's cursor, and the lesson then reopens one step earlier. No answers or rewards are affected.
+
+Not measured: the real Vercel↔Neon RTT. To check on a preview, use `INVESTI_PERF_DEBUG=1` and DevTools: the click-to-step time no longer depends on it, but the settle time does.
