@@ -1,9 +1,13 @@
 type AuthError = {
   code?: string;
   message?: string;
+  status?: number;
 } | null | undefined;
 
+export const TOO_MANY_ATTEMPTS_MESSAGE = "Příliš mnoho pokusů za krátkou dobu. Počkej chvíli a zkus to znovu.";
+
 export function getAuthErrorMessage(error: AuthError, fallback: string) {
+  if (error?.status === 429) return TOO_MANY_ATTEMPTS_MESSAGE;
   switch (error?.code) {
     case "USER_ALREADY_EXISTS":
     case "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL":

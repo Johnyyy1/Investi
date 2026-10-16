@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { isMarketDataError } from "@/features/market-data/errors";
+import { enforceMarketDataBudget } from "@/features/rate-limit";
+import { isRequestRateLimitedError } from "@/features/rate-limit/limiter";
+import { marketDataLimitMessage } from "@/features/rate-limit/policy";
 import { getCurrentUser } from "@/lib/session";
 import { requirePortfolioLabUnlock } from "@/features/progression/repository";
 import { PortfolioInputError, priceToDecimal, quantityToDecimal, fxToDecimal } from "./decimal";
@@ -19,6 +22,7 @@ function messageFor(error: unknown, context: "trade" | "preview" = "trade") {
 
 function tradeMessageFor(error: unknown) {
   if (error instanceof PortfolioInputError) return error.message;
+  if (isRequestRateLimitedError(error)) return marketDataLimitMessage(error.decision);
   if (error instanceof z.ZodError) return "Mix se nepodařilo přečíst. Zkontroluj váhy a zkus to znovu.";
   if (isMarketDataError(error)) {
     if (error.code === "FxUnavailable") return "Teď nemůžeme přepočítat cenu na koruny. Obchod nebyl proveden.";
@@ -41,10 +45,11 @@ async function authenticatedUser() {
 
 export async function searchPortfolioInstrumentsAction(query: string) {
   try {
-    await authenticatedUser();
+    const current = await authenticatedUser();
     const parsed = z.string().trim().min(2).max(80).safeParse(query);
     if (!parsed.success) return { ok: false as const, message: "Zadej pro hledání alespoň dva platné znaky.", results: [] };
     const value = parsed.data;
+    await enforceMarketDataBudget(current.id, "search");
     const results = await portfolioMarketData.service.searchInstruments(value);
     return { ok: true as const, results: results.filter(({ assetType }) => assetType !== "cash" && assetType !== "index") };
   } catch (error) {
@@ -54,8 +59,10 @@ export async function searchPortfolioInstrumentsAction(query: string) {
 
 export async function loadInstrumentPreviewAction(instrumentId: string) {
   try {
-    await authenticatedUser();
-    const preview = await loadInstrumentPreview(instrumentIdSchema.parse(instrumentId));
+    const current = await authenticatedUser();
+    const id = instrumentIdSchema.parse(instrumentId);
+    await enforceMarketDataBudget(current.id, "instrument-preview");
+    const preview = await loadInstrumentPreview(id);
     if (!preview) return { ok: false as const, message: "S tímto instrumentem nelze ve vzdělávacím portfoliu obchodovat." };
     return { ok: true as const, preview };
   } catch (error) {
@@ -99,8 +106,9 @@ export async function resetPortfolioAction(input: unknown) {
 
 export async function loadAllocationQuotesAction(instrumentIds: unknown) {
   try {
-    await authenticatedUser();
+    const current = await authenticatedUser();
     const ids = z.array(instrumentIdSchema).min(1).max(24).parse(instrumentIds);
+    await enforceMarketDataBudget(current.id, "allocation-quotes");
     return { ok: true as const, quotes: await loadAllocationQuotes([...new Set(ids)]) };
   } catch (error) {
     return { ok: false as const, message: messageFor(error) };
@@ -112,6 +120,7 @@ export async function reviewPortfolioAllocationAction(input: unknown) {
   try {
     const current = await authenticatedUser();
     const parsed = allocationInputSchema.parse(input);
+    await enforceMarketDataBudget(current.id, "allocation-quotes");
     const { plan, observations } = await reviewAllocation(current.id, parsed);
     const describe = (instrumentId: string) => {
       const observation = observations.get(instrumentId)!;

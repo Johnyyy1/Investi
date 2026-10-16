@@ -14,6 +14,12 @@ describe("getAuthErrorMessage", () => {
     expect(getAuthErrorMessage({ code: "INVALID_PASSWORD" }, "Fallback")).toBe("E-mail nebo heslo není správně.");
   });
 
+  it("explains a rate-limited attempt in Czech instead of Better Auth's English message", () => {
+    expect(getAuthErrorMessage({ status: 429, message: "Too many requests. Please try again later." }, "Fallback")).toBe(
+      "Příliš mnoho pokusů za krátkou dobu. Počkej chvíli a zkus to znovu.",
+    );
+  });
+
   it("uses the service message for unexpected errors", () => {
     expect(getAuthErrorMessage({ message: "Service unavailable" }, "Fallback")).toBe("Service unavailable");
   });

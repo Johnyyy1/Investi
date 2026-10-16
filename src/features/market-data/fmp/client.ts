@@ -98,6 +98,9 @@ export class FmpClient {
         : entitlementFailure
           ? "ProviderConfiguration"
           : response.status === 429 ? "RateLimited" : "ProviderUnavailable";
+      // Quota exhaustion affects every learner, so it is worth an alert. Only the endpoint path is
+      // logged: query parameters can carry learner search text and the key travels in a header.
+      if (response.status === 429) console.warn(`[investi:market-data] ${JSON.stringify({ event: "provider-rate-limited", provider: FMP_PROVIDER_ID, endpoint, status: 429 })}`);
       throw new MarketDataError(code, authenticationFailure
         ? "Financial Modeling Prep rejected the configured credentials."
         : entitlementFailure
