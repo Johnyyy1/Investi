@@ -23,6 +23,8 @@ try {
   page.on("console", (message) => { if (["warning", "error"].includes(message.type())) errors.push(message.text()); });
   const heading = async (name) => page.getByRole("heading", { name, exact: true }).waitFor();
   const next = async (name) => { await page.getByRole("button", { name: "Pokračovat", exact: true }).click(); await heading(name); };
+  // Steps advance before the cursor is saved; wait for the save before reading the database or leaving.
+  const saved = async () => page.locator('main[data-save-state="idle"]').waitFor();
   const row = async () => (await sql`select status, last_position, completed_at from lesson_progress where user_id = ${userId} and lesson_id = ${lessonId}`)[0];
   const overflow = async () => assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
   async function signIn() {
@@ -64,6 +66,7 @@ try {
   await heading("Od jednoho období k posloupnosti");
   assert.equal(await page.getByRole("navigation", { name: /^(Hlavní|Mobilní) navigace$/ }).count(), 0, "Lesson mode has no app navigation");
   await next("Předpověz výsledek");
+  await saved();
   assert.equal((await row()).status, "in_progress");
   assert.equal((await row()).last_position, 1);
   await page.goto(`${baseURL}/learn/returns`);
@@ -71,6 +74,19 @@ try {
   assert.equal(await compounding.getByRole("button", { name: "Pokračovat v lekci", exact: true }).isVisible(), true);
   await compounding.getByRole("button", { name: "Pokračovat v lekci", exact: true }).click();
   await heading("Předpověz výsledek");
+  // Saves revalidate nothing, so leaving the lesson must drop the Back/Forward cache: a stale restore
+  // would reopen the lesson at its old starting step and its next save would move the cursor backwards.
+  await page.getByRole("button", { name: "Předchozí", exact: true }).click();
+  await heading("Od jednoho období k posloupnosti");
+  await saved();
+  await page.goBack();
+  await heading("Výnos a složené zhodnocení");
+  await page.goForward();
+  await heading("Od jednoho období k posloupnosti");
+  assert.equal(await page.getByRole("heading", { name: "Předpověz výsledek", exact: true }).count(), 0, "Forward restores the saved step, not a cached one");
+  await next("Předpověz výsledek");
+  await saved();
+  assert.equal((await row()).last_position, 1);
   await page.reload();
   await heading("Předpověz výsledek");
   await page.getByRole("radio").first().press("Space");
@@ -84,7 +100,24 @@ try {
   await check.press("Enter");
   await heading("Správně");
   assert.equal(await page.getByRole("button", { name: "Pokračovat", exact: true }).evaluate((element) => element === document.activeElement), true);
+  // A failed save returns the learner to the unsaved step with the answer kept, and Continue retries it.
+  const failSave = (intercepted) => intercepted.request().method() === "POST" && intercepted.request().headers()["next-action"] ? intercepted.fulfill({ status: 500, body: "" }) : intercepted.fallback();
+  await page.route(`${baseURL}${route}`, failSave);
   await next("Počáteční hodnota se mění");
+  const saveError = page.getByRole("alert").filter({ hasText: "Postup se nepodařilo uložit. Zkus to znovu." });
+  await saveError.waitFor();
+  await heading("Předpověz výsledek");
+  await heading("Správně");
+  assert.equal(await page.getByRole("button", { name: "Pokračovat", exact: true }).evaluate((element) => element === document.activeElement), true, "Retry focuses Continue");
+  await saved();
+  assert.equal((await row()).last_position, 1, "A failed save leaves the cursor where it was");
+  await page.unroute(`${baseURL}${route}`, failSave);
+  // The 500 is induced on purpose; only its resource error is expected in the console.
+  errors.splice(0, errors.length, ...errors.filter((message) => !message.includes("status of 500")));
+  await next("Počáteční hodnota se mění");
+  assert.equal(await saveError.count(), 0, "Continuing clears the save error");
+  await saved();
+  assert.equal((await row()).last_position, 2);
   await next("Přemýšlej v růstových faktorech");
   await page.getByRole("textbox", { name: "Tvoje odpověď", exact: true }).fill("0,96");
   await check.click();
@@ -118,6 +151,7 @@ try {
   }
   await page.getByText("Zobrazit tabulku dat", { exact: true }).press("Enter");
   assert.equal(await page.getByRole("cell", { name: "9 600", exact: true }).isVisible(), true);
+  await saved();
   await signOut();
   await signIn();
   await page.goto(`${baseURL}${route}`);

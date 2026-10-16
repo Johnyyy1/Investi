@@ -106,6 +106,8 @@ try {
   await next(titles[2]);
   assert.equal(await page.locator("math").count(), 1);
   await layout("definition", true);
+  // The step shows before its cursor is saved; reload once the save has landed.
+  await page.locator('main[data-save-state="idle"]').waitFor();
   await page.reload();
   await heading(titles[2]);
   await button("Předchozí").click();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CompletionScreen } from "@/components/learning/completion-screen";
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { GuidedBlock } from "./guided-block";
 import { GuidedQuestion } from "./guided-question";
 import { LessonActionBar, LessonTopBar } from "./lesson-chrome";
+import { createLessonSaveQueue } from "./lesson-save-queue";
 import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, Leaf, RotateCcw } from "lucide-react";
 
 const primaryClassName = "min-h-[52px] min-w-0 flex-1 whitespace-nowrap border-action px-3 font-semibold shadow-none motion-safe:hover:translate-y-0 disabled:border-track disabled:bg-track disabled:text-text-disabled disabled:opacity-100 min-[420px]:px-6 md:flex-none";
@@ -39,12 +40,24 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [verdict, setVerdict] = useState<boolean>();
   const [pending, setPending] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string>();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const primaryRef = useRef<HTMLButtonElement>(null);
   const questionRef = useRef<HTMLDivElement>(null);
   const movedRef = useRef(false);
   const busyRef = useRef(false);
+  // Completion revalidates every overview, so leaving afterwards needs no extra refresh.
+  const completedRef = useRef(false);
+  // Steps advance at once; the cursor is saved behind them, one move at a time and in order.
+  const [saves] = useState(() => createLessonSaveQueue({
+    save: (move) => saveLessonPositionAction(lesson.id, move.to, move.answers),
+    onFailure: (move, message) => {
+      // The server cursor is still at move.from: return there with the answers that earned the move, so Continue retries it.
+      setPosition(move.from); setAnswers(move.answers ?? {}); setVerdict(move.answers ? true : undefined); setError(message);
+    },
+    onPendingChange: setSaving,
+  }));
 
   useEffect(() => {
     if (initialStatus === "not_started") void markLessonStartedAction(lesson.id).then((result) => {
@@ -57,31 +70,35 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
       window.scrollTo({ top: 0, behavior: "instant" });
     }
   }, [position, finished]);
+  useEffect(() => () => {
+    // Saving the cursor revalidates nothing, and Back/Forward reuses cached pages however stale: an overview
+    // with an old step, or this lesson with an old starting step whose next save would move the cursor back.
+    // Once the learner leaves, refresh the router (which drops that cache) after the last save has landed.
+    void saves.flush().then(() => { if (saves.saved && !completedRef.current) router.refresh(); });
+  }, [router, saves]);
   useEffect(() => {
     if (!error) return;
     const frame = requestAnimationFrame(() => primaryRef.current?.focus());
     return () => cancelAnimationFrame(frame);
   }, [error]);
 
-  async function move(next: number, submitted?: Record<string, string>) {
-    if (busyRef.current) return;
-    busyRef.current = true; setPending(true); setError(undefined);
-    try {
-      if (!review) {
-        const result = await saveLessonPositionAction(lesson.id, next, submitted);
-        if (!result.ok) { setError(result.message); return; }
-      }
-      movedRef.current = true; setPosition(next); setAnswers({}); setVerdict(undefined);
-    } catch { setError("Postup se nepodařilo uložit. Zkus to znovu."); }
-    finally { busyRef.current = false; setPending(false); }
+  function move(next: number, submitted?: Record<string, string>, event?: MouseEvent) {
+    // The second click of a double click would land on the next step's button and skip it.
+    if (busyRef.current || (event?.detail ?? 0) > 1) return;
+    setError(undefined);
+    if (!review) saves.enqueue({ from: position, to: next, answers: submitted });
+    movedRef.current = true; setPosition(next); setAnswers({}); setVerdict(undefined);
   }
   async function complete() {
     if (busyRef.current) return;
     busyRef.current = true; setPending(true); setError(undefined);
     try {
       if (!review) {
+        // Completion needs the last step saved; a failed save has already returned the learner to its step.
+        if (!(await saves.flush())) return;
         const result = await completeLessonAction(lesson.id);
         if (!result.ok || result.completedLessons === undefined) { setError(result.message ?? "Dokončení se nepodařilo potvrdit. Zkus to znovu."); return; }
+        completedRef.current = true;
         setCompletedLessons(result.completedLessons);
         setReward(result.reward);
       }
@@ -106,9 +123,9 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
     ? { label: "Zkontrolovat odpověď", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: evaluation === undefined, onClick: () => setVerdict(evaluation) }
     : question && verdict === false
       ? { label: "Zkusit znovu", icon: <RotateCcw aria-hidden="true" className="size-[18px]" />, disabled: false, onClick: retry }
-      : { label: question || !isLast ? "Pokračovat" : review ? "Dokončit opakování" : "Dokončit lekci", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: false, onClick: () => void (question ? move(position + 1, answers) : isLast ? complete() : move(position + 1)) };
+      : { label: question || !isLast ? "Pokračovat" : review ? "Dokončit opakování" : "Dokončit lekci", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: false, onClick: (event: MouseEvent) => question ? move(position + 1, answers, event) : isLast ? void complete() : move(position + 1, undefined, event) };
 
-  return <main className="investi-theme flex min-h-dvh flex-col">
+  return <main className="investi-theme flex min-h-dvh flex-col" data-save-state={saving ? "saving" : "idle"}>
     <LessonTopBar eyebrow={`${learningModule.title} · Lekce ${lesson.position}${review ? " · Opakování" : ""}`} title={lesson.title} minutes={lesson.estimatedMinutes} segments={steps.map((item) => ({ mastery: item.kind === "mastery" }))} current={position} finished={finished} />
     <div className="flex-1 px-5 pt-5 pb-7 md:px-8 md:pt-10 md:pb-14 lg:px-16 lg:pt-12 lg:pb-[72px]">
       <div className={cn("mx-auto flex w-full min-w-0 flex-col gap-5 md:gap-7", wide && !finished ? "max-w-[1040px]" : "max-w-[760px]")}>
@@ -138,7 +155,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
       </div>
     </div>
     {finished ? null : <LessonActionBar>
-      {position > 0 ? <LearningButton variant="ghost" disabled={pending} onClick={() => void move(position - 1)} className="min-h-[52px] shrink-0 px-1 text-[15px] font-semibold text-ink hover:bg-paper-muted md:min-h-12 md:px-3"><ArrowLeft aria-hidden="true" className="size-4" /><span className="max-[359px]:sr-only">Předchozí</span></LearningButton> : null}
+      {position > 0 ? <LearningButton variant="ghost" disabled={pending} onClick={(event) => move(position - 1, undefined, event)} className="min-h-[52px] shrink-0 px-1 text-[15px] font-semibold text-ink hover:bg-paper-muted md:min-h-12 md:px-3"><ArrowLeft aria-hidden="true" className="size-4" /><span className="max-[359px]:sr-only">Předchozí</span></LearningButton> : null}
       <LearningButton buttonRef={primaryRef} loading={pending} disabled={primary.disabled} aria-describedby={question && verdict !== undefined ? `${question.id}-feedback` : undefined} onClick={primary.onClick} className={cn(primaryClassName, position === 0 && "md:ml-auto")}>{primary.label}{pending ? null : <span className="contents max-[374px]:hidden">{primary.icon}</span>}</LearningButton>
     </LessonActionBar>}
   </main>;

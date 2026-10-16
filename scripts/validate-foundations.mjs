@@ -107,6 +107,8 @@ try {
   await page.getByRole("heading", { name: "Správně", exact: true }).waitFor();
   await page.getByRole("button", { name: "Pokračovat", exact: true }).press("Enter");
   await page.getByRole("heading", { name: "Lekce hotová", exact: true }).waitFor();
+  // The step shows before its cursor is saved; reload once the save has landed.
+  await page.locator('main[data-save-state="idle"]').waitFor();
   await page.reload();
   await page.getByRole("heading", { name: "Lekce hotová", exact: true }).waitFor();
   assert.equal((await sql`select last_position from lesson_progress where user_id = ${userId} and lesson_id = 'foundations-why-invest'`)[0].last_position, 2);
