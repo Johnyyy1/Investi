@@ -30,6 +30,9 @@
 .DS_Store
 *.pem
 
+# local editor/notes settings
+/.obsidian/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

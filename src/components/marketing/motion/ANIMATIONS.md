@@ -14,7 +14,7 @@ The landing page (`src/components/marketing/pen-landing.tsx`) has a GSAP motion 
 | --- | --- |
 | `src/lib/gsap.ts` | Registers the plugins once (client only). Shared `EASE`, `DUR`, `REVEAL_Y` and media queries `MQ`. Always import gsap from here. |
 | `motion/motion-root.tsx` | `"use client"` wrapper around the page. One `useGSAP({ scope })` → `gsap.matchMedia()` runs every section initialiser in `SECTIONS` order and reverts everything on unmount or route change. Calls `ScrollTrigger.refresh()` after fonts and on `load`. |
-| `motion/reveal.tsx` | Markup-only helpers: `<Reveal>`, `<SplitHeading>`, `<CountUp>`, `magneticProps`. They render plain HTML with `data-*` hooks, so SSR and no-JS output is the final state. |
+| `motion/reveal.tsx` | Markup-only helpers: `<SplitHeading>`, `<CountUp>`, `magneticProps`. They render plain HTML with `data-*` hooks, so SSR and no-JS output is the final state. |
 | `motion/utils.ts` | `useReveal`, `splitHeading` / `useSplitHeadings`, `countUp`, `magnetic`, `hoverLift`, `pressFeedback`, `fontsReady`. |
 | `motion/smooth-scroll.ts` | Lenis on the GSAP ticker. In-page `#anchors` go through `lenis.scrollTo` and then move focus to the target. `#main` (the skip link) stays native. Deep links re-land after pin refreshes. |
 | `motion/events.ts` | DOM events that let the motion layer drive the React previews (`LessonPreview`, `PortfolioPreview`). React still renders everything, and the demos never touch real state. |
@@ -48,7 +48,7 @@ The landing page (`src/components/marketing/pen-landing.tsx`) has a GSAP motion 
 ## Retuning
 
 - **Global feel:** edit `EASE`, `DUR` and `REVEAL_Y` in `src/lib/gsap.ts`.
-- **Add a reveal to new markup:** add `data-reveal` (`="fade"` for no movement, `data-reveal-delay="0.2"`, `data-reveal-stagger` for children), or wrap it in `<Reveal>`. For headings, use `<SplitHeading mode="words|lines|chars">`.
+- **Add a reveal to new markup:** add `data-reveal` (`="fade"` for no movement, `data-reveal-delay="0.2"`, `data-reveal-stagger` for children). For headings, use `<SplitHeading mode="words|lines|chars">`.
 - **Add a section:** write a `SectionInit` in `motion/sections/` and add it to `SECTIONS` in `motion-root.tsx`. Return a cleanup for any listeners. Tweens and ScrollTriggers created synchronously, or through `ctx.inContext(...)`, are reverted automatically.
 - **Debugging:** add `markers: true` to a ScrollTrigger locally, and never commit it.
 

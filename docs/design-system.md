@@ -80,4 +80,4 @@ Design-system work must preserve authentication, sessions, reward policy, streak
 
 ## Validation
 
-Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`. With the development server running, use `node scripts/validate-design-system.mjs` and the other existing `scripts/validate-*.mjs` browser suites as their environment permits. Production isolation must still return HTTP 404 for `/dev/design-system`.
+Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build`. With the development server running, use `npm run test:design-system-browser` and the other existing `scripts/validate-*.mjs` browser suites as their environment permits. Production isolation must still return HTTP 404 for `/dev/design-system`.

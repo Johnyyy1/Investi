@@ -2,7 +2,6 @@ import { gsap, ScrollTrigger, SplitText, EASE, DUR, REVEAL_Y } from "@/lib/gsap"
 
 export const $ = <T extends HTMLElement = HTMLElement>(root: ParentNode, selector: string) => root.querySelector<T>(selector);
 export const $$ = <T extends HTMLElement = HTMLElement>(root: ParentNode, selector: string) => Array.from(root.querySelectorAll<T>(selector));
-export const attr = (name: string, value?: string) => (value === undefined ? `[data-${name}]` : `[data-${name}="${value}"]`);
 
 /** Resolves when web fonts are ready, or after `timeout` ms so a slow font never blocks the intro. */
 export function fontsReady(timeout = 1200): Promise<void> {

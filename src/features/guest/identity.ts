@@ -1,7 +1,6 @@
 /** Anonymous identities come in two kinds. A demo gets seeded sample progress and open Lab access;
  * a guest is a real learner who has not saved an account yet and starts empty. */
 export const GUEST_KIND_HEADER = "x-investi-anonymous-kind";
-export type AnonymousKind = "demo" | "guest";
 type Identity = { isAnonymous?: boolean | null; anonymousKind?: string | null };
 
 export const isGuestIdentity = (identity: Identity) => identity.isAnonymous === true && identity.anonymousKind === "guest";
