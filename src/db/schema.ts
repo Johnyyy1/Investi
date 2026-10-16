@@ -326,3 +326,21 @@ export const marketDataCache = pgTable("market_data_cache", {
   check("market_data_cache_expiry_check", sql`${table.expiresAt} > ${table.storedAt}`),
   check("market_data_cache_key_length_check", sql`length(${table.cacheKey}) <= 512`),
 ]);
+
+/**
+ * Shared, cross-instance fixed-window rate-limit counters for auth endpoints and market-data reads.
+ * Keys are a readable scope plus an HMAC of the subject (IP, account or user), so no raw IP address
+ * or e-mail is stored. Rows past expires_at are restarted on the next hit and purged opportunistically;
+ * the table holds no authoritative data and is safe to truncate at any time.
+ */
+export const rateLimitBucket = pgTable("rate_limit_bucket", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull(),
+  windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  index("rate_limit_bucket_expires_at_idx").on(table.expiresAt),
+  check("rate_limit_bucket_count_check", sql`${table.count} >= 1`),
+  check("rate_limit_bucket_window_check", sql`${table.expiresAt} > ${table.windowStartedAt}`),
+  check("rate_limit_bucket_key_length_check", sql`length(${table.key}) <= 256`),
+]);

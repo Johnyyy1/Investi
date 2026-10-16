@@ -47,6 +47,7 @@
     "test:navigation-feedback": "node scripts/validate-navigation-feedback.mjs",
     "bench:navigation": "node scripts/benchmark-navigation.mjs",
     "test:market-data-cache": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-market-data-cache.mts",
+    "test:rate-limit": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-rate-limit.mts",
     "test:prepared-statements": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-prepared-statements.mts"
   },
   "dependencies": {

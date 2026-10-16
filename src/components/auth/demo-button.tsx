@@ -16,6 +16,7 @@ export function DemoButton({ compact = false, className, buttonClassName }: { co
       const current = await authClient.getSession();
       if (!current.data) {
         const result = await authClient.signIn.anonymous();
+        if (result.error?.status === 429) { setError("Z této sítě se teď otevřelo hodně dem. Zkus to znovu později."); setPending(false); return; }
         if (result.error) throw new Error("Demo se nepodařilo připravit");
       }
       router.replace("/learn"); router.refresh();

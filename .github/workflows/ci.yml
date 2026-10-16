@@ -84,6 +84,7 @@ jobs:
       - run: npm run test:persistence
       - run: npm run test:portfolio-persistence
       - run: npm run test:market-data-cache
+      - run: npm run test:rate-limit
       - run: npm run test:portfolio-allocation
       - run: npm run test:portfolio-closed-market
       - run: npm run test:progression-persistence

@@ -2,6 +2,7 @@ import "server-only";
 
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth/minimal";
+import { APIError, createAuthMiddleware, getIP } from "better-auth/api";
 import { anonymous } from "better-auth/plugins/anonymous";
 import { eq } from "drizzle-orm";
 import { ensureDemoSeed } from "@/features/demo/repository";
@@ -13,9 +14,28 @@ import { db } from "@/db";
 import * as schema from "@/db/schema";
 import { env } from "@/lib/env";
 import { createSocialAuthConfig } from "@/lib/auth-providers";
+import { rateLimiter } from "@/features/rate-limit";
+import { authIpRules, DEMO_CREATION_IP_RULE, NO_TRUSTED_IP_SUBJECT, normalizeAccountSubject, SIGN_IN_ACCOUNT_RULE, type RateLimitBucket } from "@/features/rate-limit/policy";
 
 const socialAuth = createSocialAuthConfig(env);
 export const authProviderAvailability = socialAuth.availability;
+
+/** Limits Better Auth's per-IP rules cannot express: per account for passwords, and seeded demos per IP. */
+const authAttemptLimits = createAuthMiddleware(async (ctx) => {
+  const buckets: RateLimitBucket[] = [];
+  if (ctx.path === "/sign-in/email") {
+    const account = normalizeAccountSubject((ctx.body as { email?: unknown } | undefined)?.email);
+    if (account) buckets.push({ scope: "auth:sign-in-account", subject: account, rule: SIGN_IN_ACCOUNT_RULE });
+  } else if (ctx.path === "/sign-in/anonymous" && ctx.headers?.get(GUEST_KIND_HEADER) !== "guest") {
+    const ip = ctx.headers ? getIP(ctx.headers, ctx.context.options) : null;
+    buckets.push({ scope: "auth:demo-creation", subject: ip ?? NO_TRUSTED_IP_SUBJECT, rule: DEMO_CREATION_IP_RULE });
+  }
+  const decision = await rateLimiter.consume(buckets);
+  if (!decision.allowed) {
+    const retryAfter = String(decision.retryAfterSeconds);
+    throw new APIError("TOO_MANY_REQUESTS", { message: "Too many requests. Please try again later." }, { "X-Retry-After": retryAfter, "Retry-After": retryAfter });
+  }
+});
 
 export const auth = betterAuth({
   appName: "investi",
@@ -27,7 +47,12 @@ export const auth = betterAuth({
   socialProviders: socialAuth.socialProviders,
   // Preserve Better Auth's verified-email linking safeguards; no trusted-provider override.
   onAPIError: { errorURL: new URL("/sign-in", env.BETTER_AUTH_URL).href },
-  rateLimit: { enabled: true, customRules: { "/sign-in/anonymous": { window: 60, max: 5 } } },
+  // Counted in Postgres, not per-instance memory, so the limits hold across serverless instances.
+  rateLimit: { enabled: true, customRules: authIpRules, customStorage: rateLimiter.betterAuthStorage() },
+  // Vercel overwrites X-Forwarded-For with the connecting client's IP, so a client cannot spoof it there.
+  // Better Auth trusts only a single-value header; anything else falls back to one shared bucket.
+  advanced: { ipAddress: { ipAddressHeaders: ["x-forwarded-for"] } },
+  hooks: { before: authAttemptLimits },
   databaseHooks: {
     // The guest client asks for a guest explicitly; every other anonymous sign-in stays a demo.
     // Choosing "guest" grants nothing: it only skips the demo seed and open Lab access.
