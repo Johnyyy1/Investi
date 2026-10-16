@@ -97,6 +97,11 @@ try {
   await page.getByRole("heading", { name: "Zkus to ještě jednou", exact: true }).waitFor();
   await page.screenshot({ path: `${screenshotDir}/06-incorrect-retry-state-1440.png`, fullPage: true });
   await page.getByRole("button", { name: "Zkusit znovu", exact: true }).press("Enter");
+  // Retry moves focus to the first option on the next frame; a key pressed before then would land on that option instead.
+  await page.waitForFunction(() => {
+    const labelId = document.activeElement?.getAttribute("aria-labelledby");
+    return Boolean(labelId && document.getElementById(labelId)?.textContent?.includes("Nic. Pořád je to 10 000 Kč"));
+  });
   await page.getByLabel("Koupím si za ně o něco méně.", { exact: true }).press("Space");
   await page.getByRole("button", { name: "Zkontrolovat odpověď", exact: true }).press("Enter");
   await page.getByRole("heading", { name: "Správně", exact: true }).waitFor();
