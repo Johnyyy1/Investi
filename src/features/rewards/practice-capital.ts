@@ -13,6 +13,7 @@ import { FOUNDATIONS_MODULE_ID } from "@/features/lessons/foundations/manifest";
 export const LEGACY_REWARD_POLICY_VERSION = 1;
 export const XP_ONLY_REWARD_POLICY_VERSION = 2;
 export const MODULE_REWARD_POLICY_VERSION = 3;
+/** The version new receipts are written with. @alias */
 export const REWARD_POLICY_VERSION = MODULE_REWARD_POLICY_VERSION;
 /** Per first completion of a lesson outside Foundations under policy v3. */
 export const LESSON_PRACTICE_CAPITAL_MINOR = BigInt(200_000);

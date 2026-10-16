@@ -96,6 +96,7 @@ Every suite below is an npm script in `package.json` unless it is written as `no
 | Script | Purpose |
 | --- | --- |
 | `lint`, `typecheck` | ESLint; `tsc --noEmit` (run `npx next typegen` first on a fresh checkout) |
+| `knip` | Unused files, exports and dependencies (config and reasoned exceptions in `knip.jsonc`) |
 | `test`, `test:watch` | Vitest unit tests: domain, accounting, lesson content, components |
 
 **Database suites** (need `DATABASE_URL` pointing at a disposable local database that is migrated and seeded)
@@ -128,9 +129,9 @@ Every suite below is an npm script in `package.json` unless it is written as `no
 | `test:portfolio-browser` | Portfolio Lab | ✓ |
 | `test:progression-browser` | Unlock progression | ✓ |
 | `test:backtesting-browser` | Backtesting Lab | ✓ |
-| `node scripts/validate-marketing.mjs` | Landing page | ✓ |
+| `test:marketing-browser` | Landing page | ✓ |
 | `test:not-found-browser` | 404 pages: unmatched URL, lesson, instrument | ✓ |
-| `test:log-returns-browser`, `node scripts/validate-returns-flow.mjs` | Returns module | |
+| `test:log-returns-browser`, `test:returns-browser` | Returns module | |
 | `test:portfolio-browser-closed` | Closed/stale market states (server started with `DETERMINISTIC_MARKET_NOW`) | |
 | `test:instrument-browser-unavailable` | Unavailable instrument history/quotes | |
 | `test:studovna` | Learn page | |
@@ -141,9 +142,9 @@ Every suite below is an npm script in `package.json` unless it is written as `no
 | `test:demo-session` | Demo and guest session lifetimes | |
 | `test:request-isolation` | Request-scoped memoization across users | |
 | `test:navigation-feedback` | Client navigation feedback | |
-| `node scripts/validate-auth.mjs` | Social sign-in with fake providers (see [authentication](docs/authentication.md)) | |
-| `node scripts/validate-progress.mjs` | Progress page | |
-| `node scripts/validate-design-system.mjs` | Design system (requires `npm run dev`) | |
+| `test:auth-browser` | Social sign-in with fake providers (see [authentication](docs/authentication.md)) | |
+| `test:progress-browser` | Progress page (needs `PROGRESS_QA_DISPOSABLE=1` and an `investi_progress_qa` database) | |
+| `test:design-system-browser` | Design system (requires `npm run dev`) | |
 
 **Operator and diagnostics**
 
@@ -151,6 +152,7 @@ Every suite below is an npm script in `package.json` unless it is written as `no
 | --- | --- |
 | `demo:cleanup` | Dry run of the anonymous identity cleanup; `-- --apply` applies it |
 | `smoke:fmp` | Manual smoke test of the live FMP market-data adapter |
+| `smoke:fmp-fundamentals` | Manual smoke test of live FMP equity fundamentals and their cache |
 | `bench:navigation` | Client navigation benchmark (see [performance baseline](docs/performance-baseline.md)) |
 
 ## Anonymous identity retention

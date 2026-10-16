@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { draftPayloadSchema, draftSchema, emptyDraft, experienceValues, preferencesSchema, recommendLearningPath, resumeStep, type Preferences } from "./domain";
+import { draftSchema, emptyDraft, experienceValues, preferencesSchema, recommendLearningPath, resumeStep, type Preferences } from "./domain";
 import { moduleCatalog } from "../learning/catalog";
 
 const answers: Preferences = { experienceLevel: "BASIC", goals: ["CONFIDENCE"], interests: ["STOCKS"], dailyGoalMinutes: 10 };
@@ -55,11 +55,6 @@ describe("onboarding state", () => {
     expect(resumeStep(draft, 6)).toBe(3);
     expect(resumeStep(draft, 1)).toBe(1);
     expect(draft.goals).toEqual(["CONFIDENCE"]);
-  });
-  it("cannot jump past unanswered questions", () => {
-    expect(draftPayloadSchema.safeParse({ answers: emptyDraft, step: 6 }).success).toBe(false);
-    expect(draftPayloadSchema.safeParse({ answers, step: 6 }).success).toBe(true);
-    expect(draftPayloadSchema.safeParse({ answers, step: 7 }).success).toBe(false);
   });
   it("allows review and ready to resume independently of completion", () => {
     expect(resumeStep(answers, 5)).toBe(5);

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema-jsonc.json",
+  "entry": [
+    // Spawned with `tsx` by validate-personalization-browser, validate-onboarding-redesign and validate-settings.
+    "scripts/*-browser-fixtures.mts",
+    // Manual latency tool for the navigation benchmark; see docs/performance-baseline.md.
+    "scripts/pg-latency-proxy.mjs"
+  ],
+  // An exported type or constant that the module itself uses is part of its public contract, not dead code.
+  "ignoreExportsUsedInFile": true
+}

@@ -21,7 +21,7 @@ env:
 
 jobs:
   static:
-    name: Lint, typecheck, unit tests, build
+    name: Lint, knip, typecheck, unit tests, build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -42,6 +42,7 @@ jobs:
       - name: Generate Next.js route types
         run: npx next typegen
       - run: npm run lint
+      - run: npm run knip
       - run: npm run typecheck
       - run: npm test
       - run: npm run build

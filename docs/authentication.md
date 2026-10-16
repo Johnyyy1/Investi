@@ -44,6 +44,6 @@ Only allowlisted Czech messages are rendered. Raw provider messages, `error_desc
 
 ## Verification
 
-Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build` and `git diff --check`. `scripts/validate-auth.mjs` exercises a fresh local production runtime using disposable local users and **fake** provider credentials; it stops provider navigation before contacting Google/Meta. It checks actual Better Auth authorization URLs and callback cancellation, not a live provider login. See the script's environment requirements. Real consent/token exchange requires manual testing with development credentials.
+Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build` and `git diff --check`. `npm run test:auth-browser` (`scripts/validate-auth.mjs`) exercises a fresh local production runtime using disposable local users and **fake** provider credentials; it stops provider navigation before contacting Google/Meta. It checks actual Better Auth authorization URLs and callback cancellation, not a live provider login. See the script's environment requirements. Real consent/token exchange requires manual testing with development credentials.
 
 Implementation was checked against the installed package source, including `oauth2/link-account.mjs`, `api/routes/callback.mjs` and the Google/Facebook adapters. Reference: [Better Auth accounts](https://better-auth.com/docs/concepts/users-accounts), [Google](https://better-auth.com/docs/authentication/google), [Facebook](https://better-auth.com/docs/authentication/facebook).

@@ -104,7 +104,7 @@ jobs:
           NOT_FOUND_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/not-found
       - name: Marketing
         if: ${{ !cancelled() }}
-        run: node scripts/validate-marketing.mjs
+        run: npm run test:marketing-browser
         env:
           MARKETING_TEST_URL: ${{ env.APP_URL }}
           MARKETING_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/marketing

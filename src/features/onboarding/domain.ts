@@ -28,8 +28,6 @@ export function resumeStep(draft: OnboardingDraft, savedStep: number): number {
   const firstMissing = !draft.experienceLevel ? 1 : !draft.goals.length ? 2 : !draft.interests.length ? 3 : !draft.dailyGoalMinutes ? 4 : 6;
   return Math.max(0, Math.min(Number.isInteger(savedStep) ? savedStep : 0, firstMissing));
 }
-export const draftPayloadSchema = z.object({ answers: draftSchema, step: z.number().int().min(0).max(6) }).strict()
-  .refine(({ answers, step }) => resumeStep(answers, step) === step);
 
 export type LearningRecommendation = {
   recommendedModule: { slug: "returns" | "investing-foundations"; title: string; href: "/learn/returns" | "/learn/investing-foundations" };

@@ -3,4 +3,3 @@
  * Button and ButtonLink from components/ui/button.
  */
 export { Button as LearningButton, ButtonLink as LearningLink } from "@/components/ui/button";
-export type { ButtonProps as LearningButtonProps } from "@/components/ui/button";
