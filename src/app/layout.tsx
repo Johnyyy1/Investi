@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { connection } from "next/server";
 import { LearningTheme } from "@/components/learning/learning-theme";
 import "./globals.css";
 
@@ -16,6 +17,8 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#102D4C" },
   ],
 };
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // The CSP nonce is per request, so no page may be prerendered with nonce-less scripts.
+  await connection();
   return <html lang="cs"><body><LearningTheme>{children}</LearningTheme></body></html>;
 }
