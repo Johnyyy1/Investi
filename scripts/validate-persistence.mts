@@ -7,6 +7,8 @@ import { learningProfile, lessonAward, lessonProgress, user } from "../src/db/sc
 import { ensureDemoSeed } from "../src/features/demo/repository";
 import { completeLesson, saveLessonProgress } from "../src/features/progress/repository";
 import { lessonSteps } from "../src/features/progress/transition";
+import { correctAnswers, wrongAnswers } from "../src/features/progress/test-fixtures";
+import { isQuestion } from "../src/features/lessons/question-evaluation";
 import { quickStart } from "../src/features/onboarding/repository";
 import { initializeTimeZone } from "../src/features/gamification/repository";
 import { loadPracticeCapitalSummary } from "../src/features/rewards/repository";
@@ -44,6 +46,25 @@ try {
   await assert.rejects(() => completeLesson(normal, "foundations-why-invest"));
   await assert.rejects(() => saveLessonProgress(normal, { lessonId: "foundations-why-invest", status: "in_progress", lastPosition: 8 }));
   await assert.rejects(() => saveLessonProgress(normal, { lessonId: "foundations-why-invest", status: "completed", lastPosition: 8 }));
+  // A scripted walk must pass every graded step: without correct answers it earns no Practice Capital (#42).
+  const walker = await owner(false), walked = "returns-what-is-a-return", walkSteps = lessonSteps(walked);
+  const walkTo = (position: number, answers?: Record<string, string>) => saveLessonProgress(walker, { lessonId: walked, status: "in_progress", lastPosition: position }, answers);
+  for (let position = 0; position < walkSteps.length - 1; position++) {
+    const question = walkSteps[position].blocks.find(isQuestion);
+    if (question) {
+      await assert.rejects(() => walkTo(position + 1), "a graded step needs an answer");
+      await assert.rejects(() => walkTo(position + 1, wrongAnswers(question)), "a graded step needs the correct answer");
+      await assert.rejects(() => walkTo(position + 2, correctAnswers(question)), "a correct answer earns one step, not a jump");
+      await assert.rejects(() => completeLesson(walker, walked), "completion needs the final step");
+      assert.equal((await loadPracticeCapitalSummary(walker)).earnedPracticeCapitalMinor, 0n);
+    }
+    await walkTo(position + 1, question && correctAnswers(question));
+  }
+  assert.equal((await getAwards(walker)).length, 0, "walking the steps alone records no receipt");
+  const walkedReward = await completeLesson(walker, walked);
+  assert.equal(walkedReward.practiceCapitalAwardedMinor, 200_000n);
+  assert.equal((await completeLesson(walker, walked)).practiceCapitalAwardedMinor, 0n, "repeat completion awards nothing");
+  assert.equal((await loadPracticeCapitalSummary(walker)).earnedPracticeCapitalMinor, 200_000n);
   await db.update(lessonProgress).set({ lastPosition: lessonSteps("foundations-risk-reward").length - 1 }).where(and(eq(lessonProgress.userId, a), eq(lessonProgress.lessonId, "foundations-risk-reward")));
   const [one, two] = await Promise.all([completeLesson(a, "foundations-risk-reward"), completeLesson(a, "foundations-risk-reward")]);
   assert.equal(one.xpAwarded + two.xpAwarded, 60);
@@ -69,7 +90,7 @@ try {
   const [profile] = await db.select().from(learningProfile).where(eq(learningProfile.userId, normal));
   assert.deepEqual(profile.goals, []); assert.deepEqual(profile.interests, []);
   assert.equal(profile.timeZone, "Europe/Prague");
-  console.log("PASS: real DB atomic policy-v3 receipts, review and concurrent idempotence, completedAt preservation, demo ownership/isolation, concurrent seed idempotence, seed rollback/retry, server progression validation, stale onboarding protection, pinned timezone.");
+  console.log("PASS: real DB atomic policy-v3 receipts, review and concurrent idempotence, completedAt preservation, graded-step walk without correct answers earns nothing, demo ownership/isolation, concurrent seed idempotence, seed rollback/retry, server progression validation, stale onboarding protection, pinned timezone.");
 } finally {
   if (constraint) await sql.unsafe(`ALTER TABLE lesson_award DROP CONSTRAINT IF EXISTS "${constraint}"`);
   for (const id of ids) await db.delete(user).where(eq(user.id, id));

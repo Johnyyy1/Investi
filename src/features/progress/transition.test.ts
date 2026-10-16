@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { lessonSteps, validateCompletion, validateMove } from "./transition";
 import { availableLessons } from "@/features/learning/catalog";
+import { isQuestion } from "@/features/lessons/question-evaluation";
+import { correctAnswers, wrongAnswers } from "./test-fixtures";
+
+const lessonIds = availableLessons.filter((lesson) => lesson.status === "available").map((lesson) => lesson.id);
+const questionOf = (id: string, position: number) => lessonSteps(id)[position].blocks.find(isQuestion);
+
 describe("server-side completion eligibility", () => {
   it.each(availableLessons.map((lesson) => lesson.id))("requires the final saved step of %s", (id) => {
     expect(() => validateCompletion(id)).toThrow();
@@ -30,5 +36,39 @@ describe("server-side completion eligibility", () => {
     for (const option of block.options.filter((option) => option.id !== block.correctOptionId)) expect(() => validateMove("foundations-why-invest", 1, 2, { answer: option.id })).toThrow();
     expect(() => validateMove("foundations-why-invest", 1, 2, { answer: block.correctOptionId })).not.toThrow();
     expect(() => validateCompletion("foundations-why-invest", { status: "in_progress", lastPosition: 1 })).toThrow();
+  });
+});
+
+describe("a scripted walk cannot reach completion without passing graded steps (#42)", () => {
+  it.each(lessonIds)("keeps %s gradeable: at most one question per step, none on the final step", (id) => {
+    const steps = lessonSteps(id);
+    // The client renders and submits one question per step, and completion evaluates no answers.
+    for (const step of steps) expect(step.blocks.filter(isQuestion).length).toBeLessThanOrEqual(1);
+    expect(steps.at(-1)!.blocks.some(isQuestion)).toBe(false);
+    expect(steps.some((step) => step.blocks.some(isQuestion))).toBe(true);
+  });
+  it.each(lessonIds)("stops a walk of %s without answers at its first question", (id) => {
+    const steps = lessonSteps(id);
+    const first = steps.findIndex((step) => step.blocks.some(isQuestion));
+    for (let position = 0; position < first; position++) expect(() => validateMove(id, position, position + 1)).not.toThrow();
+    expect(() => validateMove(id, first, first + 1)).toThrow("Answer the question correctly");
+    expect(() => validateCompletion(id, { status: "in_progress", lastPosition: first })).toThrow();
+  });
+  it.each(lessonIds)("rejects blank and wrong answers at every graded step of %s and completes after correct ones", (id) => {
+    const steps = lessonSteps(id);
+    for (let position = 0; position < steps.length - 1; position++) {
+      const question = questionOf(id, position);
+      if (question) {
+        expect(() => validateMove(id, position, position + 1, {})).toThrow();
+        expect(() => validateMove(id, position, position + 1, wrongAnswers(question))).toThrow();
+        expect(() => validateMove(id, position, position + 1, correctAnswers(question))).not.toThrow();
+      } else expect(() => validateMove(id, position, position + 1)).not.toThrow();
+      expect(() => validateCompletion(id, { status: "in_progress", lastPosition: position })).toThrow();
+    }
+    expect(() => validateCompletion(id, { status: "in_progress", lastPosition: steps.length - 1 })).not.toThrow();
+  });
+  it("does not accept another question's answer for a graded step", () => {
+    const [first, second] = lessonSteps("returns-compounding").flatMap((step, position) => step.blocks.some(isQuestion) ? [position] : []);
+    expect(() => validateMove("returns-compounding", first, first + 1, correctAnswers(questionOf("returns-compounding", second)!))).toThrow();
   });
 });
