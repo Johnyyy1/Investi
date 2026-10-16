@@ -15,7 +15,8 @@ export const staticSecurityHeaders: SecurityHeader[] = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), bluetooth=(), browsing-topics=()",
+    // No bluetooth=(): Chrome does not recognize it and logs a console error on every page.
+    value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), serial=(), hid=(), browsing-topics=()",
   },
 ];
 
