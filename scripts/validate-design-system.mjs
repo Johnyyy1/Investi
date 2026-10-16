@@ -19,6 +19,24 @@ try {
   await page.getByRole("button", { name: "Primary", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "primary button pressed." }).first().waitFor();
 
+  // One visual system (#47): the primary action, UI font and heading font come from styles/tokens.css.
+  const system = await page.evaluate(async () => {
+    await document.fonts.ready;
+    const style = (element) => getComputedStyle(element);
+    const primary = style([...document.querySelectorAll("button")].find((button) => button.textContent === "Primary"));
+    return {
+      primary: [primary.backgroundColor, primary.color, primary.borderTopLeftRadius, primary.minHeight],
+      body: style(document.querySelector("main p")).fontFamily.split(",")[0].replaceAll('"', ""),
+      heading: style(document.querySelector("main h2")).fontFamily.split(",")[0].replaceAll('"', ""),
+      nunito: [...document.fonts].some((face) => /nunito/i.test(face.family)),
+    };
+  });
+  assert.deepEqual(system.primary, ["rgb(35, 111, 102)", "rgb(255, 255, 255)", "8px", "52px"], "Primary action uses the shared token");
+  assert.match(system.body, /Inter/, "UI text uses Inter");
+  assert.match(system.heading, /Manrope/, "Headings use Manrope");
+  assert.equal(system.nunito, false, "No second UI font is loaded");
+  console.log("One visual system: primary action, Inter text and Manrope headings passed");
+
   for (const width of [1440, 1024, 768, 390, 375, 320]) {
     await page.setViewportSize({ width, height: 900 });
     await page.waitForFunction(() => {

@@ -3,7 +3,7 @@
 import { AppLink as Link } from "@/components/shell/app-link";
 import { useEffect, useRef, useState } from "react";
 import { Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { accountDeletionErrorMessage } from "@/features/account/deletion";
 import { authClient } from "@/lib/auth-client";
 import type { AuthProviderAvailability } from "@/lib/auth-providers";
@@ -56,7 +56,7 @@ function DataExport() {
     <div className={styles.sectionHead}><h2 id="data-export-title">Stáhnout moje data</h2><p>Kopie všeho, co o tobě investi ukládá, ve strojově čitelném formátu JSON.</p></div>
     <div className={styles.card}>
       <div className={styles.contentRow}><div><h3>Profil, učení a cvičné portfolio</h3><p>Účet a způsoby přihlášení, relace (IP adresa a prohlížeč), plán učení, pokrok, odměny, portfolia a obchody. Hesla ani přihlašovací tokeny soubor neobsahuje.</p></div>
-        <Button variant="secondary" className={styles.secondary} loading={pending} onClick={() => void download()}>{!pending && <Download size={18} aria-hidden="true" />}{pending ? "Připravuji…" : "Stáhnout data"}</Button></div>
+        <Button variant="secondary" size="compact" loading={pending} onClick={() => void download()}>{!pending && <Download size={18} aria-hidden="true" />}{pending ? "Připravuji…" : "Stáhnout data"}</Button></div>
       {message && <p className={message.ok ? styles.status : styles.error} role={message.ok ? "status" : "alert"}>{message.text}</p>}
     </div>
   </>;
@@ -65,7 +65,7 @@ function DataExport() {
 function DeletionUnavailable() {
   return <>
     <div className={styles.sectionHead}><h2>Smazat účet</h2><p>Smazání je trvalé a nejde vrátit.</p></div>
-    <div className={styles.card}><div className={styles.contentRow}><div><h3>Smazání teď nejde připravit</h3><p role="alert">Nepodařilo se načíst, jak se přihlašuješ. Načti stránku znovu.</p></div><a className={styles.secondary} href="/settings?section=data">Načíst znovu</a></div></div>
+    <div className={styles.card}><div className={styles.contentRow}><div><h3>Smazání teď nejde připravit</h3><p role="alert">Nepodařilo se načíst, jak se přihlašuješ. Načti stránku znovu.</p></div><a className={buttonVariants({ variant: "secondary", size: "compact" })} href="/settings?section=data">Načíst znovu</a></div></div>
   </>;
 }
 
@@ -125,7 +125,7 @@ function AccountDeletion({ hasPassword, fresh: initiallyFresh, reopenDeletion, a
   return <>
     <div className={styles.sectionHead}><h2 id="delete-account-title">Smazat účet</h2><p>Smazání je trvalé a nejde vrátit.</p></div>
     <div className={styles.card}><div className={styles.contentRow}><div><h3>Smazat účet a všechna data</h3><p>Smaže účet, pokrok v lekcích, odměny, cvičná portfolia i historii obchodů. Obsah lekcí a tržní data jsou společné pro všechny a zůstanou.</p></div>
-      <Button buttonRef={trigger} variant="secondary" className={styles.dangerQuiet} onClick={open}>Smazat účet…</Button></div></div>
+      <Button buttonRef={trigger} variant="dangerQuiet" size="compact" onClick={open}>Smazat účet…</Button></div></div>
     <dialog ref={dialog} className={styles.dialog} aria-labelledby="delete-title" aria-describedby="delete-description" onCancel={(event) => { if (pending) event.preventDefault(); }} onClose={() => trigger.current?.focus()}>
       <h2 id="delete-title">Smazat účet natrvalo?</h2>
       <p id="delete-description">Smažeme tvůj účet a všechno, co k němu patří. Tuhle akci nejde vrátit.</p>
@@ -135,16 +135,16 @@ function AccountDeletion({ hasPassword, fresh: initiallyFresh, reopenDeletion, a
         <p>Z bezpečnostních důvodů se nejdřív znovu přihlas. Pak se sem vrátíš a smazání potvrdíš.</p>
         {error && <p className={styles.error} role="alert">{error}</p>}
         <div className={styles.actions}>
-          <Button variant="secondary" className={styles.secondary} autoFocus disabled={Boolean(pending)} onClick={() => dialog.current?.close()}>Ponechat účet</Button>
-          {reauthProviders.map((provider) => <Button key={provider} variant="secondary" className={styles.secondary} loading={pending === provider} disabled={Boolean(pending)} onClick={() => void reauthenticate(provider)}>Znovu se přihlásit přes {providerLabels[provider]}</Button>)}
+          <Button variant="secondary" size="compact" autoFocus disabled={Boolean(pending)} onClick={() => dialog.current?.close()}>Ponechat účet</Button>
+          {reauthProviders.map((provider) => <Button key={provider} variant="secondary" size="compact" loading={pending === provider} disabled={Boolean(pending)} onClick={() => void reauthenticate(provider)}>Znovu se přihlásit přes {providerLabels[provider]}</Button>)}
         </div>
         {reauthProviders.length === 0 && <p className={styles.hint}>Odhlas se a znovu se přihlas, potom se sem vrať.</p>}
       </> : <form noValidate onSubmit={remove}>
         {hasPassword && <div className={styles.passwordField}><label htmlFor="delete-password">Heslo k účtu</label><input ref={passwordInput} id="delete-password" type="password" autoComplete="current-password" value={password} disabled={pending === "delete"} aria-invalid={error ? true : undefined} aria-describedby={error ? "delete-error" : undefined} onChange={(event) => { setPassword(event.target.value); setError(undefined); }} /></div>}
         {error && <p id="delete-error" className={styles.error} role="alert">{error}</p>}
         <div className={styles.actions}>
-          <Button variant="secondary" className={styles.secondary} autoFocus disabled={pending === "delete"} onClick={() => dialog.current?.close()}>Ponechat účet</Button>
-          <Button type="submit" variant="secondary" className={styles.dangerConfirm} loading={pending === "delete"}>{pending === "delete" ? "Mažu účet…" : "Smazat účet natrvalo"}</Button>
+          <Button variant="secondary" size="compact" autoFocus disabled={pending === "delete"} onClick={() => dialog.current?.close()}>Ponechat účet</Button>
+          <Button type="submit" variant="danger" size="compact" loading={pending === "delete"}>{pending === "delete" ? "Mažu účet…" : "Smazat účet natrvalo"}</Button>
         </div>
       </form>}
     </dialog>

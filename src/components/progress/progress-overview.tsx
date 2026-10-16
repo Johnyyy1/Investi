@@ -14,6 +14,8 @@ import { czechPlural, formatCount, formatDate, formatDecimal } from "@/lib/forma
 import { progressModel, type LessonStatus, type OutcomeIcon, type ProgressSummary } from "./progress-model";
 import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./progress-overview.module.css";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Summary = ProgressSummary & {
   user?: { name?: string | null } | null;
@@ -118,7 +120,7 @@ function Milestone({ milestone, next }: { milestone: NonNullable<Model["mileston
       <div className={styles.nextHead}><span className={styles.nextNumber}>{nextChapter.number}</span><div><h3>{nextChapter.title}</h3><p>{lessonCount(nextChapter.lessons.length)} · ≈ {nextChapter.minutes} min</p></div></div>
       <p className={styles.promise}>{nextChapter.description}</p>
       <ol className={styles.nextLessons} aria-label={`Co tě čeká v kapitole ${nextChapter.title}`}>{nextChapter.lessons.map((lesson, index) => <li key={lesson.id} className={lesson.highlighted ? styles.nextLesson : undefined}>{lesson.status === "done" ? <CircleCheck size={14} aria-hidden="true" /> : <span aria-hidden="true">{index + 1}</span>}{lesson.title}{lesson.status === "done" && <span className="sr-only"> (hotovo)</span>}</li>)}</ol>
-      <Link className={`${paper.primaryAction} ${styles.primary}`} href={`/learn/${next.moduleSlug}/${next.slug}`}>Začít lekcí {next.title}<ArrowRight size={18} aria-hidden="true" /></Link>
+      <Link className={cn(buttonVariants(), paper.primaryAction, styles.primary)} href={`/learn/${next.moduleSlug}/${next.slug}`}>Začít lekcí {next.title}<ArrowRight size={18} aria-hidden="true" /></Link>
       <p className={styles.pause}>Nebo si dej pauzu. Pokrok je uložený.</p>
     </div>
   </section>;
@@ -170,7 +172,7 @@ export function ProgressOverview({ summary, unlock, portfolio }: { summary: Summ
           <div>
             <h3>{current ? "První lekci máš rozdělanou." : "Zatím tu nejsou žádné myšlenky."}</h3>
             <p>Objeví se tu, až dokončíš první lekci. Rozpracovaná lekce se nepočítá napůl.</p>
-            <Link className={`${paper.primaryAction} ${styles.primary}`} href={model.continueHref}>{current ? `Pokračovat od kroku ${summary.position + 1}` : "Začít první lekci"}<ArrowRight size={18} aria-hidden="true" /></Link>
+            <Link className={cn(buttonVariants(), paper.primaryAction, styles.primary)} href={model.continueHref}>{current ? `Pokračovat od kroku ${summary.position + 1}` : "Začít první lekci"}<ArrowRight size={18} aria-hidden="true" /></Link>
             <p className={styles.meta}>{summary.next.title} · ≈ {summary.next.estimatedMinutes} min{current ? ` · krok ${step}` : ""}</p>
           </div>
         </div> : <>

@@ -79,14 +79,14 @@ export function PortfolioBuilder() {
 
   return <section aria-label="Sestavení portfolia" className="min-w-0 space-y-8">
     <div>
-      <h3 className="text-ql-title font-semibold">Sestavení portfolia</h3>
-      <p className="mt-2 text-ql-body text-ql-secondary">Nastav, jakou část tohoto hypotetického portfolia tvoří jednotlivé kategorie aktiv. Jde o vzdělávací sandbox, ne o doporučené rozložení.</p>
+      <h3 className="text-card-title font-semibold">Sestavení portfolia</h3>
+      <p className="mt-2 text-body text-secondary">Nastav, jakou část tohoto hypotetického portfolia tvoří jednotlivé kategorie aktiv. Jde o vzdělávací sandbox, ne o doporučené rozložení.</p>
     </div>
 
     <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label="Načíst příklad rozložení">
       {presets.map((preset) => {
         const selected = assets.every(({ id }) => allocations[id] === preset.allocation[id]);
-        return <button key={preset.label} type="button" aria-pressed={selected} onClick={() => setAllocations(preset.allocation)} className={`min-h-12 rounded-ql-md border px-4 py-3 text-left text-ql-small font-semibold transition-colors ${selected ? "border-ql-link bg-ql-subtle text-ql-link" : "border-ql-border hover:bg-ql-subtle"}`}>{preset.label}</button>;
+        return <button key={preset.label} type="button" aria-pressed={selected} onClick={() => setAllocations(preset.allocation)} className={`min-h-12 rounded-control border px-4 py-3 text-left text-small font-semibold transition-colors ${selected ? "border-primary bg-surface-muted text-primary" : "border-border hover:bg-surface-muted"}`}>{preset.label}</button>;
       })}
     </div>
 
@@ -95,7 +95,7 @@ export function PortfolioBuilder() {
         const sliderValue = parsed.percentages[index] ?? 0;
         return <div key={asset.id} className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_10rem] sm:items-start">
           <div className="min-w-0">
-            <label htmlFor={`${allocationErrorId}-${asset.id}-slider`} className="mb-2 flex items-center gap-2 text-ql-small font-semibold"><span aria-hidden="true" className={`h-3 w-3 rounded-full ${asset.color}`} />{asset.label}</label>
+            <label htmlFor={`${allocationErrorId}-${asset.id}-slider`} className="mb-2 flex items-center gap-2 text-small font-semibold"><span aria-hidden="true" className={`h-3 w-3 rounded-full ${asset.color}`} />{asset.label}</label>
             <Slider id={`${allocationErrorId}-${asset.id}-slider`} aria-label={`Rozložení pro ${asset.label.toLowerCase()}`} min="0" max="100" step="1" value={sliderValue} onChange={(event) => setAllocation(asset.id, event.target.value)} />
           </div>
           <FinanceInput label={`Rozložení · ${asset.label}`} mode="percentage" value={allocations[asset.id]} onValueChange={(value) => setAllocation(asset.id, value)} error={parsed.errors[asset.id]} />
@@ -103,33 +103,33 @@ export function PortfolioBuilder() {
       })}
     </div>
 
-    {completeAllocations ? <div role="img" className="h-6 overflow-hidden rounded-ql-full bg-ql-subtle" aria-label={`Rozložení portfolia: ${assets.map((asset, index) => `${asset.label} ${parsed.percentages[index]} %`).join(", ")}`}>
+    {completeAllocations ? <div role="img" className="h-6 overflow-hidden rounded-pill bg-surface-muted" aria-label={`Rozložení portfolia: ${assets.map((asset, index) => `${asset.label} ${parsed.percentages[index]} %`).join(", ")}`}>
       <div className="flex h-full min-w-0">
         {assets.map((asset, index) => <span key={asset.id} title={`${asset.label}: ${parsed.percentages[index]}%`} aria-hidden="true" className={`h-full shrink-0 ${asset.color}`} style={{ width: `${parsed.percentages[index]}%` }} />)}
       </div>
     </div> : null}
 
-    <div aria-live="polite" aria-atomic="true" className="grid gap-5 border-y border-ql-border py-6 sm:grid-cols-2">
+    <div aria-live="polite" aria-atomic="true" className="grid gap-5 border-y border-border py-6 sm:grid-cols-2">
       <MetricResult label="Celkové rozložení" value={total === undefined ? "—" : `${total.toLocaleString("cs-CZ", { maximumFractionDigits: 4 })} %`} />
       <MetricResult label="Zbývá rozdělit" value={remaining === undefined ? "—" : `${remaining.toLocaleString("cs-CZ", { maximumFractionDigits: 4 })} %`} sentiment={remaining === 0 ? "positive" : "negative"} />
-      <p id={allocationErrorId} role="status" className={`sm:col-span-2 text-ql-small ${valid ? "text-ql-success-ink" : "text-ql-danger-ink"}`}>{allocationMessage}</p>
+      <p id={allocationErrorId} role="status" className={`sm:col-span-2 text-small ${valid ? "text-success-ink" : "text-danger-ink"}`}>{allocationMessage}</p>
     </div>
 
     <div className="space-y-5">
       <div>
-        <h4 className="text-ql-title font-semibold">Otestuj jedno hypotetické období</h4>
-        <p className="mt-2 text-ql-small text-ql-secondary">Tyto hodnoty jsou vymyšlené pro výuku. Nejde o očekávané výnosy, tržní prognózu ani záruku.</p>
+        <h4 className="text-card-title font-semibold">Otestuj jedno hypotetické období</h4>
+        <p className="mt-2 text-small text-secondary">Tyto hodnoty jsou vymyšlené pro výuku. Nejde o očekávané výnosy, tržní prognózu ani záruku.</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label="Načíst hypotetické výnosy">
-        <button type="button" onClick={() => setReturns({ stocks: "8", bonds: "2", cash: "0" })} className="min-h-12 rounded-ql-md border border-ql-border px-4 py-3 text-left text-ql-small font-semibold hover:bg-ql-subtle">Příklad: akcie +8 %</button>
-        <button type="button" onClick={() => setReturns({ stocks: "-10", bonds: "2", cash: "0" })} className="min-h-12 rounded-ql-md border border-ql-border px-4 py-3 text-left text-ql-small font-semibold hover:bg-ql-subtle">Akcie klesnou o 10 %</button>
+        <button type="button" onClick={() => setReturns({ stocks: "8", bonds: "2", cash: "0" })} className="min-h-12 rounded-control border border-border px-4 py-3 text-left text-small font-semibold hover:bg-surface-muted">Příklad: akcie +8 %</button>
+        <button type="button" onClick={() => setReturns({ stocks: "-10", bonds: "2", cash: "0" })} className="min-h-12 rounded-control border border-border px-4 py-3 text-left text-small font-semibold hover:bg-surface-muted">Akcie klesnou o 10 %</button>
       </div>
       <div className="grid gap-5 sm:grid-cols-3">
         {assets.map((asset) => <FinanceInput key={asset.id} label={`Hypotetický výnos · ${asset.label}`} mode="percentage" value={returns[asset.id]} onValueChange={(value) => setReturn(asset.id, value)} error={returnErrors[asset.id]} />)}
       </div>
-      {Object.keys(returnErrors).length ? <p id={returnErrorId} role="alert" className="text-ql-small text-ql-danger-ink">Použij konečné výnosy; výnos za jedno období nemůže být nižší než −100 %.</p> : portfolioReturn === undefined ? <ConceptCard title="Nejprve dokonči rozložení">Vážený výnos se zobrazí, až budou všechna rozložení platná a jejich součet bude přesně 100 %.</ConceptCard> : <div aria-live="polite" aria-atomic="true" className="space-y-4 border-y border-ql-border py-6">
+      {Object.keys(returnErrors).length ? <p id={returnErrorId} role="alert" className="text-small text-danger-ink">Použij konečné výnosy; výnos za jedno období nemůže být nižší než −100 %.</p> : portfolioReturn === undefined ? <ConceptCard title="Nejprve dokonči rozložení">Vážený výnos se zobrazí, až budou všechna rozložení platná a jejich součet bude přesně 100 %.</ConceptCard> : <div aria-live="polite" aria-atomic="true" className="space-y-4 border-y border-border py-6">
         <MetricResult label="Hypotetický výnos portfolia za jedno období" value={formatPercent(portfolioReturn, 4)} sentiment={portfolioReturn > 0 ? "positive" : portfolioReturn < 0 ? "negative" : "neutral"} />
-        <p className="break-words text-ql-small text-ql-secondary">{assets.map((asset, index) => `${parsed.percentages[index]}% × ${formatPercent(parsedReturns[index]!, 4)}`).join(" + ")} = {formatPercent(portfolioReturn, 4)}</p>
+        <p className="break-words text-small text-secondary">{assets.map((asset, index) => `${parsed.percentages[index]}% × ${formatPercent(parsedReturns[index]!, 4)}`).join(" + ")} = {formatPercent(portfolioReturn, 4)}</p>
       </div>}
     </div>
   </section>;

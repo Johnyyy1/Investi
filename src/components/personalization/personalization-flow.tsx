@@ -13,6 +13,8 @@ import { PreferenceFields } from "./preference-fields";
 import { OnboardingChoice } from "./onboarding-choice";
 import { OnboardingGuide, OnboardingHeader, type GuidePose } from "./onboarding-frame";
 import styles from "./personalization-flow.module.css";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 /** Guests answer without an account. Their answers are saved to a guest identity that then sees the plan and
  * the first lesson; the account comes after that lesson (/onboarding/save) and takes the guest's learning over. */
@@ -73,7 +75,7 @@ export function PersonalizationFlow({ initialPreferences, questions, version, dr
   const progress = retake ? (draft.question + 2) / (questions.length + 2) : (draft.step + (draft.step === 4 ? draft.question + 1 : 0) + 1) / (questions.length + 6);
   const guide = guideResponse(draft, current);
   const helper = ["Vyber, co sedí nejvíc. Podle toho poskládáme začátek.", "Vyber libovolný počet témat. Zájmy můžeš doplnit i později.", "Zkušenosti jsou tvůj pohled. Krátké otázky nám pak pomohou upřesnit začátek.", "Jde o přibližné tempo jednoho sezení. Kdykoli si můžeš dát pauzu."][draft.step];
-  return <main className={`investi-theme ${styles.flow}`}>
+  return <main className={styles.flow}>
     <OnboardingHeader progress={ready ? progress : 0} disabled={pending || !ready} brandHref={guest ? "/" : undefined} back={canBack ? () => move(draft.step === 4 && draft.question >= 0 ? { question: draft.question - 1 } : { step: draft.step - 1 }) : undefined}
       trailing={guest ? <p className={styles.accountHint}>Už máš účet? <Link className={styles.accountLink} href="/sign-in">Přihlásit se</Link></p> : retake ? <Link className={styles.quiet} href="/settings">Zpět do nastavení</Link> : <button type="button" className={styles.quiet} disabled={pending || !ready} onClick={() => submit(true)}>Přeskočit personalizaci</button>} />
     {!ready ? <div className={styles.column}><OnboardingGuide pose="02-thinking">Načítám tvé předvolby…</OnboardingGuide></div> : <div className={styles.column}>
@@ -91,7 +93,7 @@ export function PersonalizationFlow({ initialPreferences, questions, version, dr
         </section>
         <div className={styles.actionRow}>
           <p className={styles.actionHint}>{draft.step === 1 ? "Více témat? Klidně vyber všechna, která tě lákají." : "Odpovědi můžeš před uložením měnit."}</p>
-          <button type="submit" className={styles.primary} disabled={!canContinue || pending}>{pending ? <LoaderCircle className={styles.spinner} size={18} aria-hidden="true" /> : null}<span>{pending ? "Ukládám odpovědi…" : draft.step === 4 ? draft.question === questions.length - 1 ? "Zobrazit můj plán" : draft.question === -1 ? "Začít diagnostiku" : "Další otázka" : "Pokračovat"}</span>{!pending && <ArrowRight size={18} aria-hidden="true" />}</button>
+          <button type="submit" className={cn(buttonVariants(), styles.primary)} disabled={!canContinue || pending}>{pending ? <LoaderCircle className={styles.spinner} size={18} aria-hidden="true" /> : null}<span>{pending ? "Ukládám odpovědi…" : draft.step === 4 ? draft.question === questions.length - 1 ? "Zobrazit můj plán" : draft.question === -1 ? "Začít diagnostiku" : "Další otázka" : "Pokračovat"}</span>{!pending && <ArrowRight size={18} aria-hidden="true" />}</button>
         </div>
       </form>
       <p className={styles.disclosure}>Vzdělávání, ne investiční doporučení.</p>

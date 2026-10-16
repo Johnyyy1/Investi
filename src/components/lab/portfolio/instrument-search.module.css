@@ -1,21 +1,21 @@
 /* Instrument search on the Portfolio Lab overview: a keyboard combobox whose options open the
    instrument detail. Touch targets ≥ 44 px; one focus ring drawn by the field. */
 .search { position: relative; min-width: 0; }
-.label { display: block; color: var(--color-text-muted); font-family: var(--font-investi-inter), sans-serif; font-size: .6875rem; line-height: 1.25; font-weight: 600; letter-spacing: .073em; text-transform: uppercase; }
-.field { position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; margin-top: 10px; padding: 0 4px 0 14px; border: 1px solid var(--color-control-outline); border-radius: 8px; background: var(--color-paper-surface); }
-.field:focus-within { border-color: var(--color-action); outline: 3px solid var(--color-ink); outline-offset: 2px; }
+.label { display: block; color: var(--color-muted); font-family: var(--font-sans); font-size: .6875rem; line-height: 1.25; font-weight: 600; letter-spacing: .073em; text-transform: uppercase; }
+.field { position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; margin-top: 10px; padding: 0 4px 0 14px; border: 1px solid var(--color-border-strong); border-radius: 8px; background: var(--color-surface); }
+.field:focus-within { border-color: var(--color-primary); outline: 3px solid var(--color-foreground); outline-offset: 2px; }
 .field input:focus-visible { outline: none; }
-.field > svg { flex: none; color: var(--color-text-muted); }
-.field input { flex: 1; min-width: 0; min-height: 50px; border: 0; background: transparent; font-size: 1rem; color: var(--color-ink); outline: none; }
-.field input::placeholder { color: var(--color-text-muted); }
-.clear { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; color: var(--color-text-secondary); cursor: pointer; }
-.clear:hover { background: var(--color-paper-muted); }
-.results { margin-top: 8px; overflow: hidden; border: 1px solid var(--color-paper-border); border-radius: 8px; background: var(--color-paper-surface); box-shadow: var(--shadow-paper-popover); }
+.field > svg { flex: none; color: var(--color-muted); }
+.field input { flex: 1; min-width: 0; min-height: 50px; border: 0; background: transparent; font-size: 1rem; color: var(--color-foreground); outline: none; }
+.field input::placeholder { color: var(--color-muted); }
+.clear { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; color: var(--color-secondary); cursor: pointer; }
+.clear:hover { background: var(--color-surface-muted); }
+.results { margin-top: 8px; overflow: hidden; border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface); box-shadow: var(--shadow-elevation-2); }
 .results > p { padding: 10px 14px 8px; }
 .result { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 60px; padding: 8px 12px 8px 14px; border-top: 1px solid var(--color-divider); cursor: pointer; }
-.result[aria-selected="true"] { background: var(--color-teal-soft); }
+.result[aria-selected="true"] { background: var(--color-primary-soft); }
 .resultText { display: grid; gap: 2px; min-width: 0; }
 .resultText strong { font-size: .875rem; line-height: 1.3; font-weight: 500; }
-.resultText span { font-size: .75rem; line-height: 1.3; color: var(--color-text-muted); }
-.chevron { flex: none; color: var(--color-text-muted); }
-.note { margin-top: 8px; font-size: .8125rem; line-height: 1.45; color: var(--color-text-muted); }
+.resultText span { font-size: .75rem; line-height: 1.3; color: var(--color-muted); }
+.chevron { flex: none; color: var(--color-muted); }
+.note { margin-top: 8px; font-size: .8125rem; line-height: 1.45; color: var(--color-muted); }

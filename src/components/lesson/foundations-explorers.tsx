@@ -33,10 +33,10 @@ export function GrowthComparison() {
   return <section aria-label="Porovnání růstu" className="space-y-6 min-w-0">
     <ConceptCard title="Matematická ilustrace">Výchozích 5 % je hypotetických, nejde o prognózu ani zaručený investiční výnos. Skutečné výnosy se liší a mohou být záporné. Scénář A předpokládá růst 0 %; hotovostní účty mohou přinášet úrok. Oba scénáře pomíjejí inflaci, poplatky, daně a další vklady.</ConceptCard>
     <div className="grid gap-5 sm:grid-cols-3"><FinanceInput {...invalid} label="Počáteční hodnota" prefix="€" value={starting} onValueChange={setStarting} /><FinanceInput {...invalid} label="Hypotetická roční sazba" mode="percentage" value={rate} onValueChange={setRate} /><FinanceInput {...invalid} label="Čas v letech" value={time} onValueChange={setTime} /></div>
-    {error ? <p id={errorId} role="alert" className="text-ql-small text-ql-danger-ink">{error}</p> : result ? <>
-      <div aria-live="polite" aria-atomic="true" className="grid min-w-0 gap-6 border-y border-ql-border py-6 sm:grid-cols-2"><MetricResult label="Scénář A · růst 0 %" value={euros(result.rows[0].cash)} /><MetricResult label="Scénář B · hypotetický" value={euros(result.final)} /></div>
-      <p className="text-ql-small text-ql-secondary">Roční sazba se každý rok použije na hodnotu z předchozího roku. Jde o nominální eura: tabulka neupravuje kupní sílu.</p>
-      <details><summary className="cursor-pointer py-3 text-ql-small text-ql-link">Zobrazit hodnoty po letech</summary><ol className="space-y-3">{result.rows.map((row) => <li key={row.year} className="border-t border-ql-border pt-3 text-ql-small break-words"><p className="font-semibold">Rok {row.year}</p><p>A · {euros(row.cash)}</p><p>B · {euros(row.hypothetical)}</p></li>)}</ol></details>
+    {error ? <p id={errorId} role="alert" className="text-small text-danger-ink">{error}</p> : result ? <>
+      <div aria-live="polite" aria-atomic="true" className="grid min-w-0 gap-6 border-y border-border py-6 sm:grid-cols-2"><MetricResult label="Scénář A · růst 0 %" value={euros(result.rows[0].cash)} /><MetricResult label="Scénář B · hypotetický" value={euros(result.final)} /></div>
+      <p className="text-small text-secondary">Roční sazba se každý rok použije na hodnotu z předchozího roku. Jde o nominální eura: tabulka neupravuje kupní sílu.</p>
+      <details><summary className="cursor-pointer py-3 text-small text-primary">Zobrazit hodnoty po letech</summary><ol className="space-y-3">{result.rows.map((row) => <li key={row.year} className="border-t border-border pt-3 text-small break-words"><p className="font-semibold">Rok {row.year}</p><p>A · {euros(row.cash)}</p><p>B · {euros(row.hypothetical)}</p></li>)}</ol></details>
     </> : null}
   </section>;
 }
@@ -87,11 +87,11 @@ export function StockPositionExplorer() {
 export function IndexEtfVisual() {
   return <figure aria-label="Index určuje měřítko, ETF drží investice a investor vlastní podíly ETF" className="space-y-3">
     <ConceptCard title="Index · určuje a měří">Firma A · Firma B · Firma C · Firma D · … Pravidla vybírají společnosti a určují jejich váhy.</ConceptCard>
-    <p aria-hidden="true" className="text-center text-ql-title text-ql-secondary">↓</p>
+    <p aria-hidden="true" className="text-center text-card-title text-secondary">↓</p>
     <ConceptCard title="ETF sledující index · snaží se ho napodobit">Fond drží investice tak, aby se přiblížil vývoji indexu. Výsledek ovlivňují náklady i odchylka sledování.</ConceptCard>
-    <p aria-hidden="true" className="text-center text-ql-title text-ql-secondary">↓</p>
+    <p aria-hidden="true" className="text-center text-card-title text-secondary">↓</p>
     <ConceptCard title="Investor · vlastní podíly ETF">Vlastníš podíly fondu, a tím získáváš expozici vůči jeho investicím.</ConceptCard>
-    <figcaption className="text-ql-small text-ql-secondary">Firmy jsou pouze ilustrační, nejde o doporučení. Příklad ukazuje ETF sledující index; jiná ETF používají jiné strategie.</figcaption>
+    <figcaption className="text-small text-secondary">Firmy jsou pouze ilustrační, nejde o doporučení. Příklad ukazuje ETF sledující index; jiná ETF používají jiné strategie.</figcaption>
   </figure>;
 }
 
@@ -131,8 +131,8 @@ export function BondCashflowExplorer() {
   const invalid = { "aria-invalid": Boolean(error), "aria-describedby": error ? errorId : undefined };
   return <section aria-label="Ilustrace peněžních toků dluhopisu" className="space-y-6 min-w-0">
     <div className="grid gap-5 sm:grid-cols-3"><FinanceInput {...invalid} label="Jistina" prefix="€" value={principal} onValueChange={setPrincipal} /><FinanceInput {...invalid} label="Roční kupónová sazba" mode="percentage" value={couponRate} onValueChange={setCouponRate} /><FinanceInput {...invalid} label="Roky do splatnosti" value={years} onValueChange={setYears} /></div>
-    {error ? <p id={errorId} role="alert" className="text-ql-small text-ql-danger-ink">{error}</p> : result ? <>
-      <div aria-live="polite" aria-atomic="true" className="grid gap-5 border-y border-ql-border py-6 sm:grid-cols-2">
+    {error ? <p id={errorId} role="alert" className="text-small text-danger-ink">{error}</p> : result ? <>
+      <div aria-live="polite" aria-atomic="true" className="grid gap-5 border-y border-border py-6 sm:grid-cols-2">
         <MetricResult label="Roční kupón" value={euros(result.annualCoupon)} />
         <MetricResult label={`Celkem kupónů za ${years} let`} value={euros(result.totalCouponPayments)} />
         <MetricResult label="Jistina vrácená při splatnosti" value={euros(result.principalAtMaturity)} />
@@ -154,9 +154,9 @@ export function AssetComparison() {
   const detail = assetDetails[asset];
   return <section aria-label="Porovnání hotovosti, dluhopisu a akcie" className="space-y-5">
     <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Vyber aktivum k porovnání">
-      {(Object.keys(assetDetails) as (keyof typeof assetDetails)[]).map((key) => <button key={key} type="button" onClick={() => setAsset(key)} aria-pressed={asset === key} className={`rounded-ql-md border px-4 py-3 text-left text-ql-small font-semibold transition-colors ${asset === key ? "border-ql-link bg-ql-subtle text-ql-link" : "border-ql-border hover:bg-ql-subtle"}`}>{assetDetails[key].name}</button>)}
+      {(Object.keys(assetDetails) as (keyof typeof assetDetails)[]).map((key) => <button key={key} type="button" onClick={() => setAsset(key)} aria-pressed={asset === key} className={`rounded-control border px-4 py-3 text-left text-small font-semibold transition-colors ${asset === key ? "border-primary bg-surface-muted text-primary" : "border-border hover:bg-surface-muted"}`}>{assetDetails[key].name}</button>)}
     </div>
-    <div aria-live="polite" className="grid gap-4 border-y border-ql-border py-6 sm:grid-cols-2">
+    <div aria-live="polite" className="grid gap-4 border-y border-border py-6 sm:grid-cols-2">
       <MetricResult label="Vztah" value={detail.relationship} />
       <MetricResult label="Chování a riziko" value={detail.volatility} />
       <MetricResult label="Obvyklý účel" value={detail.purpose} />
@@ -175,9 +175,9 @@ export function MarketQuoteExplorer() {
   const [choice, setChoice] = useState<keyof typeof marketChoices>("buy");
   const selected = marketChoices[choice];
   return <section aria-label="Práce s cenami bid a ask" className="space-y-6">
-    <div className="grid gap-5 border-y border-ql-border py-6 sm:grid-cols-3"><MetricResult label="Bid · aktuální poptávka" value="99,80 Kč" /><MetricResult label="Ask · aktuální nabídka" value="100,20 Kč" /><MetricResult label="Spread bid–ask" value={formatCurrency(bidAskSpread(99.8, 100.2), "CZK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /></div>
+    <div className="grid gap-5 border-y border-border py-6 sm:grid-cols-3"><MetricResult label="Bid · aktuální poptávka" value="99,80 Kč" /><MetricResult label="Ask · aktuální nabídka" value="100,20 Kč" /><MetricResult label="Spread bid–ask" value={formatCurrency(bidAskSpread(99.8, 100.2), "CZK", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /></div>
     <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Vyber tržní pokyn">
-      {(Object.keys(marketChoices) as (keyof typeof marketChoices)[]).map((key) => <button key={key} type="button" onClick={() => setChoice(key)} aria-pressed={choice === key} className={`rounded-ql-md border px-4 py-3 text-left text-ql-small font-semibold transition-colors ${choice === key ? "border-ql-link bg-ql-subtle text-ql-link" : "border-ql-border hover:bg-ql-subtle"}`}>{marketChoices[key].label}</button>)}
+      {(Object.keys(marketChoices) as (keyof typeof marketChoices)[]).map((key) => <button key={key} type="button" onClick={() => setChoice(key)} aria-pressed={choice === key} className={`rounded-control border px-4 py-3 text-left text-small font-semibold transition-colors ${choice === key ? "border-primary bg-surface-muted text-primary" : "border-border hover:bg-surface-muted"}`}>{marketChoices[key].label}</button>)}
     </div>
     <ConceptCard title={selected.title}>{selected.detail}</ConceptCard>
   </section>;
@@ -196,9 +196,9 @@ export function RiskScenarioExplorer() {
   const average = selected.outcomes.reduce((sum, value) => sum + value, 0) / selected.outcomes.length;
   return <section aria-label="Průzkumník rizikových scénářů" className="space-y-6">
     <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label="Vyber investiční scénář">
-      {(Object.keys(riskScenarios) as (keyof typeof riskScenarios)[]).map((key) => <button key={key} type="button" onClick={() => setScenario(key)} aria-pressed={scenario === key} className={`rounded-ql-md border px-4 py-3 text-left text-ql-small font-semibold transition-colors ${scenario === key ? "border-ql-link bg-ql-subtle text-ql-link" : "border-ql-border hover:bg-ql-subtle"}`}>{riskScenarios[key].name}</button>)}
+      {(Object.keys(riskScenarios) as (keyof typeof riskScenarios)[]).map((key) => <button key={key} type="button" onClick={() => setScenario(key)} aria-pressed={scenario === key} className={`rounded-control border px-4 py-3 text-left text-small font-semibold transition-colors ${scenario === key ? "border-primary bg-surface-muted text-primary" : "border-border hover:bg-surface-muted"}`}>{riskScenarios[key].name}</button>)}
     </div>
-    <div aria-live="polite" className="grid gap-5 border-y border-ql-border py-6 sm:grid-cols-3"><MetricResult label="Nejhorší uvedený výsledek" value={signedPercent(Math.min(...selected.outcomes))} sentiment="negative" /><MetricResult label="Nejlepší uvedený výsledek" value={signedPercent(Math.max(...selected.outcomes))} sentiment="positive" /><MetricResult label="Jednoduchý průměr výsledků" value={signedPercent(average)} /></div>
+    <div aria-live="polite" className="grid gap-5 border-y border-border py-6 sm:grid-cols-3"><MetricResult label="Nejhorší uvedený výsledek" value={signedPercent(Math.min(...selected.outcomes))} sentiment="negative" /><MetricResult label="Nejlepší uvedený výsledek" value={signedPercent(Math.max(...selected.outcomes))} sentiment="positive" /><MetricResult label="Jednoduchý průměr výsledků" value={signedPercent(average)} /></div>
     <ConceptCard title={selected.name}>{selected.description} Jde o záměrně jednoduchou ilustraci se stejnou pravděpodobností, ne o prognózu. Podobný očekávaný výsledek může mít velmi odlišnou nejistotu a ztráty.</ConceptCard>
   </section>;
 }
@@ -218,7 +218,7 @@ export function DrawdownExplorer() {
   const invalid = { "aria-invalid": Boolean(error), "aria-describedby": error ? errorId : undefined };
   return <section aria-label="Průzkumník drawdownu" className="space-y-6">
     <div className="grid gap-5 sm:grid-cols-2"><FinanceInput {...invalid} label="Předchozí vrcholová hodnota" prefix="€" value={peak} onValueChange={setPeak} /><FinanceInput {...invalid} label="Aktuální hodnota" prefix="€" value={current} onValueChange={setCurrent} /></div>
-    {error ? <p id={errorId} role="alert" className="text-ql-small text-ql-danger-ink">{error}</p> : drawdown !== undefined ? <div aria-live="polite" aria-atomic="true" className="border-y border-ql-border py-6"><MetricResult label="Drawdown od uvedeného vrcholu" value={formatPercentage(drawdown)} /><p className="mt-3 text-ql-small text-ql-secondary">Drawdown je pokles od předchozího vrcholu. Pokud je aktuální hodnota na uvedeném vrcholu nebo nad ním, ilustrace ukáže drawdown 0 %.</p></div> : null}
+    {error ? <p id={errorId} role="alert" className="text-small text-danger-ink">{error}</p> : drawdown !== undefined ? <div aria-live="polite" aria-atomic="true" className="border-y border-border py-6"><MetricResult label="Drawdown od uvedeného vrcholu" value={formatPercentage(drawdown)} /><p className="mt-3 text-small text-secondary">Drawdown je pokles od předchozího vrcholu. Pokud je aktuální hodnota na uvedeném vrcholu nebo nad ním, ilustrace ukáže drawdown 0 %.</p></div> : null}
   </section>;
 }
 
@@ -232,7 +232,7 @@ export function LiquidityComparison() {
   const selected = liquidityExamples[example];
   return <section aria-label="Porovnání likvidity" className="space-y-5">
     <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label="Vyber podmínky obchodování k porovnání">
-      {(Object.keys(liquidityExamples) as (keyof typeof liquidityExamples)[]).map((key) => <button key={key} type="button" onClick={() => setExample(key)} aria-pressed={example === key} className={`rounded-ql-md border px-4 py-3 text-left text-ql-small font-semibold transition-colors ${example === key ? "border-ql-link bg-ql-subtle text-ql-link" : "border-ql-border hover:bg-ql-subtle"}`}>{liquidityExamples[key].name}</button>)}
+      {(Object.keys(liquidityExamples) as (keyof typeof liquidityExamples)[]).map((key) => <button key={key} type="button" onClick={() => setExample(key)} aria-pressed={example === key} className={`rounded-control border px-4 py-3 text-left text-small font-semibold transition-colors ${example === key ? "border-primary bg-surface-muted text-primary" : "border-border hover:bg-surface-muted"}`}>{liquidityExamples[key].name}</button>)}
     </div>
     <ConceptCard title={selected.name}>{selected.detail}</ConceptCard>
   </section>;
@@ -248,7 +248,7 @@ export function DiversificationPreview() {
   const selected = concentrationExamples[example];
   return <section aria-label="Náhled diverzifikace" className="space-y-5">
     <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label="Vyber příklad koncentrace portfolia">
-      {(Object.keys(concentrationExamples) as (keyof typeof concentrationExamples)[]).map((key) => <button key={key} type="button" onClick={() => setExample(key)} aria-pressed={example === key} className={`rounded-ql-md border px-4 py-3 text-left text-ql-small font-semibold transition-colors ${example === key ? "border-ql-link bg-ql-subtle text-ql-link" : "border-ql-border hover:bg-ql-subtle"}`}>{concentrationExamples[key].name}</button>)}
+      {(Object.keys(concentrationExamples) as (keyof typeof concentrationExamples)[]).map((key) => <button key={key} type="button" onClick={() => setExample(key)} aria-pressed={example === key} className={`rounded-control border px-4 py-3 text-left text-small font-semibold transition-colors ${example === key ? "border-primary bg-surface-muted text-primary" : "border-border hover:bg-surface-muted"}`}>{concentrationExamples[key].name}</button>)}
     </div>
     <ConceptCard title={selected.name}>{selected.detail}</ConceptCard>
   </section>;
@@ -264,7 +264,7 @@ export function TimeHorizonExplorer() {
   const selected = horizonExamples[example];
   return <section aria-label="Porovnání časových horizontů" className="space-y-5">
     <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label="Vyber časový horizont">
-      {(Object.keys(horizonExamples) as (keyof typeof horizonExamples)[]).map((key) => <button key={key} type="button" onClick={() => setExample(key)} aria-pressed={example === key} className={`rounded-ql-md border px-4 py-3 text-left text-ql-small font-semibold transition-colors ${example === key ? "border-ql-link bg-ql-subtle text-ql-link" : "border-ql-border hover:bg-ql-subtle"}`}>{horizonExamples[key].name}</button>)}
+      {(Object.keys(horizonExamples) as (keyof typeof horizonExamples)[]).map((key) => <button key={key} type="button" onClick={() => setExample(key)} aria-pressed={example === key} className={`rounded-control border px-4 py-3 text-left text-small font-semibold transition-colors ${example === key ? "border-primary bg-surface-muted text-primary" : "border-border hover:bg-surface-muted"}`}>{horizonExamples[key].name}</button>)}
     </div>
     <ConceptCard title={selected.name}>{selected.detail}</ConceptCard>
   </section>;
@@ -282,10 +282,10 @@ export function DiversificationImpact() {
   const spread = portfolioWeightedReturn([0.25, 0.25, 0.25, 0.25], selected.returns);
   return <section aria-label="Vliv diverzifikace" className="space-y-6">
     <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label="Vyber modelový scénář výnosů">
-      {(Object.keys(diversificationScenarios) as (keyof typeof diversificationScenarios)[]).map((key) => <button key={key} type="button" aria-pressed={scenario === key} onClick={() => setScenario(key)} className={`min-h-12 rounded-ql-md border px-4 py-3 text-left text-ql-small font-semibold transition-colors ${scenario === key ? "border-ql-link bg-ql-subtle text-ql-link" : "border-ql-border hover:bg-ql-subtle"}`}>{diversificationScenarios[key].label}</button>)}
+      {(Object.keys(diversificationScenarios) as (keyof typeof diversificationScenarios)[]).map((key) => <button key={key} type="button" aria-pressed={scenario === key} onClick={() => setScenario(key)} className={`min-h-12 rounded-control border px-4 py-3 text-left text-small font-semibold transition-colors ${scenario === key ? "border-primary bg-surface-muted text-primary" : "border-border hover:bg-surface-muted"}`}>{diversificationScenarios[key].label}</button>)}
     </div>
-    <p className="text-ql-small text-ql-secondary">{selected.detail} Jde o zjednodušený příklad za jedno období, ne o předpověď.</p>
-    <div aria-live="polite" aria-atomic="true" className="grid gap-5 border-y border-ql-border py-6 sm:grid-cols-2">
+    <p className="text-small text-secondary">{selected.detail} Jde o zjednodušený příklad za jedno období, ne o předpověď.</p>
+    <div aria-live="polite" aria-atomic="true" className="grid gap-5 border-y border-border py-6 sm:grid-cols-2">
       <MetricResult label="Portfolio A · 100 % ve firmě A" value={formatPercentage(concentrated)} sentiment="negative" />
       <MetricResult label="Portfolio B · 25 % v každé firmě" value={formatPercentage(spread)} sentiment="negative" />
     </div>
@@ -303,10 +303,10 @@ export function PortfolioHorizonScenario() {
   const selected = portfolioHorizons[horizon];
   return <section aria-label="Scénář časového horizontu portfolia" className="space-y-6">
     <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label="Vyber, kdy budeš peníze potřebovat">
-      {(Object.keys(portfolioHorizons) as (keyof typeof portfolioHorizons)[]).map((key) => <button key={key} type="button" aria-pressed={horizon === key} onClick={() => setHorizon(key)} className={`min-h-12 rounded-ql-md border px-4 py-3 text-left text-ql-small font-semibold transition-colors ${horizon === key ? "border-ql-link bg-ql-subtle text-ql-link" : "border-ql-border hover:bg-ql-subtle"}`}>{portfolioHorizons[key].label}</button>)}
+      {(Object.keys(portfolioHorizons) as (keyof typeof portfolioHorizons)[]).map((key) => <button key={key} type="button" aria-pressed={horizon === key} onClick={() => setHorizon(key)} className={`min-h-12 rounded-control border px-4 py-3 text-left text-small font-semibold transition-colors ${horizon === key ? "border-primary bg-surface-muted text-primary" : "border-border hover:bg-surface-muted"}`}>{portfolioHorizons[key].label}</button>)}
     </div>
-    <div aria-live="polite" className="grid gap-5 border-y border-ql-border py-6 sm:grid-cols-2"><MetricResult label="Načasování" value={selected.timing} /><MetricResult label="Proč na něm záleží" value={selected.capacity} /></div>
-    <p className="text-ql-small text-ql-secondary">Tento scénář ukazuje, proč do úvah o portfoliu patří načasování. Nepředepisuje žádné rozložení.</p>
+    <div aria-live="polite" className="grid gap-5 border-y border-border py-6 sm:grid-cols-2"><MetricResult label="Načasování" value={selected.timing} /><MetricResult label="Proč na něm záleží" value={selected.capacity} /></div>
+    <p className="text-small text-secondary">Tento scénář ukazuje, proč do úvah o portfoliu patří načasování. Nepředepisuje žádné rozložení.</p>
   </section>;
 }
 
@@ -321,7 +321,7 @@ export function RiskCapacityScenario() {
   const selected = riskContext[context];
   return <section aria-label="Scénář tolerance a kapacity pro riziko" className="space-y-6">
     <div className="grid gap-3 sm:grid-cols-3" role="group" aria-label="Prozkoumej kontext rizika této osoby">
-      {(Object.keys(riskContext) as (keyof typeof riskContext)[]).map((key) => <button key={key} type="button" aria-pressed={context === key} onClick={() => setContext(key)} className={`min-h-12 rounded-ql-md border px-4 py-3 text-left text-ql-small font-semibold transition-colors ${context === key ? "border-ql-link bg-ql-subtle text-ql-link" : "border-ql-border hover:bg-ql-subtle"}`}>{riskContext[key].label}</button>)}
+      {(Object.keys(riskContext) as (keyof typeof riskContext)[]).map((key) => <button key={key} type="button" aria-pressed={context === key} onClick={() => setContext(key)} className={`min-h-12 rounded-control border px-4 py-3 text-left text-small font-semibold transition-colors ${context === key ? "border-primary bg-surface-muted text-primary" : "border-border hover:bg-surface-muted"}`}>{riskContext[key].label}</button>)}
     </div>
     <ConceptCard title={selected.title}>{selected.detail}</ConceptCard>
   </section>;

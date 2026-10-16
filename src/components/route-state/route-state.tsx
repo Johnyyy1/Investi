@@ -3,6 +3,7 @@ import { ArrowRight, RotateCcw } from "lucide-react";
 import { GuideImage, type GuidePoseName } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import styles from "./route-state.module.css";
+import { buttonVariants } from "@/components/ui/button";
 
 type RouteLink = { href: string; label: string };
 type RouteAction = RouteLink | { onClick: () => void; label: string };
@@ -22,7 +23,7 @@ export function RouteState({ eyebrow, title, children, action, link, standalone 
   alert?: boolean;
   pose?: GuidePoseName;
 }) {
-  return <main className={`investi-theme ${styles.page} ${standalone ? styles.standalone : ""}`}>
+  return <main className={`${styles.page} ${standalone ? styles.standalone : ""}`}>
     {standalone ? <header className={styles.header}><Link className={styles.brand} href="/" aria-label="investi · úvodní stránka">investi!</Link></header> : null}
     <div className={styles.column}>
       <div className={styles.guideZone}><GuideImage className={styles.guide} pose={pose} alt="" sizes="(max-width: 767px) 132px, 200px" /></div>
@@ -32,8 +33,8 @@ export function RouteState({ eyebrow, title, children, action, link, standalone 
         <p className={styles.body} role={alert ? "alert" : undefined}>{children}</p>
         <div className={styles.actions}>
           {"href" in action
-            ? <Link className={styles.primary} href={action.href}>{action.label}<ArrowRight size={18} aria-hidden="true" /></Link>
-            : <button type="button" className={styles.primary} onClick={action.onClick}>{action.label}<RotateCcw size={18} aria-hidden="true" /></button>}
+            ? <Link className={buttonVariants()} href={action.href}>{action.label}<ArrowRight size={18} aria-hidden="true" /></Link>
+            : <button type="button" className={buttonVariants()} onClick={action.onClick}>{action.label}<RotateCcw size={18} aria-hidden="true" /></button>}
           {link ? <Link className={styles.textLink} href={link.href}>{link.label}<ArrowRight size={15} aria-hidden="true" /></Link> : null}
         </div>
       </section>

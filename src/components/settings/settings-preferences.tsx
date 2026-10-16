@@ -77,17 +77,17 @@ export function SettingsPreferences({ initialPreferences, onDirtyChange, onEditi
       <div className={styles.preview}><Info size={20} aria-hidden="true" /><div><h3>Co se změnou upraví</h3><p>Zájmy a zkušenosti upraví doporučení a kontext učení. Délka sezení je orientační. Pořadí lekcí, uložená diagnostika, dokončené lekce i cvičný kapitál zůstávají zachované.</p></div></div>
       <SessionChoices draft={draft} pending={pending} error={Boolean(message && !message.ok)} onChange={(preferredSessionMinutes) => change({ ...draft, preferredSessionMinutes })} />
       <Feedback message={message} pending={pending} errorRef={errorSummary} />
-      <div className={styles.actions}><Button type="submit" loading={pending} className={styles.primary}>{pending ? "Ukládám předvolby…" : "Uložit předvolby"}</Button><Button variant="secondary" disabled={pending} className={styles.secondary} onClick={() => { setDraft(saved); setEditing(false); onEditingChange(false); setMessage(undefined); requestAnimationFrame(() => editButton.current?.focus()); }}>Zrušit</Button></div>
+      <div className={styles.actions}><Button type="submit" loading={pending}>{pending ? "Ukládám předvolby…" : "Uložit předvolby"}</Button><Button variant="secondary" disabled={pending} size="compact" onClick={() => { setDraft(saved); setEditing(false); onEditingChange(false); setMessage(undefined); requestAnimationFrame(() => editButton.current?.focus()); }}>Zrušit</Button></div>
       {dirty && <p className={styles.hint}>Máš neuložené změny.</p>}
     </form> : <>
       <section aria-labelledby="goal-heading"><div className={styles.sectionHead}><h2 id="goal-heading">Můj cíl</h2><p>Podle tvého cíle ladíme doporučení a kontext učení.</p></div>
         <div className={styles.card}><dl className={styles.rows}><div><dt>Cíl</dt><dd>{saved.primaryGoal ? goalLabels[saved.primaryGoal] : "Zatím nevybraný"}</dd></div><div><dt>Úroveň</dt><dd>{experienceLabels[saved.selfAssessedExperience]}</dd></div>{saved.interests.length > 0 && <div><dt>Zájmy</dt><dd>{saved.interests.map((interest) => interestLabels[interest]).join(", ")}</dd></div>}</dl>
-          <div className={styles.cardFooter}><p><Info size={18} aria-hidden="true" />Změna zachová diagnostiku, postup v lekcích i cvičný kapitál.</p><Button buttonRef={editButton} variant="secondary" disabled={pending} className={styles.secondary} onClick={() => { setDraft(saved); setEditing(true); onEditingChange(true); setMessage(undefined); }}>Změnit cíl nebo úroveň…</Button></div>
+          <div className={styles.cardFooter}><p><Info size={18} aria-hidden="true" />Změna zachová diagnostiku, postup v lekcích i cvičný kapitál.</p><Button buttonRef={editButton} variant="secondary" disabled={pending} size="compact" onClick={() => { setDraft(saved); setEditing(true); onEditingChange(true); setMessage(undefined); }}>Změnit cíl nebo úroveň…</Button></div>
         </div>
       </section>
       <SessionChoices draft={draft} pending={pending} error={Boolean(message && !message.ok)} onChange={(preferredSessionMinutes) => { const next = { ...saved, preferredSessionMinutes }; change(next); save(next, true); }} />
       <Feedback message={message} pending={pending} errorRef={errorSummary} />
-      {message && !message.ok && <Button className={styles.secondary} variant="secondary" loading={pending} onClick={() => save(draft, true)}>Zkusit uložit znovu</Button>}
+      {message && !message.ok && <Button variant="secondary" size="compact" loading={pending} onClick={() => save(draft, true)}>Zkusit uložit znovu</Button>}
     </>}
   </div>;
 }

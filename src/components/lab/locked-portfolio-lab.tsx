@@ -2,6 +2,8 @@ import { AppLink as Link } from "@/components/shell/app-link";
 import { ArrowLeft, ArrowRight, Circle, CircleCheck, LockKeyhole } from "lucide-react";
 import styles from "@/components/lab/portfolio/portfolio-lab.module.css";
 import type { evaluateUnlock } from "@/features/progression/unlocks";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type UnlockStatus = ReturnType<typeof evaluateUnlock>;
 
@@ -9,7 +11,7 @@ type UnlockStatus = ReturnType<typeof evaluateUnlock>;
 export function LockedPortfolioLab({ unlock }: { unlock: UnlockStatus }) {
   const lessonsDone = unlock.prerequisitesComplete;
   const xpDone = unlock.totalXp >= unlock.xpRequired;
-  return <main className={`investi-theme ${styles.page}`}><div className={`${styles.container} ${styles.locked}`}>
+  return <main className={styles.page}><div className={`${styles.container} ${styles.locked}`}>
     <Link href="/lab" className={styles.textLink}><ArrowLeft size={16} aria-hidden="true" />Lab</Link>
     <div className={styles.eyebrowRow}><LockKeyhole size={16} aria-hidden="true" className={styles.lockIcon} /><p className={styles.eyebrow}>Zamčeno · odemkni učením</p></div>
     <h1>Portfolio Lab</h1>
@@ -21,6 +23,6 @@ export function LockedPortfolioLab({ unlock }: { unlock: UnlockStatus }) {
       </ul>
       <p className={styles.meta}>Dokonči všech sedm lekcí Základů investování a získej 420 XP. Odemčením dostaneš jednorázově 5 000 Kč cvičného kapitálu.</p>
     </section>
-    <Link href="/learn" className={styles.primary}>Pokračovat v učení<ArrowRight size={18} aria-hidden="true" /></Link>
+    <Link href="/learn" className={cn(buttonVariants(), styles.primary)}>Pokračovat v učení<ArrowRight size={18} aria-hidden="true" /></Link>
   </div></main>;
 }

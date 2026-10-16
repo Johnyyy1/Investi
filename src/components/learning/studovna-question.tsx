@@ -7,6 +7,8 @@ import { ArrowRight, CircleCheck, CircleX, MousePointerClick } from "lucide-reac
 import type { LessonBlock } from "@/features/lessons/types";
 import { saveLessonPositionAction } from "@/features/progress/actions";
 import styles from "./studovna-page.module.css";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type Choice = Extract<LessonBlock, { type: "multipleChoiceQuestion" }>;
 
@@ -53,8 +55,8 @@ export function StudovnaQuestion({ question, lessonId, position, href, actionLab
     </section>}
     <div className={styles.continueControls}>
       <p className={styles.quietNote}><MousePointerClick size={16} aria-hidden="true" />{question ? "Klikni na odpověď a hned uvidíš proč." : "Tvoje místo v lekci zůstává uložené."}</p>
-      {correct ? <button className={styles.primaryAction} aria-busy={pending} disabled={pending} onClick={() => void continueLesson()}>{pending ? "Ukládám…" : "Pokračovat v lekci"}<ArrowRight size={18} aria-hidden="true" /></button>
-        : <Link href={href} className={styles.primaryAction} aria-label="Pokračovat">{actionLabel}<ArrowRight size={18} aria-hidden="true" /></Link>}
+      {correct ? <button className={cn(buttonVariants(), styles.primaryAction)} aria-busy={pending} disabled={pending} onClick={() => void continueLesson()}>{pending ? "Ukládám…" : "Pokračovat v lekci"}<ArrowRight size={18} aria-hidden="true" /></button>
+        : <Link href={href} className={cn(buttonVariants(), styles.primaryAction)} aria-label="Pokračovat">{actionLabel}<ArrowRight size={18} aria-hidden="true" /></Link>}
     </div>
     {error && <p role="alert" className={styles.saveError}>{error}</p>}
   </>;

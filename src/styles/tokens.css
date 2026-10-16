@@ -1,0 +1,154 @@
+/*
+ * investi design tokens: the one token set for the product (see DESIGN.md).
+ *
+ * Every name is a semantic role. Where two roles share a colour, the second
+ * refers to the first so the pair cannot drift apart. Components use these
+ * roles through Tailwind utilities (bg-primary) or var(--color-primary) in CSS
+ * modules; there are no raw palette names and no route-scoped overrides.
+ */
+@theme {
+  /* Typography: Manrope for headings, Inter for everything else. */
+  --font-sans: var(--font-investi-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-investi-manrope), var(--font-investi-inter), ui-sans-serif, system-ui, sans-serif;
+
+  /* Page and text */
+  --color-background: #f7f2e8;
+  --color-foreground: #171717;
+  --color-secondary: #41443e;
+  --color-muted: #55594f;
+  --color-disabled: #6b6e66;
+
+  /* Surfaces */
+  --color-surface: #fffcf7;
+  --color-surface-muted: #efece3;
+  --color-surface-sunken: #f7f5ef;
+  --color-surface-practice: #eff1e9;
+
+  /* Primary action (dark teal) and its quiet companions */
+  --color-primary: #236f66;
+  --color-primary-hover: #1c665e;
+  --color-primary-pressed: #195b53;
+  --color-primary-foreground: #ffffff;
+  --color-primary-soft: #e6f0e9;
+  --color-primary-tint: #a9d1ca;
+  /* Graphic teal: progress fills and charts, never text. */
+  --color-progress: #2f8f83;
+
+  /* Structure */
+  --color-border: #d5d2c8;
+  --color-border-card: #cbc9bf;
+  --color-border-strong: #73776d;
+  --color-divider: #e3e0d7;
+  --color-track: #e4e5dc;
+
+  /* Feedback */
+  --color-success: var(--color-progress);
+  --color-success-soft: var(--color-primary-soft);
+  --color-success-ink: var(--color-primary);
+  --color-success-strong: var(--color-primary-pressed);
+  --color-warning: #f1c75b;
+  --color-warning-soft: #fbf1d6;
+  --color-warning-ink: #765717;
+  --color-warning-border: #e2c987;
+  --color-danger: #a63d28;
+  --color-danger-soft: #f6e6e0;
+  --color-danger-border: #e3b5a8;
+  --color-danger-ink: var(--color-danger);
+  --color-danger-strong: #8a3b2c;
+  --color-danger-strong-hover: #76321f;
+  --color-danger-strong-border: #a87466;
+  --color-danger-foreground: #ffffff;
+  --color-info: var(--color-info-ink);
+  --color-info-soft: #e7ebf3;
+  --color-info-ink: #38557a;
+
+  /* Scrim behind modal dialogs */
+  --color-backdrop: #17171761;
+
+  /* Categorical data order (Portfolio Lab): equity, ETF, bonds, cash, other. Validated as one
+     palette on surface: chroma, CVD and normal-vision separation, ≥ 3:1 marks. */
+  --color-viz-equity: #00897a;
+  --color-viz-etf: #c2593a;
+  --color-viz-bonds: #6468d8;
+  --color-viz-cash: #a88a2e;
+  --color-viz-other: #8f9187;
+
+  /* Radius: controls and buttons, then containers. */
+  --radius-compact: 6px;
+  --radius-control: 8px;
+  --radius-button: 8px;
+  --radius-surface: 12px;
+  --radius-panel: 12px;
+  --radius-pill: 999px;
+
+  /* Depth comes from surfaces first; shadows only clarify layering. */
+  --shadow-elevation-0: none;
+  --shadow-elevation-1: 0 12px 24px #1717170c;
+  --shadow-elevation-2: 0 12px 28px #17171724;
+
+  /* Product type scale. Large marketing display type remains route-scoped. */
+  --text-microcopy: 0.8125rem;
+  --text-microcopy--line-height: 1.45;
+  --text-small: 0.9375rem;
+  --text-small--line-height: 1.55;
+  --text-body: 1rem;
+  --text-body--line-height: 1.6;
+  --text-emphasis: 1.125rem;
+  --text-emphasis--line-height: 1.5;
+  --text-card-title: 1.25rem;
+  --text-card-title--line-height: 1.35;
+  --text-section-title: 1.75rem;
+  --text-section-title--line-height: 1.2;
+  --text-page-title: clamp(2.25rem, 2rem + 1vw, 3rem);
+  --text-page-title--line-height: 1.08;
+  --text-celebration: 2.5rem;
+  --text-celebration--line-height: 1.1;
+}
+
+:root {
+  --motion-micro: 180ms;
+  --motion-surface: 270ms;
+  --motion-entry: 400ms;
+  --ease-standard: cubic-bezier(0.2, 0.75, 0.25, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+}
+
+/* Root theme, applied once by the root layout. */
+.investi-theme {
+  min-height: 100%;
+  color: var(--color-foreground);
+  background: var(--color-background);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5;
+  caret-color: var(--color-primary);
+  text-rendering: optimizeLegibility;
+}
+.investi-theme :where(h1, h2, h3, h4) {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -.03em;
+}
+.investi-theme :focus-visible { outline: 3px solid var(--color-foreground); outline-offset: 4px; }
+.investi-theme ::selection { color: var(--color-foreground); background: var(--color-primary-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .investi-theme *,
+  .investi-theme *::before,
+  .investi-theme *::after {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}

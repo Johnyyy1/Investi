@@ -1,9 +1,9 @@
 import { portfolioWeightedReturn, validatePortfolioWeights } from "@/features/finance/foundations";
 import { FinancialInputError } from "@/features/finance/returns";
 export const portfolioAssets = [
-  { id: "stocks", label: "Akcie", color: "bg-ql-blue-500" },
-  { id: "bonds", label: "Dluhopisy", color: "bg-ql-warning" },
-  { id: "cash", label: "Hotovost", color: "bg-ql-success" },
+  { id: "stocks", label: "Akcie", color: "bg-primary" },
+  { id: "bonds", label: "Dluhopisy", color: "bg-warning" },
+  { id: "cash", label: "Hotovost", color: "bg-success" },
 ] as const;
 /** Sliders redistribute the remainder proportionally, so exploring never breaks the 100% total. */
 export function rebalanceAllocation(weights: readonly number[], index: number, percentage: number) {

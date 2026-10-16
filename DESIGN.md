@@ -1,32 +1,32 @@
 ---
 name: investi
-description: The implemented paper and teal Studovna system for learning by doing.
+description: The one investi design system (paper and teal) for marketing and product.
 colors:
-  paper: "#f7f2e8"
-  ink: "#171717"
-  text-secondary: "#41443e"
-  text-muted: "#55594f"
-  text-disabled: "#6b6e66"
-  paper-surface: "#fffcf7"
-  paper-muted: "#efece3"
+  background: "#f7f2e8"
+  foreground: "#171717"
+  secondary: "#41443e"
+  muted: "#55594f"
+  disabled: "#6b6e66"
+  surface: "#fffcf7"
+  surface-muted: "#efece3"
   surface-sunken: "#f7f5ef"
   surface-practice: "#eff1e9"
-  action: "#236f66"
-  action-hover: "#1c665e"
-  action-pressed: "#195b53"
-  teal: "#2f8f83"
-  teal-soft: "#e6f0e9"
+  primary: "#236f66"
+  primary-hover: "#1c665e"
+  primary-pressed: "#195b53"
+  progress: "#2f8f83"
+  primary-soft: "#e6f0e9"
   border-card: "#cbc9bf"
-  paper-border: "#d5d2c8"
+  border: "#d5d2c8"
   divider: "#e3e0d7"
-  control-outline: "#73776d"
+  border-strong: "#73776d"
   track: "#e4e5dc"
-  butter: "#f1c75b"
-  butter-tint: "#fbf1d6"
-  butter-ink: "#765717"
-  error-ink: "#a63d28"
-  error-tint: "#f6e6e0"
-  info-tint: "#e7ebf3"
+  warning: "#f1c75b"
+  warning-soft: "#fbf1d6"
+  warning-ink: "#765717"
+  danger: "#a63d28"
+  danger-soft: "#f6e6e0"
+  info-soft: "#e7ebf3"
   info-ink: "#38557a"
   viz-bonds: "#6468d8"
   viz-cash: "#a88a2e"
@@ -62,8 +62,8 @@ typography:
     lineHeight: 1.2
     letterSpacing: "0.083em"
 rounded:
-  paper-control: "8px"
-  paper-card: "12px"
+  control: "8px"
+  surface: "12px"
 spacing:
   xs: "8px"
   sm: "12px"
@@ -76,31 +76,31 @@ spacing:
   section: "72px"
 components:
   button-primary:
-    backgroundColor: "{colors.action}"
+    backgroundColor: "{colors.primary}"
     textColor: "#fff"
-    rounded: "{rounded.paper-control}"
+    rounded: "{rounded.control}"
     padding: "12px 22px"
   button-primary-hover:
-    backgroundColor: "{colors.action-hover}"
+    backgroundColor: "{colors.primary-hover}"
   button-primary-active:
-    backgroundColor: "{colors.action-pressed}"
+    backgroundColor: "{colors.primary-pressed}"
   button-primary-pending:
     backgroundColor: "{colors.track}"
-    textColor: "{colors.text-disabled}"
+    textColor: "{colors.disabled}"
   answer-option:
-    backgroundColor: "{colors.paper-surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.paper-control}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.foreground}"
+    rounded: "{rounded.control}"
     padding: "16px 20px"
   answer-correct:
-    backgroundColor: "{colors.teal-soft}"
+    backgroundColor: "{colors.primary-soft}"
   card:
-    backgroundColor: "{colors.paper-surface}"
-    textColor: "{colors.ink}"
-    rounded: "{rounded.paper-card}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.foreground}"
+    rounded: "{rounded.surface}"
     padding: "28px"
   navigation-mobile-active:
-    textColor: "{colors.action}"
+    textColor: "{colors.primary}"
 ---
 
 # Design System: investi
@@ -111,9 +111,9 @@ components:
 
 A calm place to return to a learning decision. Warm paper, clear ink, generous separation, and a restrained teal action give the authored exercise priority. The supplied guide adds encouragement at welcome, continuation, and completion; real lesson content and learner state provide the substance.
 
-This is the implemented system from the approved Pen.dev boards `V7mUpG`, `QB1gf`, `liRhy`, and `mAWd8`. The onboarding extension follows `wKThC` (desktop), `Ui4uz` (mobile), `Z9Mlw` (plans), `XFfjW` (components), and `V507P` (guide library). Its current application is `.investi-theme` on `/learn`, `/onboarding`, and `/onboarding/plan`. Other product routes and focused lessons retain the existing Nunito-based theme during the staged migration. The legacy palette and typography in AGENTS.md are not additional tokens for this scoped system.
+This is the implemented system from the approved Pen.dev boards `V7mUpG`, `QB1gf`, `liRhy`, and `mAWd8`. The onboarding extension follows `wKThC` (desktop), `Ui4uz` (mobile), `Z9Mlw` (plans), `XFfjW` (components), and `V507P` (guide library). It is the only visual system: the root layout applies `.investi-theme` once, so marketing, auth, onboarding, Learn, focused lessons, Lab, Portfolio Lab, Backtesting, Progress, Settings, legal and error pages share the same tokens, fonts and primary action. The earlier Nunito Sans / Investi Blue theme and its `ql-*` aliases were retired in #47.
 
-Source authority: [paper-tokens.css](src/styles/paper-tokens.css), [Studovna CSS](src/components/learning/studovna-page.module.css), [shell CSS](src/components/shell/paper-shell.module.css), [Studovna components](src/components/learning/studovna-page.tsx), [onboarding CSS](src/components/personalization/personalization-flow.module.css), [onboarding flow](src/components/personalization/personalization-flow.tsx), [saved plan](src/components/personalization/study-plan.tsx), and [font loading](src/components/learning/learning-theme.tsx). Frontmatter records the implemented tokens and recurring values; the sidecar adds stateful previews and metadata. Its generated tonal ramps are swatch previews, not additions to the runtime palette. The onboarding composition and behavior are recorded in [docs/onboarding.md](docs/onboarding.md). Product constraints remain in [PRODUCT.md](PRODUCT.md) and [AGENTS.md](AGENTS.md).
+Source authority: [tokens.css](src/styles/tokens.css) (every colour, radius, shadow, font and type-scale token), [fonts.ts](src/styles/fonts.ts) (font loading), [Button](src/components/ui/button.tsx) (the one button style), [Studovna CSS](src/components/learning/studovna-page.module.css), [shell CSS](src/components/shell/paper-shell.module.css), [Studovna components](src/components/learning/studovna-page.tsx), [onboarding CSS](src/components/personalization/personalization-flow.module.css), [onboarding flow](src/components/personalization/personalization-flow.tsx) and [saved plan](src/components/personalization/study-plan.tsx). Frontmatter records the tokens and recurring values; the sidecar adds stateful previews and metadata. Its generated tonal ramps are swatch previews, not additions to the runtime palette. The onboarding composition and behavior are recorded in [docs/onboarding.md](docs/onboarding.md); token usage rules are in [docs/design-system.md](docs/design-system.md). Product constraints remain in [PRODUCT.md](PRODUCT.md) and [AGENTS.md](AGENTS.md).
 
 **Key Characteristics:**
 
@@ -128,21 +128,21 @@ The palette combines warm neutrals with dark teal actions; brighter teal serves 
 
 ### Primary
 
-- **Action Teal:** primary actions, active states, links, and correct feedback; hover and pressed tokens provide restrained darkening.
-- **Graphic Teal:** progress fills and equity segments. Its brighter tone has a separate role from action text.
-- **Soft Teal:** current lesson rows and correct answer backgrounds.
+- **Action Teal (`primary`):** primary actions, active states, links, and correct feedback; hover and pressed tokens provide restrained darkening.
+- **Graphic Teal (`progress`):** progress fills and equity segments. Its brighter tone has a separate role from action text.
+- **Soft Teal (`primary-soft`):** current lesson rows and correct answer backgrounds.
 
 ### Secondary
 
-- **Butter:** the system's warm attention accent, paired with its tint and readable ink; it is not a default action color.
-- **Information Blue:** information states and ETF segments. Bonds, cash, and other categories retain their dedicated visualization tokens.
-- **Error Ink:** wrong-answer borders and recoverable error text, supported by Error Tint where a tinted error surface is needed.
+- **Butter (`warning`):** the system's warm attention accent, paired with its tint and readable ink; it is not a default action color.
+- **Information Blue (`info-ink`, `info-soft`):** information states and ETF segments. Bonds, cash, and other categories retain their dedicated visualization tokens.
+- **Error Ink (`danger`):** wrong-answer borders and recoverable error text, supported by Error Tint (`danger-soft`) where a tinted error surface is needed.
 
 ### Neutral
 
-- **Paper / Paper Surface:** the page and readable content surfaces.
+- **Paper / Paper Surface (`background`, `surface`):** the page and readable content surfaces.
 - **Practice Surface / Muted / Sunken:** quiet separation for recap and supporting context.
-- **Ink / Secondary / Muted / Disabled:** ordered text emphasis; muted metadata remains readable.
+- **Ink / Secondary / Muted / Disabled (`foreground`, `secondary`, `muted`, `disabled`):** ordered text emphasis; muted metadata remains readable.
 - **Card Border / Paper Border / Divider:** increasingly quiet structural separation.
 - **Control Outline / Track:** visible interactive boundaries and unfilled progress.
 
@@ -164,7 +164,7 @@ Manrope gives headings a friendly, compact shape; Inter keeps decisions, explana
 - **Label:** the label style is uppercase for section eyebrows. Ordinary navigation and status labels remain sentence case.
 - **Wordmark:** Manrope (800), tight tracking (-0.05em); ordinary headings remain (600).
 
-**The Scoped Type Rule.** Apply the new font pairing through the paper theme; do not globally rewrite focused lessons or unconverted routes as part of Studovna work.
+**The One Pairing Rule.** Manrope and Inter are the only families. They load once in the root layout and are used through `--font-display` and `--font-sans`; components never name a font file or variable directly.
 
 ## Layout
 
@@ -187,13 +187,13 @@ Depth comes mainly from warm tonal surfaces, borders, and spacing. The continuat
 
 ## Shapes
 
-Controls and answer options use the Paper Control radius; content containers use Paper Card. Borders are thin and warm. Radio indicators, completion markers, and the allocation ring are circular because their function calls for it. Desktop navigation is text and an underline; mobile tabs avoid filled pills.
+Controls and answer options use the Control radius (`--radius-control`, 8px); content containers use the Surface radius (`--radius-surface`, 12px). Borders are thin and warm. Radio indicators, completion markers, and the allocation ring are circular because their function calls for it. Desktop navigation is text and an underline; mobile tabs avoid filled pills.
 
 ## Components
 
 ### Buttons
 
-Confident, quiet, and direct. The primary action uses the frontmatter button tokens with a minimum height of (52px), Inter (600), and an optional directional icon. Hover and press darken the background over (160ms ease-out); the enclosing learning theme disables transition and animation durations for reduced motion. Pending state shows “Ukládám…”, disables the control, and exposes busy state. Visible focus uses an Ink outline (3px) with (4px) offset.
+Confident, quiet, and direct. There is one button component, `Button` (`src/components/ui/button.tsx`), with `primary`, `secondary`, `ghost`, `danger` and `dangerQuiet` variants and `default` (52px) and `compact` (48px) sizes. The primary action uses the frontmatter button tokens with a minimum height of (52px), Inter (600), and an optional directional icon. Hover and press darken the background over (160ms ease-out); the enclosing learning theme disables transition and animation durations for reduced motion. Pending state shows “Ukládám…”, disables the control, and exposes busy state. Visible focus uses an Ink outline (3px) with (4px) offset.
 
 ### Cards / Containers
 
@@ -223,7 +223,8 @@ The read-only allocation ring is paired with a textual legend and values from th
 - **Do** let the authored learning interaction and its next step dominate.
 - **Do** pair feedback and data color with explanation, labels, or icons.
 - **Do** preserve the supplied guide assets and their [manifest provenance](public/investi-assets/manifest.json).
-- **Do** retain the scoped migration boundary until another route is deliberately converted.
+- **Do** build every button-like action from `Button`, `ButtonLink` or `buttonVariants()`; screen CSS adds layout only.
+- **Do** use semantic tokens from `styles/tokens.css`; marketing may keep the illustration-only tints documented in `pen-landing.module.css`.
 
 ### Don't:
 

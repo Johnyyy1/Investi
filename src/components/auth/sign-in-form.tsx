@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { LearningButton } from "@/components/learning/learning-button";
+import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/learning/text-input";
 import { authClient } from "@/lib/auth-client";
 import { getAuthErrorMessage } from "@/lib/auth-error";
@@ -23,7 +23,7 @@ export function SignInForm() {
   return <form action={onSubmit} className="space-y-5">
     <TextInput label="E-mail" type="email" name="email" autoComplete="email" placeholder="ty@example.com" required />
     <TextInput label="Heslo" type="password" name="password" autoComplete="current-password" required />
-    {errorMessage ? <p className="text-ql-small text-ql-danger-ink" role="alert">{errorMessage}</p> : null}
-    <LearningButton className="w-full" type="submit" loading={isSubmitting}>{isSubmitting ? "Přihlašuji…" : "Přihlásit se"}</LearningButton>
+    {errorMessage ? <p className="text-small text-danger-ink" role="alert">{errorMessage}</p> : null}
+    <Button className="w-full" type="submit" loading={isSubmitting}>{isSubmitting ? "Přihlašuji…" : "Přihlásit se"}</Button>
   </form>;
 }

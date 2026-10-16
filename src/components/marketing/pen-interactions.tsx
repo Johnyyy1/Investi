@@ -105,7 +105,7 @@ const money = (percent: number) => `${(100 * percent).toLocaleString("cs-CZ")} K
 /** Cash, bonds, stocks around the ring; any unallocated remainder (only mid-animation) shows as empty track. */
 function donutFill({ stocks, bonds, cash }: PortfolioDemoView) {
   const a = cash, ab = cash + bonds, abc = cash + bonds + stocks;
-  return `conic-gradient(var(--cash) 0 ${a}%, var(--bonds) ${a}% ${ab}%, var(--teal2) ${ab}% ${abc}%, #e4e5dc ${abc}% 100%)`;
+  return `conic-gradient(var(--cash) 0 ${a}%, var(--bonds) ${a}% ${ab}%, var(--teal2) ${ab}% ${abc}%, var(--color-track) ${abc}% 100%)`;
 }
 
 /** Whole-percent allocation of a fixed sample amount; never a real portfolio. */

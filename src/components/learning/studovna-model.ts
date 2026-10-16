@@ -42,7 +42,7 @@ export function portfolioComposition(view: Pick<PortfolioView, "valuationComplet
   for (const holding of view.holdings) amounts.set(holding.assetType, (amounts.get(holding.assetType) ?? 0n) + BigInt(holding.marketValueMinor!));
   amounts.set("cash", (amounts.get("cash") ?? 0n) + BigInt(view.availableCashMinor));
   const categories = [
-    { id: "equity", label: "Akcie", color: "var(--color-teal)" },
+    { id: "equity", label: "Akcie", color: "var(--color-progress)" },
     { id: "etf", label: "ETF", color: "var(--color-info-ink)" },
     { id: "bond", label: "Dluhopisy", color: "var(--color-viz-bonds)" },
     { id: "index", label: "Indexy", color: "var(--color-viz-other)" },

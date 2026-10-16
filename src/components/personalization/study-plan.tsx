@@ -6,6 +6,8 @@ import type { LearningRecommendation } from "@/features/personalization/recommen
 import { contextLabels, goalLabels, presentRecommendation, scaffoldLabels, sessionLabels } from "@/features/personalization/presentation";
 import { OnboardingGuide, OnboardingHeader } from "./onboarding-frame";
 import styles from "./personalization-flow.module.css";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
 export function StudyPlan({ profile, recommendation, states }: {
   profile: LearnerProfile; recommendation: LearningRecommendation; states: readonly { lessonId: string; status: string }[];
@@ -15,7 +17,7 @@ export function StudyPlan({ profile, recommendation, states }: {
   const session = recommendation.sessionLessonIds.flatMap((id) => availableLessons.find((lesson) => lesson.id === id) ?? []);
   const complete = recommendation.reasonCode === "CURRICULUM_COMPLETE";
   const scaffoldTitle = { guided: "Klidně od základů", standard: "Krok za krokem", compact: "Svižné zopakování" }[recommendation.scaffoldLevel];
-  return <main className={`investi-theme ${styles.flow}`}>
+  return <main className={styles.flow}>
     <OnboardingHeader progress={1} back="/settings" trailing={<Link className={styles.quiet} href="/learn">Do Studovny</Link>} />
     <div className={`${styles.column} ${styles.planColumn}`}>
       <p className={styles.eyebrow}>Krok 6 z 6 · Plán z tvých odpovědí</p>
@@ -27,7 +29,7 @@ export function StudyPlan({ profile, recommendation, states }: {
         <h2 className={styles.lessonTitle}>{view.lesson?.title ?? (complete ? "Všechny lekce máš hotové" : "Doporučení není dostupné")}</h2>
         {view.lesson && <p className={styles.lessonDuration}>Přibližně {view.lesson.estimatedMinutes} min · {recommendation.splitLessonAcrossSessions ? "klidně ve více sezeních" : "vlastním tempem"}</p>}
         {view.lesson && <p className={styles.lessonSummary}>{view.lesson.summary}</p>}
-        <Link className={styles.primary} href={view.href ?? "/learn#curriculum"}>{view.href ? "Začít doporučenou lekci" : "Zobrazit celé učení"}<ArrowRight size={18} aria-hidden="true" /></Link>
+        <Link className={cn(buttonVariants(), styles.primary)} href={view.href ?? "/learn#curriculum"}>{view.href ? "Začít doporučenou lekci" : "Zobrazit celé učení"}<ArrowRight size={18} aria-hidden="true" /></Link>
       </section>
       <section className={styles.because} aria-labelledby="plan-reasons">
         <h2 id="plan-reasons" className={styles.eyebrow}>Proč zrovna takhle</h2>

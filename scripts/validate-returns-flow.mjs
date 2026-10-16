@@ -48,7 +48,7 @@ try {
   await finishOnboarding(page); // Ends on /learn (Studovna) for a fresh learner.
   await page.getByRole("heading", { level: 1, name: "Vítej v investi, Returns.", exact: true }).waitFor();
   [{ id: userId }] = await sql`select id from "user" where email = ${email}`;
-  assert.equal(await page.locator(".learning-theme").count(), 1, "Learn uses the shared theme");
+  assert.equal(await page.locator(".investi-theme").count(), 1, "Learn uses the shared theme");
   // Studovna chapters list lessons directly; the Returns module page has no link from /learn any more.
   assert.equal(await page.getByRole("list", { name: "Lekce kapitoly Výnosy", exact: true }).locator(`a[href="${route}"]`).count(), 1, "Learn lists the Returns lessons");
   await page.goto(`${baseURL}/learn/returns`);
@@ -212,7 +212,7 @@ try {
   assert.equal(await page.getByRole("button", { name: "Předchozí" }).evaluate((element) => getComputedStyle(element).transitionDuration), "0s");
   assert.deepEqual(await row(), completed, "Review never modifies persisted completion or cursor");
   await page.goto(`${baseURL}/learn/returns/simple-returns`);
-  assert.equal(await page.locator(".learning-theme").count(), 1, "Lesson 2 uses the shared theme");
+  assert.equal(await page.locator(".investi-theme").count(), 1, "Lesson 2 uses the shared theme");
   const actionableErrors = errors.filter((message) => !message.startsWith("You have Reduced Motion enabled on your device."));
   assert.deepEqual(actionableErrors, [], "No unexpected console or hydration errors");
   console.log("All lesson steps, feedback, explorers, explicit completion, refresh, sign-out/sign-in, review, and reduced motion passed.");

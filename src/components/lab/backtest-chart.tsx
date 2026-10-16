@@ -7,7 +7,7 @@ import { formatBacktestMonth, formatBacktestMoney as money, type ComparisonPoint
 import styles from "./backtesting-lab.module.css";
 
 export type { ComparisonPoint } from "./backtest-model";
-const axis = { fill: "var(--color-text-muted)", fontSize: 12, fontFamily: "inherit" };
+const axis = { fill: "var(--color-muted)", fontSize: 12, fontFamily: "inherit" };
 function ChartTooltip({ active, payload, label }: TooltipContentProps) {
   if (!active || !payload?.length) return null;
   return <div className={styles.tooltip}><strong>{formatBacktestMonth(String(label))}</strong>{payload.map((entry) => <p key={String(entry.dataKey)}><span>{entry.name}</span><strong>{formatCurrency(Number(entry.value), "CZK")}</strong></p>)}</div>;
@@ -32,8 +32,8 @@ export function BacktestChart({ data, strategyLabel = "Tvůj mix", initial, comp
           <YAxis width={56} tick={axis} tickFormatter={(value: number) => formatDecimal(value, { notation: "compact", maximumFractionDigits: 1 })} tickLine={false} axisLine={false} domain={["auto", "auto"]} />
           <Tooltip content={ChartTooltip} isAnimationActive={false} />
           {initial !== undefined && <ReferenceLine y={initial} stroke="var(--color-viz-other)" strokeDasharray="3 4" />}
-          <Line type="linear" dataKey="value" name={`A · ${strategyLabel}`} stroke="var(--color-action)" strokeWidth={2.5} dot={false} isAnimationActive={false} />
-          <Line type="linear" dataKey="benchmark" name="B · Akciový vzorek" stroke="var(--color-text-secondary)" strokeDasharray="6 4" strokeWidth={1.75} dot={false} isAnimationActive={false} />
+          <Line type="linear" dataKey="value" name={`A · ${strategyLabel}`} stroke="var(--color-primary)" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+          <Line type="linear" dataKey="benchmark" name="B · Akciový vzorek" stroke="var(--color-secondary)" strokeDasharray="6 4" strokeWidth={1.75} dot={false} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
     </div>
