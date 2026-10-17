@@ -47,7 +47,7 @@ export function AppShell({ children, userName, isDemo = false, isGuest = false, 
     <a href="#main-content" className="sr-only z-50 rounded-control bg-surface p-4 shadow-elevation-2 focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Přeskočit na obsah</a>
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95">
       <div className="mx-auto flex min-h-20 max-w-6xl items-center justify-between gap-3 px-4 min-[375px]:px-5 sm:px-8 lg:px-10">
-        <Link href="/learn" className="flex min-h-12 w-[112px] shrink-0 items-center" aria-label="investi — Učení">
+        <Link href="/learn" className="flex min-h-12 w-[112px] shrink-0 items-center" aria-label="investi · Učení">
           <span className={styles.wordmark}>investi!</span>
         </Link>
 

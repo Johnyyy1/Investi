@@ -162,6 +162,10 @@ Always write the product name as:
 
 investi
 
+The typeset logo (wordmark) is the only place that shows investi! with an exclamation mark. Running text, page titles and aria-labels always say investi.
+
+UI terms follow the glossary in docs/terminology.md.
+
 Primary line:
 
 Learn investing by doing.

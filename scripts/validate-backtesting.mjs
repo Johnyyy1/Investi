@@ -93,7 +93,7 @@ try {
   await layouts("result");
   await openQuiz();
   await page.getByRole("radio", { name: "CAGR", exact: true }).check(); await button("Zkontrolovat odpověď").click();
-  await page.getByRole("status").filter({ hasText: "Zaměř se na maximální drawdown" }).waitFor();
+  await page.getByRole("status").filter({ hasText: "Zaměř se na největší propad" }).waitFor();
   await button("Změnit nastavení").click();
   await page.waitForFunction(() => document.activeElement?.id === "strategy", undefined, { timeout: 15000 });
   assert.equal(await page.getByRole("combobox", { name: "Zvolená strategie" }).evaluate((element) => element === document.activeElement), true);
@@ -112,7 +112,7 @@ try {
   assert.equal(new Set(shortTicks).size, shortTicks.length, "no ambiguous duplicate years");
   assert.equal(await page.getByRole("status").filter({ hasText: "Vstupy se změnily" }).count(), 0);
   await openQuiz();
-  await page.getByRole("radio", { name: "Maximální drawdown", exact: true }).check(); await button("Zkontrolovat odpověď").click();
+  await page.getByRole("radio", { name: "Největší propad", exact: true }).check(); await button("Zkontrolovat odpověď").click();
   await page.getByRole("status").filter({ hasText: "Správně." }).waitFor();
   // Changes in draft inputs must not leak into the snapshot used for comparisons.
   await button("Změnit nastavení").click(); await amount().fill("42");

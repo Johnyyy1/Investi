@@ -146,7 +146,7 @@ try {
   assert.equal(await page.locator("main > section").count(), 6);
   assert.deepEqual(await page.locator("main > section").evaluateAll(sections => sections.map(section => section.querySelector("h1,h2").textContent)), [
     "Peníze jsou vážné.Učení nemusí být.", "Malé kroky.Velké souvislosti.", "Jedna otázka.O jedno aha víc.",
-    "Vlastní nápady.Cvičné peníze.", "Rostou znalosti. Ne tlak.", "Zvědavost stačí.Začni první lekcí.",
+    "Vlastní nápady.Cvičný kapitál.", "Rostou znalosti. Ne tlak.", "Zvědavost stačí.Začni první lekcí.",
   ]);
   const expectedAssets = ["v14-curiosity-cropped.webp", "v14-discovery-edge.webp", "v14-discovery-top-grip.webp", "v14-discovery-side-grip.webp", "v14-steady-understanding.webp", "generated-19.webp"];
   await settle();

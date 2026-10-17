@@ -283,7 +283,7 @@ try {
   await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
   await page.setViewportSize({ width: 1440, height: 950 });
   await orderDialog.getByRole("button", { name: "Potvrdit nákup AAPL", exact: true }).click();
-  await orderDialog.getByRole("alert").filter({ hasText: "dostatek" }).waitFor();
+  await orderDialog.getByRole("alert").filter({ hasText: "dost hotovosti" }).waitFor();
   await page.screenshot({ path: `${screenshotDir}/insufficient-cash-1440.png`, fullPage: true });
   await orderDialog.getByRole("button", { name: "Upravit pokyn", exact: true }).click();
   await orderDialog.getByLabel("Množství", { exact: true }).fill("0.25");
@@ -317,7 +317,7 @@ try {
   assert.equal(await page.getByText("Zatím se nic nepohnulo.").count(), 1, "unchanged sample prices are explained, not dressed up");
   assert.equal(await page.getByTestId("contribution-equity").count(), 0, "no all-zero contribution chart");
   assert.equal(await page.getByRole("status").filter({ hasText: "Ukázková data" }).count(), 1, "the data banner names sample data");
-  await page.getByText("Kapitál z lekcí je vklad, ne výnos.", { exact: false }).waitFor();
+  await page.getByText("Cvičný kapitál je vklad, ne výnos.", { exact: false }).waitFor();
   await responsive(page, "overview-single", { ready: () => page.getByTestId("portfolio-value").waitFor() });
 
   // A second purchase from the overview search: an ETF bought on its detail page, one order.

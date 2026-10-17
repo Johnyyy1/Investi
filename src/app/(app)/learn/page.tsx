@@ -5,7 +5,7 @@ import { perfMeasure, perfSegment } from "@/lib/perf";
 import { getCurrentUser } from "@/lib/session";
 import { StudovnaPage } from "@/components/learning/studovna-page";
 
-export const metadata = { title: "Studovna" };
+export const metadata = { title: "Učení" };
 export default function LearnPage() {
   return perfSegment("page:/learn", renderLearnPage);
 }

@@ -44,7 +44,7 @@ try {
   await heading(visitor, "Tuhle stránku jsme nenašli");
   assert.equal(await visitor.title(), "Stránka nenalezena · investi");
   assert.doesNotMatch(await visitor.locator("main").innerText(), /lekc/i, "the generic 404 does not talk about lessons");
-  assert.equal(await link(visitor, "Pokračovat ve Studovně").count(), 0, "a visitor is not sent through sign-in");
+  assert.equal(await link(visitor, "Pokračovat v učení").count(), 0, "a visitor is not sent through sign-in");
   assert.equal(await link(visitor, "investi · úvodní stránka").getAttribute("href"), "/");
   await assertReflows(visitor, "marketing-404");
   await link(visitor, "Na úvodní stránku").click();
@@ -58,10 +58,10 @@ try {
   await finishOnboarding(page);
   [{ id: userId }] = await sql`select id from "user" where email = ${email}`;
 
-  // Unmatched URL, signed in: the same page also offers the way back to Studovna.
+  // Unmatched URL, signed in: the same page also offers the way back to Učení.
   await page.goto(`${baseURL}/lab/neexistuje`);
   await heading(page, "Tuhle stránku jsme nenašli");
-  assert.equal(await link(page, "Pokračovat ve Studovně").getAttribute("href"), "/learn");
+  assert.equal(await link(page, "Pokračovat v učení").getAttribute("href"), "/learn");
   assert.equal(await link(page, "Úvodní stránka").getAttribute("href"), "/");
 
   // Unknown lesson and unknown module share the lesson-specific state.
@@ -71,7 +71,7 @@ try {
     assert.equal(await page.getByRole("heading", { name: "Tuhle stránku jsme nenašli" }).count(), 0);
   }
   await assertReflows(page, "lesson-404");
-  await link(page, "Zpět do Studovny").click();
+  await link(page, "Zpět na Učení").click();
   await page.waitForURL(`${baseURL}/learn`);
 
   // Instrument Detail sits behind the Portfolio Lab entitlement.

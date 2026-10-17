@@ -11,7 +11,7 @@ export function OnboardingHeader({ progress, back, trailing, disabled, brandHref
 }) {
   const backContent = <><ChevronLeft size={16} aria-hidden="true" /> Zpět</>;
   return <header className={styles.header}>
-    <Link className={styles.brand} href={brandHref} aria-label={brandHref === "/" ? "investi · úvodní stránka" : "investi · Studovna"}>investi!</Link>
+    <Link className={styles.brand} href={brandHref} aria-label={brandHref === "/" ? "investi · úvodní stránka" : "investi · Učení"}>investi!</Link>
     <div className={styles.progressRow}>
       {typeof back === "string" ? <Link className={styles.back} href={back}>{backContent}</Link> : <button type="button" className={styles.back} onClick={back} disabled={disabled || !back}>{backContent}</button>}
       <div className={styles.progress} role="progressbar" aria-label="Průběh přizpůsobení učení" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>

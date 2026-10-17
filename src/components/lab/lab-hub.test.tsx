@@ -57,7 +57,7 @@ describe("Lab hub", () => {
   it("offers a sample mix sized to the learner's practice capital", () => {
     const html = card(view());
     expect(html).toContain('data-portfolio-state="new"');
-    expect(html).toContain("Sestav si portfolio z 10 000 Kč cvičných peněz.");
+    expect(html).toContain("Sestav si portfolio z 10 000 Kč cvičného kapitálu.");
     expect(html).toContain("ne doporučení");
     expect(guide(view())).toContain("Tady se nic nerozbije");
   });

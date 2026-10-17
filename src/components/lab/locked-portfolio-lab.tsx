@@ -19,7 +19,7 @@ export function LockedPortfolioLab({ unlock }: { unlock: UnlockStatus }) {
     <section className={`${styles.card} ${styles.lockedCard}`} aria-label="Podmínky odemčení">
       <ul>
         <li>{lessonsDone ? <CircleCheck size={18} aria-hidden="true" /> : <Circle size={18} aria-hidden="true" />}<span>Základy investování</span><span className={styles.num}>{unlock.completedPrerequisiteLessons} / {unlock.requiredPrerequisiteLessons} lekcí</span></li>
-        <li>{xpDone ? <CircleCheck size={18} aria-hidden="true" /> : <Circle size={18} aria-hidden="true" />}<span>Body za lekce</span><span className={styles.num}>{unlock.totalXp} / {unlock.xpRequired} XP</span></li>
+        <li>{xpDone ? <CircleCheck size={18} aria-hidden="true" /> : <Circle size={18} aria-hidden="true" />}<span>XP za lekce</span><span className={styles.num}>{unlock.totalXp} / {unlock.xpRequired} XP</span></li>
       </ul>
       <p className={styles.meta}>Dokonči všech sedm lekcí Základů investování a získej 420 XP. Odemčením dostaneš jednorázově 5 000 Kč cvičného kapitálu.</p>
     </section>

@@ -124,7 +124,7 @@ try {
   await page.getByRole("button", { name: "Dokončit lekci" }).click();
   await page.getByRole("heading", { name: "Lekce dokončena" }).waitFor();
   await page.getByText("+60 XP").waitFor();
-  await page.getByText(/Portfolio Lab odemčen · \+5\s000\sKč virtuálního kapitálu/).waitFor();
+  await page.getByText(/Portfolio Lab odemčen · \+5\s000\sKč cvičného kapitálu/).waitFor();
   await page.screenshot({ path: `${screenshotDir}/lesson-unlock-1440.png`, fullPage: true });
   await page.reload();
   assert.equal(await page.getByText("Portfolio Lab odemčen", { exact: false }).count(), 0, "unlock feedback is not replayed on reload");

@@ -4,7 +4,7 @@ import { LegalPage, legalOperator, type LegalSection } from "@/components/legal/
 
 export const metadata: Metadata = {
   title: "Podmínky použití",
-  description: "Pravidla používání investi: vzdělávací služba s cvičnými penězi, ne investiční doporučení.",
+  description: "Pravidla používání investi: vzdělávací služba s cvičným kapitálem, ne investiční doporučení.",
 };
 
 const sections: readonly LegalSection[] = [
