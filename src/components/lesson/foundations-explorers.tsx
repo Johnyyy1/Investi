@@ -216,9 +216,9 @@ export function DrawdownExplorer() {
     drawdown = drawdownFromPeak(peakValue, currentValue);
   } catch (cause) { error = cause instanceof Error ? cause.message : "Zadej platné hodnoty."; }
   const invalid = { "aria-invalid": Boolean(error), "aria-describedby": error ? errorId : undefined };
-  return <section aria-label="Průzkumník drawdownu" className="space-y-6">
+  return <section aria-label="Průzkumník propadu" className="space-y-6">
     <div className="grid gap-5 sm:grid-cols-2"><FinanceInput {...invalid} label="Předchozí vrcholová hodnota" prefix="€" value={peak} onValueChange={setPeak} /><FinanceInput {...invalid} label="Aktuální hodnota" prefix="€" value={current} onValueChange={setCurrent} /></div>
-    {error ? <p id={errorId} role="alert" className="text-small text-danger-ink">{error}</p> : drawdown !== undefined ? <div aria-live="polite" aria-atomic="true" className="border-y border-border py-6"><MetricResult label="Drawdown od uvedeného vrcholu" value={formatPercentage(drawdown)} /><p className="mt-3 text-small text-secondary">Drawdown je pokles od předchozího vrcholu. Pokud je aktuální hodnota na uvedeném vrcholu nebo nad ním, ilustrace ukáže drawdown 0 %.</p></div> : null}
+    {error ? <p id={errorId} role="alert" className="text-small text-danger-ink">{error}</p> : drawdown !== undefined ? <div aria-live="polite" aria-atomic="true" className="border-y border-border py-6"><MetricResult label="Propad od uvedeného vrcholu" value={formatPercentage(drawdown)} /><p className="mt-3 text-small text-secondary">Propad (drawdown) je pokles od předchozího vrcholu. Pokud je aktuální hodnota na uvedeném vrcholu nebo nad ním, ilustrace ukáže propad 0 %.</p></div> : null}
   </section>;
 }
 

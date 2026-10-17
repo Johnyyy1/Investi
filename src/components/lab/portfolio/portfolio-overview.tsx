@@ -111,7 +111,7 @@ export function PortfolioOverview({ view, notice: initialNotice = null }: { view
             </div> : null}
           </div> : null}
         </div>
-        <p className={styles.meta}>Otevřeno {dateLabel(view.openedAt)} · cvičné peníze, nic skutečného</p>
+        <p className={styles.meta}>Otevřeno {dateLabel(view.openedAt)} · cvičný kapitál, nic skutečného</p>
       </header>}
       {firstVisit || (!hasCapital && !hasHoldings) ? null : <div className={styles.buyBar}><InstrumentSearch sample={view.marketDataMode === "sample"} /></div>}
 
@@ -124,7 +124,7 @@ export function PortfolioOverview({ view, notice: initialNotice = null }: { view
             {status.kind === "unavailable" ? <Missing view={view} status={status} refreshing={refreshing} onRetry={refresh} /> : <Overview view={view} status={status} />}
           </>}
 
-      <footer className={styles.footer}><p>investi!</p><p>Výukový model s cvičnými penězi. Nejde o investiční doporučení ani odhad budoucího výnosu.</p></footer>
+      <footer className={styles.footer}><p>investi!</p><p>Výukový model s cvičným kapitálem. Nejde o investiční doporučení ani odhad budoucího výnosu.</p></footer>
     </div>
 
     <dialog ref={resetDialog} className={styles.dialog} aria-labelledby="reset-title" aria-describedby="reset-description" onCancel={(event) => { if (resetting) event.preventDefault(); }} onClose={() => {
@@ -184,7 +184,7 @@ function FirstVisit({ view }: { view: PortfolioView }) {
       <ul className={styles.facts}>
         <li><Wallet size={20} aria-hidden="true" /><strong className={styles.num}>{money(capital)}</strong><span>cvičný kapitál z lekcí, ne tvoje peníze</span></li>
         <li><ChartLine size={20} aria-hidden="true" /><strong>{sample ? "Ukázkové ceny" : "Tržní ceny"}</strong><span>{sample ? "pevná výuková sada, ne tržní data" : "pozorování od poskytovatele, mohou být zpožděná"}</span></li>
-        <li><CircleOff size={20} aria-hidden="true" /><strong>Mimo XP</strong><span>zisk ani ztráta body nemění</span></li>
+        <li><CircleOff size={20} aria-hidden="true" /><strong>Mimo XP</strong><span>zisk ani ztráta XP nemění</span></li>
       </ul>
       <div className={styles.emptySearch}><InstrumentSearch id="first-buy-search" label="Najdi, co chceš koupit" sample={sample} /></div>
     </section>
@@ -276,7 +276,7 @@ function ValueCard({ view, status }: { view: PortfolioView; status: DataStatus }
       <span>Investováno <strong className={styles.num} data-testid="portfolio-invested">{view.holdingsMarketValueMinor === null ? "neúplné" : money(view.holdingsMarketValueMinor)}</strong></span>
       <span>Cvičný kapitál <strong className={styles.num} data-testid="portfolio-capital">{money(view.earnedPracticeCapitalMinor)}</strong></span>
     </p>
-    <p className={styles.contributionNote}><Info size={15} aria-hidden="true" />Kapitál z lekcí je vklad, ne výnos. Do zisku ani ztráty se nepočítá.</p>
+    <p className={styles.contributionNote}><Info size={15} aria-hidden="true" />Cvičný kapitál je vklad, ne výnos. Do zisku ani ztráty se nepočítá.</p>
   </section>;
 }
 
@@ -371,7 +371,7 @@ function AllocationCard({ view, rows }: { view: PortfolioView; rows: readonly Gr
       segments={rows.map((row) => ({ id: row.group, label: groups[row.group].label, color: groups[row.group].color, basisPoints: row.weightBasisPoints ?? 0, value: percent(row.weightBasisPoints), detail: row.valueMinor === null ? undefined : money(row.valueMinor) }))}
     /> : <p className={styles.meta}>Rozložení ukážeme, až budou známé ceny všech položek.</p>}
     <div className={styles.drift}>
-      <p>Kolik z celé hodnoty máš v akciích, ETF, dluhopisech a v hotovosti. Rozložení se mění s cenami i s každým nákupem a prodejem. Kapitál z nových lekcí přibude do hotovosti.</p>
+      <p>Kolik z celé hodnoty máš v akciích, ETF, dluhopisech a v hotovosti. Rozložení se mění s cenami i s každým nákupem a prodejem. Cvičný kapitál z nových lekcí přibude do hotovosti.</p>
       <Link className={styles.textLink} href={PORTFOLIO_LESSON_HREF}>Lekce: Portfolio, váhy a diverzifikace<ArrowRight size={16} aria-hidden="true" /></Link>
     </div>
   </section>;

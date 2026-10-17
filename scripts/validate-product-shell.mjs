@@ -100,7 +100,7 @@ try {
   assert.equal((await finalValue.textContent()).replace(/\s/g, ""), "159732Kč");
   await page.locator(".recharts-surface").waitFor();
   await page.getByText("Ověř si porozumění", { exact: true }).click();
-  await page.getByRole("radio", { name: "Maximální drawdown", exact: true }).check();
+  await page.getByRole("radio", { name: "Největší propad", exact: true }).check();
   await button("Zkontrolovat odpověď").click();
   await page.getByRole("status").filter({ hasText: "Správně." }).waitFor();
   await page.getByText("Zobrazit tabulku dat", { exact: true }).click();

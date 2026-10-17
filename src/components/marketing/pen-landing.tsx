@@ -15,7 +15,7 @@ export function PenLanding() {
     <header className={styles.siteHeader} data-nav>
       <span className={styles.navBg} data-nav-bg aria-hidden="true"/>
       <div className={styles.container}>
-        <Link href="/" className={styles.wordmark} aria-label="investi domů">investi!</Link>
+        <Link href="/" className={styles.wordmark} aria-label="investi · úvodní stránka">investi!</Link>
         <nav className={styles.topNav} aria-label="Hlavní navigace">
           <a href="#jak-to-funguje">Jak to funguje</a>
           <a href="#portfolio-lab">Portfolio Lab</a>
@@ -75,7 +75,7 @@ export function PenLanding() {
       </section>
       <section className={styles.labSection} id="portfolio-lab" aria-labelledby="lab-title">
         <div className={styles.container}>
-          <div className={styles.labIntro}><div><p className={styles.eyebrow} data-reveal="fade">PORTFOLIO LAB</p><SplitHeading id="lab-title" mode="lines">Vlastní nápady.<br/>Cvičné peníze.</SplitHeading></div><div className={styles.labExplanation} data-reveal data-reveal-delay="0.25"><p>Změň rozložení mezi akcie, dluhopisy a hotovost. Zjisti, co jednotlivé části přinášejí. Bez jediného skutečného obchodu.</p><small>Portfolio Lab navazuje na lekce základů.</small></div></div>
+          <div className={styles.labIntro}><div><p className={styles.eyebrow} data-reveal="fade">PORTFOLIO LAB</p><SplitHeading id="lab-title" mode="lines">Vlastní nápady.<br/>Cvičný kapitál.</SplitHeading></div><div className={styles.labExplanation} data-reveal data-reveal-delay="0.25"><p>Změň rozložení mezi akcie, dluhopisy a hotovost. Zjisti, co jednotlivé části přinášejí. Bez jediného skutečného obchodu.</p><small>Portfolio Lab navazuje na lekce základů.</small></div></div>
           <div data-reveal><PortfolioPreview/></div>
           <div className={styles.labClosing}><p data-reveal>Nejdřív porozumět riziku. Až potom se rozhodovat.</p></div>
         </div>
@@ -100,6 +100,6 @@ export function PenLanding() {
         <div className={styles.container}><Image className={styles.closingArt} data-closing-art src="/marketing/generated-19.webp" alt="" aria-hidden="true" width={1000} height={747} sizes="(max-width: 500px) 300px, (max-width: 780px) 500px, 360px" /><SplitHeading id="closing-title" mode="chars">Zvědavost stačí.<br/>Začni první lekcí.</SplitHeading><p data-reveal data-reveal-delay="0.3">Nemusíš mít všechno nastudované.<br/> Právě od toho je tu investi.</p><div className={styles.closingActions} data-reveal data-reveal-delay="0.4"><Link href="/onboarding" prefetch={false} className={`${styles.primaryButton} ${styles.shimmerHost}`} data-lift data-press {...magneticProps}>Začít se učit <ArrowRight aria-hidden="true" size={18}/><span className={styles.shimmer} data-shimmer aria-hidden="true"/></Link><DemoButton compact className={styles.demoButtonWrap} buttonClassName={styles.secondaryButton}/></div></div>
       </section>
     </main>
-    <footer className={styles.footer} data-footer><div className={styles.container}><Link href="/" className={styles.wordmark}>investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><nav aria-label="Patička"><a href="#jak-to-funguje">Jak to funguje</a><Link href="/sign-in" prefetch={false}>Přihlásit se</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href} prefetch={false}>{link.label}</Link>)}</nav></div></footer>
+    <footer className={styles.footer} data-footer><div className={styles.container}><Link href="/" className={styles.wordmark} aria-label="investi · úvodní stránka">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><nav aria-label="Patička"><a href="#jak-to-funguje">Jak to funguje</a><Link href="/sign-in" prefetch={false}>Přihlásit se</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href} prefetch={false}>{link.label}</Link>)}</nav></div></footer>
   </MotionRoot>;
 }

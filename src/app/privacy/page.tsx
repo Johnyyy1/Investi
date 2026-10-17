@@ -17,7 +17,7 @@ const sections: readonly LegalSection[] = [
     <div><dt>Přihlášení přes Google nebo Facebook</dt><dd>Identifikátor tvého účtu u poskytovatele, přístupové tokeny, které nám poskytovatel předá, a případně profilový obrázek.</dd></div>
     <div><dt>Relace</dt><dd>Pro každé přihlášení IP adresu, identifikaci prohlížeče (user agent), čas vytvoření a vypršení.</dd></div>
     <div><dt>Učení</dt><dd>Odpovědi z úvodního nastavení a diagnostiky (zkušenost, cíle, zájmy, délka lekcí), časové pásmo, pokrok v lekcích, XP a záznamy o odměnách cvičného kapitálu.</dd></div>
-    <div><dt>Portfolio Lab</dt><dd>Cvičná portfolia, provedené cvičné obchody a uložené mixy. Jde o cvičné peníze, ne o skutečné investice.</dd></div>
+    <div><dt>Portfolio Lab</dt><dd>Cvičná portfolia, provedené cvičné obchody a uložené mixy. Jde o cvičný kapitál, ne o skutečné investice.</dd></div>
     <div><dt>Ochrana proti zneužití</dt><dd>Počítadla požadavků, která brání hádání hesel a přetěžování služby. Místo IP adresy nebo e-mailu v nich ukládáme jen jednosměrný otisk.</dd></div>
     <div><dt>Host a demo</dt><dd>Když se učíš bez účtu, vytvoříme anonymní profil bez e-mailu. Ukládáme k němu stejná data o učení a relacích jako k účtu.</dd></div>
   </dl> },
@@ -68,5 +68,5 @@ const sections: readonly LegalSection[] = [
 
 export default function PrivacyPage() {
   return <LegalPage title="Zásady ochrany osobních údajů" sections={sections}
-    intro={<p>investi je vzdělávací služba, ve které se učíš investovat na cvičných penězích. Ukládáme jen to, co k tomu potřebujeme, a všechno si můžeš kdykoli stáhnout nebo smazat.</p>} />;
+    intro={<p>investi je vzdělávací služba, ve které se učíš investovat s cvičným kapitálem. Ukládáme jen to, co k tomu potřebujeme, a všechno si můžeš kdykoli stáhnout nebo smazat.</p>} />;
 }

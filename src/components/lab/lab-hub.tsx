@@ -127,7 +127,7 @@ function Donut({ segments, label }: { segments: readonly Segment[]; label: strin
 
 function PortfolioSkeleton() {
   return <section className={styles.card} aria-busy="true" aria-label="Portfolio Lab se načítá">
-    <CardHeading eyebrow="Portfolio Lab" title="Sestav si portfolio z cvičných peněz." />
+    <CardHeading eyebrow="Portfolio Lab" title="Sestav si portfolio z cvičného kapitálu." />
     <div className={`${styles.preview} ${styles.skeleton}`} role="status">Načítám portfolio…</div>
   </section>;
 }
@@ -136,7 +136,7 @@ function LockedPortfolioCard({ unlock, completedLessonIds }: { unlock: LabHubUnl
   const next = nextFoundationsLesson(completedLessonIds);
   const done = unlock.completedPrerequisiteLessons, total = unlock.requiredPrerequisiteLessons;
   return <section className={styles.card} data-portfolio-state="locked" aria-labelledby="portfolio-card-heading">
-    <CardHeading id="portfolio-card-heading" eyebrow="Portfolio Lab" title="Sestav si portfolio z cvičných peněz." />
+    <CardHeading id="portfolio-card-heading" eyebrow="Portfolio Lab" title="Sestav si portfolio z cvičného kapitálu." />
     <div className={styles.preview}>
       <h3 className={styles.lockTitle}>Otevře se po Základech investování</h3>
       <p className={styles.lockText}>Mix dává smysl, když víš, co jsou akcie, dluhopisy a ETF. Přesně to Základy probírají.</p>
@@ -157,8 +157,8 @@ async function LoadedPortfolioCard({ view }: { view: ViewPromise }) {
 export function PortfolioCard({ view }: { view: PortfolioView | null }) {
   if (!view) return <section className={styles.card} data-portfolio-state="error" aria-labelledby="portfolio-card-heading">
     <CardHeading id="portfolio-card-heading" eyebrow="Portfolio Lab" title="Portfolio se teď nenačetlo." />
-    <div className={styles.notice}><CircleAlert size={18} aria-hidden="true" /><div><strong>Nic se neztratilo.</strong><p>Tvoje cvičné peníze i pozice zůstaly uložené. V Portfolio Labu se načtou znovu.</p></div></div>
-    <Action href="/lab/portfolio" primary label="Otevřít Portfolio Lab" note="Jen cvičné peníze. Nic se doopravdy nekupuje." />
+    <div className={styles.notice}><CircleAlert size={18} aria-hidden="true" /><div><strong>Nic se neztratilo.</strong><p>Tvůj cvičný kapitál i pozice zůstaly uložené. V Portfolio Labu se načtou znovu.</p></div></div>
+    <Action href="/lab/portfolio" primary label="Otevřít Portfolio Lab" note="Jen cvičný kapitál. Nic se doopravdy nekupuje." />
   </section>;
   return view.holdings.length === 0 ? <NewPortfolioCard view={view} /> : <SavedPortfolioCard view={view} />;
 }
@@ -166,13 +166,13 @@ export function PortfolioCard({ view }: { view: PortfolioView | null }) {
 function NewPortfolioCard({ view }: { view: PortfolioView }) {
   const cash = minor(view.availableCashMinor);
   return <section className={styles.card} data-portfolio-state="new" aria-labelledby="portfolio-card-heading">
-    <CardHeading id="portfolio-card-heading" eyebrow="Portfolio Lab" title={cash > 0n ? `Sestav si portfolio z ${wholeMoney(cash)} cvičných peněz.` : "Sestav si portfolio z cvičných peněz."} />
+    <CardHeading id="portfolio-card-heading" eyebrow="Portfolio Lab" title={cash > 0n ? `Sestav si portfolio z ${wholeMoney(cash)} cvičného kapitálu.` : "Sestav si portfolio z cvičného kapitálu."} />
     <div className={styles.preview}>
       <div className={styles.previewHead}><strong>Ukázkový mix</strong>{cash > 0n ? <span className={styles.previewCapital}>{wholeMoney(cash)}</span> : null}</div>
       <Donut segments={SAMPLE_MIX} label="Ukázkový mix: akcie 60 %, dluhopisy 30 %, hotovost 10 %" />
       <p className={styles.meta}>Ukázka · ilustrační rozložení, ne doporučení. Vlastní mix si složíš v Labu.</p>
     </div>
-    <Action href="/lab/portfolio" primary label="Otevřít Portfolio Lab" note="Jen cvičné peníze. Nic se doopravdy nekupuje." />
+    <Action href="/lab/portfolio" primary label="Otevřít Portfolio Lab" note="Jen cvičný kapitál. Nic se doopravdy nekupuje." />
   </section>;
 }
 
@@ -218,7 +218,7 @@ function SavedPortfolioCard({ view }: { view: PortfolioView }) {
       {segments.length > 0 && !missing ? <Donut segments={segments} label={`Současné rozložení: ${segments.map((segment) => `${segment.label} ${percent(segment.basisPoints)}`).join(", ")}`} /> : null}
       <p className={styles.meta}>{meta}</p>
     </div>
-    <Action href="/lab/portfolio" primary label="Pokračovat" note={stale || missing ? "Prohlížet můžeš hned. Nakupovat půjde, až se ceny načtou." : "Jen cvičné peníze. Nic se doopravdy nekupuje."} />
+    <Action href="/lab/portfolio" primary label="Pokračovat" note={stale || missing ? "Prohlížet můžeš hned. Nakupovat půjde, až se ceny načtou." : "Jen cvičný kapitál. Nic se doopravdy nekupuje."} />
   </section>;
 }
 

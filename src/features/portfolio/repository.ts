@@ -167,7 +167,7 @@ export async function executeTrade(userId: string, input: {
     ]);
     const folded = foldTrades(earned, trades.map(asLedgerTrade));
     if (input.side === "BUY" && observation.grossMinor > folded.cashMinor) {
-      throw new PortfolioInputError("InsufficientCash", "Pro tento obchod nemáš dostatek dostupného Practice Capital.");
+      throw new PortfolioInputError("InsufficientCash", "Na tento obchod nemáš dost hotovosti.");
     }
     if (input.side === "SELL") {
       const holding = folded.holdings.find(({ instrumentId }) => instrumentId === input.instrumentId);

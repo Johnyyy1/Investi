@@ -18,7 +18,7 @@ export function StudyPlan({ profile, recommendation, states }: {
   const complete = recommendation.reasonCode === "CURRICULUM_COMPLETE";
   const scaffoldTitle = { guided: "Klidně od základů", standard: "Krok za krokem", compact: "Svižné zopakování" }[recommendation.scaffoldLevel];
   return <main className={styles.flow}>
-    <OnboardingHeader progress={1} back="/settings" trailing={<Link className={styles.quiet} href="/learn">Do Studovny</Link>} />
+    <OnboardingHeader progress={1} back="/settings" trailing={<Link className={styles.quiet} href="/learn">Do Učení</Link>} />
     <div className={`${styles.column} ${styles.planColumn}`}>
       <p className={styles.eyebrow}>Krok 6 z 6 · Plán z tvých odpovědí</p>
       <h1 className={styles.planTitle}>Tvůj plán</h1>
@@ -41,7 +41,7 @@ export function StudyPlan({ profile, recommendation, states }: {
         <details className={styles.sessionDetails}><summary>Jak si rozvrhnout učení <ChevronDown size={16} aria-hidden="true" /></summary><p>{scaffoldLabels[recommendation.scaffoldLevel]}</p>{session.length > 0 && <><p className={styles.sessionLabel}>Doporučené sezení</p><ol className={styles.sessionList}>{session.map((lesson) => <li key={lesson.id}><Link href={`/learn/${lesson.moduleSlug}/${lesson.slug}`}>{lesson.title}</Link><span>≈ {lesson.estimatedMinutes} min</span></li>)}</ol></>}</details>
       </section>
       <section className={styles.curriculum} aria-labelledby="plan-curriculum">
-        <h2 id="plan-curriculum" className={styles.eyebrow}>Tvůj plán ve Studovně</h2>
+        <h2 id="plan-curriculum" className={styles.eyebrow}>Tvůj plán učení</h2>
         {moduleCatalog.map((module, index) => {
           const lessons = getModuleLessons(module.slug).filter((lesson) => lesson.status === "available");
           const count = lessons.filter((lesson) => completed.has(lesson.id)).length;

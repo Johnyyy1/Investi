@@ -18,7 +18,7 @@ export default function ProgressError({ retry }: { error: Error & { digest?: str
         <h1 id="progress-error-title">Tvůj pokrok se teď nenačetl.</h1>
         <p role="alert">Nic se neztratilo. Hotové lekce i uložené kroky zůstávají u tvého účtu, jen je teď neumíme zobrazit. Proto tu nejsou žádná čísla.</p>
         <button type="button" className={cn(buttonVariants(), paper.primaryAction, styles.primary)} onClick={() => retry()}>Načíst znovu<RotateCcw size={18} aria-hidden="true" /></button>
-        <Link className={styles.textLink} href="/learn">Mezitím otevřít Studovnu<ArrowRight size={15} aria-hidden="true" /></Link>
+        <Link className={styles.textLink} href="/learn">Mezitím otevřít Učení<ArrowRight size={15} aria-hidden="true" /></Link>
       </div>
     </section>
   </div></main>;

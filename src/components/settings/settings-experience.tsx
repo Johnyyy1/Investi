@@ -93,7 +93,7 @@ export function SettingsExperience(props: Props) {
           </header>
           <div hidden={!account}><Identity identity={identity} accounts={props.initialAccounts} onDirtyChange={setNameDirty} />
             {identity.guest && <div className={styles.demoNote}><Info size={20} aria-hidden="true" /><div><h2>Pokrok zatím není uložený</h2><p>Učíš se jako host. Lekce a plán zůstanou jen v tomhle prohlížeči, dokud si nevytvoříš účet. <Link href="/onboarding/save">Uložit pokrok</Link></p></div></div>}
-            {identity.demo && <div className={styles.demoNote}><Info size={20} aria-hidden="true" /><div><h2>Soukromý cvičný profil</h2><p>Demo používá samostatný účet a je dostupné 24 hodin. Cvičné peníze nejsou skutečné. Tvůj postup je uložený u této demo identity.</p></div></div>}
+            {identity.demo && <div className={styles.demoNote}><Info size={20} aria-hidden="true" /><div><h2>Soukromý cvičný profil</h2><p>Demo používá samostatný účet a je dostupné 24 hodin. Cvičný kapitál není skutečné peníze. Tvůj postup je uložený u této demo identity.</p></div></div>}
           </div>
           <div className={account ? styles.overviewPreferences : undefined} hidden={!account && section !== "goal"}>
             <SettingsPreferences initialPreferences={initialPreferences} onDirtyChange={setPreferenceDirty} onEditingChange={(editing) => { setPreferenceEditing(editing); if (editing && section !== "goal") router.push("/settings?section=goal"); }} />
@@ -101,7 +101,7 @@ export function SettingsExperience(props: Props) {
           <section hidden={section !== "learning"} aria-labelledby="diagnostic-heading" className={styles.section}>
             <div className={styles.sectionHead}><h2 id="diagnostic-heading">Krátká diagnostika</h2><p>{props.hasDiagnostic ? "Tvoje odpovědi jsou uložené a pomáhají doporučit další krok." : "Diagnostiku zatím nemáš dokončenou."}</p></div>
             <div className={styles.card}><div className={styles.contentRow}><div><h3>{props.personalized ? "Zopakovat diagnostiku" : "Přizpůsobit učení"}</h3><p>Krátké otázky pomohou nastavit kontext učení. Postup v lekcích i cvičný kapitál ti zůstanou.</p></div><Link href={retakeHref} className={buttonVariants({ variant: "secondary", size: "compact" })}>{props.personalized ? "Zopakovat krátkou diagnostiku" : "Dokončit přizpůsobení"}<ArrowRight size={18} aria-hidden="true" /></Link></div></div>
-            <div className={styles.sectionHead}><h2>Pokračuj vlastním tempem</h2><p>Hotové lekce si můžeš kdykoli zopakovat. Opakování nepřidává další odměnu.</p></div><Link href="/learn" className={styles.textLink}>Zpět do Studovny<ArrowRight size={18} aria-hidden="true" /></Link>
+            <div className={styles.sectionHead}><h2>Pokračuj vlastním tempem</h2><p>Hotové lekce si můžeš kdykoli zopakovat. Opakování nepřidává další odměnu.</p></div><Link href="/learn" className={styles.textLink}>Zpět na Učení<ArrowRight size={18} aria-hidden="true" /></Link>
           </section>
           <section hidden={section !== "format"} className={styles.section} aria-label="Jazyk a formát">
             <div className={styles.card}><dl className={styles.rows}><div><dt>Jazyk</dt><dd>Čeština</dd></div><div><dt>Formát čísel a dat</dt><dd>cs-CZ · 1 234,50 Kč</dd></div><div><dt>Časové pásmo učení</dt><dd>{props.timeZone}</dd></div><div><dt>Cvičný kapitál</dt><dd>CZK · česká koruna</dd></div></dl></div><p className={styles.hint}>Ceny nástrojů v Portfolio Lab uvádíme v původní měně. Hodnotu portfolia přepočítáváme do korun.</p>
@@ -113,7 +113,7 @@ export function SettingsExperience(props: Props) {
         </div>
       </div>
     </div>
-    <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi — Studovna">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
+    <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi · Učení">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
     <dialog ref={signOutDialog} className={styles.dialog} aria-labelledby="unsaved-title" aria-describedby="unsaved-description" onCancel={(event) => { if (signingOut) event.preventDefault(); }} onClose={() => signOutTrigger.current?.focus()}><h2 id="unsaved-title">Máš neuložené změny</h2><p id="unsaved-description">Odhlášením ztratíš rozepsané změny nastavení. Už uložené předvolby, lekce a portfolio zůstanou.</p>{signOutError && <p role="alert" className={styles.error}>{signOutError}</p>}<div className={styles.actions}><Button variant="secondary" size="compact" disabled={signingOut} autoFocus onClick={() => signOutDialog.current?.close()}>Zůstat v nastavení</Button><Button loading={signingOut} onClick={() => void signOut()}>Odhlásit se</Button></div></dialog>
   </main>;
 }

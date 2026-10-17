@@ -6,10 +6,10 @@ export const metadata: Metadata = { title: "Stránka nenalezena" };
 
 /** Unmatched URLs anywhere, including marketing typos, render outside the app shell. */
 export default async function NotFound() {
-  // A failed session read must not turn a 404 into an error page; it only drops the Studovna link.
+  // A failed session read must not turn a 404 into an error page; it only drops the Učení link.
   const signedIn = await getCurrentUser().then((user) => user !== null, () => false);
   return <RouteState standalone eyebrow="Chyba 404" title="Tuhle stránku jsme nenašli"
-    action={signedIn ? { href: "/learn", label: "Pokračovat ve Studovně" } : { href: "/", label: "Na úvodní stránku" }}
+    action={signedIn ? { href: "/learn", label: "Pokračovat v učení" } : { href: "/", label: "Na úvodní stránku" }}
     link={signedIn ? { href: "/", label: "Úvodní stránka" } : undefined}>
     Odkaz může být neúplný, nebo stránka už neexistuje. Zkontroluj adresu, nebo pokračuj odsud.
   </RouteState>;

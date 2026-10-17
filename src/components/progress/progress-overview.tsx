@@ -81,7 +81,7 @@ function PortfolioCard({ summary, unlock, portfolio, model, timeZone }: { summar
   const title = !unlocked ? "Zatím zamčený" : portfolio === undefined ? "Uložené údaje se nenačetly" : !portfolio ? "Cvičné portfolio" : portfolio.holdingsCount ? `${formatCount(portfolio.holdingsCount, ["pozice", "pozice", "pozic"])} v portfoliu` : "Připravené k prvnímu nákupu";
   return <section className={styles.lab} aria-labelledby="lab-title">
     <p className={styles.eyebrow}>Portfolio Lab</p>
-    <div className={styles.labHead}><h2 id="lab-title">{title}</h2><p>Cvičné peníze, nic skutečného.</p></div>
+    <div className={styles.labHead}><h2 id="lab-title">{title}</h2><p>Cvičný kapitál, nic skutečného.</p></div>
     <dl className={styles.facts}>
       {!unlocked && unlock && <>
         <div><dt>Lekce Základů investování</dt><dd>{unlock.completedPrerequisiteLessons} / {unlock.requiredPrerequisiteLessons}</dd></div>
@@ -187,7 +187,7 @@ export function ProgressOverview({ summary, unlock, portfolio }: { summary: Summ
 
       <div className={styles.lower}>
         <section className={styles.curriculum} aria-labelledby="curriculum-title">
-          <div className={styles.curriculumHead}><h2 id="curriculum-title">Kurikulum podle kapitol</h2><Link className={styles.textLink} href="/learn#curriculum">Otevřít Studovnu<ArrowRight size={15} aria-hidden="true" /></Link></div>
+          <div className={styles.curriculumHead}><h2 id="curriculum-title">Kurikulum podle kapitol</h2><Link className={styles.textLink} href="/learn#curriculum">Otevřít Učení<ArrowRight size={15} aria-hidden="true" /></Link></div>
           {model.chapters.map((chapter) => <ChapterBlock key={chapter.slug} chapter={chapter} />)}
           {model.planned && <div className={styles.planned}><span className={styles.chapterNumber}>{model.planned.number}</span><span className={styles.chapterName}><h3>{model.planned.title}</h3><span>{model.planned.topics.join(" · ")}</span></span><span className={styles.chapterStatus}><span className={styles.chip} data-status="planned"><Clock3 size={13} aria-hidden="true" />Připravujeme</span></span></div>}
           <ul className={styles.legend} aria-label="Stavy lekcí"><li data-status="done">hotovo</li><li data-status="active">rozpracováno</li><li data-status="todo">nezačato</li></ul>
@@ -197,7 +197,7 @@ export function ProgressOverview({ summary, unlock, portfolio }: { summary: Summ
 
       <details className={styles.explanation}><summary>Jak funguje pokrok<ChevronDown size={18} aria-hidden="true" /></summary><p>První dokončení lekce přidá {LESSON_XP} XP. XP měří učení a nedají se utratit. Portfolio Lab se odemkne po dokončení všech {definition.prerequisiteLessonIds.length} lekcí Základů investování a získání {formatDecimal(definition.xpRequired)} XP. Odemčení jednorázově přidá {formatPracticeCapitalMinor(definition.rewardPracticeCapitalMinor)} cvičného kapitálu. Každé první dokončení lekce mimo Základy přidá {formatPracticeCapitalMinor(LESSON_PRACTICE_CAPITAL_MINOR)}; když ji dokončíš dřív, kapitál počká na odemčení. Opakování lekce další XP ani kapitál nepřidává.</p><p>Cvičný kapitál je vzdělávací vklad do Portfolio Labu. Nejsou to skutečné peníze ani investiční výnos.</p></details>
 
-      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi — Studovna">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
+      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi · Učení">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
     </div>
   </main>;
 }

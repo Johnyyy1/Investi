@@ -44,7 +44,7 @@ function metricsFor(metrics: PriceMetrics): Metric[] {
       meaning: drawdown === null
         ? "V tomto období cena neklesla pod předchozí nejvyšší zavírací cenu."
         : `${dateLabel(drawdown.peakDate)} → ${dateLabel(drawdown.troughDate)}. ${drawdown.recoveryDate ? `Na vrchol se cena vrátila ${dateLabel(drawdown.recoveryDate)}.` : "Vrchol v tomto období zatím nebyl znovu dosažen."}`,
-      help: "Propad měří, o kolik cena klesla od nejvyšší předchozí zavírací ceny k nejnižší následné. Ukazuje, jak hluboký pokles investor v tomto období zažil.",
+      help: "Největší propad (max. drawdown) měří, o kolik cena klesla od nejvyšší předchozí zavírací ceny k nejnižší následné. Ukazuje, jak hluboký pokles investor v tomto období zažil.",
       tone: drawdown === null ? "neutral" : "negative",
     },
     {

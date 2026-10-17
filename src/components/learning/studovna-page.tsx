@@ -57,7 +57,7 @@ function PortfolioCard({ summary, portfolio }: { summary: LearnerSummary; portfo
   let offset = 0;
   const segments = composition?.map(({ color, percent }) => { const start = offset; offset += percent; return `${color} ${start}% ${offset}%`; });
   return <section className={styles.sideCard} aria-labelledby="portfolio-title">
-    <p className={styles.eyebrow}>Portfolio Lab</p><h3 id="portfolio-title">Můj první mix</h3><p className={styles.sideDescription}>Cvičné peníze, skutečné souvislosti.</p>
+    <p className={styles.eyebrow}>Portfolio Lab</p><h3 id="portfolio-title">Můj první mix</h3><p className={styles.sideDescription}>Cvičný kapitál, skutečné souvislosti.</p>
     <div className={styles.capitalRow}><span>Cvičný kapitál</span><strong>{formatPracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)}</strong></div>
     {composition ? <>
       <div className={styles.composition}><div className={styles.donut} style={{ background: `conic-gradient(${segments!.join(", ")})` }} role="img" aria-label={`Složení portfolia: ${composition.map((item) => `${item.label} ${item.percent} %`).join(", ")}`} /><ul>{composition.map(({ id, label, color, percent }) => <li key={id}><span className={styles.swatch} style={{ background: color }} aria-hidden="true" /><span>{label}</span><strong>{percent.toLocaleString("cs-CZ")} %</strong></li>)}</ul></div>
@@ -102,7 +102,7 @@ export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; 
       </div>
       <section className={styles.planContext} aria-label="Tvůj studijní plán"><p>{recommendationReason}</p>{recommendedLesson && <Link className={styles.recommendedLink} href={`/learn/${recommendedLesson.moduleSlug}/${recommendedLesson.slug}`}>Doporučená lekce: {recommendedLesson.title}<ArrowRight size={16} aria-hidden="true" /></Link>}<details><summary>Jak si rozvrhnout učení</summary><p>{contextLabels[summary.recommendation.exampleContext]}</p><p>{scaffoldLabels[summary.recommendation.scaffoldLevel]}</p>{summary.recommendation.splitLessonAcrossSessions && <p>Lekci si můžeš rozdělit do více sezení. Uložený postup tě dovede zpět.</p>}</details></section>
       {!summary.profile?.personalizedOnboardingCompletedAt && summary.user && <PersonalizationPrompt userId={summary.user.id} />}
-      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi — Studovna">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
+      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi · Učení">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
     </div>
   </main>;
 }

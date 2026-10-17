@@ -162,7 +162,7 @@ Manrope gives headings a friendly, compact shape; Inter keeps decisions, explana
 - **Title:** questions use the title style; mobile uses (1.5rem). Lesson titles use (2.375rem / 1.15) on desktop and (1.5625rem / 1.16) on mobile.
 - **Body:** the body style supports explanation and answer choices; supporting text ranges from (0.8125rem) metadata to (0.9375rem) recap copy. Longer preview explanation is bounded to (65ch).
 - **Label:** the label style is uppercase for section eyebrows. Ordinary navigation and status labels remain sentence case.
-- **Wordmark:** Manrope (800), tight tracking (-0.05em); ordinary headings remain (600).
+- **Wordmark:** the typeset `investi!` in Manrope (800), tight tracking (-0.05em); ordinary headings remain (600). The exclamation mark belongs to the wordmark only: running text, titles and aria-labels say `investi`, and a wordmark link names its target (`investi · úvodní stránka`, `investi · Učení`).
 
 **The One Pairing Rule.** Manrope and Inter are the only families. They load once in the root layout and are used through `--font-display` and `--font-sans`; components never name a font file or variable directly.
 

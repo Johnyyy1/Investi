@@ -192,7 +192,7 @@ try {
   await answerChoice(page, "Ne, stále záleží na vahách a společných rizicích");
   await page.getByRole("heading", { name: "Teď umíš číst portfolio", exact: true }).waitFor();
   await completeLesson(page, 420);
-  await page.getByText(/Portfolio Lab odemčen · \+5\s000\sKč virtuálního kapitálu/).waitFor();
+  await page.getByText(/Portfolio Lab odemčen · \+5\s000\sKč cvičného kapitálu/).waitFor();
   await page.screenshot({ path: `${screenshotDir}/08-portfolio-lab-unlocked-1440.png`, fullPage: true });
   assert.equal((await sql`select count(*)::int as count from progression_unlock where user_id = ${userId} and unlock_id = 'PORTFOLIO_LAB'`)[0].count, 1);
   assert.equal((await sql`select practice_capital_minor from progression_unlock where user_id = ${userId} and unlock_id = 'PORTFOLIO_LAB'`)[0].practice_capital_minor, "500000");
@@ -217,7 +217,7 @@ try {
   await page.getByRole("heading", { name: "Lekce hotová", exact: true }).waitFor();
   await page.getByRole("button", { name: "Dokončit opakování", exact: true }).click();
   await page.getByRole("heading", { name: "Opakování dokončeno", exact: true }).waitFor();
-  await page.getByText("Opakováním si znalost upevníš. Další XP ani virtuální kapitál se nepřipisují.", { exact: true }).waitFor();
+  await page.getByText("Opakováním si znalost upevníš. Další XP ani cvičný kapitál se nepřipisují.", { exact: true }).waitFor();
   const afterReview = (await sql`select coalesce(sum(xp), 0)::int as xp, count(*)::int as receipts from lesson_award where user_id = ${userId}`)[0];
   assert.deepEqual(afterReview, beforeReview, "Review does not duplicate XP or a lesson receipt");
   assert.equal((await sql`select count(*)::int as count from progression_unlock where user_id = ${userId} and unlock_id = 'PORTFOLIO_LAB'`)[0].count, 1, "Review does not duplicate unlock");
