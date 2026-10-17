@@ -37,7 +37,7 @@ function tradeMessageFor(error: unknown) {
 
 async function authenticatedUser() {
   const current = await getCurrentUser();
-  if (!current) throw new PortfolioInputError("PortfolioUnavailable", "Relace skončila. Přihlas se znovu, abys mohl(a) používat Portfolio Lab.");
+  if (!current) throw new PortfolioInputError("PortfolioUnavailable", "Relace skončila. Přihlas se znovu a pokračuj v Portfolio Labu.");
   try { await requirePortfolioLabUnlock(current.id); }
   catch { throw new PortfolioInputError("PortfolioUnavailable", "Portfolio Lab je zamčený. Dokonči Základy investování a odemkni ho."); }
   return current;

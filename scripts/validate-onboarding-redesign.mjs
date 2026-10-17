@@ -234,7 +234,7 @@ try {
   await c.page.getByRole('heading', { name: 'Co se chceš naučit?', exact: true }).waitFor();
   await c.page.evaluate(() => { Storage.prototype.setItem = () => { throw new Error('storage blocked'); }; });
   await c.page.locator('input[value="CONFIDENCE"]').check(); await next(c.page); await next(c.page);
-  await c.page.getByRole('heading', { name: 'Jak bys popsal své zkušenosti?', exact: true }).waitFor();
+  await c.page.getByRole('heading', { name: 'Jaké máš zkušenosti s investováním?', exact: true }).waitFor();
   console.log('PASS: skip persists neutral defaults, returning skipped learner is not re-gated, malformed/disabled storage does not block the flow.');
 
   const d = await account();
@@ -258,7 +258,7 @@ try {
   assert.ok(await c.page.locator('input[value="CONFIDENCE"]').evaluate((element) => getComputedStyle(element.parentElement).outlineStyle !== 'none'));
   await tabTo('button[type="submit"]'); await c.page.keyboard.press('Enter');
   await tabTo('input[value="STOCKS"]'); await c.page.keyboard.press('Space'); await c.page.keyboard.press('Tab'); await c.page.keyboard.press('Space');
-  for (const title of ['Jak bys popsal své zkušenosti?', 'Kolik času chceš učení běžně věnovat?', 'Najdeme vhodný začátek']) { await tabTo('button[type="submit"]'); await c.page.keyboard.press('Enter'); await c.page.getByRole('heading', { name: title, exact: true }).waitFor(); }
+  for (const title of ['Jaké máš zkušenosti s investováním?', 'Kolik času chceš učení běžně věnovat?', 'Najdeme vhodný začátek']) { await tabTo('button[type="submit"]'); await c.page.keyboard.press('Enter'); await c.page.getByRole('heading', { name: title, exact: true }).waitFor(); }
   await tabTo('button[type="submit"]'); await c.page.keyboard.press('Enter');
   for (let i = 0; i < 5; i++) { await c.page.locator('input[type="radio"]').first().waitFor(); await tabTo('input[type="radio"]'); await c.page.keyboard.press('Space'); await c.page.keyboard.press('ArrowDown'); await tabTo('button[type="submit"]'); await c.page.keyboard.press('Enter'); if (i < 4) await c.page.getByRole('status').filter({ hasText: `Otázka ${i + 2} z 5` }).waitFor(); }
   await c.page.waitForURL('**/onboarding/plan');

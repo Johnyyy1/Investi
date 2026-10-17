@@ -48,7 +48,7 @@ const sections: readonly LegalSection[] = [
   { id: "cookies", title: "Cookies a úložiště v prohlížeči", body: <>
     <p>Používáme jen cookies nezbytné pro přihlášení, proto nepotřebujeme tvůj souhlas:</p>
     <ul>
-      <li><strong>Přihlašovací cookie</strong> (začíná na <code>better-auth.</code>): drží tě přihlášeného, platí po dobu relace.</li>
+      <li><strong>Přihlašovací cookie</strong> (začíná na <code>better-auth.</code>): udržuje tvé přihlášení, platí po dobu relace.</li>
       <li><strong>Dočasné cookies přihlášení přes Google nebo Facebook</strong>: chrání přihlášení před podvržením a po návratu z poskytovatele zaniknou.</li>
     </ul>
     <p>Do úložiště prohlížeče si ukládáme rozepsané odpovědi z úvodního nastavení (do zavření karty) a skrytí nabídky přizpůsobení. Nepoužíváme analytické, reklamní ani sledovací cookies třetích stran.</p>

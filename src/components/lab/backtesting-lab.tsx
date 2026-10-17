@@ -62,7 +62,7 @@ function PredictionResult({ result }: { result: BacktestResult }) {
   const prediction = result.prediction === "strategy" ? "A" : result.prediction === "benchmark" ? "B" : undefined;
   return <section className={styles.reflection} aria-labelledby="prediction-result-heading">
     <h2 id="prediction-result-heading">{equal ? "Obě cesty skončily stejně." : `V tomhle období skončil výš ${higher}.`}</h2>
-    <p>{prediction ? `Tvůj tip byl ${prediction}. ` : result.prediction === "unknown" ? "Předem jsi zvolil/a „Nevím“. " : "Tentokrát bez tipu předem. "}Tip se nehodnotí. Výsledek popisuje jen zvolený syntetický vzorek.</p>
+    <p>{prediction ? `Tvůj tip byl ${prediction}. ` : result.prediction === "unknown" ? "Tvůj tip byl „Nevím“. " : "Tentokrát bez tipu předem. "}Tip se nehodnotí. Výsledek popisuje jen zvolený syntetický vzorek.</p>
     <div className={styles.reflectionBody}>
       <dl className={styles.outcomes}>
         <div><dt>Na konci výš</dt><dd>{equal ? "Stejné hodnoty" : `${higher} · o ${money(Math.abs(result.metrics.finalValue - result.benchmark.finalValue))}`}</dd></div>
@@ -71,7 +71,7 @@ function PredictionResult({ result }: { result: BacktestResult }) {
       </dl>
       <div className={styles.explanation}>
         <h3>Proč se výsledky liší</h3>
-        <p>{result.strategy.id === "stocks" ? "Zvolil/a jsi stejný akciový vzorek jako benchmark. Obě křivky proto mají totožné výnosy i propady." : result.strategy.id === "bonds" ? "Dluhopisový a akciový vzorek mají různé měsíční výnosy. Ty se postupně násobí, takže rozhoduje celá cesta, ne jen poslední měsíc." : "Mix kombinuje akcie, dluhopisy a hotovost. Každý měsíc používá váhy 60 / 30 / 10, zatímco benchmark zůstává celý v akciovém vzorku. Rozdílné měsíční výnosy se postupně násobí."}</p>
+        <p>{result.strategy.id === "stocks" ? "Vybraná strategie používá stejný akciový vzorek jako benchmark. Obě křivky proto mají totožné výnosy i propady." : result.strategy.id === "bonds" ? "Dluhopisový a akciový vzorek mají různé měsíční výnosy. Ty se postupně násobí, takže rozhoduje celá cesta, ne jen poslední měsíc." : "Mix kombinuje akcie, dluhopisy a hotovost. Každý měsíc používá váhy 60 / 30 / 10, zatímco benchmark zůstává celý v akciovém vzorku. Rozdílné měsíční výnosy se postupně násobí."}</p>
         <p>Vyšší konečná hodnota sama o sobě neříká, jak náročná byla cesta. Zkus stejné rozložení v jiném období. Z těchto výsledků nelze předpovídat budoucnost.</p>
       </div>
     </div>

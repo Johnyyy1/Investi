@@ -40,6 +40,18 @@ Always write the product name as **investi**; only the typeset wordmark shows **
 
 The user approved the final Pen.dev design system and Studovna boards. The visual implementation is staged; [DESIGN.md](DESIGN.md) records its current scope without changing product behavior.
 
+## Voice and Tone
+
+Czech copy addresses the learner with *ty* and without grammatical gender. Use the present or future tense, the imperative, or a noun instead of a gendered past tense or adjective:
+
+- „Pokračuj tam, kde to máš rozdělané.“, not „Naváž tam, kde jsi skončil.“
+- „Jaké máš zkušenosti s investováním?“, not „Jak bys popsal své zkušenosti?“
+- „Až se k tomu vrátíš“, not „Až budeš připravený“
+- „Tvůj tip byl …“ or „Vybraná strategie …“, not „Zvolil/a jsi …“
+- „Přihlas se znovu a pokračuj v Portfolio Labu.“, not „abys mohl(a) používat …“
+
+Never use slashed or bracketed forms such as „/a“ or „(a)“. The guide persona may speak about itself in its own voice („Rád tě zase vidím“), and lessons may describe *investor* as a third-person role. `src/lib/copy-voice.test.ts` flags the common gendered patterns in `src`.
+
 ## Evidence on Hand
 
 [AGENTS.md](AGENTS.md) supplies the product and accounting rules. The authored lesson registry, `loadLearner`, and `PortfolioView` supply real content and state. Final visual references are `investi-design.pen` boards `V7mUpG` (design system), `QB1gf` (desktop), `liRhy` (mobile), and `mAWd8` (states). User-supplied guide assets are tracked in [public/investi-assets/manifest.json](public/investi-assets/manifest.json). Do not invent balances, allocation, metrics, testimonials, or proof.
