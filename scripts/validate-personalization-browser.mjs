@@ -300,7 +300,7 @@ try {
   await keyboard.page.getByRole("heading", { name: "Co tě zajímá nejvíc?" }).waitFor();
   await tabTo('input[value="STOCKS"]'); await keyboard.page.keyboard.press("Space");
   await keyboard.page.keyboard.press("Tab"); await keyboard.page.keyboard.press("Space");
-  for (const title of ["Jak bys popsal své zkušenosti?", "Kolik času chceš učení běžně věnovat?", "Najdeme vhodný začátek"]) {
+  for (const title of ["Jaké máš zkušenosti s investováním?", "Kolik času chceš učení běžně věnovat?", "Najdeme vhodný začátek"]) {
     await tabTo('button[type="submit"]'); await keyboard.page.keyboard.press("Enter");
     await keyboard.page.getByRole("heading", { name: title, exact: true }).waitFor();
   }

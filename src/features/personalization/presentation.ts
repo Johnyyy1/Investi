@@ -17,10 +17,10 @@ export const experienceLabels = {
   BEGINNER: "Začínám od nuly", BASIC: "Znám základní pojmy", INVESTOR: "Už investuji a chci jít víc do hloubky",
 } satisfies Record<PersonalizedPreferences["selfAssessedExperience"], string>;
 export const sessionLabels = { 5: "5 minut", 10: "10 minut", 20: "15–20 minut", 30: "30+ minut" };
-export const questionTitles = ["Co se chceš naučit?", "Co tě zajímá nejvíc?", "Jak bys popsal své zkušenosti?", "Kolik času chceš učení běžně věnovat?"];
+export const questionTitles = ["Co se chceš naučit?", "Co tě zajímá nejvíc?", "Jaké máš zkušenosti s investováním?", "Kolik času chceš učení běžně věnovat?"];
 export const reasonLabels: Record<ReasonCode, string> = {
   FOUNDATIONS_START: "Začínáš od základů, proto doporučujeme první lekci.",
-  FOUNDATIONS_CONTINUE: "Navážeme tam, kde jsi v Základech skončil.",
+  FOUNDATIONS_CONTINUE: "Pokračujeme v Základech tam, kde to máš rozdělané.",
   DIAGNOSTIC_REMEDIATION: "Diagnostika ukázala několik základů, které se vyplatí procvičit.",
   FOUNDATIONS_COMPACT_REVIEW: "Základní pojmy ovládáš dobře. Můžeš postupovat svižněji, všechny lekce ale stále dokončíš.",
   RETURNS_AFTER_FOUNDATIONS: "Po Základech je dalším krokem práce s výnosy.",

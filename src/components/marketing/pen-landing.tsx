@@ -91,7 +91,7 @@ export function PenLanding() {
               <div className={styles.progressItem} data-progress-item><CircleDashed size={20} aria-hidden="true" data-progress-ring/><div><span>Základy investování</span><small>3 ze 7 lekcí dokončeno</small></div></div>
               <div className={styles.progressItem} data-progress-item data-progress-next><ArrowRight aria-hidden="true" size={20}/><div><span>Další krok: Portfolio, váhy a diverzifikace</span><small>≈ 10 min</small></div></div>
               <div className={styles.progressItem} data-progress-item><LockKeyhole size={20} aria-hidden="true"/><div><span>Portfolio Lab</span><small>Navazuje na lekce základů.</small></div></div>
-              <p className={styles.progressPromise}>XP nejsou závod. Jsou malá odměna za pochopení, ne měřítko toho, jak dobrý jsi investor.</p>
+              <p className={styles.progressPromise}>XP nejsou závod. Jsou malá odměna za pochopení, ne měřítko toho, jak dobře investuješ.</p>
             </div>
           </div>
         </div>
