@@ -83,6 +83,10 @@ Determinism comes from a fixed plan instead of a stored file. Each provider has 
 
 The label follows provenance. Only non-deterministic `historical` data is shown as „Historická data · {zdroj} · stav k {datum}“, always with „jen cena, bez dividend“ and the retrieval date. Deterministic fixtures are shown as „Ukázková data“. The exercises do not affect lesson completion or rewards.
 
+## Backtesting history
+
+The Backtesting Lab loads split-adjusted daily closes of one fixed instrument per provider (FMP: SPY 2007–2025; deterministic: the synthetic SPX series 2015–2025) through `MarketDataService` on the server. It resamples them to month-end closes without filling gaps and runs in the quote currency without FX. The same provenance rule applies as for lessons. See `docs/backtesting.md`.
+
 ## Cache policy
 
 FMP services use a small process-local cache of normalized successful results with lazy expiry:

@@ -48,7 +48,7 @@ export const ACCOUNT_DELETION_USER_RULE: RateLimitRule = { window: 15 * MINUTE, 
 /** Full personal-data exports per user; each one reads every row the user owns. */
 export const ACCOUNT_EXPORT_USER_RULE: RateLimitRule = { window: HOUR, max: 10 };
 
-export type MarketDataFamily = "search" | "instrument-preview" | "allocation-quotes" | "instrument-detail" | "instrument-compare";
+export type MarketDataFamily = "search" | "instrument-preview" | "allocation-quotes" | "instrument-detail" | "instrument-compare" | "backtest";
 
 /** Per-user bursts per surface; a debounced search box stays far below these. */
 export const marketDataMinuteRules: Readonly<Record<MarketDataFamily, RateLimitRule>> = {
@@ -57,6 +57,7 @@ export const marketDataMinuteRules: Readonly<Record<MarketDataFamily, RateLimitR
   "allocation-quotes": { window: MINUTE, max: 10 },
   "instrument-detail": { window: MINUTE, max: 30 },
   "instrument-compare": { window: MINUTE, max: 30 },
+  backtest: { window: MINUTE, max: 20 },
 };
 /** One daily budget per user across every market-data surface, so one account cannot drain the provider quota. */
 export const MARKET_DATA_DAILY_RULE: RateLimitRule = { window: DAY, max: 600 };

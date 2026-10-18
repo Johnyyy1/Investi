@@ -2,6 +2,8 @@ import { portfolioWeightedReturn } from "@/features/finance/foundations";
 import { parsePrice } from "@/features/finance/returns";
 import { calculateBacktestMetrics, selectMonthlySample, type MonthlyObservation } from "@/features/lab/backtest";
 import { syntheticMonthlyData } from "@/features/lab/sample-data";
+import type { HistoryBacktestResult } from "@/features/backtesting/catalog";
+import type { Currency } from "@/features/market-data/contracts";
 import { formatCurrency } from "@/lib/formatters";
 
 export const backtestStrategies = [
@@ -31,14 +33,17 @@ export function buildBacktestResult(config: BacktestConfig, data: readonly Month
   const labels = [`${config.start - 1}-12`, ...rows.map((row) => row.month)];
   return {
     config: { ...config }, strategy, amount, metrics, benchmark,
+    source: { kind: "sample" } as const, benchmarkName: "Akciový vzorek", currency: "CZK" as Currency,
     period: `Leden ${config.start} – prosinec ${config.end}`,
     months: rows.length,
     points: labels.map((label, index): ComparisonPoint => ({ label, value: metrics.values[index], benchmark: benchmark.values[index] })),
   };
 }
-export type BacktestResult = ReturnType<typeof buildBacktestResult> & { prediction?: BacktestPrediction };
-export function formatBacktestMoney(value: number) {
-  return formatCurrency(value, "CZK", { maximumFractionDigits: Math.abs(value) < 1000 ? 2 : 0 });
+export type SampleBacktestResult = ReturnType<typeof buildBacktestResult>;
+/** Either the synthetic sample (computed in the browser) or a price-history run (computed on the server). */
+export type BacktestResult = (SampleBacktestResult | HistoryBacktestResult) & { prediction?: BacktestPrediction };
+export function formatBacktestMoney(value: number, currency: Currency = "CZK") {
+  return formatCurrency(value, currency, { maximumFractionDigits: Math.abs(value) < 1000 ? 2 : 0 });
 }
 export function formatBacktestMonth(month: string) {
   return new Intl.DateTimeFormat("cs-CZ", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));

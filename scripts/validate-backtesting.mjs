@@ -136,9 +136,54 @@ try {
   assert.equal(await button("Spustit backtest").evaluate((element) => getComputedStyle(element).transitionDuration), "0s");
   await page.getByRole("combobox", { name: "Zvolená strategie" }).selectOption("bonds"); await amount().fill("1.3333"); await button("Spustit backtest").click();
   await page.getByRole("heading", { name: "100 % dluhopisový vzorek", exact: true }).waitFor();
+
+  // Price history through MarketDataService. Deterministic mode serves the invented SPX series, so it stays "Ukázková data".
+  const strategySelect = page.getByRole("combobox", { name: "Zvolená strategie" });
+  const sourceLabel = page.getByTestId("backtest-source-label");
+  await button("Změnit nastavení").click();
+  await page.getByRole("radio", { name: /Ukázková řada SPX/ }).check();
+  assert.equal(await strategySelect.locator("option").count(), 2);
+  assert.equal(await amount().inputValue(), "10000");
+  assert.equal(await page.getByLabel("Od ledna", { exact: true }).inputValue(), "2016");
+  assert.equal(await page.getByRole("combobox", { name: "Rebalancování" }).inputValue(), "annual");
+  assert.match(await page.locator("#backtest-configuration").textContent(), /USD/);
+  await button("Spustit backtest").click();
+  await page.getByRole("heading", { name: "SPX 60 % + hotovost 40 %", exact: true }).waitFor();
+  assert.equal((await final().textContent()).replace(/\s/g, ""), "13321$");
+  assert.match(await sourceLabel.textContent(), /^\s*Ukázková data · ukázková řada SPX · 2016–2025$/);
+  assert.equal(await page.locator("main").getByText("Historická data").count(), 0, "deterministic history is never labelled historical");
+  assert.match(await page.getByRole("region", { name: "Výsledek backtestu" }).textContent(), /Jen SPX/);
+  assert.match(await page.getByRole("region", { name: "Výsledek backtestu" }).textContent(), /9× vrátil k vahám 60 \/ 40/);
+  await page.getByText("Zobrazit tabulku dat", { exact: true }).click();
+  assert.equal(await page.getByRole("row").count(), 122, "120 monthly closes, the start value and the header");
+  assert.match(await page.getByRole("row").nth(1).textContent(), /2015-12/);
+  await page.getByText("Zobrazit tabulku dat", { exact: true }).click();
+  await button("Změnit nastavení").click();
+  await page.getByRole("combobox", { name: "Rebalancování" }).selectOption("monthly");
+  await page.getByRole("status").filter({ hasText: "Vstupy se změnily" }).waitFor();
+  await button("Spustit backtest").click();
+  await page.getByText(/119× vrátil k vahám/).waitFor();
+  assert.equal((await final().textContent()).replace(/\s/g, ""), "13412$");
+  await button("Změnit nastavení").click();
+  await strategySelect.selectOption("trend-sma");
+  assert.equal(await page.getByRole("combobox", { name: "Rebalancování" }).count(), 0, "a trend filter has no rebalancing rule");
+  await page.getByLabel("Od ledna", { exact: true }).selectOption("2024"); await page.getByLabel("Do prosince", { exact: true }).selectOption("2018");
+  await button("Spustit backtest").click(); await page.locator("main").getByRole("alert").filter({ hasText: "počáteční rok" }).waitFor();
+  assert.equal((await final().textContent()).replace(/\s/g, ""), "13412$", "a refused history run keeps the previous result");
+  await page.getByLabel("Od ledna", { exact: true }).selectOption("2016"); await page.getByLabel("Do prosince", { exact: true }).selectOption("2025");
+  await button("Spustit backtest").click();
+  await page.getByRole("heading", { name: "SPX s trendovým filtrem", exact: true }).waitFor();
+  assert.equal((await final().textContent()).replace(/\s/g, ""), "13092$");
+  await page.getByText(/Filtr držel SPX 83 z 120 měsíců a 21× přepnul/).waitFor();
+  await button("Zkusit jiné období").click();
+  await page.getByRole("heading", { name: "Stejný pokus, jiná období." }).waitFor();
+  assert.equal(await page.locator("main article").count(), 4);
+  assert.match(await page.locator("main article").first().textContent(), /Celá řada.*13\s092\s\$/s);
+  await layouts("history");
+
   assert.deepEqual(await financialState(), before, "backtests leave capital receipts, trades and generations unchanged");
   assert.deepEqual(errors, [], "no browser runtime errors");
-  console.log(`PASS: setup, loading, predictions, exact fixture, all monthly points, chart keyboard tooltip/table, invalid reruns, snapshots, comparisons, all strategies, decimal inputs, responsive widths/200% text, reduced motion, untouched portfolio. Screenshots: ${output}`);
+  console.log(`PASS: setup, loading, predictions, exact fixture, all monthly points, chart keyboard tooltip/table, invalid reruns, snapshots, comparisons, all strategies, decimal inputs, price-history runs (sample label, rebalancing, trend filter, refused input, period comparison), responsive widths/200% text, reduced motion, untouched portfolio. Screenshots: ${output}`);
 } finally {
   await browser.close(); if (userId) await sql`delete from "user" where id = ${userId}`; await sql.end();
 }
