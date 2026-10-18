@@ -29,11 +29,15 @@ Instrument Detail uses available split-adjusted closes in the quote currency for
 
 Log returns add through time for one return series; they do not substitute for portfolio-weighted simple returns. Simple returns remain the normal performance wording. Rearranging an identical set of returns changes the path but not its final product in the absence of cash flows.
 
+## Correlation
+
+`features/instruments/correlation.ts` computes the Pearson correlation of two instruments' simple **price returns**, never of prices. Each series stays in its own quote currency with split-adjusted closes: it is not a correlation in CZK, applies no FX and excludes dividends. Only dates both series traded are paired; nothing is forward-filled. Daily frequency (the default) pairs returns between consecutive common dates and excludes, rather than bridges, gaps longer than `MAX_VOLATILITY_GAP_DAYS`, as volatility does. Weekly frequency pairs returns between the last common close of consecutive ISO weeks (Monday–Sunday, UTC) and excludes a week with no common date; it softens the close-time mismatch of exchanges such as XNAS and XETR. Fewer than 20 paired returns give `insufficient-data`, and a series without variation gives `no-variation`; both return a `null` coefficient, never 0. The result `{ coefficient, observationCount, startDate, endDate, frequency }` carries the actually paired dates and an unrounded coefficient in [−1, 1]; rounding belongs to presentation. `correlation-loader.ts` loads both histories through `MarketDataService` on the server and keeps their provenance, so the coefficient is never computed from client-sent closes.
+
 ## Active backlog
 
 The checkpoint remains planned. A future exercise should use a new fixed series with flat and losing intervals, test signed adjacent returns/N−1 and decimal↔percentage conversion, derive cumulative value/recovery, choose a common price/total-return basis, and interpret supplied log values. It can introduce intuitive center/extremes/time order without calculating variance, volatility, or correlation. Reuse existing question types and completion semantics; do not publish future Risk content implicitly.
 
-Read-only market-history lesson integration needs a frozen dataset/basis/provenance so answers stay reproducible. Risk needs return dispersion/frequency conventions; correlation needs explicit interval alignment; portfolio/backtesting work needs consistent return and cash-flow semantics. Live-provider lesson calls, stochastic calculus, total-return data generation, portfolio optimization, and personal transaction-history backtesting remain separate work.
+Read-only market-history lesson integration needs a frozen dataset/basis/provenance so answers stay reproducible. Risk needs return dispersion/frequency conventions; portfolio/backtesting work needs consistent return and cash-flow semantics. Live-provider lesson calls, stochastic calculus, total-return data generation, portfolio optimization, and personal transaction-history backtesting remain separate work.
 
 ## Validation
 
