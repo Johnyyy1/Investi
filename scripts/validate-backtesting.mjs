@@ -20,6 +20,13 @@ page.on("pageerror", (error) => errors.push(error.message));
 let userId;
 const button = (name) => page.getByRole("button", { name, exact: true });
 const final = () => page.getByTestId("metric-konečná-hodnota");
+const text = async (testId) => (await page.getByTestId(testId).textContent()).replace(/\s/g, "");
+const number = (value) => Number(value.replace(/[^\d,+-]/g, "").replace(",", "."));
+/** The difference column is A − B of the displayed values, up to display rounding. */
+async function assertDifference(metric, tolerance) {
+  const [a, b, difference] = await Promise.all([text(`metric-${metric}`), text(`benchmark-${metric}`), text(`difference-${metric}`)]);
+  assert.ok(Math.abs(number(difference) - (number(a) - number(b))) <= tolerance, `${metric}: ${difference} is A ${a} − B ${b}`);
+}
 const amount = () => page.getByRole("textbox", { name: "Počáteční částka", exact: true });
 async function openQuiz() {
   const summary = page.getByText("Ověř si porozumění", { exact: true });
@@ -132,6 +139,9 @@ try {
   await amount().fill("0.25"); await button("Spustit backtest").click();
   await page.getByRole("heading", { name: "Obě cesty skončily stejně." }).waitFor();
   assert.equal(await page.locator("main article").count(), 0, "rerun clears prior period comparisons");
+  assert.match(await page.getByRole("region", { name: "Výsledek backtestu" }).textContent(), /B · Buy-and-hold akciového vzorku/);
+  assert.equal(await text("difference-konečná-hodnota"), "0Kč", "the stock sample held as strategy equals its buy-and-hold benchmark");
+  assert.equal(await text("difference-cagr"), "0p.b.");
   await button("Změnit nastavení").click();
   assert.equal(await button("Spustit backtest").evaluate((element) => getComputedStyle(element).transitionDuration), "0s");
   await page.getByRole("combobox", { name: "Zvolená strategie" }).selectOption("bonds"); await amount().fill("1.3333"); await button("Spustit backtest").click();
@@ -147,12 +157,38 @@ try {
   assert.equal(await page.getByLabel("Od ledna", { exact: true }).inputValue(), "2016");
   assert.equal(await page.getByRole("combobox", { name: "Rebalancování" }).inputValue(), "annual");
   assert.match(await page.locator("#backtest-configuration").textContent(), /USD/);
+  const benchmarkSelect = page.getByRole("combobox", { name: "Benchmark B · koupit a držet" });
+  assert.deepEqual(await benchmarkSelect.locator("option").allTextContents(), ["Buy-and-hold SPX", "Buy-and-hold NVDA"]);
+  assert.match(await page.locator("#backtest-configuration").textContent(), /Celá částka jednou koupí SPX \(Ukázková řada indexu S&P 500\) na začátku a drží ho\. Žádné rebalancování ani obchody\./);
   await button("Spustit backtest").click();
   await page.getByRole("heading", { name: "SPX 60 % + hotovost 40 %", exact: true }).waitFor();
   assert.equal((await final().textContent()).replace(/\s/g, ""), "13321$");
   assert.match(await sourceLabel.textContent(), /^\s*Ukázková data · ukázková řada SPX · 2016–2025$/);
   assert.equal(await page.locator("main").getByText("Historická data").count(), 0, "deterministic history is never labelled historical");
-  assert.match(await page.getByRole("region", { name: "Výsledek backtestu" }).textContent(), /Jen SPX/);
+  assert.match(await page.getByRole("region", { name: "Výsledek backtestu" }).textContent(), /B · Buy-and-hold SPX/);
+  for (const [metric, tolerance] of [["konečná-hodnota", 1], ["cagr", 0.011], ["největší-propad", 0.011], ["volatilita", 0.011]]) await assertDifference(metric, tolerance);
+  const spxBenchmark = await text("benchmark-konečná-hodnota");
+  // Another benchmark changes only path B: same months, amount, currency and price-only returns.
+  await button("Změnit nastavení").click();
+  await benchmarkSelect.selectOption("US-XNAS:NVDA");
+  await page.getByRole("status").filter({ hasText: "Vstupy se změnily" }).waitFor();
+  await page.getByRole("radio", { name: "B Buy-and-hold NVDA", exact: true }).check();
+  await button("Spustit backtest").click();
+  await page.getByText(/Tvůj tip byl B\./).waitFor();
+  assert.equal((await final().textContent()).replace(/\s/g, ""), "13321$", "the strategy path does not depend on the benchmark");
+  assert.notEqual(await text("benchmark-konečná-hodnota"), spxBenchmark);
+  for (const [metric, tolerance] of [["konečná-hodnota", 1], ["cagr", 0.011], ["největší-propad", 0.011], ["volatilita", 0.011]]) await assertDifference(metric, tolerance);
+  const nvdaResult = await page.getByRole("region", { name: "Výsledek backtestu" }).textContent();
+  assert.match(nvdaResult, /B · Buy-and-hold NVDA/);
+  assert.match(nvdaResult, /jiný instrument, NVDA/);
+  assert.match(nvdaResult, /Tip se nehodnotí\./);
+  assert.match(await sourceLabel.textContent(), /^\s*Ukázková data · ukázková řada SPX · 2016–2025$/);
+  assert.equal(await page.locator("main").getByText("Historická data").count(), 0);
+  await page.getByText("Zobrazit tabulku dat", { exact: true }).click();
+  assert.equal(await page.getByRole("row").count(), 122, "the benchmark covers the same 120 months and start value");
+  assert.match(await page.getByRole("row").first().textContent(), /B · Buy-and-hold NVDA/);
+  await page.getByText("Zobrazit tabulku dat", { exact: true }).click();
+  await layouts("history-benchmark");
   assert.match(await page.getByRole("region", { name: "Výsledek backtestu" }).textContent(), /9× vrátil k vahám 60 \/ 40/);
   await page.getByText("Zobrazit tabulku dat", { exact: true }).click();
   assert.equal(await page.getByRole("row").count(), 122, "120 monthly closes, the start value and the header");
@@ -163,6 +199,7 @@ try {
   await page.getByRole("status").filter({ hasText: "Vstupy se změnily" }).waitFor();
   await button("Spustit backtest").click();
   await page.getByText(/119× vrátil k vahám/).waitFor();
+  assert.match(await page.getByRole("region", { name: "Výsledek backtestu" }).textContent(), /B · Buy-and-hold NVDA/, "the chosen benchmark stays selected");
   assert.equal((await final().textContent()).replace(/\s/g, ""), "13412$");
   await button("Změnit nastavení").click();
   await strategySelect.selectOption("trend-sma");
@@ -179,11 +216,12 @@ try {
   await page.getByRole("heading", { name: "Stejný pokus, jiná období." }).waitFor();
   assert.equal(await page.locator("main article").count(), 4);
   assert.match(await page.locator("main article").first().textContent(), /Celá řada.*13\s092\s\$/s);
+  assert.match(await page.locator("main article").first().textContent(), /B · Buy-and-hold NVDA/, "period comparisons keep the chosen benchmark");
   await layouts("history");
 
   assert.deepEqual(await financialState(), before, "backtests leave capital receipts, trades and generations unchanged");
   assert.deepEqual(errors, [], "no browser runtime errors");
-  console.log(`PASS: setup, loading, predictions, exact fixture, all monthly points, chart keyboard tooltip/table, invalid reruns, snapshots, comparisons, all strategies, decimal inputs, price-history runs (sample label, rebalancing, trend filter, refused input, period comparison), responsive widths/200% text, reduced motion, untouched portfolio. Screenshots: ${output}`);
+  console.log(`PASS: setup, loading, predictions, exact fixture, all monthly points, chart keyboard tooltip/table, invalid reruns, snapshots, comparisons, all strategies, decimal inputs, price-history runs (sample label, buy-and-hold benchmark choice and A − B differences, rebalancing, trend filter, refused input, period comparison), responsive widths/200% text, reduced motion, untouched portfolio. Screenshots: ${output}`);
 } finally {
   await browser.close(); if (userId) await sql`delete from "user" where id = ${userId}`; await sql.end();
 }

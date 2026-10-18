@@ -4,7 +4,7 @@ import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Too
 import { Info } from "lucide-react";
 import type { Currency } from "@/features/market-data/contracts";
 import { formatCurrency, formatDecimal } from "@/lib/formatters";
-import { formatBacktestMonth, formatBacktestMoney, type ComparisonPoint } from "./backtest-model";
+import { formatBacktestMonth, formatBacktestMoney, sampleBenchmarkName, type ComparisonPoint } from "./backtest-model";
 import styles from "./backtesting-lab.module.css";
 
 export type { ComparisonPoint } from "./backtest-model";
@@ -23,7 +23,7 @@ const sampleSource: BacktestChartSource = {
 };
 const unitLabel = (currency: Currency) => currency === "CZK" ? "Kč" : currency;
 
-export function BacktestChart({ data, strategyLabel = "Tvůj mix", benchmarkLabel = "Akciový vzorek", currency = "CZK", source = sampleSource, initial, compact = false }: { data: ComparisonPoint[]; strategyLabel?: string; benchmarkLabel?: string; currency?: Currency; source?: BacktestChartSource; initial?: number; compact?: boolean }) {
+export function BacktestChart({ data, strategyLabel = "Tvůj mix", benchmarkLabel = sampleBenchmarkName, currency = "CZK", source = sampleSource, initial, compact = false }: { data: ComparisonPoint[]; strategyLabel?: string; benchmarkLabel?: string; currency?: Currency; source?: BacktestChartSource; initial?: number; compact?: boolean }) {
   const money = (value: number) => formatBacktestMoney(value, currency);
   const unit = unitLabel(currency);
   if (!data.length || data.some((point) => !Number.isFinite(point.value) || !Number.isFinite(point.benchmark))) return <figure className={styles.chart}><figcaption>Hodnota v {unit}</figcaption><p role="status" className={styles.hint}>Pro toto období nejsou dostupná úplná data. Graf nelze zobrazit.</p></figure>;

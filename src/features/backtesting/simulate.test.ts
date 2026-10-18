@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildBacktestResult } from "@/components/lab/backtest-model";
 import { syntheticMonthlyData } from "@/features/lab/sample-data";
-import { fromMonth, simulateBacktest } from "./simulate";
-import { addMonths, BacktestDataError, monthRange, type BacktestSpec } from "./spec";
+import { simulateBacktest, simulateBuyAndHold } from "./simulate";
+import { BacktestDataError, buyAndHoldFor, monthRange, type BacktestSpec } from "./spec";
 
-const base = { frequency: "monthly", adjustment: "split-adjusted", initialAmount: 100 } as const;
+const base = { frequency: "monthly", currency: "USD", adjustment: "split-adjusted", initialAmount: 100 } as const;
 const mix = (rebalance: "none" | "monthly" | "annual", startMonth = "2020-11", endMonth = "2021-01"): BacktestSpec => ({
   ...base, startMonth, endMonth, holdings: [{ instrumentId: "A", weightBps: 5_000 }, { instrumentId: "B", weightBps: 5_000 }], cashWeightBps: 0, rule: { kind: "fixed-weights", rebalance },
 });
@@ -94,8 +94,33 @@ describe("refusing incomplete input", () => {
     ["a non-finite close", { months: swing.months, closes: [[10, Number.NaN, 10, 20], [10, 10, 10, 10]] }],
     ["a missing instrument", { months: swing.months, closes: [[10, 20, 10, 20]] }],
   ])("rejects %s rather than filling it", (_, data) => expect(() => simulateBacktest(mix("monthly"), data)).toThrow(BacktestDataError));
-  it("cuts the benchmark's closes from the same aligned months", () => {
-    expect(fromMonth(swing, addMonths("2020-12", -1), [1])).toEqual({ months: ["2020-11", "2020-12", "2021-01"], closes: [[10, 10, 10]] });
-    expect(() => fromMonth(swing, "2019-01", [0])).toThrow(BacktestDataError);
+});
+
+describe("buy-and-hold benchmark", () => {
+  // Test-only closes, Nov 2020 – Jan 2021, of the instrument a single-holding strategy owns.
+  const single = { months: ["2020-11", "2020-12", "2021-01"], closes: [[10, 13, 7.3]] };
+  const own = (rebalance: "none" | "monthly" | "annual"): BacktestSpec => ({ ...base, startMonth: "2020-12", endMonth: "2021-01", holdings: [{ instrumentId: "A", weightBps: 10_000 }], cashWeightBps: 0, rule: { kind: "fixed-weights", rebalance } });
+
+  it("is identical to a strategy that holds the same instrument at 100 % without rebalancing", () => {
+    const strategy = simulateBacktest(own("none"), single);
+    const benchmark = simulateBuyAndHold(buyAndHoldFor(own("none"), "A"), single);
+    expect(benchmark.values).toEqual(strategy.values);
+    expect(benchmark.metrics).toEqual(strategy.metrics);
+    // With a single holding, rebalancing changes nothing either.
+    expect(simulateBacktest(own("monthly"), single).values).toEqual(benchmark.values);
+  });
+  it("buys once at the start value and never trades again", () => {
+    const result = simulateBuyAndHold(buyAndHoldFor(own("none"), "A"), single);
+    expect(result.values).toEqual([100, 130, 73]);
+    expect(result.rebalanceMonths).toEqual([]);
+    expect(result.exposure).toEqual([1, 1]);
+  });
+  it.each([0.1, 0.25, 1.3333])("scales linearly with a decimal starting amount of %s", (initialAmount) => {
+    const result = simulateBuyAndHold(buyAndHoldFor({ ...own("none"), initialAmount }, "A"), single);
+    expect(result.metrics.finalValue / initialAmount).toBeCloseTo(0.73, 12);
+  });
+  it("refuses other return semantics and incomplete closes", () => {
+    expect(() => simulateBuyAndHold({ ...buyAndHoldFor(own("none"), "A"), adjustment: "total-return" }, single)).toThrow(BacktestDataError);
+    expect(() => simulateBuyAndHold(buyAndHoldFor(own("none"), "A"), { months: single.months.slice(1), closes: [single.closes[0].slice(1)] })).toThrow(BacktestDataError);
   });
 });

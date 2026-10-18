@@ -9,11 +9,11 @@ import { AnswerOption } from "@/components/learning/answer-option";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/form-controls";
 import { runHistoryBacktestAction } from "@/features/backtesting/actions";
-import type { BacktestHistoryView, HistoryBacktestResult } from "@/features/backtesting/catalog";
+import { benchmarkName, type BacktestHistoryView, type HistoryBacktestResult } from "@/features/backtesting/catalog";
 import type { RebalanceRule } from "@/features/backtesting/spec";
 import { FinancialInputError } from "@/features/finance/returns";
 import { formatPercentage } from "@/lib/formatters";
-import { backtestPeriods, backtestStrategies, backtestYears, buildBacktestResult, formatBacktestMoney, type BacktestPrediction, type BacktestResult } from "./backtest-model";
+import { backtestPeriods, backtestStrategies, backtestYears, buildBacktestResult, formatBacktestMoney, formatBacktestMoneyDifference, formatPercentagePoints, sampleBenchmarkName, type BacktestPrediction, type BacktestResult } from "./backtest-model";
 import { historySourceCopy, rebalanceOptions, sampleSourceCopy, type BacktestSourceCopy, type BacktestSourceKind } from "./backtest-source";
 import styles from "./backtesting-lab.module.css";
 
@@ -40,29 +40,39 @@ function DataCard({ copy }: { copy: BacktestSourceCopy }) {
 }
 
 function Metrics({ result }: { result: BacktestResult }) {
+  const { metrics: a, benchmark: b } = result;
+  const ratio = (key: "cagr" | "maxDrawdown" | "volatility") => ({ value: formatPercentage(a[key]), benchmark: formatPercentage(b[key]), difference: formatPercentagePoints(a[key] - b[key]) });
   const rows = [
-    { label: "Konečná hodnota", detail: "Poslední bod grafu po zvoleném období.", value: money(result, result.metrics.finalValue), benchmark: money(result, result.benchmark.finalValue) },
-    { label: "CAGR", detail: "Stálé roční tempo od začátku do konce. Ne výnos každého roku.", value: formatPercentage(result.metrics.cagr), benchmark: formatPercentage(result.benchmark.cagr) },
-    { label: "Největší propad", detail: "Největší pokles od předchozího maxima, měřený na konci měsíce (max. drawdown).", value: formatPercentage(result.metrics.maxDrawdown), benchmark: formatPercentage(result.benchmark.maxDrawdown) },
-    { label: "Volatilita", detail: "Anualizované kolísání měsíčních výnosů. Ne každý typ rizika.", value: formatPercentage(result.metrics.volatility), benchmark: formatPercentage(result.benchmark.volatility) },
+    { label: "Konečná hodnota", detail: "Poslední bod grafu po zvoleném období.", value: money(result, a.finalValue), benchmark: money(result, b.finalValue), difference: formatBacktestMoneyDifference(a.finalValue - b.finalValue, result.currency) },
+    { label: "CAGR", detail: "Stálé roční tempo od začátku do konce. Ne výnos každého roku.", ...ratio("cagr") },
+    { label: "Největší propad", detail: "Největší pokles od předchozího maxima, měřený na konci měsíce (max. drawdown).", ...ratio("maxDrawdown") },
+    { label: "Volatilita", detail: "Anualizované kolísání měsíčních výnosů. Ne každý typ rizika.", ...ratio("volatility") },
   ];
   return <section className={styles.metrics} aria-labelledby="journey-heading">
     <h2 id="journey-heading">Jak se ta cesta cítila</h2>
-    <p>Konečná hodnota je jen poslední bod grafu. Porovnej i kolísání a propady.</p>
-    <dl className={styles.metricRows}>{rows.map((row) => <div key={row.label} className={styles.metricRow}>
-      <dt><strong>{row.label}</strong><span>{row.detail}</span></dt>
-      <dd><span className={styles.metricSeries}><Badge>A</Badge> {result.strategy.name}</span><strong data-testid={`metric-${row.label.toLowerCase().replaceAll(" ", "-")}`}>{row.value}</strong></dd>
-      <dd><span className={styles.metricSeries}><Badge>B</Badge> {result.benchmarkName}</span><strong>{row.benchmark}</strong></dd>
-    </div>)}</dl>
+    <p>Konečná hodnota je jen poslední bod grafu. Porovnej i kolísání a propady. Rozdíl je A minus B. U procent je v procentních bodech (p. b.).</p>
+    <dl className={styles.metricRows}>{rows.map((row) => {
+      const slug = row.label.toLowerCase().replaceAll(" ", "-");
+      return <div key={row.label} className={styles.metricRow}>
+        <dt><strong>{row.label}</strong><span>{row.detail}</span></dt>
+        <dd><span className={styles.metricSeries}><Badge>A</Badge> {result.strategy.name}</span><strong data-testid={`metric-${slug}`}>{row.value}</strong></dd>
+        <dd><span className={styles.metricSeries}><Badge>B</Badge> {result.benchmarkName}</span><strong data-testid={`benchmark-${slug}`}>{row.benchmark}</strong></dd>
+        <dd className={styles.metricDifference}><span className={styles.metricSeries}>Rozdíl A − B</span><strong data-testid={`difference-${slug}`}>{row.difference}</strong></dd>
+      </div>;
+    })}</dl>
   </section>;
 }
 
 function explanation(result: BacktestResult) {
   if (isHistory(result)) {
     const symbol = result.source.symbol;
-    if (result.strategy.id === "trend-sma") return `Filtr držel ${symbol} ${result.monthsInvested} z ${result.months} měsíců a ${result.switches}× přepnul mezi ${symbol} a hotovostí. Rozhoduje vždy podle uzávěrky předchozího měsíce, takže na rychlý obrat trhu reaguje se zpožděním. Benchmark drží ${symbol} celou dobu.`;
+    const other = result.source.benchmark.symbol;
+    const benchmark = other === symbol
+      ? `Benchmark koupí ${symbol} jednou na začátku a drží ho celou dobu.`
+      : `Benchmark koupí jednou na začátku jiný instrument, ${other}, a drží ho celou dobu. Rozdíl proto ukazuje i rozdíl mezi ${symbol} a ${other}, nejen pravidlo strategie.`;
+    if (result.strategy.id === "trend-sma") return `Filtr držel ${symbol} ${result.monthsInvested} z ${result.months} měsíců a ${result.switches}× přepnul mezi ${symbol} a hotovostí. Rozhoduje vždy podle uzávěrky předchozího měsíce, takže na rychlý obrat trhu reaguje se zpožděním. ${benchmark}`;
     const rule = result.config.rebalance === "none" ? `Mix se nerebalancoval, takže podíl ${symbol} se posouval s cenou.` : `Mix se ${result.rebalances}× vrátil k vahám 60 / 40.`;
-    return `Mix drží část peněz v hotovosti bez úroku. V propadech proto ztrácí méně, v růstu méně získá. ${rule} Benchmark drží ${symbol} celou dobu.`;
+    return `Mix drží část peněz v hotovosti bez úroku. V propadech proto ztrácí méně, v růstu méně získá. ${rule} ${benchmark}`;
   }
   if (result.strategy.id === "stocks") return "Vybraná strategie používá stejný akciový vzorek jako benchmark. Obě křivky proto mají totožné výnosy i propady.";
   if (result.strategy.id === "bonds") return "Dluhopisový a akciový vzorek mají různé měsíční výnosy. Ty se postupně násobí, takže rozhoduje celá cesta, ne jen poslední měsíc.";
@@ -104,23 +114,25 @@ const sampleOptions: SourceOptions = {
   strategies: backtestStrategies,
   periods: backtestPeriods,
   years: backtestYears,
-  benchmarkName: "Akciový vzorek",
-  benchmarkDescription: "100 % akcií jako srovnávací benchmark. Stejná počáteční částka i období.",
+  benchmarkName: sampleBenchmarkName,
+  benchmarkDescription: "Celá částka jednou koupí akciový vzorek na začátku a drží ho. Žádné rebalancování ani obchody. Stejná počáteční částka i období.",
 };
 
-function historyOptions(history: BacktestHistoryView): SourceOptions {
+function historyOptions(history: BacktestHistoryView, benchmarkId?: string): SourceOptions {
+  const benchmark = history.benchmarks.find((item) => item.instrumentId === benchmarkId) ?? history.benchmarks[0];
   return {
     strategies: history.strategies,
     periods: history.periods,
     years: Array.from({ length: history.lastYear - history.firstYear + 1 }, (_, index) => history.firstYear + index),
-    benchmarkName: history.benchmarkName,
-    benchmarkDescription: `100 % v ${history.symbol} po celé období, bez zásahů. Stejná počáteční částka i období.`,
+    benchmarkName: benchmarkName(benchmark.symbol),
+    benchmarkDescription: `Celá částka jednou koupí ${benchmark.symbol} (${benchmark.name}) na začátku a drží ho. Žádné rebalancování ani obchody. Stejné období, počáteční částka, měna (${history.currency}) i výnos jen z ceny.`,
   };
 }
 
 export function BacktestingLab({ history = null }: { history?: BacktestHistoryView | null }) {
   const [source, setSource] = useState<BacktestSourceKind>("sample");
   const [strategy, setStrategy] = useState("mixed");
+  const [benchmark, setBenchmark] = useState(history?.benchmarks[0].instrumentId ?? "");
   const [rebalance, setRebalance] = useState<RebalanceRule>("annual");
   const [start, setStart] = useState(2015), [end, setEnd] = useState(2025);
   const [amount, setAmount] = useState("100000");
@@ -136,29 +148,31 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
   const configuration = useRef<HTMLFormElement>(null);
   const comparisonHeading = useRef<HTMLHeadingElement>(null);
   const inFlight = useRef(false);
-  const options = source === "history" && history ? historyOptions(history) : sampleOptions;
+  const options = source === "history" && history ? historyOptions(history, benchmark) : sampleOptions;
   const selected = options.strategies.find((item) => item.id === strategy) ?? options.strategies[0];
   const selectedKind = source === "history" ? history?.strategies.find((item) => item.id === selected.id)?.kind : undefined;
-  const copy = source === "history" && history ? historySourceCopy(history) : sampleSourceCopy;
+  const selectedBenchmark = history?.benchmarks.find((item) => item.instrumentId === benchmark) ?? history?.benchmarks[0];
+  const copy = source === "history" && history ? historySourceCopy(history, { benchmark: selectedBenchmark }) : sampleSourceCopy;
   const resultCopy = result ? copyFor(result) : copy;
   const currency = source === "history" && history ? history.currency : "CZK";
-  const dirty = Boolean(result && (source !== sourceOf(result) || selected.id !== result.config.strategy || start !== result.config.start || end !== result.config.end || amount !== result.config.amount || (isHistory(result) && selectedKind === "fixed-weights" && rebalance !== result.config.rebalance)));
+  const dirty = Boolean(result && (source !== sourceOf(result) || selected.id !== result.config.strategy || start !== result.config.start || end !== result.config.end || amount !== result.config.amount || (isHistory(result) && (selectedBenchmark?.instrumentId !== result.config.benchmark || (selectedKind === "fixed-weights" && rebalance !== result.config.rebalance)))));
   const periodId = options.periods.find((period) => period.start === start && period.end === end)?.id ?? "custom";
 
   function copyFor(item: BacktestResult) {
-    return isHistory(item) && history ? historySourceCopy(history, { start: item.config.start, end: item.config.end }, item.source) : sampleSourceCopy;
+    return isHistory(item) && history ? historySourceCopy(history, { years: { start: item.config.start, end: item.config.end }, source: item.source }) : sampleSourceCopy;
   }
 
   function chooseSource(next: BacktestSourceKind) {
     const nextOptions = next === "history" && history ? historyOptions(history) : sampleOptions;
     setSource(next);
     setStrategy(nextOptions.strategies[0].id);
+    if (history) setBenchmark(history.benchmarks[0].instrumentId);
     setStart(nextOptions.years[0]); setEnd(nextOptions.years.at(-1)!);
     setAmount(next === "history" ? "10000" : "100000");
     setError(undefined);
   }
 
-  async function calculate(periods: readonly { start: number; end: number }[], config: { strategy: string; amount: string; rebalance: RebalanceRule }, kind: BacktestSourceKind): Promise<BacktestResult[]> {
+  async function calculate(periods: readonly { start: number; end: number }[], config: { strategy: string; benchmark: string; amount: string; rebalance: RebalanceRule }, kind: BacktestSourceKind): Promise<BacktestResult[]> {
     if (kind === "sample") return periods.map((period) => buildBacktestResult({ strategy: config.strategy, start: period.start, end: period.end, amount: config.amount }));
     const response = await runHistoryBacktestAction({ ...config, periods });
     if (!response.ok) throw new FinancialInputError(response.message);
@@ -172,7 +186,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
     // Yield to paint the actual running state; no artificial network delay.
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     try {
-      const [next] = await calculate([{ start, end }], { strategy: selected.id, amount, rebalance }, source);
+      const [next] = await calculate([{ start, end }], { strategy: selected.id, benchmark: selectedBenchmark?.instrumentId ?? "", amount, rebalance }, source);
       setResult({ ...next, prediction });
       setEditing(false); setComparison(undefined); setAnswer(undefined); setChecked(false);
       requestAnimationFrame(() => heading.current?.focus());
@@ -190,7 +204,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
     const presets = kind === "history" && history ? history.periods : backtestPeriods;
     setComparing(true);
     try {
-      const results = await calculate(presets, { strategy: result.config.strategy, amount: result.config.amount, rebalance: isHistory(result) ? result.config.rebalance : "annual" }, kind);
+      const results = await calculate(presets, { strategy: result.config.strategy, benchmark: isHistory(result) ? result.config.benchmark : "", amount: result.config.amount, rebalance: isHistory(result) ? result.config.rebalance : "annual" }, kind);
       setComparison({ results: results.map((item) => ({ ...item, prediction: result.prediction })), names: presets.map((period) => period.name) });
       requestAnimationFrame(() => comparisonHeading.current?.focus());
     } catch (cause) {
@@ -227,6 +241,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
             <label htmlFor="strategy" className={styles.label}>Zvolená strategie</label>
             <Select id="strategy" value={selected.id} onChange={(event) => setStrategy(event.target.value)}>{options.strategies.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</Select>
             {selectedKind === "fixed-weights" && <div className={styles.rebalance}><label htmlFor="rebalance" className={styles.label}>Rebalancování</label><Select id="rebalance" value={rebalance} onChange={(event) => setRebalance(event.target.value as RebalanceRule)}>{rebalanceOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select></div>}
+            {source === "history" && history && <div className={styles.rebalance}><label htmlFor="benchmark" className={styles.label}>Benchmark B · koupit a držet</label><Select id="benchmark" value={selectedBenchmark?.instrumentId} onChange={(event) => setBenchmark(event.target.value)}>{history.benchmarks.map((item) => <option key={item.instrumentId} value={item.instrumentId}>{benchmarkName(item.symbol)}</option>)}</Select></div>}
             <div className={styles.approaches}>
               <div><h3><Badge>A</Badge>{selected.name}</h3><p>{selected.description}</p></div>
               <div><h3><Badge>B</Badge>{options.benchmarkName}</h3><p>{options.benchmarkDescription}</p></div>
@@ -275,7 +290,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
           <h3>{comparison.names[index]}</h3><p>{item.period}</p>
           <BacktestChart data={item.points} strategyLabel={item.strategy.name} benchmarkLabel={item.benchmarkName} currency={item.currency} source={copyFor(item).chart} initial={item.amount} compact />
           <dl><div><dt>A · Konečná hodnota</dt><dd>{money(item, item.metrics.finalValue)}</dd></div><div><dt>B · {item.benchmarkName}</dt><dd>{money(item, item.benchmark.finalValue)}</dd></div><div><dt>Propad A / B</dt><dd>{formatPercentage(item.metrics.maxDrawdown)} / {formatPercentage(item.benchmark.maxDrawdown)}</dd></div></dl>
-          <Button variant="secondary" onClick={() => { if (source !== sourceOf(item)) { chooseSource(sourceOf(item)); setStrategy(item.config.strategy); } setStart(item.config.start); setEnd(item.config.end); setEditing(true); requestAnimationFrame(() => configuration.current?.querySelector<HTMLSelectElement>("#start-year")?.focus()); }}>Vybrat toto období<ArrowRight size={16} aria-hidden="true" /></Button>
+          <Button variant="secondary" onClick={() => { if (source !== sourceOf(item)) { chooseSource(sourceOf(item)); setStrategy(item.config.strategy); if (isHistory(item)) setBenchmark(item.config.benchmark); } setStart(item.config.start); setEnd(item.config.end); setEditing(true); requestAnimationFrame(() => configuration.current?.querySelector<HTMLSelectElement>("#start-year")?.focus()); }}>Vybrat toto období<ArrowRight size={16} aria-hidden="true" /></Button>
         </article>)}</div>
         <p className={styles.hint}>Každý graf má vlastní svislou škálu. Srovnávej i hodnoty a propady, ne jen tvar křivek. Žádné období není předpověď.</p>
       </section>}

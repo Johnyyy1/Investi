@@ -1,4 +1,4 @@
-import type { BacktestHistoryView, HistorySource } from "@/features/backtesting/catalog";
+import { benchmarkName, type BacktestHistoryView, type BacktestInstrument, type HistorySource } from "@/features/backtesting/catalog";
 import type { RebalanceRule } from "@/features/backtesting/spec";
 import { formatDate } from "@/lib/formatters";
 import type { BacktestChartSource } from "./backtest-chart";
@@ -49,13 +49,25 @@ const rebalanceLabels: Record<RebalanceRule, string> = {
 };
 export const rebalanceOptions = (Object.keys(rebalanceLabels) as RebalanceRule[]).map((value) => ({ value, label: rebalanceLabels[value] }));
 
+type HistoryCopyOptions = {
+  years?: { start: number; end: number };
+  /** A finished run's source; its benchmark wins over `benchmark`. */
+  source?: HistorySource;
+  /** Benchmark chosen in the setup; defaults to the plan's first. */
+  benchmark?: BacktestInstrument;
+};
+
 /**
  * Labels follow provenance, not the mode: only non-deterministic history is „Historická data“.
  * The deterministic run uses the same pipeline on an invented series and stays „Ukázková data“.
  */
-export function historySourceCopy(view: BacktestHistoryView, years: { start: number; end: number } = { start: view.firstYear, end: view.lastYear }, source?: HistorySource): BacktestSourceCopy {
+export function historySourceCopy(view: BacktestHistoryView, { years = { start: view.firstYear, end: view.lastYear }, source, benchmark = view.benchmarks[0] }: HistoryCopyOptions = {}): BacktestSourceCopy {
   const sample = view.sample || source?.sample === true;
   const { symbol } = view;
+  const b = source?.benchmark ?? benchmark;
+  const own = b.symbol === symbol;
+  /** Every instrument whose closes the run reads. */
+  const symbols = own ? symbol : `${symbol} a ${b.symbol}`;
   const currency = source?.currency ?? "USD";
   const span = `${years.start}–${years.end}`;
   const loaded = source && !sample ? ` · ${view.sourceName}, načteno ${formatDate(source.retrievedAt, { timeZone: "UTC" })}` : "";
@@ -63,26 +75,27 @@ export function historySourceCopy(view: BacktestHistoryView, years: { start: num
     label: sample ? `Ukázková data · ukázková řada ${symbol} · ${span}` : `Historická data · ${view.sourceName} · ${span}`,
     chart: {
       tag: sample ? "Ukázková data" : "Historická data",
-      note: sample ? "Vymyšlená řada, měsíční uzávěrky. Nic z grafu nepředpovídá budoucí výnosy." : `Minulé měsíční uzávěrky ${symbol}. Nic z grafu nepředpovídá budoucí výnosy.`,
+      note: sample ? `Vymyšlen${own ? "á řada" : "é řady"}, měsíční uzávěrky. Nic z grafu nepředpovídá budoucí výnosy.` : `Minulé měsíční uzávěrky ${symbols}. Nic z grafu nepředpovídá budoucí výnosy.`,
       details: `${currency} · jen cena, bez dividend · bez poplatků a daní · přímé spojnice měsíčních uzávěrek${loaded}`,
     },
     notes: [
-      { term: "Zdroj", detail: sample ? `${view.instrumentName}. Vymyšlené denní ceny investi, ne skutečný index.` : `${view.sourceName} · denní závěrečné ceny ${symbol} (${view.instrumentName}).` },
+      { term: "Zdroj", detail: sample ? `${view.instrumentName}${own ? "" : ` a ${b.name}`}. Vymyšlené denní ceny investi, ne skutečné tržní ceny.` : `${view.sourceName} · denní závěrečné ceny ${symbol} (${view.instrumentName})${own ? "" : ` a ${b.symbol} (${b.name})`}.` },
+      { term: "Benchmark", detail: `${benchmarkName(b.symbol)}: celá částka jednou koupí ${b.symbol} na začátku a drží ho. Žádné rebalancování ani obchody. Stejné období, částka, měna i výnos jen z ceny jako u strategie.` },
       { term: "Dostupné období", detail: `Leden ${view.firstYear} – prosinec ${view.lastYear} · měsíční uzávěrky` },
       { term: "Výnos", detail: "Cenový výnos bez dividend. Ceny jsou očištěné jen o splity, takže celkový výnos s dividendami by byl vyšší." },
       { term: "Měsíční data", detail: "Poslední závěrečná cena každého měsíce. Chybí-li měsíc, backtest se nespustí. Nic nedoplňujeme." },
-      { term: "Měna", detail: `${currency}, měna kotace ${symbol}. Bez převodu na koruny, takže v tom není ani vliv kurzu.` },
+      { term: "Měna", detail: `${currency}, měna kotace ${symbols}. Bez převodu na koruny, takže v tom není ani vliv kurzu.` },
       { term: "Co v tom není", detail: "Dividendy, úrok z hotovosti, poplatky, daně, spready, inflace ani další vklady." },
     ],
     method: [
       sample
-        ? `Řada ${symbol} je vymyšlená. Počítá se ale stejně jako skutečné ceny: denní ceny → měsíční uzávěrky → simulace.`
-        : `Ceny ${symbol} načítá server ze zdroje ${view.sourceName}. Jsou to minulé závěrečné ceny, ne živé kotace. Hodnoty z prohlížeče se do výpočtu nedostanou.`,
+        ? `${own ? `Řada ${symbol} je vymyšlená` : `Řady ${symbols} jsou vymyšlené`}. Počítá se ale stejně jako skutečné ceny: denní ceny → měsíční uzávěrky → simulace.`
+        : `Ceny ${symbols} načítá server ze zdroje ${view.sourceName}. Jsou to minulé závěrečné ceny, ne živé kotace. Hodnoty z prohlížeče se do výpočtu nedostanou.`,
       "Hotovost nenese úrok. Mix s pevnými vahami se mezi rebalancováními posouvá podle cen. Trendový filtr se na konci měsíce rozhoduje jen podle uzávěrek do toho dne: porovná uzávěrku s průměrem posledních 10 měsíčních uzávěrek. Budoucí ceny nezná.",
     ],
-    periodHint: sample ? "Stejný pokus může v jiném období dopadnout jinak. Řada je vymyšlená." : `Stejný pokus může v jiném období dopadnout jinak. Roky odpovídají skutečným cenám ${symbol}.`,
+    periodHint: sample ? "Stejný pokus může v jiném období dopadnout jinak. Řada je vymyšlená." : `Stejný pokus může v jiném období dopadnout jinak. Roky odpovídají skutečným cenám ${symbols}.`,
     amountHint: `Jen pro tenhle pokus, v ${currency}, měně kotace ${symbol}. Stejnou částku vložíme do obou cest na začátku. Žádné další vklady.`,
-    runHint: `Počítá se z cenové historie ${symbol}. Nic se nekupuje.`,
-    scope: sample ? "Výsledek popisuje jen vymyšlenou řadu." : `Výsledek popisuje jen minulé ceny ${symbol} ve zvoleném období, bez dividend.`,
+    runHint: `Počítá se z cenové historie ${symbols}. Nic se nekupuje.`,
+    scope: sample ? `Výsledek popisuje jen vymyšlen${own ? "ou řadu" : "é řady"}.` : `Výsledek popisuje jen minulé ceny ${symbols} ve zvoleném období, bez dividend.`,
   };
 }

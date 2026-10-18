@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { AdjustmentMode } from "@/features/market-data/contracts";
 
 /** Calendar month, YYYY-MM. Each month is represented by its last close. */
 export type CalendarMonth = string;
@@ -10,6 +11,8 @@ export type RebalanceRule = (typeof rebalanceRules)[number];
 export const FULL_WEIGHT_BPS = 10_000;
 
 const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+const currencySchema = z.string().regex(/^[A-Z]{3}$/);
+const adjustmentModes = ["raw", "split-adjusted", "total-return"] as const satisfies readonly AdjustmentMode[];
 
 const holdingSchema = z.object({
   instrumentId: z.string().min(1).max(80),
@@ -40,6 +43,8 @@ export const backtestSpecSchema = z.object({
   endMonth: monthSchema,
   initialAmount: z.number().finite().positive().max(1e12),
   frequency: z.literal("monthly"),
+  /** Quote currency of every holding. Backtests never convert FX. */
+  currency: currencySchema,
   /** Split-adjusted closes are price-only: dividends are excluded, never silently mixed in. */
   adjustment: z.literal("split-adjusted"),
 }).superRefine((spec, context) => {
@@ -52,6 +57,43 @@ export const backtestSpecSchema = z.object({
 
 export type BacktestSpec = z.infer<typeof backtestSpecSchema>;
 export type BacktestRule = BacktestSpec["rule"];
+
+/**
+ * Buy and hold one instrument: a single purchase at the start value, then no rebalancing and no
+ * trades. The adjustment is any market-data mode so that a mismatch is refused, not impossible.
+ */
+export const buyAndHoldBenchmarkSchema = z.object({
+  kind: z.literal("buy-and-hold"),
+  instrumentId: z.string().min(1).max(80),
+  startMonth: monthSchema,
+  endMonth: monthSchema,
+  initialAmount: z.number().finite().positive().max(1e12),
+  frequency: z.literal("monthly"),
+  currency: currencySchema,
+  adjustment: z.enum(adjustmentModes),
+});
+
+export type BuyAndHoldBenchmark = z.infer<typeof buyAndHoldBenchmarkSchema>;
+
+/**
+ * A strategy and its benchmark are comparable only on the same period, starting amount, currency
+ * and return semantics. Price-only and total-return paths are never compared with each other.
+ */
+export const backtestComparisonSchema = z.object({ strategy: backtestSpecSchema, benchmark: buyAndHoldBenchmarkSchema }).superRefine(({ strategy, benchmark }, context) => {
+  const issue = (field: keyof BuyAndHoldBenchmark, message: string) => context.addIssue({ code: "custom", path: ["benchmark", field], message });
+  if (benchmark.startMonth !== strategy.startMonth || benchmark.endMonth !== strategy.endMonth) issue("startMonth", "The benchmark must cover the same period as the strategy.");
+  if (benchmark.initialAmount !== strategy.initialAmount) issue("initialAmount", "The benchmark must start with the same amount as the strategy.");
+  if (benchmark.currency !== strategy.currency) issue("currency", "The benchmark must be in the same currency as the strategy.");
+  if (benchmark.adjustment !== strategy.adjustment) issue("adjustment", "The benchmark must use the same return semantics as the strategy.");
+});
+
+export type BacktestComparison = z.infer<typeof backtestComparisonSchema>;
+
+/** The benchmark that buys and holds `instrumentId` over the strategy's own period, amount, currency and semantics. */
+export function buyAndHoldFor(strategy: BacktestSpec, instrumentId: string): BuyAndHoldBenchmark {
+  const { startMonth, endMonth, initialAmount, frequency, currency, adjustment } = strategy;
+  return { kind: "buy-and-hold", instrumentId, startMonth, endMonth, initialAmount, frequency, currency, adjustment };
+}
 
 /** History that is missing, incomplete or inconsistent. It is reported, never filled. */
 export class BacktestDataError extends Error {

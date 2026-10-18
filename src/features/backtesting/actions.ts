@@ -15,6 +15,7 @@ import { BacktestDataError, rebalanceRules } from "./spec";
 /** The browser sends only choices from the catalog; prices, values and results come from the server. */
 const inputSchema = z.object({
   strategy: z.string().min(1).max(40),
+  benchmark: z.string().min(1).max(80),
   rebalance: z.enum(rebalanceRules),
   amount: z.string().max(40),
   periods: z.array(z.object({ start: z.number().int(), end: z.number().int() })).min(1).max(4),

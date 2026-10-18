@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateBacktestMetrics } from "@/features/lab/backtest";
 import { syntheticMonthlyData } from "@/features/lab/sample-data";
-import { backtestPeriods, buildBacktestResult, formatBacktestMoney, formatBacktestMonth } from "./backtest-model";
+import { backtestPeriods, buildBacktestResult, formatBacktestMoney, formatBacktestMoneyDifference, formatBacktestMonth, formatPercentagePoints } from "./backtest-model";
 
 const config = { strategy: "mixed", start: 2015, end: 2025, amount: "100000" };
 describe("Backtesting presentation snapshots", () => {
@@ -55,6 +55,17 @@ describe("Backtesting presentation snapshots", () => {
     expect(() => buildBacktestResult({ ...config, start: 2025, end: 2020 })).toThrow();
   });
   it("uses Czech month names independently of machine timezone", () => expect(formatBacktestMonth("2020-01")).toBe("leden 2020"));
+  it("names the sample benchmark as buying and holding the stock sample", () => {
+    expect(buildBacktestResult(config).benchmarkName).toBe("Buy-and-hold akciového vzorku");
+  });
+  it("signs A − B differences without judging them, and leaves zero unsigned", () => {
+    expect(formatPercentagePoints(0.0123)).toBe("+1,23 p. b.");
+    expect(formatPercentagePoints(-0.25)).toBe("-25 p. b.");
+    expect(formatPercentagePoints(0)).toBe("0 p. b.");
+    expect(formatBacktestMoneyDifference(3321.4, "USD").replace(/\s/g, " ")).toBe("+3 321 $");
+    expect(formatBacktestMoneyDifference(-0.25).replace(/\s/g, " ")).toBe("-0,25 Kč");
+    expect(formatBacktestMoneyDifference(0).replace(/\s/g, " ")).toBe("0 Kč");
+  });
   it("keeps small amounts readable at the presentation boundary", () => {
     expect(formatBacktestMoney(0.25)).toBe("0,25 Kč");
     expect(formatBacktestMoney(159732.4758937891)).toBe("159 732 Kč");
