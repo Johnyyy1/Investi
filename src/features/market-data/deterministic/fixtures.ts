@@ -51,6 +51,32 @@ function sampleAaplHistory(): readonly HistoricalPricePoint[] {
   return [...points, ...bars([100, 102, 99, 95, 98, 104, 108, 106, 111, 114])];
 }
 
+// Synthetic weekday index history for the Backtesting Lab's monthly sample runs, 2015–2025.
+// A drift with deterministic wiggles and four stress windows (late 2018, early 2020, 2022), scaled
+// to end just below the January 2026 bars. Invented values; not the real S&P 500.
+function sampleSpxHistory(): readonly HistoricalPricePoint[] {
+  const raw: [string, number][] = [];
+  let level = Math.log(2000), index = 0;
+  for (let time = Date.parse("2015-01-01T00:00:00.000Z"); time <= Date.parse("2025-12-31T00:00:00.000Z"); time += 86_400_000) {
+    const date = new Date(time);
+    if (date.getUTCDay() === 0 || date.getUTCDay() === 6) continue;
+    const day = date.toISOString().slice(0, 10);
+    let change = 0.00038 + 0.0042 * Math.sin(index * 0.9) + 0.0025 * Math.sin(index * 0.23) + 0.0012 * Math.sin(index * 0.031);
+    if (day >= "2018-10-01" && day <= "2018-12-24") change -= 0.0028;
+    if (day >= "2020-02-20" && day <= "2020-03-23") change -= 0.0125;
+    if (day >= "2020-03-24" && day <= "2020-06-30") change += 0.0035;
+    if (day >= "2022-01-04" && day <= "2022-10-12") change -= 0.0013;
+    level += change;
+    raw.push([day, Math.exp(level)]);
+    index += 1;
+  }
+  const scale = 4_985 / raw.at(-1)![1];
+  return raw.map(([date, value]) => {
+    const close = Number((value * scale).toFixed(2));
+    return { date, open: close, high: close, low: close, close };
+  });
+}
+
 function bars(closes: readonly (number | null)[], withVolume = true): readonly HistoricalPricePoint[] {
   return closes.flatMap((close, index) => {
     if (close === null) return [];
@@ -78,7 +104,7 @@ export const deterministicHistory: Readonly<Record<InstrumentId, DeterministicHi
   "IE-XETR:VWCE": { points: bars([120, 120.5, 119.8, 118.5, 119.4, 121, 122.2, 121.8, 123, 124]), completeness: "complete" },
   "CZ-XPRA:CZGB35": { points: bars([100.2, 100.25, null, 100.3, 100.35, 100.4, 100.38, 100.45, 100.5, 100.6]), completeness: "partial" },
   "CASH:CZK": { points: bars([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], false), completeness: "complete" },
-  "US-XCBO:SPX": { points: bars([5_000, 5_040, 4_980, 4_890, 4_950, 5_020, 5_090, 5_060, 5_110, 5_140], false), completeness: "complete" },
+  "US-XCBO:SPX": { points: [...sampleSpxHistory(), ...bars([5_000, 5_040, 4_980, 4_890, 4_950, 5_020, 5_090, 5_060, 5_110, 5_140], false)], completeness: "complete" },
 };
 
 export const deterministicFxRates: Readonly<Record<string, number>> = {

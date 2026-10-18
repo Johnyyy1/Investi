@@ -19,6 +19,7 @@
 .formSection { min-width: 0; padding: 24px 0; border-bottom: 1px solid var(--color-divider); }
 .page .step { margin-bottom: 16px; font-size: .8125rem; line-height: 1.4; letter-spacing: .04em; text-transform: uppercase; color: var(--color-muted); font-weight: 600; }
 .label { display: block; margin-bottom: 8px; font-size: .875rem; font-weight: 600; }
+.rebalance { margin-top: 16px; }
 .approaches { display: grid; gap: 12px; margin-top: 16px; }
 .approaches > div { padding: 16px 18px; background: var(--color-surface-sunken); border-radius: 8px; }
 .approaches h3 { display: flex; align-items: center; gap: 10px; font-size: 1.0625rem; line-height: 1.35; letter-spacing: 0; }
