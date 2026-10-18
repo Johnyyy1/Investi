@@ -85,7 +85,7 @@ The label follows provenance. Only non-deterministic `historical` data is shown 
 
 ## Backtesting history
 
-The Backtesting Lab loads split-adjusted daily closes of one fixed instrument per provider (FMP: SPY 2007–2025; deterministic: the synthetic SPX series 2015–2025) through `MarketDataService` on the server. It resamples them to month-end closes without filling gaps and runs in the quote currency without FX. The same provenance rule applies as for lessons. See `docs/backtesting.md`.
+The Backtesting Lab loads split-adjusted daily closes of one fixed instrument per provider (FMP: SPY 2007–2025; deterministic: the synthetic SPX series 2015–2025) through `MarketDataService` on the server, plus the chosen buy-and-hold benchmark when it is another instrument (FMP: AAPL or NVDA; deterministic: the synthetic NVDA series 2015–2025). It resamples them to month-end closes without filling gaps and runs in the quote currency without FX. The same provenance rule applies as for lessons. See `docs/backtesting.md`.
 
 ## Cache policy
 

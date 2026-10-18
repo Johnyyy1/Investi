@@ -77,6 +77,31 @@ function sampleSpxHistory(): readonly HistoricalPricePoint[] {
   });
 }
 
+// Synthetic weekday single-stock history, 2015–2025, so the deterministic Backtesting Lab can offer
+// a second buy-and-hold benchmark. Steeper drift and deeper stress windows than the SPX sample,
+// scaled to end just below the January 2026 bars. Invented values; not real NVIDIA prices.
+function sampleNvdaHistory(): readonly HistoricalPricePoint[] {
+  const raw: [string, number][] = [];
+  let level = Math.log(10), index = 0;
+  for (let time = Date.parse("2015-01-01T00:00:00.000Z"); time <= Date.parse("2025-12-31T00:00:00.000Z"); time += 86_400_000) {
+    const date = new Date(time);
+    if (date.getUTCDay() === 0 || date.getUTCDay() === 6) continue;
+    const day = date.toISOString().slice(0, 10);
+    let change = 0.0011 + 0.0095 * Math.sin(index * 0.7) + 0.005 * Math.sin(index * 0.19) + 0.0025 * Math.sin(index * 0.027);
+    if (day >= "2018-10-01" && day <= "2018-12-24") change -= 0.0075;
+    if (day >= "2020-02-20" && day <= "2020-03-18") change -= 0.014;
+    if (day >= "2022-01-04" && day <= "2022-10-12") change -= 0.0042;
+    level += change;
+    raw.push([day, Math.exp(level)]);
+    index += 1;
+  }
+  const scale = 148 / raw.at(-1)![1];
+  return raw.map(([date, value]) => {
+    const close = Number((value * scale).toFixed(2));
+    return { date, open: close, high: close, low: close, close };
+  });
+}
+
 function bars(closes: readonly (number | null)[], withVolume = true): readonly HistoricalPricePoint[] {
   return closes.flatMap((close, index) => {
     if (close === null) return [];
@@ -100,7 +125,7 @@ export interface DeterministicHistoryFixture {
 export const deterministicHistory: Readonly<Record<InstrumentId, DeterministicHistoryFixture>> = {
   "US-XNAS:AAPL": { points: sampleAaplHistory(), completeness: "complete" },
   "US-XNAS:MSFT": { points: bars([200, 201, 203, 202, 205, 207, 206, 208, 210, 212]), completeness: "complete" },
-  "US-XNAS:NVDA": { points: bars([150, 158, 153, 143, 147, 160, 168, 164, 172, 178]), completeness: "complete" },
+  "US-XNAS:NVDA": { points: [...sampleNvdaHistory(), ...bars([150, 158, 153, 143, 147, 160, 168, 164, 172, 178])], completeness: "complete" },
   "IE-XETR:VWCE": { points: bars([120, 120.5, 119.8, 118.5, 119.4, 121, 122.2, 121.8, 123, 124]), completeness: "complete" },
   "CZ-XPRA:CZGB35": { points: bars([100.2, 100.25, null, 100.3, 100.35, 100.4, 100.38, 100.45, 100.5, 100.6]), completeness: "partial" },
   "CASH:CZK": { points: bars([1, 1, 1, 1, 1, 1, 1, 1, 1, 1], false), completeness: "complete" },

@@ -1,6 +1,6 @@
 import { calculateCagr, calculateMaxDrawdown, calculateVolatility } from "@/features/lab/backtest";
 import type { AlignedMonthlyCloses } from "./monthly";
-import { addMonths, BacktestDataError, FULL_WEIGHT_BPS, lookbackMonths, monthRange, type BacktestSpec, type CalendarMonth } from "./spec";
+import { addMonths, BacktestDataError, FULL_WEIGHT_BPS, lookbackMonths, monthRange, type BacktestSpec, type BuyAndHoldBenchmark, type CalendarMonth } from "./spec";
 
 export type BacktestMetrics = { values: number[]; finalValue: number; cagr: number; maxDrawdown: number; volatility: number };
 
@@ -99,9 +99,14 @@ export function simulateBacktest(spec: BacktestSpec, data: AlignedMonthlyCloses)
   return { months: months.slice(base), values, returns, exposure, rebalanceMonths, switches, metrics: metricsFromValues(values, returns) };
 }
 
-/** The same closes restricted to the months a buy-and-hold benchmark needs. */
-export function fromMonth(data: AlignedMonthlyCloses, first: CalendarMonth, rows: readonly number[]): AlignedMonthlyCloses {
-  const start = data.months.indexOf(first);
-  if (start < 0) throw new BacktestDataError("Měsíční řada neodpovídá zvolenému období.", "incomplete");
-  return { months: data.months.slice(start), closes: rows.map((row) => data.closes[row].slice(start)) };
+/**
+ * Buy and hold: the whole amount buys the benchmark at the start value's close and is never
+ * rebalanced or traded. It runs through the same month-by-month simulation as a strategy, so a
+ * strategy that holds the same instrument at 100 % without rebalancing produces the same curve.
+ */
+export function simulateBuyAndHold(benchmark: BuyAndHoldBenchmark, data: AlignedMonthlyCloses): SimulationResult {
+  if (benchmark.adjustment !== "split-adjusted") throw new BacktestDataError("Benchmark musí mít stejnou sémantiku výnosu jako strategie: jen cenu bez dividend.", "incomplete");
+  const { instrumentId, startMonth, endMonth, initialAmount, frequency, currency, adjustment } = benchmark;
+  const spec: BacktestSpec = { holdings: [{ instrumentId, weightBps: FULL_WEIGHT_BPS }], cashWeightBps: 0, rule: { kind: "fixed-weights", rebalance: "none" }, startMonth, endMonth, initialAmount, frequency, currency, adjustment };
+  return simulateBacktest(spec, data);
 }

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { addMonths, backtestSpecSchema, lookbackMonths, monthRange } from "./spec";
+import { addMonths, backtestComparisonSchema, backtestSpecSchema, buyAndHoldFor, lookbackMonths, monthRange, type BacktestSpec } from "./spec";
 
 const valid = {
   holdings: [{ instrumentId: "A", weightBps: 6_000 }], cashWeightBps: 4_000, rule: { kind: "fixed-weights", rebalance: "annual" },
-  startMonth: "2020-01", endMonth: "2020-12", initialAmount: 1000, frequency: "monthly", adjustment: "split-adjusted",
+  startMonth: "2020-01", endMonth: "2020-12", initialAmount: 1000, frequency: "monthly", currency: "USD", adjustment: "split-adjusted",
 };
 
 describe("backtest specification", () => {
@@ -23,11 +23,35 @@ describe("backtest specification", () => {
     ["a non-finite amount", { initialAmount: Number.POSITIVE_INFINITY }],
     ["an unknown rebalancing rule", { rule: { kind: "fixed-weights", rebalance: "weekly" } }],
     ["total-return data", { adjustment: "total-return" }],
+    ["a malformed currency", { currency: "usd" }],
     ["a trend filter on a mix", { rule: { kind: "trend-filter", smaMonths: 10 } }],
     ["a one-month moving average", { holdings: [{ instrumentId: "A", weightBps: 10_000 }], cashWeightBps: 0, rule: { kind: "trend-filter", smaMonths: 1 } }],
   ])("rejects %s", (_, change) => expect(backtestSpecSchema.safeParse({ ...valid, ...change }).success).toBe(false));
   it("accepts a trend filter that switches one instrument between 100 % and cash", () => {
     expect(backtestSpecSchema.safeParse({ ...valid, holdings: [{ instrumentId: "A", weightBps: 10_000 }], cashWeightBps: 0, rule: { kind: "trend-filter", smaMonths: 10 } }).success).toBe(true);
+  });
+});
+
+describe("strategy and buy-and-hold benchmark", () => {
+  const strategy = valid as BacktestSpec;
+  const benchmark = buyAndHoldFor(strategy, "B");
+
+  it("inherits the strategy's period, amount, currency and return semantics", () => {
+    expect(benchmark).toEqual({ kind: "buy-and-hold", instrumentId: "B", startMonth: "2020-01", endMonth: "2020-12", initialAmount: 1000, frequency: "monthly", currency: "USD", adjustment: "split-adjusted" });
+    expect(backtestComparisonSchema.safeParse({ strategy, benchmark }).success).toBe(true);
+    expect(backtestComparisonSchema.safeParse({ strategy, benchmark: buyAndHoldFor(strategy, "A") }).success).toBe(true);
+  });
+  it.each([
+    ["total-return semantics", { adjustment: "total-return" }, "adjustment"],
+    ["raw prices", { adjustment: "raw" }, "adjustment"],
+    ["another currency", { currency: "EUR" }, "currency"],
+    ["another start month", { startMonth: "2020-02" }, "startMonth"],
+    ["another end month", { endMonth: "2020-11" }, "startMonth"],
+    ["another amount", { initialAmount: 1000.01 }, "initialAmount"],
+  ])("rejects a benchmark with %s", (_, change, field) => {
+    const result = backtestComparisonSchema.safeParse({ strategy, benchmark: { ...benchmark, ...change } });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues.map((issue) => issue.path.join("."))).toContain(`benchmark.${field}`);
   });
 });
 
