@@ -3,10 +3,12 @@ import type { ReactNode } from "react";
 import { Bookmark, BookOpenCheck, Calculator, ChartPie, Flag, Lightbulb, Sigma, SlidersHorizontal } from "lucide-react";
 import { AssetComparison, BondCashflowExplorer, DiversificationImpact, DiversificationPreview, DrawdownExplorer, EtfHoldingsVisual, GrowthComparison, LiquidityComparison, MarketQuoteExplorer, PortfolioHorizonScenario, RiskCapacityScenario, RiskScenarioExplorer, ShareExplorer, StockPositionExplorer, TimeHorizonExplorer, IndexEtfVisual } from "./foundations-explorers";
 import type { LessonBlock } from "@/features/lessons/types";
+import type { LessonHistoryEntry } from "@/features/lessons/real-history/snapshot";
 import { cn } from "@/lib/utils";
 import { CompoundingExplorer } from "./compounding-explorer";
 import { ReturnCalculator } from "./return-calculator";
 import { PriceSeriesExplorer } from "./price-series-explorer";
+import { HistoricalReturnsExercise } from "./historical-returns-exercise";
 import { RecoveryExplorer } from "./recovery-explorer";
 import { PortfolioBuilder } from "./portfolio-builder";
 
@@ -14,7 +16,7 @@ const eyebrow = "text-[11px] font-semibold tracking-[0.9px] uppercase md:text-xs
 const blockTitle = "text-[19px]/6 font-semibold tracking-[-0.3px] md:text-[21px]/[26px]";
 
 /** Presentation adapter for existing authored blocks, not a second content source. */
-export function GuidedBlock({ block }: { block: LessonBlock }) {
+export function GuidedBlock({ block, history }: { block: LessonBlock; history?: readonly LessonHistoryEntry[] }) {
   switch (block.type) {
     case "heading": return <div className="flex flex-col gap-2"><h3 className="text-[21px]/[26px] font-semibold tracking-[-0.5px] md:text-2xl/[30px]">{block.title}</h3>{block.body ? <p className="text-base/[25px] text-secondary">{block.body}</p> : null}</div>;
     case "paragraph": return <p className="text-base/[25px] text-secondary">{block.content}</p>;
@@ -49,7 +51,7 @@ export function GuidedBlock({ block }: { block: LessonBlock }) {
         <h3 id={`${block.id}-title`} className="text-xl/[26px] font-semibold tracking-[-0.3px] md:text-[22px]/7">{block.title}</h3>
         <p className="text-sm/[21px] text-secondary md:text-[15px]/[23px]">{block.description}</p>
       </div>
-      <div className="p-4 pb-[18px] md:p-7">{block.figure === "growth-comparison" ? <GrowthComparison /> : block.figure === "ownership-explorer" ? <ShareExplorer kind="ownership" /> : block.figure === "market-cap-explorer" ? <ShareExplorer kind="market-cap" /> : block.figure === "stock-position-explorer" ? <StockPositionExplorer /> : block.figure === "index-etf-visual" ? <IndexEtfVisual /> : block.figure === "etf-holdings-visual" ? <EtfHoldingsVisual /> : block.figure === "bond-cashflow-explorer" ? <BondCashflowExplorer /> : block.figure === "asset-comparison" ? <AssetComparison /> : block.figure === "market-quote-explorer" ? <MarketQuoteExplorer /> : block.figure === "liquidity-comparison" ? <LiquidityComparison /> : block.figure === "risk-scenario-explorer" ? <RiskScenarioExplorer /> : block.figure === "drawdown-explorer" ? <DrawdownExplorer /> : block.figure === "diversification-preview" ? <DiversificationPreview /> : block.figure === "time-horizon-explorer" ? <TimeHorizonExplorer /> : block.figure === "portfolio-builder" ? <PortfolioBuilder /> : block.figure === "diversification-impact" ? <DiversificationImpact /> : block.figure === "portfolio-horizon-scenario" ? <PortfolioHorizonScenario /> : block.figure === "risk-capacity-scenario" ? <RiskCapacityScenario /> : block.figure === "return-calculator" ? <ReturnCalculator /> : block.figure === "price-series-explorer" ? <PriceSeriesExplorer /> : block.figure === "compounding-explorer" ? <CompoundingExplorer /> : block.figure === "recovery-explorer" ? <RecoveryExplorer /> : null}</div>
+      <div className="p-4 pb-[18px] md:p-7">{block.figure === "growth-comparison" ? <GrowthComparison /> : block.figure === "ownership-explorer" ? <ShareExplorer kind="ownership" /> : block.figure === "market-cap-explorer" ? <ShareExplorer kind="market-cap" /> : block.figure === "stock-position-explorer" ? <StockPositionExplorer /> : block.figure === "index-etf-visual" ? <IndexEtfVisual /> : block.figure === "etf-holdings-visual" ? <EtfHoldingsVisual /> : block.figure === "bond-cashflow-explorer" ? <BondCashflowExplorer /> : block.figure === "asset-comparison" ? <AssetComparison /> : block.figure === "market-quote-explorer" ? <MarketQuoteExplorer /> : block.figure === "liquidity-comparison" ? <LiquidityComparison /> : block.figure === "risk-scenario-explorer" ? <RiskScenarioExplorer /> : block.figure === "drawdown-explorer" ? <DrawdownExplorer /> : block.figure === "diversification-preview" ? <DiversificationPreview /> : block.figure === "time-horizon-explorer" ? <TimeHorizonExplorer /> : block.figure === "portfolio-builder" ? <PortfolioBuilder /> : block.figure === "diversification-impact" ? <DiversificationImpact /> : block.figure === "portfolio-horizon-scenario" ? <PortfolioHorizonScenario /> : block.figure === "risk-capacity-scenario" ? <RiskCapacityScenario /> : block.figure === "return-calculator" ? <ReturnCalculator /> : block.figure === "price-series-explorer" ? <PriceSeriesExplorer /> : block.figure === "historical-period-returns" ? <HistoricalReturnsExercise mode="period" history={history} /> : block.figure === "historical-cumulative-returns" ? <HistoricalReturnsExercise mode="cumulative" history={history} /> : block.figure === "compounding-explorer" ? <CompoundingExplorer /> : block.figure === "recovery-explorer" ? <RecoveryExplorer /> : null}</div>
     </section>;
     default: return null; // Questions own their Check → feedback → Continue interaction.
   }

@@ -186,6 +186,28 @@ try {
   await page.getByRole("radio").first().check();
   await page.getByRole("button", { name: "Zkontrolovat odpověď", exact: true }).click();
   await heading("Správně");
+  // Historical-data practice: deterministic mode serves sample fixtures, which must never be called historical or live.
+  await next("Slož výnosy reálného instrumentu");
+  const exercise = page.getByRole("region", { name: "Cvičení na historických cenách", exact: true });
+  await exercise.getByText("Ukázková data · pevná data pro výuku, ne skutečný vývoj trhu", { exact: true }).waitFor();
+  assert.equal(await exercise.getByText(/Historická data|\bLive\b|[Aa]ktuální cena/).count(), 0, "Sample fixtures are not labelled as historical or live");
+  assert.equal(await exercise.getByRole("link", { name: "Podívej se na tenhle instrument v Labu" }).getAttribute("href"), "/lab/instruments/US-XNAS%3AAAPL");
+  const cumulativeInput = exercise.getByRole("textbox", { name: /^Kumulativní výnos/ });
+  const checkCalculation = exercise.getByRole("button", { name: "Zkontrolovat výpočet", exact: true });
+  await cumulativeInput.fill("13,75"); // The arithmetic sum of the period returns, not the compounded result.
+  await checkCalculation.click();
+  await exercise.getByText("Zatím to nesedí.", { exact: true }).waitFor();
+  await cumulativeInput.fill("14");
+  await checkCalculation.click();
+  await exercise.getByText("Správně.", { exact: true }).waitFor();
+  assert.equal(await exercise.getByText(/^\+13,75\s%$/).count(), 1, "The arithmetic sum is shown next to the compounded result");
+  await exercise.getByRole("button", { name: "VWCE · fond ETF", exact: true }).click();
+  assert.equal(await exercise.getByRole("button", { name: "VWCE · fond ETF", exact: true }).getAttribute("aria-pressed"), "true");
+  await cumulativeInput.fill("1");
+  await checkCalculation.click();
+  await exercise.getByRole("button", { name: "Ukázat řešení", exact: true }).click();
+  await exercise.getByText(/^Řešení: \+3,33\s%\.$/).waitFor();
+  for (const width of [320, 390, 768, 1440]) { await page.setViewportSize({ width, height: 900 }); await overflow(); }
   await next("Spoj si to dohromady");
   assert.equal((await row()).status, "in_progress", "Reaching the end does not auto-complete");
   await page.getByRole("button", { name: "Dokončit lekci", exact: true }).click();
@@ -213,6 +235,31 @@ try {
   assert.deepEqual(await row(), completed, "Review never modifies persisted completion or cursor");
   await page.goto(`${baseURL}/learn/returns/simple-returns`);
   assert.equal(await page.locator(".investi-theme").count(), 1, "Lesson 2 uses the shared theme");
+  // Lesson 2's historical-data step: jump the disposable learner's cursor there instead of replaying every question.
+  await heading("Jedno období po druhém");
+  // Opening the lesson marks it started in the background; wait for that row before moving its cursor.
+  for (let attempt = 0; !(await sql`select 1 from lesson_progress where user_id = ${userId} and lesson_id = 'returns-simple-returns'`).length; attempt++) {
+    assert.ok(attempt < 50, "Opening lesson 2 marks it started");
+    await page.waitForTimeout(100);
+  }
+  await sql`update lesson_progress set last_position = 9 where user_id = ${userId} and lesson_id = 'returns-simple-returns'`;
+  await page.reload();
+  await heading("Vyzkoušej to na reálných datech");
+  const periodExercise = page.getByRole("region", { name: "Cvičení na historických cenách", exact: true });
+  await periodExercise.getByText("Ukázková data · pevná data pro výuku, ne skutečný vývoj trhu", { exact: true }).waitFor();
+  assert.ok(await periodExercise.getByText("Odhalí se po kontrole").first().isVisible(), "Period returns stay hidden until the learner checks a calculation");
+  const periodInput = periodExercise.getByRole("textbox", { name: /^Výnos za 1\. období/ });
+  await periodInput.fill("1"); // Sign error: the price fell.
+  await periodExercise.getByRole("button", { name: "Zkontrolovat výpočet", exact: true }).click();
+  await periodExercise.getByText("Zatím to nesedí.", { exact: true }).waitFor();
+  await periodInput.fill("-1");
+  await periodExercise.getByRole("button", { name: "Zkontrolovat výpočet", exact: true }).click();
+  await periodExercise.getByText("Správně.", { exact: true }).waitFor();
+  await periodExercise.getByRole("cell", { name: /^R₃: \+10,20\s%$/ }).waitFor();
+  for (const width of [320, 390, 768, 1440]) { await page.setViewportSize({ width, height: 900 }); await overflow(); }
+  await next("Shrň si to");
+  await saved();
+  assert.equal((await sql`select last_position from lesson_progress where user_id = ${userId} and lesson_id = 'returns-simple-returns'`)[0].last_position, 10, "The ungraded practice step advances like any other step");
   const actionableErrors = errors.filter((message) => !message.startsWith("You have Reduced Motion enabled on your device."));
   assert.deepEqual(actionableErrors, [], "No unexpected console or hydration errors");
   console.log("All lesson steps, feedback, explorers, explicit completion, refresh, sign-out/sign-in, review, and reduced motion passed.");

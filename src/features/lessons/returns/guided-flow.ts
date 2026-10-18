@@ -26,6 +26,7 @@ const simpleSteps: Step[] = [
   { title: "Desetinná čísla a procenta", blocks: ["representation", "decimal-callout", "decimal-practice"] },
   { title: "Spočítej výnosová pozorování", blocks: ["comparison"] },
   { title: "Promysli dvě období", blocks: ["practice", "two-periods"] },
+  { title: "Vyzkoušej to na reálných datech", blocks: ["real-series", "real-series-figure"] },
   { title: "Shrň si to", blocks: ["raw-differences", "takeaway", "checkpoint"] },
 ];
 const comparingSteps: Step[] = [

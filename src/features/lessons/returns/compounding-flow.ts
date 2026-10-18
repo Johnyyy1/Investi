@@ -11,6 +11,7 @@ export const compoundingSteps = [
   { title: "Propoj výnosy s cenami", blocks: ["price-series", "price-series-example", "multi-period"] },
   { title: "Zotavení po ztrátě", blocks: ["asymmetry", "recovery-explorer", "loss-practice"] },
   { title: "Ověř si porozumění", blocks: ["concept"] },
+  { title: "Slož výnosy reálného instrumentu", blocks: ["real-history", "real-history-figure"] },
   { title: "Spoj si to dohromady", blocks: ["takeaway", "checkpoint"] },
 ] as const;
 

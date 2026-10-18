@@ -15,6 +15,7 @@ export const compoundingAndCumulativeReturnsLesson: AuthoredLesson = {
     { id: "explore", label: "Prozkoumej složené zhodnocení" },
     { id: "asymmetry", label: "Asymetrie ztráty" },
     { id: "practice", label: "Procvičení" },
+    { id: "real-history", label: "Reálná historie" },
   ],
   navigation: { previous: { href: "/learn/returns/simple-returns", label: "Jednoduché výnosy" }, next: { href: "/learn/returns/comparing-investments", label: returnsLessons[3].title } },
   blocks: [
@@ -38,6 +39,8 @@ export const compoundingAndCumulativeReturnsLesson: AuthoredLesson = {
     { id: "recovery-explorer", type: "interactiveFigure", figure: "recovery-explorer", title: "Potřebné zotavení po ztrátě", description: "Vyzkoušej velikost ztráty. Potřebný zisk pro zotavení vychází z 1 ÷ (1 − ztráta) − 1." },
     { id: "loss-practice", type: "numericQuestion", prompt: "Investice klesne o 50 %. Jaký výnos je od nové hodnoty potřeba k návratu na původní hodnotu?", answer: 100, tolerance: 0.05, unit: "%", correctExplanation: "Po ztrátě 50 % se ze 100 stane 50. K návratu na 100 je potřeba zisk 50 ze základu 50: 50 ÷ 50 = 100 %.", incorrectExplanation: "Ztráta 50 % hodnotu rozpůlí. Zotavení začíná z této poloviční hodnoty, takže je potřeba ji zdvojnásobit: +100 %." },
     { id: "concept", type: "multipleChoiceQuestion", prompt: "Proč se jednoduché výnosy za jednotlivá období obvykle nedají sečíst pro výpočet kumulativního výsledku?", options: [{ id: "a", label: "Protože výnos každého období se počítá z hodnoty vytvořené předchozími obdobími." }, { id: "b", label: "Protože procenta se ve financích nikdy nedají sčítat." }, { id: "c", label: "Protože kumulativní výnos se vždy rovná konečné změně ceny v korunách." }], correctOptionId: "a", correctExplanation: "Každý výnos působí na měnící se základ. Násobení růstových faktorů tuto posloupnost zachytí, zatímco prosté sčítání obvykle ne.", incorrectExplanation: "Problémem je měnící se základní hodnota. Výnosy někdy lze sečíst jako aproximaci, ale přesný kumulativní výsledek vzniká složením růstových faktorů." },
+    { id: "real-history", type: "heading", title: "Od výnosů za období ke kumulativnímu výnosu.", body: "Stejné období, dva instrumenty: akcie a široký fond ETF. Z výnosů za jednotlivá období slož kumulativní výnos a porovnej ho s přímým výpočtem z první a poslední ceny." },
+    { id: "real-history-figure", type: "interactiveFigure", figure: "historical-cumulative-returns", title: "Kumulativní výnos z historických cen", description: "Vyber instrument a vynásob růstové faktory všech období. Po kontrole uvidíš, proč prostý součet výnosů dává jiné číslo." },
     { id: "takeaway", type: "takeaway", title: "Shrnutí", content: "Výnos za období popisuje jeden interval. Kumulativní výnos popisuje celou posloupnost. K jeho výpočtu a výpočtu konečné hodnoty násob růstové faktory; výnosy za období nesčítej." },
     { id: "checkpoint", type: "checkpoint", label: "Než budeš pokračovat", content: "Teď umíš rozlišit výnos za období, kumulativní výnos a konečnou hodnotu, složit posloupnost pomocí růstových faktorů a vysvětlit, proč se stejně velké procentní zisky a ztráty nevyruší." },
   ],

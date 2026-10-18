@@ -4,9 +4,9 @@ import { compoundingSteps, getCompoundingSteps } from "./compounding-flow";
 import { isQuestion } from "../question-evaluation";
 
 describe("production compounding presentation", () => {
-  it("preserves every authored block exactly once in ten learning steps", () => {
+  it("preserves every authored block exactly once in eleven learning steps", () => {
     const steps = getCompoundingSteps(lesson);
-    expect(steps).toHaveLength(10);
+    expect(steps).toHaveLength(11);
     expect(steps.flatMap((step) => step.blocks)).toEqual(lesson.blocks);
     expect(new Set(compoundingSteps.flatMap((step) => [...step.blocks])).size).toBe(lesson.blocks.length);
   });
