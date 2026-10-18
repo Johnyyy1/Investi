@@ -75,6 +75,14 @@ Extended hours, unscheduled exchange closures, and early-close sessions are not 
 
 If one holding cannot be valued, that holding is marked unavailable and is never treated as zero. Other holdings retain their individual values, while aggregate portfolio value, allocation, and gain/loss remain incomplete until every open holding has a valid valuation. Authentication, rate-limit, provider, instrument, quote, and FX failures remain distinct on the server and are reduced to concise UI messages.
 
+## Lesson history
+
+The lessons *Jednoduché výnosy* and *Složené a kumulativní výnosy* each have one ungraded exercise on the history of a stock and a broad ETF (`src/features/lessons/real-history`). The real history is not committed to the repository: FMP's terms do not allow copying or redistributing its data without a separate licence. The lesson page therefore loads it on the server through `MarketDataService`, so it uses the same cache and normalized failures as the instrument detail.
+
+Determinism comes from a fixed plan instead of a stored file. Each provider has a fixed past window and fixed anchor dates (FMP: AAPL and SPY at the 2023 year-end and every 2024 quarter-end; deterministic mode: the AAPL and VWCE sample fixtures). Each anchor takes the last split-adjusted close on or before it, at most 7 days earlier. A missing anchor, unsorted or duplicate dates, a non-positive close, or a different basis makes that instrument unavailable. A gap is never filled. Answers are checked against the frozen points shown on screen, so the result does not depend on the date of the visit. SPY stands in for a world ETF because VT and VWCE are not on the current FMP plan.
+
+The label follows provenance. Only non-deterministic `historical` data is shown as „Historická data · {zdroj} · stav k {datum}“, always with „jen cena, bez dividend“ and the retrieval date. Deterministic fixtures are shown as „Ukázková data“. The exercises do not affect lesson completion or rewards.
+
 ## Cache policy
 
 FMP services use a small process-local cache of normalized successful results with lazy expiry:

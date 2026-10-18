@@ -49,7 +49,7 @@ export function PriceSeriesExplorer() {
   const selectPeriod = (index: number) => <Button variant="ghost" className="min-h-11 px-3" aria-label={`Prohlédnout období ${index + 1}`} aria-pressed={index === activePeriod} onClick={() => setActivePeriod(index)}>Prohlédnout</Button>;
 
   return <section aria-label="Průzkumník výnosů za období" className="min-w-0 space-y-6">
-    <p className="text-small text-secondary">Ukázková cenová řada · pevná data pro výuku · leden 2026 · CZK</p>
+    <p className="text-small text-secondary">Ukázková data · pevná data pro výuku · leden 2026 · CZK</p>
     <LearningChart data={prices.map((point) => ({ label: point.label, value: point.price }))} title="Cenová data" description="100 → 103 → 101 → 106. Ceny jsou úrovně při čtyřech po sobě jdoucích pozorováních." valueLabel="Cena" formatValue={formatPrice} yDomain={[95, 110]} />
     <div>
       <h3 className="text-card-title font-semibold">Výnosová data</h3>
