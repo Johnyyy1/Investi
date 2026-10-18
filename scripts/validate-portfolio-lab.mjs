@@ -349,6 +349,43 @@ try {
   await targetsAtLeast44(page, ["#instrument-search"]);
   await responsive(page, "overview-holdings", { ready: () => page.getByTestId("portfolio-value").waitFor() });
 
+  // Sector and country exposure: AAPL whole, VWCE looked through, cash and unclassified shares named.
+  const splitSwitch = legend.getByRole("group", { name: "Rozložení podle" });
+  assert.equal(await splitSwitch.getByRole("button", { name: "Typ aktiva", exact: true }).getAttribute("aria-pressed"), "true", "the asset-type view comes first");
+  const exposureRows = async (dimension) => {
+    const rows = await legend.getByTestId(`exposure-${dimension}`).locator("li").evaluateAll((items) => items.map((item) => ({
+      label: item.querySelector("span")?.textContent ?? "",
+      share: item.querySelector("strong")?.textContent ?? "",
+      detail: item.querySelector("small")?.textContent ?? "",
+    })));
+    const total = rows.reduce((sum, row) => sum + minorFromCzk(row.detail.split(" · ")[0]), 0n);
+    assert.equal(total, afterEtf.total, `${dimension}: the categories add up exactly to the portfolio value`);
+    const percent = rows.reduce((sum, row) => sum + Number(row.share.replace(/[\s %]/g, "").replace(",", ".")), 0);
+    assert.ok(Math.abs(percent - 100) <= rows.length * 0.05 + 1e-9, `${dimension}: shares add up to 100 % within display rounding (${percent})`);
+    return rows;
+  };
+  await splitSwitch.getByRole("button", { name: "Sektor", exact: true }).click();
+  assert.equal(await splitSwitch.getByRole("button", { name: "Sektor", exact: true }).getAttribute("aria-pressed"), "true");
+  const sectorRows = await exposureRows("sector");
+  assert.equal(sectorRows[0].label, "Technologie", "the stock and the fund's technology share land in one sector");
+  assert.match(clean(sectorRows[0].detail), /AAPL, VWCE$/, "the sector names both holdings that feed it");
+  assert.ok(sectorRows.some(({ label, detail }) => label === "Finance" && /VWCE$/.test(clean(detail))), "VWCE is looked through into its other sectors");
+  assert.equal(sectorRows.at(-1).label, "Hotovost", "cash is its own category");
+  assert.equal(sectorRows.some(({ label }) => label === "Neznámé"), false, "the sample fund's sectors cover 100 %");
+  assert.match(clean(await legend.getByTestId("exposure-sector-largest").textContent()), /^Největší sektor: Technologie \d+,\d %$/, "an explainable rule, not a score");
+  assert.equal(await legend.getByText(/\d+\s?\/\s?100|skóre/).count(), 0, "no composite score");
+  await splitSwitch.getByRole("button", { name: "Země", exact: true }).click();
+  const countryRows = await exposureRows("country");
+  assert.equal(countryRows[0].label, "Spojené státy", "AAPL's US and VWCE's United States meet in one country");
+  assert.match(clean(countryRows[0].detail), /AAPL, VWCE$/);
+  assert.ok(countryRows.some(({ label }) => label === "Japonsko"));
+  assert.ok(countryRows.some(({ label }) => label === "Neznámé"), "the fund's unreported countries are shown, not dropped");
+  await legend.getByText("VWCE: zdroj nerozepsal celý fond", { exact: false }).waitFor();
+  await targetsAtLeast44(page, ['section[aria-labelledby="allocation-title"] [role="group"] button']);
+  await responsive(page, "overview-countries", { reloadEachWidth: false });
+  await splitSwitch.getByRole("button", { name: "Sektor", exact: true }).click();
+  await responsive(page, "overview-sectors", { reloadEachWidth: false });
+
   // Selling stays a single-instrument flow on the instrument page; oversell is refused by the server.
   await page.getByTestId("holding-AAPL").getByRole("link").click();
   await page.waitForURL(/\/lab\/instruments\/US-XNAS%3AAAPL/);
@@ -395,6 +432,7 @@ try {
   assert.match(clean(await page.getByTestId("holding-NVDA").innerText()), /nakoupeno 22 Kč|22 Kč/);
   await page.getByRole("button", { name: "Načíst znovu" }).click();
   await page.getByRole("heading", { name: "Co víme jistě" }).waitFor();
+  assert.equal(await page.getByTestId(/^exposure-/).count(), 0, "a missing price shows no sector or country split at all, never zeros");
   await responsive(page, "unavailable", { ready: () => page.getByRole("heading", { name: "Co víme jistě" }).waitFor() });
   const tradesBlocked = (await sql`select count(*)::int as count from portfolio_trade where portfolio_id = ${activePortfolioId}`)[0].count;
 
@@ -428,7 +466,7 @@ try {
   assert.equal((await sql`select count(*)::int as count from portfolio_allocation where portfolio_id = ${generations[0].id}`)[0].count, 0, "single orders never write a mix");
   await page.screenshot({ path: `${screenshotDir}/post-reset-1440.png`, fullPage: true });
   assert.deepEqual(errors, [], "Portfolio Lab has no browser errors");
-  console.log("PASS: locked, zero capital, first visit, instrument buy/sell, search → detail → buy, split in koruny, price/FX attribution, unavailable prices, reset, 44 px targets, responsive layouts and 200% text. Screenshots:", screenshotDir);
+  console.log("PASS: locked, zero capital, first visit, instrument buy/sell, search → detail → buy, split in koruny, sector/country look-through, price/FX attribution, unavailable prices, reset, 44 px targets, responsive layouts and 200% text. Screenshots:", screenshotDir);
 } finally {
   await browser.close();
   if (userId) await sql`delete from "user" where id = ${userId}`;

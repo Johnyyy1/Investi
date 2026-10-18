@@ -19,6 +19,7 @@ import { foldTrades, valuePortfolio, type LedgerTrade } from "./domain";
 import { tradeInputSchema } from "./input";
 import {
   loadPortfolioInstrumentPreview,
+  observeHoldingClassification,
   observePortfolioExecution,
   observePortfolioHoldingValue,
   type PortfolioMarketDataGateway,
@@ -426,5 +427,30 @@ describe("Portfolio market-data failures", () => {
       unitPrice: "1",
       fxRateToBase: "1",
     }).success).toBe(false);
+  });
+});
+
+describe("Portfolio holding classification", () => {
+  const sample: PortfolioMarketDataGateway = { provider: "deterministic", fxProvider: "deterministic", service: createDeterministicMarketDataService() };
+
+  it("classifies an equity whole by its profile and an ETF by its reported weights", async () => {
+    expect(await observeHoldingClassification(sample, { instrumentId: "US-XNAS:AAPL", assetType: "equity" })).toEqual({
+      instrumentId: "US-XNAS:AAPL",
+      sector: [{ key: "Technology", weightUnits: 1_000_000n }],
+      country: [{ key: "US", weightUnits: 1_000_000n }],
+    });
+    const vwce = await observeHoldingClassification(sample, { instrumentId: "IE-XETR:VWCE", assetType: "etf" });
+    expect(vwce.sector?.[0]).toEqual({ key: "Technology", weightUnits: 252_000n });
+    expect(vwce.country?.[0]).toEqual({ key: "US", weightUnits: 581_000n });
+    expect(vwce.country?.reduce((sum, { weightUnits }) => sum + weightUnits, 0n)).toBe(868_000n);
+  });
+
+  it("leaves unclassifiable holdings null instead of guessing", async () => {
+    expect(await observeHoldingClassification(sample, { instrumentId: "CZ-XPRA:CZGB35", assetType: "bond" })).toEqual({ instrumentId: "CZ-XPRA:CZGB35", sector: null, country: null });
+    // An identity from another provider, and an ETF the source has no breakdown for.
+    expect(await observeHoldingClassification(sample, { instrumentId: "FMP:NASDAQ:NVDA", assetType: "equity" })).toMatchObject({ sector: null, country: null });
+    const service = createDeterministicMarketDataService();
+    vi.spyOn(service, "getEtfAnalytics").mockRejectedValue(new MarketDataError("ProviderConfiguration", "restricted"));
+    expect(await observeHoldingClassification({ ...sample, service }, { instrumentId: "IE-XETR:VWCE", assetType: "etf" })).toMatchObject({ sector: null, country: null });
   });
 });

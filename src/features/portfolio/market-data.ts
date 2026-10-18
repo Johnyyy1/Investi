@@ -4,6 +4,7 @@ import type { Currency, FxRate, Instrument, MarketSessionState, Quote, QuoteUsab
 import type { FxDataProviderName, MarketDataProviderName } from "@/features/market-data/composition";
 import { isMarketDataError, MarketDataError } from "@/features/market-data/errors";
 import type { MarketDataService } from "@/features/market-data/service";
+import type { EtfAllocation } from "@/features/market-data/etf-analytics";
 import {
   fxToDecimal,
   fxUnitsFromNumber,
@@ -12,7 +13,10 @@ import {
   PortfolioInputError,
   priceToDecimal,
   priceUnitsFromNumber,
+  weightUnitsFromFraction,
+  WEIGHT_SCALE,
 } from "./decimal";
+import { exposureKey, type ExposureDimension, type ExposureWeight } from "./exposure";
 
 export interface PortfolioMarketDataGateway {
   provider: MarketDataProviderName;
@@ -296,5 +300,48 @@ export async function observeAllocationQuote(
   } catch (error) {
     if (isMarketDataError(error) && (error.code === "InstrumentNotFound" || error.code === "UnsupportedInstrument")) return { instrumentId, status: "unsupported", ...empty };
     return { instrumentId, status: "unavailable", ...empty };
+  }
+}
+
+export interface HoldingClassification {
+  instrumentId: string;
+  /** null when the source does not classify this instrument; the exposure then counts it as unknown. */
+  sector: ExposureWeight[] | null;
+  country: ExposureWeight[] | null;
+}
+
+function fundBreakdown(dimension: ExposureDimension, rows: readonly EtfAllocation[] | undefined): ExposureWeight[] | null {
+  if (!rows || rows.length === 0) return null;
+  return rows.map((row) => ({ key: exposureKey(dimension, row.name), weightUnits: weightUnitsFromFraction(row.weight) }));
+}
+
+function wholeInstrument(dimension: ExposureDimension, name: string | null | undefined): ExposureWeight[] | null {
+  return name ? [{ key: exposureKey(dimension, name), weightUnits: WEIGHT_SCALE }] : null;
+}
+
+/**
+ * Sector and country classification of one holding: an equity's own profile, or an ETF's
+ * reported sector and country weights (look-through). Classification never blocks the
+ * portfolio: a source that cannot classify the instrument yields null, never a guess.
+ */
+export async function observeHoldingClassification(
+  gateway: PortfolioMarketDataGateway,
+  holding: { instrumentId: string; assetType: string },
+): Promise<HoldingClassification> {
+  const unclassified = { instrumentId: holding.instrumentId, sector: null, country: null };
+  try {
+    assertCompatibleInstrumentId(gateway, holding.instrumentId);
+    if (holding.assetType === "etf") {
+      const snapshot = await gateway.service.getEtfAnalytics(holding.instrumentId);
+      return { instrumentId: holding.instrumentId, sector: fundBreakdown("sector", snapshot.sectors?.value), country: fundBreakdown("country", snapshot.countries?.value) };
+    }
+    if (holding.assetType === "equity") {
+      const profile = (await gateway.service.getInstrumentMetadata(holding.instrumentId)).equityProfile;
+      return { instrumentId: holding.instrumentId, sector: wholeInstrument("sector", profile?.sector), country: wholeInstrument("country", profile?.country) };
+    }
+    return unclassified;
+  } catch (error) {
+    if (!isMarketDataError(error)) throw error;
+    return unclassified;
   }
 }
