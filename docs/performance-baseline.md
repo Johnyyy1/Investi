@@ -626,3 +626,9 @@ Follow-ups that would cut early bytes. Each one is a design or platform decision
 npm run build && npx next start -p 3462
 npx -y lighthouse@13.5.0 http://localhost:3462/ --only-categories=performance --form-factor=mobile --chrome-flags="--headless=new"
 ```
+
+## Phase 7: fonts and KaTeX CSS (checked 2026-10-18, issue #46)
+
+Fonts were settled in #47: the root layout loads only Manrope and Inter through `src/styles/fonts.ts`, both with `latin` + `latin-ext` and `display: "swap"`. Nunito Sans and `LearningTheme` are gone, so Phase 6 follow-up 1 no longer applies. `/` and `/sign-in` preload four font files: Inter and Manrope, each in Latin and Latin Extended, so Czech diacritics arrive with the first paint.
+
+`katex/dist/katex.min.css` (24.8 KB, 4 KB gzip) was imported by the root layout, so every page downloaded it. It is now imported by the two components that render formulas, `FormulaBlock` and `GuidedBlock`. In the production build the KaTeX chunk is referenced only by `/learn/[moduleSlug]/[lessonSlug]` and the dev-only `/dev/design-system`. `/`, `/sign-in`, `/sign-up`, `/privacy` and the 404 page no longer link it. `test:log-returns-browser` asserts that KaTeX's rules still apply in a lesson.

@@ -105,6 +105,8 @@ try {
   await layout("multiplication");
   await next(titles[2]);
   assert.equal(await page.locator("math").count(), 1);
+  // KaTeX CSS is imported by the formula components, not the root layout: its rules must still apply here.
+  assert.deepEqual(await page.locator(".katex").first().evaluate((el) => ({ font: getComputedStyle(el).fontFamily.split(",")[0], mathml: getComputedStyle(el.querySelector(".katex-mathml")).position })), { font: "KaTeX_Main", mathml: "absolute" });
   await layout("definition", true);
   // The step shows before its cursor is saved; reload once the save has landed.
   await page.locator('main[data-save-state="idle"]').waitFor();
