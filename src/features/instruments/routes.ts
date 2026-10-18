@@ -1,4 +1,5 @@
 import type { InstrumentId } from "@/features/market-data/contracts";
+import type { ChartRange } from "./history";
 
 /** Resolve either a raw encoded segment or a segment decoded once by Next. */
 export function resolveInstrumentRouteParam(value: unknown): InstrumentId | null {
@@ -24,4 +25,23 @@ export function resolveInstrumentRouteParam(value: unknown): InstrumentId | null
 export function instrumentDetailHref(instrumentId: InstrumentId): string {
   if (resolveInstrumentRouteParam(instrumentId) === null) throw new Error("Invalid instrument identity");
   return `/lab/instruments/${encodeURIComponent(instrumentId)}`;
+}
+
+/** Query values are already decoded once; reject any value the route decoder would change, never rewrite it. */
+export function resolveInstrumentQueryParam(value: unknown): InstrumentId | null {
+  const instrumentId = resolveInstrumentRouteParam(value);
+  return instrumentId !== null && instrumentId === value ? instrumentId : null;
+}
+
+/** `/lab/compare?a=…&b=…&range=…`; a missing instrument opens the picker for it. */
+export function instrumentCompareHref(first: InstrumentId | null, second: InstrumentId | null = null, range?: ChartRange): string {
+  const query = new URLSearchParams();
+  for (const [key, instrumentId] of [["a", first], ["b", second]] as const) {
+    if (instrumentId === null) continue;
+    if (resolveInstrumentQueryParam(instrumentId) === null) throw new Error("Invalid instrument identity");
+    query.set(key, instrumentId);
+  }
+  if (range) query.set("range", range);
+  const search = query.toString();
+  return search ? `/lab/compare?${search}` : "/lab/compare";
 }

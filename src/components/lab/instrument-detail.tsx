@@ -1,7 +1,7 @@
 "use client";
 
 import { AppLink as Link } from "@/components/shell/app-link";
-import { Check, ChevronRight, X } from "lucide-react";
+import { Check, ChevronRight, GitCompareArrows, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type MouseEvent } from "react";
 import { BuyReview } from "@/components/lab/buy-review";
@@ -9,10 +9,11 @@ import { InstrumentPriceChart } from "@/components/lab/instrument-price-chart";
 import { InstrumentReturnAnalytics } from "@/components/lab/instrument-return-analytics";
 import { EquityKeyMetrics } from "@/components/lab/equity-key-metrics";
 import { EtfAnalytics } from "@/components/lab/etf-analytics";
-import { Button, IconButton } from "@/components/ui/button";
+import { Button, ButtonLink, IconButton } from "@/components/ui/button";
 import { Feedback } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/form-controls";
 import type { ChartRange } from "@/features/instruments/history";
+import { instrumentCompareHref } from "@/features/instruments/routes";
 import type { PriceMetrics } from "@/features/instruments/price-metrics";
 import type { HistoricalPricePoint, Instrument, MarketSessionState, QuoteUsabilityStatus } from "@/features/market-data/contracts";
 import type { EquityFundamentalsSnapshot } from "@/features/market-data/equity-fundamentals";
@@ -139,7 +140,10 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points, 
           <div className="flex min-w-0 flex-wrap items-center gap-3"><h1 className="min-w-0 wrap-anywhere text-page-title font-bold tracking-[-0.025em]">{instrument.name}</h1>{showSampleDataIndicator(portfolio.marketDataMode) ? <span className="rounded-control border border-border bg-surface-muted px-2.5 py-1 text-microcopy font-semibold text-secondary">Ukázková data</span> : null}</div>
           <p className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-small text-secondary"><span className="rounded-control bg-surface-muted px-2 py-0.5 font-bold text-foreground tabular-nums">{instrument.symbol}</span><span className="min-w-0 wrap-anywhere">{assetTypeLabel(instrument.assetType)}{instrument.exchangeMic ? ` · burza ${instrument.exchangeMic}` : ""} · obchoduje se v {instrument.quoteCurrency}</span></p>
         </div>
-        {canInvest ? <Button onClick={openBuy} className="hidden sm:inline-flex sm:w-auto">Koupit {instrument.symbol}</Button> : null}
+        <div className="flex flex-wrap items-center gap-3">
+          {instrument.assetType !== "cash" ? <ButtonLink href={instrumentCompareHref(instrument.instrumentId, null, range)} variant="secondary" size="compact" className="min-h-[52px]"><GitCompareArrows aria-hidden="true" className="size-4" />Porovnat s…</ButtonLink> : null}
+          {canInvest ? <Button onClick={openBuy} className="hidden sm:inline-flex sm:w-auto">Koupit {instrument.symbol}</Button> : null}
+        </div>
       </div>
     </header>
 

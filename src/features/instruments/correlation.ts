@@ -47,10 +47,11 @@ export const MIN_CORRELATION_OBSERVATIONS = 20;
 /** Return dispersion at or below this counts as no variation; real daily returns vary far more. */
 const MIN_RETURN_DEVIATION = 1e-12;
 
-type AlignedClose = { date: string; first: number; second: number };
+export type AlignedClose = { date: string; first: number; second: number };
 type PairedReturn = { startDate: string; endDate: string; first: number; second: number };
 
-function commonCloses(first: readonly PriceMetricObservation[], second: readonly PriceMetricObservation[]): AlignedClose[] {
+/** Closes on the dates both series traded, in the first series' order; nothing is forward-filled. */
+export function commonCloses(first: readonly PriceMetricObservation[], second: readonly PriceMetricObservation[]): AlignedClose[] {
   const secondByDate = new Map(second.map((point) => [point.date, point.close]));
   return first.flatMap((point) => {
     const close = secondByDate.get(point.date);

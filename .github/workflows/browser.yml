@@ -84,6 +84,12 @@ jobs:
         env:
           PORTFOLIO_TEST_URL: ${{ env.APP_URL }}
           PORTFOLIO_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/portfolio
+      - name: Instrument comparison
+        if: ${{ !cancelled() }}
+        run: npm run test:compare-browser
+        env:
+          COMPARE_TEST_URL: ${{ env.APP_URL }}
+          COMPARE_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/compare
       - name: Progression
         if: ${{ !cancelled() }}
         run: npm run test:progression-browser

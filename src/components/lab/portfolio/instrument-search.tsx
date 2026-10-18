@@ -13,8 +13,17 @@ type SearchState = "idle" | "loading" | "results" | "empty" | "error";
 
 const typeLabel = (assetType: string | null) => assetType === "equity" ? "Akcie" : assetType === "etf" ? "ETF" : assetType === "bond" ? "Dluhopis" : "Typ se ověřuje";
 
-/** Search → instrument detail. Buying happens on the detail page, one order at a time. */
-export function InstrumentSearch({ id = "instrument-search", label = "Koupit akcii, ETF nebo dluhopis", sample }: { id?: string; label?: string; sample: boolean }) {
+/** Where a chosen result leads, and how the field says so. */
+export type InstrumentSearchTarget = { href: (instrumentId: string) => string; hint: string; opening: string };
+
+const detailTarget: InstrumentSearchTarget = {
+  href: instrumentDetailHref,
+  hint: "Zadej aspoň dva znaky. Výběrem otevřeš detail s grafem, kde můžeš nakoupit.",
+  opening: "Otevírám detail…",
+};
+
+/** Search → instrument detail by default. Buying happens on the detail page, one order at a time. */
+export function InstrumentSearch({ id = "instrument-search", label = "Koupit akcii, ETF nebo dluhopis", sample, target = detailTarget }: { id?: string; label?: string; sample: boolean; target?: InstrumentSearchTarget }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<readonly InstrumentSearchResult[]>([]);
@@ -47,7 +56,7 @@ export function InstrumentSearch({ id = "instrument-search", label = "Koupit akc
   }
 
   function open(result: InstrumentSearchResult) {
-    startOpen(() => router.push(instrumentDetailHref(result.instrumentId)));
+    startOpen(() => router.push(target.href(result.instrumentId)));
   }
 
   return <section className={styles.search} aria-labelledby={`${id}-label`}>
@@ -81,7 +90,7 @@ export function InstrumentSearch({ id = "instrument-search", label = "Koupit akc
     </div> : state === "loading" ? <p role="status" className={styles.note}>Hledám…</p>
       : state === "empty" ? <p role="status" className={styles.note}>Nic jsme nenašli. Zkus jiný název nebo ticker.</p>
         : state === "error" ? <p role="alert" className={`${styles.note} ${lab.error}`}>{error}</p>
-          : <p className={styles.note}>Zadej aspoň dva znaky. Výběrem otevřeš detail s grafem, kde můžeš nakoupit.</p>}
-    {opening ? <p role="status" className={styles.note}>Otevírám detail…</p> : null}
+          : <p className={styles.note}>{target.hint}</p>}
+    {opening ? <p role="status" className={styles.note}>{target.opening}</p> : null}
   </section>;
 }
