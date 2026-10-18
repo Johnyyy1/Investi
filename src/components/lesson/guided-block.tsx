@@ -1,4 +1,5 @@
 import katex from "katex";
+import "katex/dist/katex.min.css";
 import type { ReactNode } from "react";
 import { Bookmark, BookOpenCheck, Calculator, ChartPie, Flag, Lightbulb, Sigma, SlidersHorizontal } from "lucide-react";
 import { AssetComparison, BondCashflowExplorer, DiversificationImpact, DiversificationPreview, DrawdownExplorer, EtfHoldingsVisual, GrowthComparison, LiquidityComparison, MarketQuoteExplorer, PortfolioHorizonScenario, RiskCapacityScenario, RiskScenarioExplorer, ShareExplorer, StockPositionExplorer, TimeHorizonExplorer, IndexEtfVisual } from "./foundations-explorers";

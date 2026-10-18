@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
 import { fontVariables } from "@/styles/fonts";
-import "katex/dist/katex.min.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
