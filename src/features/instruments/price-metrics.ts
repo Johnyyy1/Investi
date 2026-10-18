@@ -34,10 +34,10 @@ export type PriceMetrics = {
 const DAY_MS = 86_400_000;
 const TRADING_DAYS_PER_YEAR = 252;
 const MIN_VOLATILITY_RETURNS = 20;
-/** Gaps longer than this (in calendar days) are excluded from volatility, not bridged. */
-const MAX_VOLATILITY_GAP_DAYS = 4;
+/** Gaps longer than this (in calendar days) are excluded from volatility and correlation, not bridged. */
+export const MAX_VOLATILITY_GAP_DAYS = 4;
 
-function dayNumber(date: string) {
+export function dayNumber(date: string) {
   return Date.parse(`${date}T00:00:00.000Z`) / DAY_MS;
 }
 
