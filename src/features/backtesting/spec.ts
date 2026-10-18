@@ -87,8 +87,6 @@ export const backtestComparisonSchema = z.object({ strategy: backtestSpecSchema,
   if (benchmark.adjustment !== strategy.adjustment) issue("adjustment", "The benchmark must use the same return semantics as the strategy.");
 });
 
-export type BacktestComparison = z.infer<typeof backtestComparisonSchema>;
-
 /** The benchmark that buys and holds `instrumentId` over the strategy's own period, amount, currency and semantics. */
 export function buyAndHoldFor(strategy: BacktestSpec, instrumentId: string): BuyAndHoldBenchmark {
   const { startMonth, endMonth, initialAmount, frequency, currency, adjustment } = strategy;
