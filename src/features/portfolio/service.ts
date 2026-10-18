@@ -4,18 +4,35 @@ import type { Currency } from "@/features/market-data/contracts";
 import { attributeHolding, foldQuoteCost, impliedPurchaseFxUnits } from "./attribution";
 import { allocationBasisPoints, foldTrades, valuePortfolio, type HoldingValuation } from "./domain";
 import { decimalToPriceUnits, fxToDecimal, quantityToDecimal } from "./decimal";
+import { portfolioExposure, type ExposureDimension, type PortfolioExposure } from "./exposure";
 import { perfMeasure } from "@/lib/perf";
 import { portfolioMarketData } from "./environment";
 import {
   loadPortfolioInstrumentPreview,
   marketDataMode,
   observeAllocationQuote,
+  observeHoldingClassification,
   observePortfolioHoldingValue,
   type AllocationQuote,
   type PortfolioInstrumentPreview,
   type ValuationUnavailableReason,
 } from "./market-data";
 import { getOrCreateActivePortfolio, loadLatestAllocation, loadLedgerRows, type AllocationLineRow } from "./repository";
+
+/** Sector or country split of the whole portfolio; "unvalued" while any quote or FX is missing. */
+export type PortfolioExposureView =
+  | { status: "unvalued"; missingSymbols: string[] }
+  | {
+    status: "valued";
+    categories: Array<{
+      key: string;
+      kind: "classified" | "unknown" | "cash";
+      valueMinor: string;
+      weightBasisPoints: string;
+      contributions: Array<{ symbol: string; valueMinor: string }>;
+    }>;
+    unclassified: Array<{ symbol: string; coverage: "none" | "partial" }>;
+  };
 
 export interface PortfolioView {
   portfolioId: string;
@@ -43,6 +60,8 @@ export interface PortfolioView {
     realizedGainLossMinor: string;
     currencies: Array<{ currency: Currency; purchaseFxRate: string; currentFxRate: string; effectMinor: string }>;
   } | null;
+  /** Look-through exposure by sector and country, cash included. */
+  exposure: Record<ExposureDimension, PortfolioExposureView>;
   /** Latest saved target mix of the active generation. */
   allocation: {
     id: string;
@@ -105,7 +124,10 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
   ]);
   const baseCurrency = rows.portfolio.baseCurrency as Currency;
   const folded = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades);
-  const observations = await perfMeasure("portfolio.observeAllHoldings", "external", () => Promise.all(folded.holdings.map((holding) => perfMeasure("portfolio.observeHolding", "external", () => observePortfolioHoldingValue(portfolioMarketData, holding, baseCurrency)))));
+  const [observations, classifications] = await Promise.all([
+    perfMeasure("portfolio.observeAllHoldings", "external", () => Promise.all(folded.holdings.map((holding) => perfMeasure("portfolio.observeHolding", "external", () => observePortfolioHoldingValue(portfolioMarketData, holding, baseCurrency))))),
+    perfMeasure("portfolio.classifyHoldings", "external", () => Promise.all(folded.holdings.map((holding) => observeHoldingClassification(portfolioMarketData, holding)))),
+  ]);
   const quoteCost = foldQuoteCost(rows.trades);
   const quoteCurrency = new Map(rows.trades.map((trade) => [trade.instrumentId, trade.quoteCurrency as Currency]));
   const observationByInstrument = new Map(observations.map((observation) => [observation.instrumentId, observation]));
@@ -131,6 +153,27 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
       priceUnits: decimalToPriceUnits(observation.currentPrice),
     }, baseCurrency)] as const];
   }));
+  const symbolOf = new Map(valued.holdings.map((holding) => [holding.instrumentId, holding.symbol]));
+  const classificationOf = new Map(classifications.map((classification) => [classification.instrumentId, classification]));
+  const exposureView = (dimension: ExposureDimension): PortfolioExposureView => {
+    const exposure: PortfolioExposure = portfolioExposure(folded.cashMinor, valued.holdings.map((holding) => ({
+      instrumentId: holding.instrumentId,
+      marketValueMinor: holding.marketValueMinor,
+      breakdown: classificationOf.get(holding.instrumentId)?.[dimension] ?? null,
+    })));
+    if (exposure.status === "unvalued") return { status: "unvalued", missingSymbols: exposure.missingInstrumentIds.map((id) => symbolOf.get(id) ?? id) };
+    return {
+      status: "valued",
+      categories: exposure.categories.map((category) => ({
+        key: category.key,
+        kind: category.kind,
+        valueMinor: category.valueMinor.toString(),
+        weightBasisPoints: category.weightBasisPoints.toString(),
+        contributions: category.kind === "cash" ? [] : category.contributions.map(({ instrumentId, valueMinor }) => ({ symbol: symbolOf.get(instrumentId) ?? instrumentId, valueMinor: valueMinor.toString() })),
+      })),
+      unclassified: exposure.unclassified.map(({ instrumentId, coverage }) => ({ symbol: symbolOf.get(instrumentId) ?? instrumentId, coverage })),
+    };
+  };
   const foreign = [...new Set(valued.holdings.map(({ instrumentId }) => quoteCurrency.get(instrumentId)!).filter((currency) => currency !== baseCurrency))];
   const attribution = !valued.complete ? null : {
     priceEffectMinor: [...attributed.values()].reduce((sum, value) => sum + value.priceEffectMinor, 0n).toString(),
@@ -172,6 +215,7 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
     realizedGainLossMinor: folded.realizedGainLossMinor.toString(),
     cashWeightBasisPoints: total === null || total <= 0n ? null : allocationBasisPoints(folded.cashMinor, total).toString(),
     attribution,
+    exposure: { sector: exposureView("sector"), country: exposureView("country") },
     allocation: allocation ? {
       id: allocation.id,
       createdAt: allocation.createdAt.toISOString(),

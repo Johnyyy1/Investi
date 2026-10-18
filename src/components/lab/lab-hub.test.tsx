@@ -23,6 +23,7 @@ function view(overrides: Partial<PortfolioView> = {}): PortfolioView {
     availableCashMinor: "1000000", holdingsMarketValueMinor: "0", portfolioTotalMinor: "1000000", investmentGainLossMinor: "0", investmentGainLossBasisPoints: "0",
     valuationComplete: true, valuedHoldingsCount: 0, totalHoldingsCount: 0, marketDataMode: "market", realizedGainLossMinor: "0", cashWeightBasisPoints: "10000",
     attribution: null, allocation: null, holdings: [], recentActivity: [],
+    exposure: { sector: { status: "valued", categories: [], unclassified: [] }, country: { status: "valued", categories: [], unclassified: [] } },
     ...overrides,
   };
 }

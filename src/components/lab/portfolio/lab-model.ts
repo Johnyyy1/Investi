@@ -181,3 +181,77 @@ export function contributionStory(view: PortfolioView, contributions: readonly C
   }
   return { headline, sentences };
 }
+
+/* ── Sector and country exposure ─────────────────────────────────────────── */
+
+export type ExposureView = PortfolioView["exposure"]["sector"];
+export type ValuedExposure = Extract<ExposureView, { status: "valued" }>;
+export type ExposureRow = ValuedExposure["categories"][number];
+export type SplitBy = "type" | "sector" | "country";
+export const splitOptions: ReadonlyArray<{ id: SplitBy; label: string }> = [
+  { id: "type", label: "Typ aktiva" },
+  { id: "sector", label: "Sektor" },
+  { id: "country", label: "Země" },
+];
+
+/** Provider sector names (sample data and FMP) in Czech; an unknown name is shown as reported. */
+const sectorLabels: Readonly<Record<string, string>> = {
+  Technology: "Technologie",
+  Financials: "Finance",
+  "Financial Services": "Finance",
+  Industrials: "Průmysl",
+  Healthcare: "Zdravotnictví",
+  "Consumer goods": "Spotřební zboží",
+  "Consumer Cyclical": "Cyklická spotřeba",
+  "Consumer Defensive": "Základní spotřeba",
+  Communication: "Komunikace",
+  "Communication Services": "Komunikace",
+  Energy: "Energetika",
+  Materials: "Materiály",
+  "Basic Materials": "Materiály",
+  Utilities: "Veřejné služby",
+  "Real estate": "Nemovitosti",
+  "Real Estate": "Nemovitosti",
+  Other: "Ostatní",
+};
+
+let regionNames: Intl.DisplayNames | null | undefined;
+function countryName(code: string) {
+  if (regionNames === undefined) {
+    try { regionNames = new Intl.DisplayNames(["cs"], { type: "region" }); } catch { regionNames = null; }
+  }
+  try { return regionNames?.of(code) ?? code; } catch { return code; }
+}
+
+export function exposureLabel(dimension: Exclude<SplitBy, "type">, category: ExposureRow) {
+  if (category.kind === "cash") return "Hotovost";
+  if (category.kind === "unknown") return "Neznámé";
+  if (dimension === "sector") return sectorLabels[category.key] ?? category.key;
+  if (category.key === "Other") return "Ostatní";
+  return /^[A-Z]{2}$/.test(category.key) ? countryName(category.key) : category.key;
+}
+
+const dimensionWords = {
+  sector: { largest: "Největší sektor", one: "jednoho sektoru", it: "mu", none: "sektor" },
+  country: { largest: "Největší země", one: "jedné země", it: "jí", none: "zemi" },
+} as const;
+
+/**
+ * An explainable rule instead of a score: name the largest classified category and its share
+ * of the whole portfolio, and say plainly which holdings could not be classified.
+ */
+export function exposureFacts(dimension: Exclude<SplitBy, "type">, exposure: ValuedExposure) {
+  const words = dimensionWords[dimension];
+  const largest = exposure.categories.find(({ kind }) => kind === "classified") ?? null;
+  const missing = exposure.unclassified.filter(({ coverage }) => coverage === "none").map(({ symbol }) => symbol);
+  const partial = exposure.unclassified.filter(({ coverage }) => coverage === "partial").map(({ symbol }) => symbol);
+  const notes: string[] = [];
+  if (missing.length > 0) notes.push(`${missing.join(", ")}: zdroj ${words.none} neuvádí, proto ${missing.length === 1 ? "je" : "jsou"} v kategorii Neznámé.`);
+  if (partial.length > 0) notes.push(`${partial.join(", ")}: zdroj nerozepsal celý fond, nerozepsaný zbytek je v kategorii Neznámé.`);
+  return {
+    headline: largest ? `${words.largest}: ${exposureLabel(dimension, largest)} ${percent(largest.weightBasisPoints)}` : null,
+    explanation: `Čím větší podíl ${words.one}, tím víc celé portfolio závisí na tom, jak se ${words.it} daří. ETF se počítá podle vah uvnitř fondu, akcie jedné firmy patří celá do ${words.one}.`,
+    complete: exposure.unclassified.length === 0,
+    notes,
+  };
+}

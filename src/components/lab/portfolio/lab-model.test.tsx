@@ -6,7 +6,7 @@ import type { PortfolioView } from "@/features/portfolio/service";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 vi.mock("@/features/portfolio/actions", () => ({ resetPortfolioAction: vi.fn(), searchPortfolioInstrumentsAction: vi.fn() }));
 
-import { contributionRows, contributionStory, dataStatus, groupSummaries } from "./lab-model";
+import { contributionRows, contributionStory, dataStatus, exposureFacts, exposureLabel, groupSummaries, type ValuedExposure } from "./lab-model";
 import { PortfolioOverview } from "./portfolio-overview";
 import PortfolioLabError from "@/app/(app)/lab/portfolio/error";
 import { AppRouteFallback as PortfolioLabLoading } from "@/components/shell/app-route-fallback";
@@ -24,12 +24,15 @@ function holding(input: HoldingInput): PortfolioView["holdings"][number] {
   };
 }
 
+const cashOnly: PortfolioView["exposure"]["sector"] = { status: "valued", categories: [{ key: "cash", kind: "cash", valueMinor: "500000", weightBasisPoints: "10000", contributions: [] }], unclassified: [] };
+
 function view(overrides: Partial<PortfolioView> = {}): PortfolioView {
   return {
     portfolioId: "p1", baseCurrency: "CZK", openedAt: "2026-10-13T08:00:00.000Z", openingCapitalMinor: "500000", earnedPracticeCapitalMinor: "500000",
     availableCashMinor: "500000", holdingsMarketValueMinor: "0", portfolioTotalMinor: "500000", investmentGainLossMinor: "0", investmentGainLossBasisPoints: "0",
     valuationComplete: true, valuedHoldingsCount: 0, totalHoldingsCount: 0, marketDataMode: "sample", realizedGainLossMinor: "0", cashWeightBasisPoints: "10000",
     attribution: { priceEffectMinor: "0", fxEffectMinor: "0", realizedGainLossMinor: "0", currencies: [] }, allocation: null, holdings: [], recentActivity: [],
+    exposure: { sector: cashOnly, country: cashOnly },
     ...overrides,
   };
 }
@@ -94,6 +97,46 @@ describe("what moved the result", () => {
 
   it("has no story while the valuation is incomplete", () => {
     expect(contributionRows(view({ attribution: null }), [])).toBeNull();
+  });
+});
+
+describe("sector and country exposure", () => {
+  const category = (key: string, kind: "classified" | "unknown" | "cash", weightBasisPoints: string, symbols: string[] = []) =>
+    ({ key, kind, valueMinor: "100", weightBasisPoints, contributions: symbols.map((symbol) => ({ symbol, valueMinor: "50" })) });
+
+  it("names categories in Czech and keeps an unrecognised source name as reported", () => {
+    expect(exposureLabel("sector", category("Technology", "classified", "0"))).toBe("Technologie");
+    expect(exposureLabel("sector", category("Financial Services", "classified", "0"))).toBe("Finance");
+    expect(exposureLabel("sector", category("Space mining", "classified", "0"))).toBe("Space mining");
+    expect(exposureLabel("country", category("US", "classified", "0"))).toBe("Spojené státy");
+    expect(exposureLabel("country", category("JP", "classified", "0"))).toBe("Japonsko");
+    expect(exposureLabel("country", category("unknown", "unknown", "0"))).toBe("Neznámé");
+    expect(exposureLabel("country", category("cash", "cash", "0"))).toBe("Hotovost");
+  });
+
+  it("states the largest category as a rule, not a score, and names what could not be classified", () => {
+    const exposure: ValuedExposure = {
+      status: "valued",
+      categories: [category("Technology", "classified", "4012", ["AAPL", "VWCE"]), category("Financials", "classified", "488", ["VWCE"]), category("unknown", "unknown", "1500", ["CZGB35"]), category("cash", "cash", "4000")],
+      unclassified: [{ symbol: "CZGB35", coverage: "none" }, { symbol: "VWCE", coverage: "partial" }],
+    };
+    const facts = exposureFacts("sector", exposure);
+    expect(facts.headline).toMatch(/^Největší sektor: Technologie 40,1\s%$/);
+    expect(facts.headline).not.toMatch(/\/100|skóre/);
+    expect(facts.complete).toBe(false);
+    expect(facts.notes).toEqual([
+      "CZGB35: zdroj sektor neuvádí, proto je v kategorii Neznámé.",
+      "VWCE: zdroj nerozepsal celý fond, nerozepsaný zbytek je v kategorii Neznámé.",
+    ]);
+    expect(exposureFacts("country", { status: "valued", categories: [category("cash", "cash", "10000")], unclassified: [] })).toMatchObject({ headline: null, complete: true, notes: [] });
+  });
+
+  it("offers the split switch with the asset-type view first", () => {
+    const html = renderToStaticMarkup(createElement(PortfolioOverview, { view: view({ holdings: [vt], availableCashMinor: "590500", cashWeightBasisPoints: "5960", portfolioTotalMinor: "1000000" }) }));
+    expect(html).toMatch(/role="group" aria-label="Rozložení podle"/);
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Typ aktiva/);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Sektor/);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Země/);
   });
 });
 

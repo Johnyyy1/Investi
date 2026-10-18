@@ -141,6 +141,25 @@ a.rowName:hover { color: var(--color-primary); text-decoration: underline; text-
 .legendRow span:nth-child(2) { font-size: .875rem; line-height: 1.35; }
 .legendRow strong { font-size: .875rem; font-weight: 600; text-align: right; }
 .legendRow small { grid-column: 2 / -1; font-size: .75rem; color: var(--color-muted); }
+.splitSwitch { display: flex; flex-wrap: wrap; gap: 2px; width: fit-content; max-width: 100%; margin-top: 12px; padding: 2px; border: 1px solid var(--color-border); border-radius: 8px; }
+.splitSwitch button { min-height: 44px; padding: 0 12px; border-radius: 6px; color: var(--color-secondary); font-size: .875rem; font-weight: 600; line-height: 1.3; cursor: pointer; }
+.splitSwitch button:hover { color: var(--color-foreground); }
+.splitSwitch button[aria-pressed="true"] { background: var(--color-surface-muted); color: var(--color-foreground); }
+.exposureList { display: grid; gap: 10px; margin-top: 14px; }
+.exposureRow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 8px; }
+.exposureLabel { font-size: .875rem; line-height: 1.35; }
+.exposureRow[data-kind="unknown"] .exposureLabel { font-style: italic; }
+.exposureRow strong { font-size: .875rem; font-weight: 600; text-align: right; }
+.exposureRow small { grid-column: 1 / -1; font-size: .75rem; line-height: 1.35; color: var(--color-muted); }
+.exposureBar { grid-column: 1 / -1; display: block; height: 4px; overflow: hidden; border-radius: 999px; background: var(--color-track); }
+.exposureBar span { display: block; height: 100%; border-radius: inherit; background: var(--color-primary); }
+.exposureRow[data-kind="unknown"] .exposureBar span { background: var(--color-viz-other); }
+.exposureRow[data-kind="cash"] .exposureBar span { background: var(--color-viz-cash); }
+.drift .exposureRule { color: var(--color-foreground); font-weight: 600; }
+.exposureNote { display: flex; align-items: flex-start; gap: 8px; margin-top: 8px; }
+.exposureNote svg { flex: none; margin-top: 3px; }
+.exposureEmpty { display: flex; align-items: flex-start; gap: 8px; margin-top: 14px; font-size: .875rem; line-height: 1.5; color: var(--color-secondary); }
+.exposureEmpty svg { flex: none; margin-top: 3px; }
 .drift { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--color-divider); }
 .drift p { font-size: .875rem; line-height: 1.5; color: var(--color-secondary); }
 .drift .textLink { margin-top: 2px; }

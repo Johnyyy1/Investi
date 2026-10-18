@@ -58,6 +58,14 @@ export function fxUnitsFromNumber(value: number) {
   return decimalToScaled(decimalFromNumber(value, 12, "FX rate"), FX_SCALE, 12);
 }
 
+/** Composition weights (a fund's sector or country shares) at 6 dp: parts per million. */
+export const WEIGHT_SCALE = 1_000_000n;
+
+export function weightUnitsFromFraction(value: number) {
+  if (!Number.isFinite(value) || value < 0 || value > 1) throw new RangeError("Weight must be a fraction between 0 and 1.");
+  return decimalToScaled(value.toFixed(6), WEIGHT_SCALE, 6);
+}
+
 function decimalToScaled(value: string, scale: bigint, decimalPlaces: number) {
   const [whole, fraction = ""] = value.split(".");
   return BigInt(whole) * scale + BigInt(fraction.padEnd(decimalPlaces, "0").slice(0, decimalPlaces) || "0");

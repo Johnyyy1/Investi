@@ -17,8 +17,8 @@ import { formatDecimal } from "@/lib/formatters";
 import { AllocationDonut } from "./allocation-donut";
 import { InstrumentSearch } from "./instrument-search";
 import {
-  contributionRows, contributionStory, currencyName, dataStatus, fxRate, groupOf, groupOrder, groups, groupSummaries, minor, money,
-  percent, quantity, signedMoney, trend, wholeMoney, type DataStatus, type GroupSummary, type Holding,
+  contributionRows, contributionStory, currencyName, dataStatus, exposureFacts, exposureLabel, fxRate, groupOf, groupOrder, groups, groupSummaries, minor, money,
+  percent, quantity, signedMoney, splitOptions, trend, wholeMoney, type DataStatus, type GroupSummary, type Holding, type SplitBy, type ValuedExposure,
 } from "./lab-model";
 import styles from "./portfolio-lab.module.css";
 import { buttonVariants } from "@/components/ui/button";
@@ -361,20 +361,56 @@ function HoldingsCard({ view }: { view: PortfolioView }) {
 }
 
 function AllocationCard({ view, rows }: { view: PortfolioView; rows: readonly GroupSummary[] }) {
+  const [splitBy, setSplitBy] = useState<SplitBy>("type");
   const complete = rows.every((row) => row.weightBasisPoints !== null);
   const count = view.holdings.length + (minor(view.availableCashMinor) > 0n ? 1 : 0);
+  const exposure = splitBy === "type" ? null : view.exposure[splitBy];
   return <section className={`${styles.card} ${styles.allocation}`} aria-labelledby="allocation-title">
     <div className={styles.cardHead}><h2 id="allocation-title">Rozložení</h2><p className={styles.meta}>podíl na celé hodnotě</p></div>
-    {complete ? <AllocationDonut
-      label={`Rozložení portfolia: ${rows.map((row) => `${groups[row.group].label} ${percent(row.weightBasisPoints)}${row.valueMinor === null ? "" : `, ${money(row.valueMinor)}`}`).join("; ")}.`}
-      center={`${count} ${count === 1 ? "položka" : count < 5 ? "položky" : "položek"}`}
-      segments={rows.map((row) => ({ id: row.group, label: groups[row.group].label, color: groups[row.group].color, basisPoints: row.weightBasisPoints ?? 0, value: percent(row.weightBasisPoints), detail: row.valueMinor === null ? undefined : money(row.valueMinor) }))}
-    /> : <p className={styles.meta}>Rozložení ukážeme, až budou známé ceny všech položek.</p>}
+    <div role="group" aria-label="Rozložení podle" className={styles.splitSwitch}>
+      {splitOptions.map((option) => <button key={option.id} type="button" aria-pressed={splitBy === option.id} onClick={() => setSplitBy(option.id)}>{option.label}</button>)}
+    </div>
+    {splitBy === "type" ? <>
+      {complete ? <AllocationDonut
+        label={`Rozložení portfolia: ${rows.map((row) => `${groups[row.group].label} ${percent(row.weightBasisPoints)}${row.valueMinor === null ? "" : `, ${money(row.valueMinor)}`}`).join("; ")}.`}
+        center={`${count} ${count === 1 ? "položka" : count < 5 ? "položky" : "položek"}`}
+        segments={rows.map((row) => ({ id: row.group, label: groups[row.group].label, color: groups[row.group].color, basisPoints: row.weightBasisPoints ?? 0, value: percent(row.weightBasisPoints), detail: row.valueMinor === null ? undefined : money(row.valueMinor) }))}
+      /> : <p className={styles.meta}>Rozložení ukážeme, až budou známé ceny všech položek.</p>}
+      <div className={styles.drift}>
+        <p>Kolik z celé hodnoty máš v akciích, ETF, dluhopisech a v hotovosti. Rozložení se mění s cenami i s každým nákupem a prodejem. Cvičný kapitál z nových lekcí přibude do hotovosti.</p>
+        <Link className={styles.textLink} href={PORTFOLIO_LESSON_HREF}>Lekce: Portfolio, váhy a diverzifikace<ArrowRight size={16} aria-hidden="true" /></Link>
+      </div>
+    </> : exposure?.status === "valued" ? <ExposureSplit dimension={splitBy} exposure={exposure} holdingsCount={view.holdings.length} />
+      : <p className={styles.exposureEmpty} role="status" data-testid="exposure-unvalued">
+        <CircleAlert size={16} aria-hidden="true" />
+        <span>Neúplné: {splitBy === "sector" ? "sektory" : "země"} ukážeme, až budou známé ceny všech položek{exposure ? ` (chybí ${exposure.missingSymbols.join(", ")})` : ""}.</span>
+      </p>}
+  </section>;
+}
+
+function ExposureSplit({ dimension, exposure, holdingsCount }: { dimension: Exclude<SplitBy, "type">; exposure: ValuedExposure; holdingsCount: number }) {
+  const facts = exposureFacts(dimension, exposure);
+  const max = exposure.categories.reduce((largest, row) => Math.max(largest, Number(row.weightBasisPoints)), 0);
+  const name = dimension === "sector" ? "sektoru" : "země";
+  return <>
+    <ul className={styles.exposureList} aria-label={`Rozložení podle ${name}`} data-testid={`exposure-${dimension}`}>
+      {exposure.categories.map((row) => {
+        const label = exposureLabel(dimension, row);
+        return <li key={`${row.kind}:${row.key}`} className={styles.exposureRow} data-kind={row.kind}>
+          <span className={styles.exposureLabel}>{label}</span>
+          <strong className={styles.num}>{percent(row.weightBasisPoints)}</strong>
+          <small className={styles.num}>{money(row.valueMinor)}{holdingsCount > 1 && row.contributions.length > 0 ? ` · ${row.contributions.map(({ symbol }) => symbol).join(", ")}` : ""}</small>
+          <span className={styles.exposureBar} aria-hidden="true"><span style={{ width: `${max > 0 ? Math.max(1, Number(row.weightBasisPoints) / max * 100) : 0}%` }} /></span>
+        </li>;
+      })}
+    </ul>
     <div className={styles.drift}>
-      <p>Kolik z celé hodnoty máš v akciích, ETF, dluhopisech a v hotovosti. Rozložení se mění s cenami i s každým nákupem a prodejem. Cvičný kapitál z nových lekcí přibude do hotovosti.</p>
+      {facts.headline ? <p className={styles.exposureRule} data-testid={`exposure-${dimension}-largest`}>{facts.headline}</p> : null}
+      <p>{facts.explanation}</p>
+      {facts.notes.map((note) => <p key={note} className={styles.exposureNote}><Info size={15} aria-hidden="true" /><span>{note}</span></p>)}
       <Link className={styles.textLink} href={PORTFOLIO_LESSON_HREF}>Lekce: Portfolio, váhy a diverzifikace<ArrowRight size={16} aria-hidden="true" /></Link>
     </div>
-  </section>;
+  </>;
 }
 
 function Activity({ view }: { view: PortfolioView }) {
