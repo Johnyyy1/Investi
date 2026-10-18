@@ -34,6 +34,7 @@
     "test:portfolio-browser": "node scripts/validate-portfolio-lab.mjs",
     "test:portfolio-browser-closed": "node scripts/validate-portfolio-closed-market.mjs",
     "test:instrument-browser-unavailable": "node scripts/validate-instrument-unavailable.mjs",
+    "test:compare-browser": "node scripts/validate-compare.mjs",
     "test:not-found-browser": "node scripts/validate-not-found.mjs",
     "test:account-deletion": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-account-deletion.mts",
     "test:legal-browser": "node scripts/validate-legal-pages.mjs",

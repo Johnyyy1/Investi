@@ -27,7 +27,8 @@ async function loadCloses(service: MarketDataService, instrumentId: InstrumentId
   return { request, points, provenance: series.provenance };
 }
 
-function messageFor(correlation: ReturnCorrelation) {
+/** Why no coefficient is shown; null when it was computed. */
+export function correlationMessage(correlation: ReturnCorrelation) {
   if (correlation.status === "ok") return null;
   if (correlation.status === "no-variation") return "Cena jednoho z instrumentů se v tomto období nemění, takže korelaci nelze spočítat.";
   const unit = correlation.frequency === "weekly" ? "týdenních" : "denních";
@@ -62,7 +63,7 @@ export async function loadInstrumentCorrelation(
   const correlation = returnCorrelation(first.value.points, second.value.points, frequency);
   return {
     correlation,
-    message: messageFor(correlation),
+    message: correlationMessage(correlation),
     startDate,
     endDate,
     historyPartial: first.value.provenance.completeness === "partial" || second.value.provenance.completeness === "partial",
