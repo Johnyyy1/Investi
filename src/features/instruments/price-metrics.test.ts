@@ -23,7 +23,9 @@ describe("price metrics", () => {
     expect(metrics?.maxDrawdown).toEqual({
       depth: 90 / 120 - 1,
       peakDate: "2026-01-02",
+      peakClose: 120,
       troughDate: "2026-01-03",
+      troughClose: 90,
       recoveryDate: "2026-01-05",
     });
   });
@@ -61,5 +63,23 @@ describe("price metrics", () => {
     expect(contiguous).toBeGreaterThan(0);
     expect(withGap).toBeGreaterThan(0);
     expect(withGap).not.toBeNull();
+  });
+  it("takes the drawdown from a running peak, not from the global high and low", () => {
+    // The global low (80) comes before the global high (150); the deepest fall is 150 → 110, not 150 → 80.
+    const metrics = priceMetrics(daily("2026-01-01", [100, 80, 150, 110, 140]));
+    expect(metrics?.maxDrawdown).toEqual({ depth: 110 / 150 - 1, peakDate: "2026-01-03", peakClose: 150, troughDate: "2026-01-04", troughClose: 110, recoveryDate: null });
+  });
+
+  it("keeps the deepest of several drawdowns and dates its recovery at the first close back at the peak", () => {
+    const metrics = priceMetrics(daily("2026-01-01", [100, 90, 100, 130, 91, 125, 130, 135]));
+    expect(metrics?.maxDrawdown).toMatchObject({ peakDate: "2026-01-04", peakClose: 130, troughDate: "2026-01-05", troughClose: 91, recoveryDate: "2026-01-07" });
+    expect(metrics?.maxDrawdown?.depth).toBeCloseTo(-0.3, 12);
+  });
+
+  it("recomputes the drawdown for a shorter slice of the same history", () => {
+    const history = daily("2026-01-01", [100, 60, 100, 110, 99, 112]);
+    expect(priceMetrics(history)?.maxDrawdown).toMatchObject({ peakDate: "2026-01-01", troughDate: "2026-01-02" });
+    expect(priceMetrics(history.slice(3))?.maxDrawdown).toMatchObject({ peakDate: "2026-01-04", troughDate: "2026-01-05", recoveryDate: "2026-01-06" });
+    expect(priceMetrics(history.slice(3))?.maxDrawdown?.depth).toBeCloseTo(-0.1, 12);
   });
 });

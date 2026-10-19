@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregateCandles, barChanges, candleInterval, candleLabel, candlePeriod, chartTone, drawdownSpan, formatChartPrice, formatSignedChange, hasCandlestickData, parseChartType, axisDecimals } from "./price-chart-presentation";
+import { aggregateCandles, barChanges, candleInterval, candleLabel, candlePeriod, chartTone, drawdownSpan, formatChartPrice, formatSignedChange, hasCandlestickData, ohlcExtremes, parseChartType, axisDecimals } from "./price-chart-presentation";
 
 const candles = [
   { date: "2026-01-05", open: 100, high: 104, low: 99, close: 103 },
@@ -126,7 +126,7 @@ describe("instrument chart presentation", () => {
   });
 
   it("maps the daily-close drawdown onto the bars that contain its peak and trough", () => {
-    const drawdown = { depth: -0.2, peakDate: "2025-12-31", troughDate: "2026-02-04", recoveryDate: null };
+    const drawdown = { depth: -0.2, peakDate: "2025-12-31", peakClose: 100, troughDate: "2026-02-04", troughClose: 80, recoveryDate: null };
     expect(drawdownSpan(drawdown, "line")).toEqual({ from: "2025-12-31", to: "2026-02-04" });
     expect(drawdownSpan(drawdown, "daily")).toEqual({ from: "2025-12-31", to: "2026-02-04" });
     expect(drawdownSpan(drawdown, "weekly")).toEqual({ from: "2025-12-29", to: "2026-02-02" });
@@ -162,5 +162,14 @@ describe("instrument chart presentation", () => {
     expect(candleLabel({ periodStart: "2026-01-05", firstDate: "2026-01-06", lastDate: "2026-01-09", partial: false }, "weekly")).toBe("Týden · 6. 1. 2026 – 9. 1. 2026");
     expect(candleLabel({ periodStart: "2025-10-01", firstDate: "2025-10-01", lastDate: "2025-10-31", partial: false }, "monthly")).toBe("říjen 2025");
     expect(candleLabel({ periodStart: "2026-01-01", firstDate: "2026-01-02", lastDate: "2026-01-08", partial: true }, "monthly")).toBe("leden 2026 (2. 1. 2026 – 8. 1. 2026)");
+  });
+  it("finds the lowest daily low and highest daily high with their dates, not the closes", () => {
+    const days = [
+      { date: "2026-01-05", open: 100, high: 104, low: 99, close: 103 },
+      { date: "2026-01-06", open: 103, high: 110, low: 98, close: 99 },
+      { date: "2026-01-07", open: 99, high: 101, low: 95.25, close: 100 },
+    ];
+    expect(ohlcExtremes(days)).toEqual({ low: 95.25, lowDate: "2026-01-07", high: 110, highDate: "2026-01-06" });
+    expect(ohlcExtremes([])).toBeNull();
   });
 });

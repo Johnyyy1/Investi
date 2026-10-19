@@ -235,10 +235,10 @@ describe("FMP requests per instrument detail view", () => {
   async function viewTwiceFromDifferentInstances(instrumentId: string, sharedCache?: SharedMarketDataCacheStore) {
     const first: string[] = [];
     const second: string[] = [];
-    const detail = await loadInstrumentDetail(instance(first, sharedCache), instrumentId, "5Y", new Date(NOW));
+    const detail = await loadInstrumentDetail(instance(first, sharedCache), instrumentId, new Date(NOW));
     expect(detail.instrument).not.toBeNull();
     expect(detail.points.length).toBeGreaterThan(0);
-    const repeated = await loadInstrumentDetail(instance(second, sharedCache), instrumentId, "5Y", new Date(NOW));
+    const repeated = await loadInstrumentDetail(instance(second, sharedCache), instrumentId, new Date(NOW));
     expect(repeated.points).toEqual(detail.points);
     expect(repeated.fundamentals ?? repeated.etfAnalytics).toEqual(detail.fundamentals ?? detail.etfAnalytics);
     return { first: first.sort(), second: second.sort() };
@@ -267,10 +267,10 @@ describe("FMP requests per instrument detail view", () => {
       get: (family, key) => shared.get(family, key, now),
       set: (family, key, value, expiresAt) => shared.set(family, key, value, expiresAt),
     };
-    await loadInstrumentDetail(instance([], timedShared), "FMP:NASDAQ:AAPL", "5Y", new Date(NOW));
+    await loadInstrumentDetail(instance([], timedShared), "FMP:NASDAQ:AAPL", new Date(NOW));
     now += 60_000;
     const requests: string[] = [];
-    await loadInstrumentDetail(instance(requests, timedShared), "FMP:NASDAQ:AAPL", "5Y", new Date(NOW));
+    await loadInstrumentDetail(instance(requests, timedShared), "FMP:NASDAQ:AAPL", new Date(NOW));
     // The FMP adapter resolves the quote currency through its own profile request.
     expect(requests.sort()).toEqual(["profile", "quote"]);
   });

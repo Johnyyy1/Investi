@@ -11,7 +11,7 @@ const metrics: PriceMetrics = {
   spanDays: 400,
   periodReturn: 0.862,
   annualisedReturn: 0.132,
-  maxDrawdown: { depth: -0.334, peakDate: "2024-12-26", troughDate: "2025-04-08", recoveryDate: null },
+  maxDrawdown: { depth: -0.334, peakDate: "2024-12-26", peakClose: 150, troughDate: "2025-04-08", troughClose: 99.9, recoveryDate: null },
   annualisedVolatility: 0.28,
 };
 

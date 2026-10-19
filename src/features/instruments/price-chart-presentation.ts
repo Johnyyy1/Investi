@@ -105,6 +105,18 @@ export function aggregateCandles(points: readonly HistoricalPricePoint[], interv
   return bars;
 }
 
+/** Lowest daily low and highest daily high, with the first day each was reached. Only for genuine OHLC. */
+export function ohlcExtremes(points: readonly HistoricalPricePoint[]): { low: number; lowDate: string; high: number; highDate: string } | null {
+  if (!points.length) return null;
+  let low = points[0];
+  let high = points[0];
+  for (const point of points) {
+    if (point.low < low.low) low = point;
+    if (point.high > high.high) high = point;
+  }
+  return { low: low.low, lowDate: low.date, high: high.high, highDate: high.date };
+}
+
 export function barChanges(bars: readonly { close: number }[]): BarChange[] {
   return bars.map((bar, index) => {
     if (index === 0) return null;

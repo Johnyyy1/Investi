@@ -11,7 +11,9 @@ export type MaxDrawdown = {
   /** Decimal depth, for example -0.334 for a 33.4 % fall. */
   depth: number;
   peakDate: string;
+  peakClose: number;
   troughDate: string;
+  troughClose: number;
   /** First later observation that closes at or above the peak; null when not recovered. */
   recoveryDate: string | null;
 };
@@ -55,7 +57,9 @@ function maxDrawdownOf(points: readonly PriceMetricObservation[]): MaxDrawdown |
   return {
     depth: worst.depth,
     peakDate: points[worst.peakIndex].date,
+    peakClose,
     troughDate: points[worst.troughIndex].date,
+    troughClose: points[worst.troughIndex].close,
     recoveryDate: recovery?.date ?? null,
   };
 }
