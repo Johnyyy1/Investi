@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/form-controls";
 import type { ChartRange } from "@/features/instruments/history";
 import { instrumentCompareHref } from "@/features/instruments/routes";
 import type { PriceMetrics } from "@/features/instruments/price-metrics";
+import type { ChartType } from "@/features/instruments/price-chart-presentation";
 import type { HistoricalPricePoint, Instrument, MarketSessionState, QuoteUsabilityStatus } from "@/features/market-data/contracts";
 import type { EquityFundamentalsSnapshot } from "@/features/market-data/equity-fundamentals";
 import type { EtfAnalyticsSnapshot } from "@/features/market-data/etf-analytics";
@@ -76,7 +77,7 @@ function czkValue(price: number, homeCurrency: NonNullable<HomeCurrency>) {
   return new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 }).format(price * homeCurrency.rate);
 }
 
-export function InstrumentDetailView({ instrument, quote, quoteMessage, points, historyMessage, historyPartial, metrics, homeCurrency, homeCurrencyMessage, fundamentals, fundamentalsMessage, etfAnalytics, etfAnalyticsMessage, range, portfolio: initialPortfolio }: { instrument: Instrument; quote: QuoteView | null; quoteMessage: string | null; points: HistoricalPricePoint[]; historyMessage: string | null; historyPartial: boolean; metrics: PriceMetrics | null; homeCurrency: HomeCurrency; homeCurrencyMessage: string | null; fundamentals: EquityFundamentalsSnapshot | null; fundamentalsMessage: string | null; etfAnalytics: EtfAnalyticsSnapshot | null; etfAnalyticsMessage: string | null; range: ChartRange; portfolio: PortfolioView }) {
+export function InstrumentDetailView({ instrument, quote, quoteMessage, points, historyMessage, historyPartial, metrics, homeCurrency, homeCurrencyMessage, fundamentals, fundamentalsMessage, etfAnalytics, etfAnalyticsMessage, range, chartType, historyWindow, portfolio: initialPortfolio }: { instrument: Instrument; quote: QuoteView | null; quoteMessage: string | null; points: HistoricalPricePoint[]; historyMessage: string | null; historyPartial: boolean; metrics: PriceMetrics | null; homeCurrency: HomeCurrency; homeCurrencyMessage: string | null; fundamentals: EquityFundamentalsSnapshot | null; fundamentalsMessage: string | null; etfAnalytics: EtfAnalyticsSnapshot | null; etfAnalyticsMessage: string | null; range: ChartRange; chartType: ChartType; historyWindow: { startDate: string; endDate: string }; portfolio: PortfolioView }) {
   const router = useRouter();
   const [portfolio, setPortfolio] = useState(initialPortfolio);
   const [preview, setPreview] = useState<InstrumentPreview | null>(null);
@@ -165,7 +166,7 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points, 
       </div>
     </section>
 
-    <div className="mt-6"><InstrumentPriceChart key={`${instrument.instrumentId}:${range}`} instrumentId={instrument.instrumentId} range={range} points={points} currency={instrument.quoteCurrency} message={historyMessage} partial={historyPartial} metrics={metrics} /></div>
+    <div className="mt-6"><InstrumentPriceChart key={instrument.instrumentId} instrumentId={instrument.instrumentId} range={range} points={points} currency={instrument.quoteCurrency} message={historyMessage} partial={historyPartial} metrics={metrics} initialChartType={chartType} historyWindow={historyWindow} /></div>
 
     <div className="mt-6"><InstrumentReturnAnalytics metrics={metrics} currency={instrument.quoteCurrency} /></div>
 
@@ -175,6 +176,7 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points, 
       <div className="min-w-0"><p className="text-microcopy font-bold uppercase tracking-[0.12em] text-primary-hover">Z učení</p><h2 id="learning-hook-heading" className="mt-2 text-section-title font-bold">Rozumíš tomuhle grafu?</h2>
         <ul className="mt-5 grid gap-3 text-small leading-relaxed">
           <li className="flex gap-3"><span aria-hidden="true" className="mt-2 inline-block h-0.5 w-6 shrink-0 bg-primary" /><span>Čára: zavírací cena v jednotlivých dnech, v {priceCurrency}.</span></li>
+          <li className="flex gap-3"><span aria-hidden="true" className="mt-0.5 inline-flex h-4 w-6 shrink-0 items-center justify-center gap-1"><span className="h-full w-1.5 rounded-[1px] bg-success-ink" /><span className="h-3 w-1.5 rounded-[1px] bg-danger-ink" /></span><span>Svíčka: otevření, maximum, minimum a zavření za den, týden nebo měsíc. Zelená skončila výš, než začala, červená níž.</span></li>
           <li className="flex gap-3"><span aria-hidden="true" className="mt-2 inline-block h-3 w-6 shrink-0 rounded-sm bg-warning-soft" /><span>Žlutý pruh: největší propad období, pokud byl v datech.</span></li>
           <li className="flex gap-3"><span aria-hidden="true" className="mt-2 inline-block h-0.5 w-6 shrink-0 border-t border-dashed border-border-strong" /><span>Přerušovaná čára: cena na začátku vybraného období.</span></li>
         </ul>
