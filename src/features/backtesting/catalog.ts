@@ -1,6 +1,7 @@
 import type { CalendarDate, Currency, InstrumentId, UtcTimestamp } from "@/features/market-data/contracts";
 import type { BacktestMetrics } from "@/features/lab/backtest";
-import { FULL_WEIGHT_BPS, type BacktestSpec, type CalendarMonth, type RebalanceRule } from "./spec";
+import type { TradingSummary } from "./costs";
+import { FULL_WEIGHT_BPS, type BacktestCosts, type BacktestSpec, type CalendarMonth, type RebalanceRule } from "./spec";
 
 export type BacktestStrategyDefinition = {
   id: string;
@@ -128,7 +129,13 @@ export type HistorySource = {
   retrievedAt: UtcTimestamp;
 };
 
-export type HistoryBacktestConfig = { source: "history"; strategy: string; benchmark: InstrumentId; start: number; end: number; amount: string; rebalance: RebalanceRule };
+/** Costs as typed by the learner: a percentage of each trade and a flat fee per trade. */
+export type CostSettings = { rate: string; fixedFee: string };
+
+/** `costs` echoes the learner's input; null means the run had no costs. */
+export type HistoryBacktestConfig = { source: "history"; strategy: string; benchmark: InstrumentId; start: number; end: number; amount: string; rebalance: RebalanceRule; costs: CostSettings | null };
+
+type CurvePoint = { label: string; value: number; benchmark: number };
 
 export type HistoryBacktestResult = {
   config: HistoryBacktestConfig;
@@ -140,7 +147,13 @@ export type HistoryBacktestResult = {
   benchmark: BacktestMetrics;
   period: string;
   months: number;
-  points: { label: string; value: number; benchmark: number }[];
+  /** With costs when the run had any; `metrics`, `benchmark` and `points` always describe the same run. */
+  points: CurvePoint[];
+  /** The costs per trade the run paid; zero when it ran without costs. */
+  costs: BacktestCosts;
+  trading: { strategy: TradingSummary; benchmark: TradingSummary };
+  /** The same closes simulated without costs; null when the run had none. */
+  withoutCosts: { metrics: BacktestMetrics; benchmark: BacktestMetrics; points: CurvePoint[] } | null;
   /** Fixed mix: month ends at which it was rebalanced. Trend filter: months held in the instrument and switches. */
   rebalances: number;
   monthsInvested: number;

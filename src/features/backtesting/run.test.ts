@@ -134,6 +134,45 @@ describe("history backtest with the deterministic provider", () => {
     expect(monthly.rebalances).toBe(119);
     expect(none.metrics.finalValue).not.toBeCloseTo(monthly.metrics.finalValue, 2);
   });
+  it("zero costs give the same result as a run without costs", async () => {
+    const service = deterministic();
+    for (const strategy of ["mix-60-40", "trend-sma"]) {
+      const [plain] = await runHistoryBacktests(service, backtestHistoryPlans.deterministic, { ...request, strategy });
+      const [zero] = await runHistoryBacktests(service, backtestHistoryPlans.deterministic, { ...request, strategy, costs: { rate: "0", fixedFee: "0" } });
+      expect(plain.withoutCosts).toBeNull();
+      expect(zero.withoutCosts).toBeNull();
+      expect(zero.metrics).toEqual(plain.metrics);
+      expect(zero.benchmark).toEqual(plain.benchmark);
+      expect(zero.points).toEqual(plain.points);
+      expect(zero.trading.strategy.costs).toBe(0);
+    }
+  });
+  it("simulates a run with costs a second time without them, on the same closes", async () => {
+    const service = deterministic();
+    const [plain] = await runHistoryBacktests(service, backtestHistoryPlans.deterministic, request);
+    const [result] = await runHistoryBacktests(service, backtestHistoryPlans.deterministic, { ...request, costs: { rate: "0,1", fixedFee: "1" } });
+    expect(result.costs).toEqual({ rateBps: 10, fixedFee: 1 });
+    expect(result.config.costs).toEqual({ rate: "0,1", fixedFee: "1" });
+    expect(result.withoutCosts).toEqual({ metrics: plain.metrics, benchmark: plain.benchmark, points: plain.points });
+    expect(result.metrics.finalValue).toBeLessThan(plain.metrics.finalValue);
+    // Annual rebalancing of SPX against cash: the purchase plus one trade per December rebalance.
+    expect(result.trading.strategy.trades).toBe(1 + result.rebalances);
+    expect(result.trading.strategy.costs).toBeCloseTo(0.001 * result.trading.strategy.turnover + result.trading.strategy.trades, 8);
+    // Benchmark B pays for its single purchase only: 10 000 = bought + 0.1 % of bought + 1.
+    expect(result.trading.benchmark).toEqual({ trades: 1, turnover: expect.closeTo(9_999 / 1.001, 8), costs: expect.closeTo(10_000 - 9_999 / 1.001, 8) });
+    expect(result.benchmark.finalValue).toBeCloseTo(plain.benchmark.finalValue * (9_999 / 1.001) / 10_000, 6);
+    expect(result.points[0]).toEqual({ label: "2015-12", value: 10_000, benchmark: 10_000 });
+  });
+  it("makes monthly rebalancing cost more than annual, and annual more than none", async () => {
+    const service = deterministic();
+    const costs = { rate: "0,25", fixedFee: "0" };
+    const runs = await Promise.all((["none", "annual", "monthly"] as const).map(async (rebalance) => (await runHistoryBacktests(service, backtestHistoryPlans.deterministic, { ...request, rebalance, costs }))[0]));
+    const paid = runs.map((run) => run.trading.strategy.costs);
+    expect(runs.map((run) => run.trading.strategy.trades)).toEqual([1, 10, 120]);
+    expect(paid[0]).toBeLessThan(paid[1]);
+    expect(paid[1]).toBeLessThan(paid[2]);
+    for (const run of runs) expect(run.trading.benchmark.trades).toBe(1);
+  });
   it.each([
     ["an unknown strategy", { strategy: "VTI" }, /dostupnou strategii/],
     ["a benchmark outside the plan", { benchmark: "FMP:AMEX:SPY" }, /dostupný benchmark/],
@@ -141,6 +180,9 @@ describe("history backtest with the deterministic provider", () => {
     ["a year outside the plan", { periods: [{ start: 2010, end: 2012 }] }, /2016–2025/],
     ["a zero amount", { amount: "0" }, /větší než nula/],
     ["a blank amount", { amount: "" }, /povinné/],
+    ["a cost rate above 2 %", { costs: { rate: "2,5", fixedFee: "0" } }, /nejvýš 2 %/],
+    ["a cost rate with three decimals", { costs: { rate: "0,125", fixedFee: "0" } }, /dvě desetinná místa/],
+    ["a blank flat fee", { costs: { rate: "0,1", fixedFee: "" } }, /povinné/],
   ])("refuses %s before loading any history", async (_, change, message) => {
     const service = deterministic();
     const spy = vi.spyOn(service, "getHistoricalPrices");

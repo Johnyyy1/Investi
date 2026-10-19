@@ -18,6 +18,7 @@ const inputSchema = z.object({
   benchmark: z.string().min(1).max(80),
   rebalance: z.enum(rebalanceRules),
   amount: z.string().max(40),
+  costs: z.object({ rate: z.string().max(20), fixedFee: z.string().max(20) }).nullable().optional(),
   periods: z.array(z.object({ start: z.number().int(), end: z.number().int() })).min(1).max(4),
 });
 

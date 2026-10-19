@@ -4,7 +4,7 @@ import { calculateBacktestMetrics, selectMonthlySample, type MonthlyObservation 
 import { syntheticMonthlyData } from "@/features/lab/sample-data";
 import type { HistoryBacktestResult } from "@/features/backtesting/catalog";
 import type { Currency } from "@/features/market-data/contracts";
-import { formatCurrency, formatDecimal } from "@/lib/formatters";
+import { formatCurrency, formatDecimal, formatPercentage } from "@/lib/formatters";
 
 export const backtestStrategies = [
   { id: "mixed", name: "Mix 60 / 30 / 10", description: "60 % akcií, 30 % dluhopisů a 10 % hotovosti.", weights: [0.6, 0.3, 0.1] },
@@ -51,9 +51,9 @@ export function formatBacktestMoney(value: number, currency: Currency = "CZK") {
 export function formatBacktestMoneyDifference(value: number, currency: Currency = "CZK") {
   return formatCurrency(value, currency, { maximumFractionDigits: Math.abs(value) < 1000 ? 2 : 0, signDisplay: "exceptZero" });
 }
-/** Signed difference of two ratios in percentage points: 0.0123 is „+1,23 p. b.“. */
-export function formatPercentagePoints(value: number) {
-  return `${formatDecimal(value * 100, { maximumFractionDigits: 2, signDisplay: "exceptZero" })} p. b.`;
+/** Signed difference of two ratios in percentage points: 0.0123 is „+1,23 p. b.“; unsigned, „1,23 p. b.“. */
+export function formatPercentagePoints(value: number, { signed = true } = {}) {
+  return `${formatDecimal(value * 100, { maximumFractionDigits: 2, signDisplay: signed ? "exceptZero" : "auto" })} p. b.`;
 }
 /** Sharpe ratio to two decimals. An undefined ratio is shown as unavailable, never as 0. */
 export function formatSharpeRatio(value: number | null) {
@@ -62,6 +62,17 @@ export function formatSharpeRatio(value: number | null) {
 /** Signed difference A − B of two Sharpe ratios; unavailable when either one is. */
 export function formatSharpeDifference(strategy: number | null, benchmark: number | null) {
   return strategy === null || benchmark === null ? "Nedostupné" : formatDecimal(strategy - benchmark, { minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero" });
+}
+/** A cost rate in basis points as a percentage: 10 is „0,1 %“. */
+export function formatCostRate(rateBps: number) {
+  return formatPercentage(rateBps / 10_000);
+}
+/** Which run a result with costs shows: with them (the default) or the same closes without them. */
+export type CostView = "with" | "without";
+export function viewWithCosts(result: BacktestResult, view: CostView): BacktestResult {
+  if (view === "with" || result.source.kind !== "history" || !("withoutCosts" in result) || !result.withoutCosts) return result;
+  const { metrics, benchmark, points } = result.withoutCosts;
+  return { ...result, metrics, benchmark, points };
 }
 export function formatBacktestMonth(month: string) {
   return new Intl.DateTimeFormat("cs-CZ", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));

@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { buildBacktestResult } from "@/components/lab/backtest-model";
 import { syntheticMonthlyData } from "@/features/lab/sample-data";
 import { simulateBacktest, simulateBuyAndHold } from "./simulate";
-import { BacktestDataError, buyAndHoldFor, monthRange, type BacktestSpec } from "./spec";
+import { BacktestDataError, buyAndHoldFor, monthRange, NO_COSTS, type BacktestSpec } from "./spec";
 
-const base = { frequency: "monthly", currency: "USD", adjustment: "split-adjusted", initialAmount: 100 } as const;
+const base = { frequency: "monthly", currency: "USD", adjustment: "split-adjusted", initialAmount: 100, costs: NO_COSTS } as const;
 const mix = (rebalance: "none" | "monthly" | "annual", startMonth = "2020-11", endMonth = "2021-01"): BacktestSpec => ({
   ...base, startMonth, endMonth, holdings: [{ instrumentId: "A", weightBps: 5_000 }, { instrumentId: "B", weightBps: 5_000 }], cashWeightBps: 0, rule: { kind: "fixed-weights", rebalance },
 });
@@ -130,5 +130,81 @@ describe("buy-and-hold benchmark", () => {
   it("refuses other return semantics and incomplete closes", () => {
     expect(() => simulateBuyAndHold({ ...buyAndHoldFor(own("none"), "A"), adjustment: "total-return" }, single)).toThrow(BacktestDataError);
     expect(() => simulateBuyAndHold(buyAndHoldFor(own("none"), "A"), { months: single.months.slice(1), closes: [single.closes[0].slice(1)] })).toThrow(BacktestDataError);
+  });
+});
+
+describe("transaction costs", () => {
+  const costs = (rateBps: number, fixedFee = 0) => ({ rateBps, fixedFee });
+  const trendSpec = (startMonth: string, endMonth: string): BacktestSpec => ({ ...base, startMonth, endMonth, holdings: [{ instrumentId: "A", weightBps: 10_000 }], cashWeightBps: 0, rule: { kind: "trend-filter", smaMonths: 3 } });
+  const trendMonths = monthRange("2019-10", "2020-06");
+  const trendCloses = [[10, 11, 12, 13, 9, 8, 9, 12, 13]];
+
+  it("zero costs give exactly the result without costs, for every rule", () => {
+    for (const rebalance of ["none", "monthly", "annual"] as const) {
+      const result = simulateBacktest({ ...mix(rebalance), costs: costs(0, 0) }, swing);
+      expect(result.values).toEqual(simulateBacktest(mix(rebalance), swing).values);
+      expect(result.trading.costs).toBe(0);
+    }
+    expect(simulateBacktest({ ...mix("monthly"), costs: costs(0) }, swing).values).toEqual([100, 150, 112.5, 168.75]);
+    const trend = simulateBacktest({ ...trendSpec("2020-01", "2020-06"), costs: costs(0) }, { months: trendMonths, closes: trendCloses });
+    expect(trend.metrics).toEqual(simulateBacktest(trendSpec("2020-01", "2020-06"), { months: trendMonths, closes: trendCloses }).metrics);
+  });
+  it("without rebalancing pays only the entry costs, once per instrument", () => {
+    const gross = simulateBacktest(mix("none"), swing);
+    const result = simulateBacktest({ ...mix("none"), costs: costs(10, 0.5) }, swing);
+    // 100 = invested + 0.1 % of invested + two flat fees of 0.5.
+    const invested = 99 / 1.001;
+    expect(result.trading.trades).toBe(2);
+    expect(result.trading.turnover).toBeCloseTo(invested, 12);
+    expect(result.trading.costs).toBeCloseTo(100 - invested, 12);
+    expect(result.values[0]).toBe(100);
+    result.values.slice(1).forEach((value, index) => expect(value).toBeCloseTo(gross.values[index + 1] * invested / 100, 12));
+    expect(result.rebalanceMonths).toEqual([]);
+  });
+  it.each([[10, 0.001], [25, 0.0025]])("charges %i basis points on every rebalance, showing in the next month", (rateBps, rate) => {
+    // Test-only: A at 50 % with 50 % cash; A doubles in December, then stays flat.
+    const spec: BacktestSpec = { ...mix("monthly", "2020-12", "2021-01"), holdings: [{ instrumentId: "A", weightBps: 5_000 }], cashWeightBps: 5_000, costs: costs(rateBps) };
+    const result = simulateBacktest(spec, { months: ["2020-11", "2020-12", "2021-01"], closes: [[10, 20, 20]] });
+    const start = 100 / (1 + rate * 0.5);
+    const december = start * 1.5;
+    // December's close sells back to 50 %: V' = (V − rate × A) ÷ (1 − rate × 0.5).
+    const january = (december - rate * start) / (1 - rate * 0.5);
+    expect(result.values[1]).toBeCloseTo(december, 12);
+    expect(result.values[2]).toBeCloseTo(january, 12);
+    expect(result.trading.trades).toBe(2);
+    // Costs of the purchase plus costs of the December sale.
+    expect(result.trading.costs).toBeCloseTo(100 - start + december - january, 12);
+    expect(result.trading.costs).toBeCloseTo(rate * result.trading.turnover, 12);
+  });
+  it("more rebalancing means more trades, more turnover and more costs", () => {
+    const longer = { months: monthRange("2019-11", "2021-12"), closes: [monthRange("2019-11", "2021-12").map((_, index) => 10 + (index % 5) * 2), monthRange("2019-11", "2021-12").map(() => 5)] };
+    const [none, annual, monthly] = (["none", "annual", "monthly"] as const).map((rebalance) => simulateBacktest({ ...mix(rebalance, "2019-12", "2021-12"), costs: costs(10, 1) }, longer));
+    expect([none.trading.trades, annual.trading.trades, monthly.trading.trades]).toEqual([2, 6, 50]);
+    expect(none.trading.costs).toBeLessThan(annual.trading.costs);
+    expect(annual.trading.costs).toBeLessThan(monthly.trading.costs);
+    expect(none.trading.turnover).toBeLessThan(monthly.trading.turnover);
+    for (const result of [none, annual, monthly]) expect(result.trading.costs).toBeCloseTo(0.001 * result.trading.turnover + result.trading.trades, 10);
+  });
+  it("a trend filter pays on its first purchase and on every switch", () => {
+    const result = simulateBacktest({ ...trendSpec("2020-01", "2020-06"), costs: costs(10, 0.25) }, { months: trendMonths, closes: trendCloses });
+    // In from January, out for March–April, back in from May: buy, sell, buy.
+    expect(result.switches).toBe(2);
+    expect(result.trading.trades).toBe(3);
+    expect(result.exposure).toEqual([1, 1, 0, 0, 1, 1]);
+    expect(result.trading.costs).toBeCloseTo(0.001 * result.trading.turnover + 3 * 0.25, 12);
+    // The cash months stay flat after the sale's costs.
+    expect(result.values[3]).toBe(result.values[4]);
+  });
+  it("buy and hold pays only for its single purchase", () => {
+    const single = { months: ["2020-11", "2020-12", "2021-01"], closes: [[10, 13, 7.3]] };
+    const own: BacktestSpec = { ...base, startMonth: "2020-12", endMonth: "2021-01", holdings: [{ instrumentId: "A", weightBps: 10_000 }], cashWeightBps: 0, rule: { kind: "fixed-weights", rebalance: "none" }, costs: costs(25, 2) };
+    const result = simulateBuyAndHold(buyAndHoldFor(own, "A"), single);
+    const invested = (100 - 2) / 1.0025;
+    expect(result.trading.trades).toBe(1);
+    expect(result.values).toEqual([100, invested * 1.3, invested * 0.73].map((value, index) => index ? expect.closeTo(value, 12) : value));
+    expect(result.metrics).toEqual(simulateBacktest(own, single).metrics);
+  });
+  it("refuses fees that would use up the portfolio", () => {
+    expect(() => simulateBacktest({ ...mix("monthly"), costs: costs(0, 60) }, swing)).toThrow(/spotřebovaly celé portfolio/);
   });
 });
