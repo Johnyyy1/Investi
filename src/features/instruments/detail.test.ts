@@ -72,6 +72,14 @@ describe("instrument detail loading", () => {
     expect(detail.points).toEqual([]);
     expect(detail.historyMessage).toMatch(/není dostupná/);
   });
+  it.each([["UnsupportedInstrument", "zdroj nepokrývá"], ["RateLimited", "dočasně omezený"]] as const)("explains ETF %s while retaining prices and history", async (code, message) => {
+    const service = createDeterministicMarketDataService();
+    vi.spyOn(service, "getEtfAnalytics").mockRejectedValue(new MarketDataError(code, "unavailable"));
+    const detail = await loadInstrumentDetail(service, "IE-XETR:VWCE", "1Y", now);
+    expect(detail.etfAnalyticsMessage).toContain(message);
+    expect(detail.quote?.price).toBe(124);
+    expect(detail.points.length).toBe(10);
+  });
   it("keeps a missing instrument distinct from a missing quote", async () => {
     const detail = await loadInstrumentDetail(createDeterministicMarketDataService(), "FMP:NASDAQ:AAPL", "1Y", now);
     expect(detail.instrument).toBeNull();

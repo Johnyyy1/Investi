@@ -9,7 +9,7 @@ import type { FmpClientOptions } from "./fmp/client";
 import { FmpClient } from "./fmp/client";
 import { FmpMarketDataProvider } from "./fmp/provider";
 import { FmpEquityFundamentalsProvider } from "./fmp/equity-fundamentals";
-import { FmpEtfAnalyticsProvider } from "./fmp/etf-analytics";
+import { TickerInsideEtfAnalyticsProvider, type TickerInsideFetch } from "./tickerinside/etf-analytics";
 import type { CnbClientOptions } from "./cnb/client";
 import { CNB_FX_CACHE_MILLISECONDS, createCnbFxProvider } from "./cnb/provider";
 import type { FrankfurterClientOptions } from "./frankfurter/client";
@@ -29,6 +29,7 @@ export interface MarketDataCompositionOptions extends Omit<MarketDataServiceOpti
   fetch?: FmpClientOptions["fetch"];
   frankfurterFetch?: FrankfurterClientOptions["fetch"];
   cnbFetch?: CnbClientOptions["fetch"];
+  tickerinsideFetch?: TickerInsideFetch;
   /** Cross-instance layer behind the process-local cache; only used when external providers are configured. */
   sharedCache?: SharedMarketDataCacheStore;
 }
@@ -44,6 +45,7 @@ export function createMarketDataService(options: MarketDataCompositionOptions) {
     fetch,
     frankfurterFetch,
     cnbFetch,
+    tickerinsideFetch,
     sharedCache,
     ...serviceOptions
   } = options;
@@ -90,6 +92,6 @@ export function createMarketDataService(options: MarketDataCompositionOptions) {
       })
     : undefined);
   const equityFundamentalsProvider = provider === "deterministic" ? new DeterministicEquityFundamentalsProvider(clock) : new FmpEquityFundamentalsProvider(fmpClient!, clock);
-  const etfAnalyticsProvider = provider === "deterministic" ? new DeterministicEtfAnalyticsProvider(clock) : new FmpEtfAnalyticsProvider(fmpClient!, clock);
+  const etfAnalyticsProvider = provider === "deterministic" ? new DeterministicEtfAnalyticsProvider(clock) : new TickerInsideEtfAnalyticsProvider({ fetch: tickerinsideFetch, clock });
   return new MarketDataService(securityProvider, { ...serviceOptions, ...(cache ? { cache } : {}), clock, fxProvider, equityFundamentalsProvider, etfAnalyticsProvider });
 }

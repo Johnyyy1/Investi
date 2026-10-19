@@ -48,6 +48,7 @@
     "test:foundations-browser": "node scripts/validate-foundations.mjs",
     "smoke:fmp": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/smoke-fmp-market-data.mts",
     "smoke:fmp-fundamentals": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/smoke-equity-fundamentals.mts",
+    "smoke:tickerinside": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/smoke-tickerinside.mts",
     "demo:cleanup": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/cleanup-anonymous.mts",
     "test:personalization-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-personalization-persistence.mts",
     "test:personalization-compatibility": "node scripts/validate-personalization-compatibility.mjs",

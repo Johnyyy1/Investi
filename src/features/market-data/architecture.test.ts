@@ -33,6 +33,7 @@ describe("market-data architecture boundary", () => {
       "fmp/client.ts",
       "fmp/equity-fundamentals.ts",
       "fmp/provider.ts",
+      "tickerinside/etf-analytics.ts",
       "cnb/client.ts",
       "cnb/parse.ts",
       "cnb/provider.ts",
@@ -51,7 +52,7 @@ describe("market-data architecture boundary", () => {
     for (const file of files) {
       const source = await readFile(file, "utf8");
       if (!/^"use client";/.test(source)) continue;
-      expect(source, path.relative(repositoryRoot, file)).not.toMatch(/features\/market-data\/(?:cache|postgres-cache|composition|environment|service|provider|deterministic|fmp|frankfurter|cnb)/);
+      expect(source, path.relative(repositoryRoot, file)).not.toMatch(/features\/market-data\/(?:cache|postgres-cache|composition|environment|service|provider|deterministic|fmp|frankfurter|cnb|tickerinside)/);
     }
   });
 

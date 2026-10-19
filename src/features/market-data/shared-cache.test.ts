@@ -208,10 +208,6 @@ describe("FMP requests per instrument detail view", () => {
     "ratios-ttm": (symbol) => [{ symbol, priceToEarningsRatioTTM: 31.4 }],
     "income-statement": (symbol) => [{ symbol, date: "2025-09-27", filingDate: "2025-10-31", period: "FY", reportedCurrency: "USD", revenue: 391_000_000_000, netIncome: 96_000_000_000, epsDiluted: 6.42 }],
     "cash-flow-statement": (symbol) => [{ symbol, date: "2025-09-27", filingDate: "2025-10-31", period: "FY", reportedCurrency: "USD", freeCashFlow: 108_000_000_000 }],
-    info: (symbol) => [{ symbol, expenseRatio: 0.09, assetsUnderManagement: 789_000_000_000, nav: 756.92, navCurrency: "USD", holdingsCount: 504, inceptionDate: "1993-01-22", updatedAt: "2026-06-06T07:46:00.054Z" }],
-    holdings: (symbol) => [{ symbol, asset: "AAPL", name: "Apple", weightPercentage: 7.1, updatedAt: "2026-06-01 08:00:00" }],
-    "sector-weightings": (symbol) => [{ symbol, sector: "Technology", weightPercentage: 25.4 }],
-    "country-weightings": (symbol) => [{ symbol, country: "United States", weightPercentage: 59.2 }],
   };
 
   function instance(fmpRequests: string[], sharedCache?: SharedMarketDataCacheStore) {
@@ -227,6 +223,10 @@ describe("FMP requests per instrument detail view", () => {
       fmpApiKey: "test-only",
       fmpBaseUrl: "https://fmp.test/stable",
       fetch,
+      tickerinsideFetch: async () => {
+        fmpRequests.push("tickerinside/fund/spy.json");
+        return Response.json({ ticker: "SPY", expense_ratio: 0.09, holdings: { AAPL: 100 }, holdings_as_of: "2026-06-01", breakdown: { sectors_pct: { technology: 100 }, sectors_stated: true, countries_pct: { US: 100 } } });
+      },
       clock: () => new Date(NOW),
       ...(sharedCache ? { sharedCache } : {}),
     });
@@ -277,7 +277,9 @@ describe("FMP requests per instrument detail view", () => {
 
   it("serves every ETF dataset to another instance from the shared layer", async () => {
     const withoutShared = await viewTwiceFromDifferentInstances("FMP:NYSE:SPY");
-    expect(withoutShared.first).toHaveLength(9);
+    expect(withoutShared.first).toHaveLength(6);
+    expect(withoutShared.first.filter((path) => path.startsWith("tickerinside/"))).toEqual(["tickerinside/fund/spy.json"]);
+    expect(withoutShared.first.some((path) => path.startsWith("etf/"))).toBe(false);
     expect(withoutShared.second).toEqual(withoutShared.first);
 
     const shared = new FakeSharedStore();
