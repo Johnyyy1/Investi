@@ -10,7 +10,7 @@ const metrics: PriceMetrics = {
   spanDays: 365,
   periodReturn: 0.25,
   annualisedReturn: 0.1,
-  maxDrawdown: { depth: -0.2, peakDate: "2025-02-03", troughDate: "2025-04-08", recoveryDate: "2025-08-01" },
+  maxDrawdown: { depth: -0.2, peakDate: "2025-02-03", peakClose: 100, troughDate: "2025-04-08", troughClose: 80, recoveryDate: "2025-08-01" },
   annualisedVolatility: 0.3333,
 };
 

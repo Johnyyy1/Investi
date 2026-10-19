@@ -3,7 +3,7 @@
 import { AppLink as Link } from "@/components/shell/app-link";
 import { Check, ChevronRight, GitCompareArrows, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition, type MouseEvent } from "react";
+import { useMemo, useRef, useState, useTransition, type MouseEvent } from "react";
 import { BuyReview } from "@/components/lab/buy-review";
 import { InstrumentPriceChart } from "@/components/lab/instrument-price-chart";
 import { InstrumentReturnAnalytics } from "@/components/lab/instrument-return-analytics";
@@ -12,9 +12,9 @@ import { EtfAnalytics } from "@/components/lab/etf-analytics";
 import { Button, ButtonLink, IconButton } from "@/components/ui/button";
 import { Feedback } from "@/components/ui/feedback";
 import { Input } from "@/components/ui/form-controls";
-import type { ChartRange } from "@/features/instruments/history";
+import { filterHistoryByTimeframe, timeframeWindow, type ChartRange } from "@/features/instruments/history";
 import { instrumentCompareHref } from "@/features/instruments/routes";
-import type { PriceMetrics } from "@/features/instruments/price-metrics";
+import { priceMetrics } from "@/features/instruments/price-metrics";
 import type { ChartType } from "@/features/instruments/price-chart-presentation";
 import type { HistoricalPricePoint, Instrument, MarketSessionState, QuoteUsabilityStatus } from "@/features/market-data/contracts";
 import type { EquityFundamentalsSnapshot } from "@/features/market-data/equity-fundamentals";
@@ -77,8 +77,18 @@ function czkValue(price: number, homeCurrency: NonNullable<HomeCurrency>) {
   return new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 }).format(price * homeCurrency.rate);
 }
 
-export function InstrumentDetailView({ instrument, quote, quoteMessage, points, historyMessage, historyPartial, metrics, homeCurrency, homeCurrencyMessage, fundamentals, fundamentalsMessage, etfAnalytics, etfAnalyticsMessage, range, chartType, historyWindow, portfolio: initialPortfolio }: { instrument: Instrument; quote: QuoteView | null; quoteMessage: string | null; points: HistoricalPricePoint[]; historyMessage: string | null; historyPartial: boolean; metrics: PriceMetrics | null; homeCurrency: HomeCurrency; homeCurrencyMessage: string | null; fundamentals: EquityFundamentalsSnapshot | null; fundamentalsMessage: string | null; etfAnalytics: EtfAnalyticsSnapshot | null; etfAnalyticsMessage: string | null; range: ChartRange; chartType: ChartType; historyWindow: { startDate: string; endDate: string }; portfolio: PortfolioView }) {
+export function InstrumentDetailView({ instrument, quote, quoteMessage, points: history, historyMessage, historyPartial, homeCurrency, homeCurrencyMessage, fundamentals, fundamentalsMessage, etfAnalytics, etfAnalyticsMessage, initialRange, chartType, asOf, portfolio: initialPortfolio }: { instrument: Instrument; quote: QuoteView | null; quoteMessage: string | null; points: HistoricalPricePoint[]; historyMessage: string | null; historyPartial: boolean; homeCurrency: HomeCurrency; homeCurrencyMessage: string | null; fundamentals: EquityFundamentalsSnapshot | null; fundamentalsMessage: string | null; etfAnalytics: EtfAnalyticsSnapshot | null; etfAnalyticsMessage: string | null; initialRange: ChartRange; chartType: ChartType; asOf: string; portfolio: PortfolioView }) {
   const router = useRouter();
+  // The whole history is already here; a timeframe is a slice of it, so switching never fetches.
+  const [range, setRange] = useState(initialRange);
+  const timeframe = useMemo(() => {
+    const reference = new Date(`${asOf}T00:00:00.000Z`);
+    const bounds = timeframeWindow(history, range, reference);
+    const points = filterHistoryByTimeframe(history, range, reference);
+    // The instrument's own history starts inside the window, so only part of the timeframe exists.
+    const coverageStart = range !== "Max" && points.length > 0 && points[0] === history[0] && history[0].date > bounds.startDate ? history[0].date : null;
+    return { bounds, points, coverageStart, metrics: points.length ? priceMetrics(points) : null };
+  }, [history, range, asOf]);
   const [portfolio, setPortfolio] = useState(initialPortfolio);
   const [preview, setPreview] = useState<InstrumentPreview | null>(null);
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
@@ -142,7 +152,8 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points, 
           <p className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 text-small text-secondary"><span className="rounded-control bg-surface-muted px-2 py-0.5 font-bold text-foreground tabular-nums">{instrument.symbol}</span><span className="min-w-0 wrap-anywhere">{assetTypeLabel(instrument.assetType)}{instrument.exchangeMic ? ` · burza ${instrument.exchangeMic}` : ""} · obchoduje se v {instrument.quoteCurrency}</span></p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {instrument.assetType !== "cash" ? <ButtonLink href={instrumentCompareHref(instrument.instrumentId, null, range)} variant="secondary" size="compact" className="min-h-[52px]"><GitCompareArrows aria-hidden="true" className="size-4" />Porovnat s…</ButtonLink> : null}
+          {/* Not prefetched: the href follows the selected timeframe, and each new href would render the compare route. */}
+          {instrument.assetType !== "cash" ? <ButtonLink href={instrumentCompareHref(instrument.instrumentId, null, range)} prefetch={false} variant="secondary" size="compact" className="min-h-[52px]"><GitCompareArrows aria-hidden="true" className="size-4" />Porovnat s…</ButtonLink> : null}
           {canInvest ? <Button onClick={openBuy} className="hidden sm:inline-flex sm:w-auto">Koupit {instrument.symbol}</Button> : null}
         </div>
       </div>
@@ -166,9 +177,9 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points, 
       </div>
     </section>
 
-    <div className="mt-6"><InstrumentPriceChart key={instrument.instrumentId} instrumentId={instrument.instrumentId} range={range} points={points} currency={instrument.quoteCurrency} message={historyMessage} partial={historyPartial} metrics={metrics} initialChartType={chartType} historyWindow={historyWindow} /></div>
+    <div className="mt-6"><InstrumentPriceChart key={instrument.instrumentId} range={range} onRangeChange={setRange} points={timeframe.points} bounds={timeframe.bounds} coverageStart={timeframe.coverageStart} currency={instrument.quoteCurrency} message={historyMessage ?? "Cenová historie pro toto období není dostupná."} partial={historyPartial} metrics={timeframe.metrics} initialChartType={chartType} /></div>
 
-    <div className="mt-6"><InstrumentReturnAnalytics metrics={metrics} currency={instrument.quoteCurrency} /></div>
+    <div className="mt-6"><InstrumentReturnAnalytics metrics={timeframe.metrics} currency={instrument.quoteCurrency} /></div>
 
     {holding ? <section aria-labelledby="position-heading" className="mt-8 border-t border-border pt-7"><div className="flex flex-wrap items-center justify-between gap-4"><h2 id="position-heading" className="text-section-title font-bold">Tvoje pozice</h2><div className="flex w-full flex-wrap gap-2 sm:w-auto">{canInvest ? <Button size="compact" onClick={openBuy}>Koupit další</Button> : null}<Button size="compact" variant="secondary" onClick={openSell}>Prodat</Button></div></div><dl className="mt-5 grid gap-4 text-small sm:grid-cols-4"><div><dt className="text-secondary">Množství</dt><dd className="mt-1 font-bold tabular-nums">{quantity(holding.quantity)} pozic</dd></div><div><dt className="text-secondary">Tržní hodnota</dt><dd className="mt-1 font-bold tabular-nums">{holding.marketValueMinor === null ? "Nedostupné" : formatPracticeCapitalMinor(holding.marketValueMinor)}</dd></div><div><dt className="text-secondary">Zisk / ztráta</dt><dd className={`mt-1 font-bold tabular-nums ${gainLossState(holding.gainLossMinor) === "positive" ? "text-success-ink" : gainLossState(holding.gainLossMinor) === "negative" ? "text-danger-ink" : ""}`}>{signedMoney(holding.gainLossMinor)}</dd></div><div><dt className="text-secondary">Váha v portfoliu</dt><dd className="mt-1 font-bold tabular-nums">{holding.allocationBasisPoints === null ? "Nedostupné" : formatPercentage(Number(holding.allocationBasisPoints) / 10_000)}</dd></div></dl></section> : null}
 

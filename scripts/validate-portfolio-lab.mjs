@@ -205,28 +205,60 @@ try {
   await page.keyboard.press("Escape");
   assert.match(await readout.innerText(), /poslední svíčka/, "Escape returns the readout to the latest bar");
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-candles-1440.png`, fullPage: true });
+  const timeframe = (label) => page.getByRole("group", { name: "Období vývoje ceny" }).getByRole("button", { name: label, exact: true });
+  // Timeframes and chart types are slices and views of the history already on the page:
+  // switching them must not navigate, render on the server or fetch anything.
+  const switchRequests = [];
+  const recordRequest = (request) => { if (["document", "fetch", "xhr"].includes(request.resourceType())) switchRequests.push(`${request.method()} ${request.url()}`); };
+  page.on("request", recordRequest);
   for (const longRange of ["5Y", "Max"]) {
-    const link = page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: longRange === "5Y" ? "5L" : longRange });
-    assert.match(await link.getAttribute("href"), /chart=candles/, "range links keep the chart type");
-    await link.click();
+    await timeframe(longRange === "5Y" ? "5L" : longRange).click();
     await page.waitForURL(new RegExp(`range=${longRange}&chart=candles`));
+    assert.equal(await timeframe(longRange === "5Y" ? "5L" : longRange).getAttribute("aria-pressed"), "true", `${longRange} is the pressed timeframe`);
     // The sample history spans about a year, so even 5L and Max keep daily candles.
     assert.match(await page.getByRole("img", { name: /denní, svíčkový graf cen očištěných o splity/ }).getAttribute("aria-label"), /pokrývá pozorování od 2\. 1\. 2025 do 16\. 1\. 2026/, `${longRange} candles retain all available observations`);
     await page.screenshot({ path: `${screenshotDir}/instrument-aapl-${longRange.toLowerCase()}-candles-1440.png`, fullPage: true });
   }
-  await page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: "1R" }).click();
+  await timeframe("1R").click();
   await page.waitForURL(/range=1Y/);
   await equityScreenshotStyle.evaluate((style) => style.remove());
   await page.getByRole("button", { name: "Křivka", exact: true }).click();
   await page.waitForURL((url) => !url.search.includes("chart="));
   await wheelZoom();
-  await page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: "1M" }).click();
+  await timeframe("1M").click();
   await page.waitForURL(/range=1M/);
   await resetViewport.waitFor({ state: "hidden" });
   assert.equal(await resetViewport.isVisible(), false, "changing timeframe resets the viewport");
   assert.match(await page.locator("main").innerText(), /Cenový výnos za zobrazené období/);
   assert.match(await page.locator("main").innerText(), /Začátek · .*Konec · .*Minimum období.*Maximum období/s);
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-1m-1440.png`, fullPage: true });
+  {
+    const horizon = async () => (await page.locator("[data-chart-type]").getAttribute("aria-label")).match(/od (\d+\. \d+\. \d{4}) do (\d+\. \d+\. \d{4})/).slice(1).join(" – ");
+    const seen = new Map();
+    for (const [label, range] of [["5L", "5Y"], ["1M", "1M"], ["3M", "3M"], ["6M", "6M"], ["Letos", "YTD"], ["1R", "1Y"], ["Max", "Max"], ["5L", "5Y"]]) {
+      await timeframe(label).click();
+      await page.waitForURL(new RegExp(`range=${range}(&|$)`));
+      assert.equal(await page.getByRole("status").filter({ hasText: /Načítá|není dostupná/ }).count(), 0, `${label} renders without a loading or unavailable state`);
+      const statistics = await selectedStatistics();
+      if (seen.has(range)) assert.equal(statistics, seen.get(range), `${label} recomputes the same statistics on a revisit`);
+      seen.set(range, statistics);
+      assert.match(await horizon(), /\d{4} – \d+\. \d+\. 2026/, `${label} chart names its observation horizon`);
+    }
+    // The sample history starts in January 2025 and ends 16 January 2026, so 1M, 3M and 1R are distinct slices.
+    assert.notEqual(seen.get("1M"), seen.get("3M"), "1M and 3M statistics differ");
+    assert.notEqual(seen.get("3M"), seen.get("1Y"), "3M and 1R statistics differ");
+    assert.equal(seen.get("5Y"), seen.get("Max"), "5L and Max cover the same year of sample data");
+    for (let index = 0; index < 3; index++) {
+      await page.getByRole("button", { name: "Svíčky", exact: true }).click();
+      await page.locator('[data-chart-type="candles"]').waitFor();
+      await page.getByRole("button", { name: "Křivka", exact: true }).click();
+      await page.locator('[data-chart-type="line"]').waitFor();
+    }
+    await timeframe("1M").click();
+    await page.waitForURL(/range=1M/);
+  }
+  page.off("request", recordRequest);
+  assert.deepEqual(switchRequests, [], "switching timeframes and chart types makes no request");
   await page.getByRole("button", { name: "Svíčky", exact: true }).click();
   for (const width of [320, 375, 390, 768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
@@ -279,7 +311,7 @@ try {
   assert.equal(await resetViewport.isVisible(), true, "ETF candle mode preserves zoom");
   await page.screenshot({ path: `${screenshotDir}/instrument-etf-candles-zoom-1440.png`, fullPage: true });
   await resetViewport.click();
-  assert.match(await page.locator('section[aria-labelledby="price-history-heading"]').innerText(), /Minimum období\s*117,789 EUR/, "candle summary uses OHLC low instead of closing low");
+  assert.match(await page.locator('section[aria-labelledby="price-history-heading"]').innerText(), /Minimum období · \d+\. \d+\. \d{4}\s*117,789 EUR/, "candle summary uses OHLC low instead of closing low, with its date");
   await page.screenshot({ path: `${screenshotDir}/instrument-etf-candles-1440.png`, fullPage: true });
   await page.locator('[data-testid="etf-analytics"] > div').screenshot({ path: `${screenshotDir}/instrument-etf-holdings-sectors.png` });
   await page.locator('section[aria-labelledby="etf-countries-heading"]').screenshot({ path: `${screenshotDir}/instrument-etf-countries.png` });

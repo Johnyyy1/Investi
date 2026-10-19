@@ -40,7 +40,7 @@ export default async function InstrumentPage({ params, searchParams }: { params:
     <div className="mt-6"><h1 className="text-page-title font-bold">Instrument teď nelze načíst</h1><Feedback state="warning" role="status" className="mt-5">{marketDataLimitMessage(budget)}</Feedback></div>
   </PageFrame>;
   const [detail, portfolio] = await Promise.all([
-    loadInstrumentDetail(portfolioMarketData.service, instrumentId, range, env.MARKET_DATA_PROVIDER === "deterministic" ? new Date(env.DETERMINISTIC_MARKET_NOW ?? FIXTURE_RETRIEVED_AT) : new Date()),
+    loadInstrumentDetail(portfolioMarketData.service, instrumentId, env.MARKET_DATA_PROVIDER === "deterministic" ? new Date(env.DETERMINISTIC_MARKET_NOW ?? FIXTURE_RETRIEVED_AT) : new Date()),
     loadPortfolioView(user.id),
   ]);
   if (detail.instrumentMissing) notFound();
@@ -51,7 +51,7 @@ export default async function InstrumentPage({ params, searchParams }: { params:
       observedAt: detail.quote.observedAt,
       status: detail.quote.usability.status,
       marketState: detail.quote.usability.marketState,
-    } : null} quoteMessage={detail.quoteMessage} historyMessage={detail.historyMessage} points={chartPayload(detail.points)} historyPartial={detail.historyPartial} metrics={detail.metrics} homeCurrency={detail.homeCurrency} homeCurrencyMessage={detail.homeCurrencyMessage} fundamentals={detail.fundamentals} fundamentalsMessage={detail.fundamentalsMessage} etfAnalytics={detail.etfAnalytics} etfAnalyticsMessage={detail.etfAnalyticsMessage} range={range} chartType={parseChartType(query.chart)} historyWindow={{ startDate: detail.startDate, endDate: detail.endDate }} portfolio={portfolio} />
+    } : null} quoteMessage={detail.quoteMessage} historyMessage={detail.historyMessage} points={chartPayload(detail.points)} historyPartial={detail.historyPartial} homeCurrency={detail.homeCurrency} homeCurrencyMessage={detail.homeCurrencyMessage} fundamentals={detail.fundamentals} fundamentalsMessage={detail.fundamentalsMessage} etfAnalytics={detail.etfAnalytics} etfAnalyticsMessage={detail.etfAnalyticsMessage} initialRange={range} chartType={parseChartType(query.chart)} asOf={detail.endDate} portfolio={portfolio} />
       : <div className="mt-6"><h1 className="text-page-title font-bold">Instrument není dostupný</h1><Feedback state="warning" role="status" className="mt-5">{detail.metadataMessage}</Feedback></div>}
   </PageFrame>;
 }

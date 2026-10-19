@@ -1,13 +1,11 @@
 "use client";
 
-import { AppLink as Link } from "@/components/shell/app-link";
 import { useId, useMemo, useState } from "react";
 import { PriceChartCanvas, type ChartBar } from "@/components/lab/price-chart-canvas";
 import { chartRanges, type ChartRange } from "@/features/instruments/history";
 import { periodStatistics, type PriceObservation } from "@/features/instruments/period-statistics";
 import type { PriceMetrics } from "@/features/instruments/price-metrics";
-import { aggregateCandles, barChanges, candleInterval, candleIntervalLabels, candleLabel, chartTone, drawdownSpan, formatChartDate, formatChartPrice, formatSignedChange, hasCandlestickData, axisDecimals, type CandleInterval, type ChartType } from "@/features/instruments/price-chart-presentation";
-import { instrumentDetailHref } from "@/features/instruments/routes";
+import { aggregateCandles, barChanges, candleInterval, candleIntervalLabels, candleLabel, chartTone, drawdownSpan, formatChartDate, formatChartPrice, formatSignedChange, hasCandlestickData, axisDecimals, ohlcExtremes, type CandleInterval, type ChartType } from "@/features/instruments/price-chart-presentation";
 import type { Currency, HistoricalPricePoint } from "@/features/market-data/contracts";
 
 /** Presentation labels for the Pen period selector; the values stay the same as the loaded range. */
@@ -20,21 +18,34 @@ function axisLabel(date: string, interval: CandleInterval) {
   return monthLabel.format(new Date(`${date}T00:00:00.000Z`));
 }
 
-function chartHref(instrumentId: string, range: ChartRange, type: ChartType) {
-  return `${instrumentDetailHref(instrumentId)}?range=${range}${type === "candles" ? "&chart=candles" : ""}`;
+/** Keeps the view in the URL for reloads and sharing, without a navigation or a server render. */
+function replaceSearchParam(name: string, value: string | null) {
+  const url = new URL(window.location.href);
+  if (value === null) url.searchParams.delete(name);
+  else url.searchParams.set(name, value);
+  window.history.replaceState(null, "", url);
 }
 
-export function InstrumentPriceChart({ instrumentId, range, points, currency, message, partial, metrics, initialChartType = "line", historyWindow }: {
-  instrumentId: string;
+/**
+ * Renders one timeframe of an instrument's already loaded history. Every figure here is
+ * derived from `points`, so switching the timeframe or the chart type is a local state
+ * change: no navigation, no request and no loading state.
+ */
+export function InstrumentPriceChart({ range, onRangeChange, points, bounds, coverageStart = null, currency, message, partial, metrics, initialChartType = "line" }: {
   range: ChartRange;
+  onRangeChange: (range: ChartRange) => void;
+  /** The selected timeframe's observations. */
   points: PriceObservation[];
+  /** The selected timeframe's date window; aggregated bars it cuts are labelled as partial. */
+  bounds?: { startDate: string; endDate: string };
+  /** First observation of a history that starts inside the window; null when the history covers it. */
+  coverageStart?: string | null;
   currency: Currency;
   message: string | null;
   partial: boolean;
+  /** Price metrics of `points`; the drawdown band comes from here. */
   metrics: PriceMetrics | null;
   initialChartType?: ChartType;
-  /** The requested date window; aggregated bars it cuts are labelled as partial. */
-  historyWindow?: { startDate: string; endDate: string };
 }) {
   const [chartType, setChartType] = useState<ChartType>(initialChartType);
   const [tableOpen, setTableOpen] = useState(false);
@@ -46,8 +57,8 @@ export function InstrumentPriceChart({ instrumentId, range, points, currency, me
   const intervalCopy = candleIntervalLabels[interval];
   const tone = chartTone(period?.returnPercent);
   const largestDrop = metrics?.maxDrawdown ?? null;
-  const startDate = historyWindow?.startDate;
-  const endDate = historyWindow?.endDate;
+  const startDate = bounds?.startDate;
+  const endDate = bounds?.endDate;
 
   const candles = useMemo(() => canShowCandles ? aggregateCandles(points as readonly HistoricalPricePoint[], interval, startDate && endDate ? { startDate, endDate } : undefined) : [], [points, interval, canShowCandles, startDate, endDate]);
   const decimals = useMemo(() => axisDecimals(points.flatMap((point) => {
@@ -69,21 +80,27 @@ export function InstrumentPriceChart({ instrumentId, range, points, currency, me
 
   const selectType = (type: ChartType) => {
     setChartType(type);
-    // Keep the choice in the URL without a server round trip; range links carry it too.
-    const url = new URL(window.location.href);
-    if (type === "candles") url.searchParams.set("chart", "candles");
-    else url.searchParams.delete("chart");
-    window.history.replaceState(null, "", url);
+    replaceSearchParam("chart", type === "candles" ? "candles" : null);
+  };
+  const selectRange = (next: ChartRange) => {
+    onRangeChange(next);
+    replaceSearchParam("range", next);
   };
 
   const first = points[0];
   const last = points.at(-1);
-  const extremes = showingCandles && candles.length ? { low: Math.min(...candles.map((bar) => bar.low)), high: Math.max(...candles.map((bar) => bar.high)) } : period ? { low: period.low, high: period.high } : null;
+  // Candles show daily lows and highs; the line only has closes, so its extremes are closes.
+  const extremes = (showingCandles ? ohlcExtremes(points as readonly HistoricalPricePoint[]) : null) ?? period;
   const ariaLabel = !period || !first || !last ? ""
     : showingCandles
       ? `${range}, ${intervalCopy.adjective}, svíčkový graf cen očištěných o splity v ${currency}. ${candles.length} svíček pokrývá pozorování od ${formatChartDate(first.date)} do ${formatChartDate(last.date)}. Každá svíčka ukazuje otevření, maximum, minimum a zavření.`
       : `${range}, denní graf závěrečných cen očištěných o splity v ${currency}. ${period.observationCount} pozorování od ${formatChartDate(first.date)} do ${formatChartDate(last.date)}. První cena období ${formatChartPrice(period.start.close, currency)}; poslední ${formatChartPrice(period.end.close, currency)}. Minimum období ${formatChartPrice(period.low, currency)}; maximum období ${formatChartPrice(period.high, currency)}.`;
-  const datasetKey = `${instrumentId}:${range}:${points.length}:${first?.date}:${last?.date}`;
+  const datasetKey = `${range}:${points.length}:${first?.date}:${last?.date}`;
+  const coverageNote = !period ? null
+    : period.observationCount === 1 ? "Je dostupná jen jedna závěrečná cena; výnos za období nelze vypočítat."
+    : coverageStart ? `Cenová historie začíná ${formatChartDate(coverageStart)}, takže graf ukazuje jen tuto část období. Chybějící dny nejsou doplněny.`
+    : partial && range === "Max" ? "Pouze dostupná pozorování; chybějící dny nejsou doplněny."
+    : null;
   const toggleClass = (active: boolean) => `min-h-11 rounded-control px-3 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${active ? "bg-surface text-foreground shadow-elevation-1" : "text-secondary hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45"}`;
 
   return <section aria-labelledby="price-history-heading" className="min-w-0">
@@ -97,9 +114,9 @@ export function InstrumentPriceChart({ instrumentId, range, points, currency, me
           <button type="button" aria-pressed={!showingCandles} onClick={() => selectType("line")} className={toggleClass(!showingCandles)}>Křivka</button>
           <button type="button" aria-pressed={showingCandles} disabled={!canShowCandles} aria-describedby={!canShowCandles && period ? candleHelpId : undefined} onClick={() => selectType("candles")} className={toggleClass(showingCandles)}>Svíčky</button>
         </div>
-        <nav aria-label="Období vývoje ceny" className="flex min-w-0 max-w-full flex-wrap gap-0.5 text-small">
-          {chartRanges.map((option) => <Link key={option} href={chartHref(instrumentId, option, showingCandles ? "candles" : "line")} aria-current={range === option ? "page" : undefined} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-control px-2.5 font-semibold tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${range === option ? "bg-surface text-foreground shadow-elevation-1" : "text-secondary hover:bg-surface hover:text-foreground"}`}>{periodOptionLabels[option]}</Link>)}
-        </nav>
+        <div role="group" aria-label="Období vývoje ceny" className="flex min-w-0 max-w-full flex-wrap gap-0.5 text-small">
+          {chartRanges.map((option) => <button key={option} type="button" aria-pressed={range === option} onClick={() => selectRange(option)} className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-control px-2.5 font-semibold tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${range === option ? "bg-surface text-foreground shadow-elevation-1" : "text-secondary hover:bg-surface hover:text-foreground"}`}>{periodOptionLabels[option]}</button>)}
+        </div>
       </div>
     </div>
     {period && first && last ? <>
@@ -109,7 +126,7 @@ export function InstrumentPriceChart({ instrumentId, range, points, currency, me
         <span aria-hidden="true" className="mt-1.5 inline-block size-2.5 shrink-0 rounded-sm bg-warning" />
         <span>
           Graf ukazuje jen cenu očištěnou o splity. Dividendy v něm nejsou, takže celkový výnos držitele mohl být vyšší.
-          {largestDrop ? ` Žlutý pruh označuje největší propad období podle zavíracích cen: z vrcholu ${formatChartDate(largestDrop.peakDate)} na dno ${formatChartDate(largestDrop.troughDate)}, ${formatSignedChange(largestDrop.depth * 100, "%", 1)}. ${largestDrop.recoveryDate ? `Na vrchol se cena vrátila ${formatChartDate(largestDrop.recoveryDate)}.` : "Do konce období se na vrchol nevrátila."}${showingCandles && interval !== "daily" ? ` Ve svíčkách pruh pokrývá ${interval === "weekly" ? "týdny" : "měsíce"}, které tyto dny obsahují.` : ""}` : ""}
+          {largestDrop ? ` Žlutý pruh označuje největší propad období podle zavíracích cen: z vrcholu ${formatChartDate(largestDrop.peakDate)} (${formatChartPrice(largestDrop.peakClose, currency)}) na dno ${formatChartDate(largestDrop.troughDate)} (${formatChartPrice(largestDrop.troughClose, currency)}), ${formatSignedChange(largestDrop.depth * 100, "%", 1)}. ${largestDrop.recoveryDate ? `Na vrchol se cena vrátila ${formatChartDate(largestDrop.recoveryDate)}.` : "Do konce období se na vrchol nevrátila."}${showingCandles && interval !== "daily" ? ` Ve svíčkách pruh pokrývá ${interval === "weekly" ? "týdny" : "měsíce"}, které tyto dny obsahují.` : ""}` : ""}
         </span>
       </p>
       <dl className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(min(100%,9.5rem),1fr))] gap-x-5 gap-y-4 border-t border-border pt-5 text-small">
@@ -117,11 +134,11 @@ export function InstrumentPriceChart({ instrumentId, range, points, currency, me
         <div><dt className="text-secondary">Konec · {formatChartDate(period.end.date)}</dt><dd className="mt-1 font-bold tabular-nums">{formatChartPrice(period.end.close, currency)}</dd></div>
         <div><dt className="text-secondary">Cenový výnos za zobrazené období</dt><dd className={`mt-1 font-bold tabular-nums ${tone === "positive" ? "text-success-ink" : tone === "negative" ? "text-danger-ink" : ""}`}>{period.returnPercent === null ? "Nedostupné" : formatSignedChange(period.returnPercent, "%")}</dd></div>
         <div><dt className="text-secondary">Změna ceny</dt><dd className="mt-1 font-bold tabular-nums">{period.change === null ? "Nedostupné" : formatSignedChange(period.change, ` ${currency}`, decimals)}</dd></div>
-        <div><dt className="text-secondary">Minimum období</dt><dd className="mt-1 font-bold tabular-nums">{formatChartPrice(extremes!.low, currency)}</dd></div>
-        <div><dt className="text-secondary">Maximum období</dt><dd className="mt-1 font-bold tabular-nums">{formatChartPrice(extremes!.high, currency)}</dd></div>
+        <div><dt className="text-secondary">Minimum období · {formatChartDate(extremes!.lowDate)}</dt><dd className="mt-1 font-bold tabular-nums">{formatChartPrice(extremes!.low, currency)}</dd></div>
+        <div><dt className="text-secondary">Maximum období · {formatChartDate(extremes!.highDate)}</dt><dd className="mt-1 font-bold tabular-nums">{formatChartPrice(extremes!.high, currency)}</dd></div>
       </dl>
-      {showingCandles ? <p className="mt-3 text-microcopy text-secondary">Minimum a maximum ve svíčkách počítáme z denních minim a maxim, ne jen ze zavíracích cen.</p> : null}
-      {period.observationCount === 1 || partial ? <p className="mt-3 text-microcopy text-secondary">{period.observationCount === 1 ? "Je dostupná jen jedna závěrečná cena; výnos za období nelze vypočítat." : "Pouze dostupná pozorování; chybějící dny nejsou doplněny."}</p> : null}
+      <p className="mt-3 text-microcopy text-secondary">{showingCandles ? "Minimum a maximum ve svíčkách počítáme z denních minim a maxim, ne jen ze zavíracích cen." : "Minimum a maximum v křivce jsou zavírací ceny, ne denní minima a maxima."}</p>
+      {coverageNote ? <p className="mt-3 text-microcopy text-secondary">{coverageNote}</p> : null}
       <details className="mt-3 text-small" onToggle={(event) => setTableOpen(event.currentTarget.open)}>
         <summary className="inline-flex min-h-11 cursor-pointer items-center font-semibold text-primary-hover focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-primary">Zobrazit cenová data</summary>
         {/* Rendered on demand: Max can hold thousands of rows. */}

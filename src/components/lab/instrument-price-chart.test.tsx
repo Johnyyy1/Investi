@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import type { ChartRange } from "@/features/instruments/history";
 import type { ChartType } from "@/features/instruments/price-chart-presentation";
 import type { PriceMetrics } from "@/features/instruments/price-metrics";
 import { InstrumentPriceChart } from "./instrument-price-chart";
@@ -12,8 +13,8 @@ const ohlc: Point[] = [
   { date: "2026-01-07", open: 105, high: 105.5, low: 95, close: 96 },
 ];
 
-function render(points: Point[], options: { chart?: ChartType; metrics?: PriceMetrics | null } = {}) {
-  return renderToStaticMarkup(createElement(InstrumentPriceChart, { instrumentId: "US-XNAS:AAPL", range: "1Y", points, currency: "USD", message: null, partial: false, metrics: options.metrics ?? null, initialChartType: options.chart, historyWindow: { startDate: "2025-01-07", endDate: "2026-01-07" } }));
+function render(points: Point[], options: { chart?: ChartType; metrics?: PriceMetrics | null; range?: ChartRange; coverageStart?: string; partial?: boolean } = {}) {
+  return renderToStaticMarkup(createElement(InstrumentPriceChart, { range: options.range ?? "1Y", onRangeChange: () => {}, points, currency: "USD", message: null, partial: options.partial ?? false, metrics: options.metrics ?? null, initialChartType: options.chart, bounds: { startDate: "2025-01-07", endDate: "2026-01-07" }, coverageStart: options.coverageStart ?? null }));
 }
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/ /g, " ").replace(/\s+/g, " ");
 
@@ -35,19 +36,20 @@ describe("instrument price chart", () => {
     expect(text(html)).toContain("Svíčky nejsou k dispozici");
   });
 
-  it("starts in candle mode from the URL and keeps that mode in the range links", () => {
+  it("starts in candle mode from the URL", () => {
     const html = render(ohlc, { chart: "candles" });
     expect(html).toContain('data-chart-type="candles"');
     expect(html).toMatch(/aria-pressed="true"[^>]*>Svíčky/);
     expect(html).toContain("1Y, denní, svíčkový graf cen očištěných o splity v USD. 3 svíček pokrývá pozorování od 5. 1. 2026 do 7. 1. 2026");
-    expect(html).toContain('href="/lab/instruments/US-XNAS%3AAAPL?range=5Y&amp;chart=candles"');
-    expect(html).not.toContain("?range=5Y\"");
   });
 
-  it("uses plain range links in line mode", () => {
-    const html = render(ohlc);
-    expect(html).toContain('href="/lab/instruments/US-XNAS%3AAAPL?range=5Y"');
-    expect(html).not.toContain("chart=candles");
+  it("offers every timeframe as an in-page toggle, not a navigation", () => {
+    const html = render(ohlc, { range: "6M" });
+    expect(html).not.toContain("href=\"/lab/instruments");
+    const group = html.match(/<div role="group" aria-label="Období vývoje ceny".*?<\/div>/s)![0];
+    expect(text(group).trim().split(" ")).toEqual(["1M", "3M", "6M", "Letos", "1R", "5L", "Max"]);
+    expect(group.match(/aria-pressed="true"/g)).toHaveLength(1);
+    expect(group).toMatch(/aria-pressed="true"[^>]*>6M</);
   });
 
   it("renders the latest bar in the readout before any hover, with its change against the previous close", () => {
@@ -59,15 +61,26 @@ describe("instrument price chart", () => {
   });
 
   it("uses OHLC extremes in candle mode and closing extremes in line mode", () => {
-    expect(text(render(ohlc, { chart: "candles" }))).toMatch(/Minimum období 95,00 USD Maximum období 106,00 USD/);
-    expect(text(render(ohlc))).toMatch(/Minimum období 96,00 USD Maximum období 105,00 USD/);
+    const candles = text(render(ohlc, { chart: "candles" }));
+    expect(candles).toMatch(/Minimum období · 7\. 1\. 2026 95,00 USD Maximum období · 6\. 1\. 2026 106,00 USD/);
+    expect(candles).toContain("z denních minim a maxim");
+    const line = text(render(ohlc));
+    expect(line).toMatch(/Minimum období · 7\. 1\. 2026 96,00 USD Maximum období · 6\. 1\. 2026 105,00 USD/);
+    expect(line).toContain("Minimum a maximum v křivce jsou zavírací ceny");
   });
 
   it("describes the same drawdown dates the chart band uses", () => {
-    const metrics: PriceMetrics = { startDate: "2026-01-05", endDate: "2026-01-07", observationCount: 3, spanDays: 2, periodReturn: -0.04, annualisedReturn: null, annualisedVolatility: null, maxDrawdown: { depth: 96 / 105 - 1, peakDate: "2026-01-06", troughDate: "2026-01-07", recoveryDate: null } };
+    const metrics: PriceMetrics = { startDate: "2026-01-05", endDate: "2026-01-07", observationCount: 3, spanDays: 2, periodReturn: -0.04, annualisedReturn: null, annualisedVolatility: null, maxDrawdown: { depth: 96 / 105 - 1, peakDate: "2026-01-06", peakClose: 105, troughDate: "2026-01-07", troughClose: 96, recoveryDate: null } };
     const description = text(render(ohlc, { metrics }));
-    expect(description).toContain("z vrcholu 6. 1. 2026 na dno 7. 1. 2026, −8,6 %");
+    expect(description).toContain("z vrcholu 6. 1. 2026 (105,00 USD) na dno 7. 1. 2026 (96,00 USD), −8,6 %");
     expect(description).toContain("Do konce období se na vrchol nevrátila.");
+  });
+
+  it("says when the history starts inside the selected timeframe", () => {
+    expect(text(render(ohlc, { range: "5Y", coverageStart: "2026-01-05" }))).toContain("Cenová historie začíná 5. 1. 2026, takže graf ukazuje jen tuto část období.");
+    expect(text(render(ohlc, { range: "1Y" }))).not.toContain("Cenová historie začíná");
+    expect(text(render(ohlc, { range: "Max", partial: true }))).toContain("Pouze dostupná pozorování");
+    expect(text(render(ohlc.slice(0, 1)))).toContain("Je dostupná jen jedna závěrečná cena");
   });
 
   it("does not render the data table rows until it is opened", () => {

@@ -27,7 +27,7 @@ describe("selected-period split-adjusted price statistics", () => {
     expect(periodStatistics([point("2026-01-16", 114), point("2026-01-05", 100)])).toBeNull();
   });
   it("exposes only price statistics with no total-return field", () => {
-    expect(Object.keys(periodStatistics([point("2026-01-05", 100), point("2026-01-16", 114)]) ?? {})).toEqual(["start", "end", "change", "returnPercent", "low", "high", "observationCount"]);
+    expect(Object.keys(periodStatistics([point("2026-01-05", 100), point("2026-01-16", 114)]) ?? {})).toEqual(["start", "end", "change", "returnPercent", "low", "lowDate", "high", "highDate", "observationCount"]);
     expect(periodReturnLabel("1M")).toBe("Cenový výnos za 1 měsíc");
     expect(periodReturnLabel("3M")).toBe("Cenový výnos za 3 měsíce");
     expect(periodReturnLabel("6M")).toBe("Cenový výnos za 6 měsíců");
@@ -36,5 +36,15 @@ describe("selected-period split-adjusted price statistics", () => {
     expect(periodReturnLabel("5Y")).toBe("Cenový výnos za 5 let");
     expect(periodReturnLabel("Max")).toBe("Cenový výnos za celé období");
     expect(periodReturnLabel("1M")).not.toMatch(/total return/i);
+  });
+  it("dates the period low and high at their first occurrence", () => {
+    const result = periodStatistics([point("2026-01-05", 100), point("2026-01-06", 90), point("2026-01-07", 130), point("2026-01-08", 90), point("2026-01-09", 130)]);
+    expect(result).toMatchObject({ low: 90, lowDate: "2026-01-06", high: 130, highDate: "2026-01-07" });
+    expect(periodStatistics([point("2026-01-05", 0.1)])).toMatchObject({ low: 0.1, lowDate: "2026-01-05", high: 0.1, highDate: "2026-01-05", change: null, returnPercent: null });
+  });
+  it("keeps decimal prices exact in the change and return", () => {
+    const result = periodStatistics([point("2026-01-05", 0.25), point("2026-01-06", 1.3333)]);
+    expect(result?.change).toBeCloseTo(1.0833, 12);
+    expect(result?.returnPercent).toBeCloseTo(433.32, 10);
   });
 });
