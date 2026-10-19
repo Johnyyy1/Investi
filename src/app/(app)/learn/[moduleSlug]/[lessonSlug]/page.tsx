@@ -9,7 +9,7 @@ import { serializePracticeCapitalMinor } from "@/features/rewards/presentation";
 import { toLearningMomentum } from "@/features/progress/contracts";
 import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
 import { isGuestIdentity } from "@/features/guest/identity";
-import { loadLessonHistory, lessonUsesHistory } from "@/features/lessons/real-history/load";
+import { loadLessonHistory, loadLessonRiskHistory, lessonUsesHistory, lessonUsesRiskHistory } from "@/features/lessons/real-history/load";
 import { getConfiguredMarketDataProviderName, getConfiguredMarketDataService } from "@/features/market-data/environment";
 
 type LessonPageProps = { params: Promise<{ moduleSlug: string; lessonSlug: string }> };
@@ -23,13 +23,14 @@ export default async function LessonPage({ params }: LessonPageProps) {
   if (!lesson) notFound();
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
-  const [progress, completedLessons, summary, history] = await Promise.all([
+  const [progress, completedLessons, summary, history, riskHistory] = await Promise.all([
     getLessonProgress(user.id, lesson.id),
     getModuleProgress(user.id, getModuleLessons(moduleSlug)[0].moduleId),
     loadLearner(),
     lessonUsesHistory(lesson) ? loadLessonHistory(getConfiguredMarketDataService(), getConfiguredMarketDataProviderName()) : undefined,
+    lessonUsesRiskHistory(lesson) ? loadLessonRiskHistory(getConfiguredMarketDataService(), getConfiguredMarketDataProviderName()) : undefined,
   ]);
   const status = progress?.status ?? "not_started";
   if (!summary.gamification) redirect("/sign-in");
-  return <GuidedLesson key={lesson.id} lesson={lesson} initialStatus={status} initialPosition={Math.min(progress?.lastPosition ?? 0, getGuidedSteps(lesson).length - 1)} initialCompletedLessons={completedLessons} initialLearningMomentum={toLearningMomentum(summary.gamification)} initialEarnedPracticeCapitalMinor={serializePracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)} nextHref={summary.allComplete ? "/lab" : `/learn/${summary.next.moduleSlug}/${summary.next.slug}`} guest={isGuestIdentity(user)} history={history} />;
+  return <GuidedLesson key={lesson.id} lesson={lesson} initialStatus={status} initialPosition={Math.min(progress?.lastPosition ?? 0, getGuidedSteps(lesson).length - 1)} initialCompletedLessons={completedLessons} initialLearningMomentum={toLearningMomentum(summary.gamification)} initialEarnedPracticeCapitalMinor={serializePracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)} nextHref={summary.allComplete ? "/lab" : `/learn/${summary.next.moduleSlug}/${summary.next.slug}`} guest={isGuestIdentity(user)} history={history} riskHistory={riskHistory} />;
 }

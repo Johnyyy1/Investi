@@ -2,6 +2,7 @@ import { AppLink as Link } from "@/components/shell/app-link";
 import { ChevronRight, CircleHelp } from "lucide-react";
 import { ComparePicker } from "@/components/lab/compare-picker";
 import { InstrumentComparisonChart, SeriesSwatch } from "@/components/lab/instrument-comparison-chart";
+import { MetricLessonLink } from "@/components/lab/instrument-return-analytics";
 import { Feedback } from "@/components/ui/feedback";
 import type { ComparedInstrument, InstrumentComparison } from "@/features/instruments/comparison-loader";
 import { comparisonDataLabel, comparisonMetricRows, correlationView, CORRELATION_HELP, formatIndexLevel, type ComparedMetricValue } from "@/features/instruments/comparison-presentation";
@@ -25,10 +26,11 @@ function MetricMeaning({ value }: { value: ComparedMetricValue }) {
   return <p className="mt-1 text-microcopy leading-relaxed text-secondary">{value === null ? "Chybí cenová historie tohoto instrumentu." : value.meaning}</p>;
 }
 
-function MetricHelp({ help }: { help: string }) {
+function MetricHelp({ help, lesson }: { help: string; lesson?: { href: string; label: string } }) {
   return <details className="mt-1 text-small">
     <summary className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 font-semibold text-primary-hover focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-primary"><CircleHelp aria-hidden="true" className="size-4" />Co to znamená?</summary>
     <p className="mt-1 max-w-[30rem] text-microcopy leading-relaxed text-secondary">{help}</p>
+    {lesson ? <MetricLessonLink lesson={lesson} /> : null}
   </details>;
 }
 
@@ -88,7 +90,7 @@ export function InstrumentComparisonView({ data, sample }: { data: InstrumentCom
         <caption className="sr-only">Ukazatele A a B za společné období</caption>
         <thead><tr className="border-b border-border-strong"><th scope="col" className="w-[30%] py-3 pr-4 font-semibold text-secondary">Ukazatel</th>{instruments.map((side, index) => <th key={letters[index]} scope="col" className="py-3 pr-4 font-semibold"><span className="flex min-w-0 items-center gap-2"><SeriesSwatch series={seriesKeys[index]} /><span className="wrap-anywhere">{letters[index]} · {symbolOf(side)}</span></span></th>)}</tr></thead>
         <tbody>{rows.map((row) => <tr key={row.id} className="border-b border-border align-top">
-          <th scope="row" className="py-4 pr-4 font-semibold">{row.label}<MetricHelp help={row.help} /></th>
+          <th scope="row" className="py-4 pr-4 font-semibold">{row.label}<MetricHelp help={row.help} lesson={row.lesson} /></th>
           {row.values.map((value, index) => <td key={letters[index]} className="py-4 pr-4"><MetricValue value={value} unit={row.unit} /><MetricMeaning value={value} /></td>)}
         </tr>)}</tbody>
       </table>
@@ -99,7 +101,7 @@ export function InstrumentComparisonView({ data, sample }: { data: InstrumentCom
             <dt className="flex items-center gap-2 text-microcopy font-semibold text-secondary"><SeriesSwatch series={seriesKeys[index]} />{letters[index]} · {symbolOf(instruments[index])}</dt>
             <dd className="mt-1"><MetricValue value={value} unit={row.unit} /><MetricMeaning value={value} /></dd>
           </div>)}</dl>
-          <MetricHelp help={row.help} />
+          <MetricHelp help={row.help} lesson={row.lesson} />
         </li>)}
       </ul>
     </section>

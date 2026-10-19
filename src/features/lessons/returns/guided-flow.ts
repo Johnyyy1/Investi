@@ -1,6 +1,7 @@
 import type { AuthoredLesson } from "../types";
 import { compoundingSteps } from "./compounding-flow";
 import { foundationsSteps } from "../foundations/content";
+import { volatilitySteps } from "../volatility/flow";
 import { availableLessons } from "../../learning/catalog";
 import { returnsLessons } from "./manifest";
 
@@ -56,6 +57,7 @@ export function getStepDefinitions(lessonId: string): readonly Step[] {
   if (lessonId === returnsLessons[3].id) return comparingSteps;
   if (lessonId === returnsLessons[4].id) return logSteps;
   if (foundationsSteps[lessonId]) return foundationsSteps[lessonId];
+  if (volatilitySteps[lessonId]) return volatilitySteps[lessonId];
   throw new Error("This lesson is not available.");
 }
 /** Presentation only: the authored lessons remain the source of every concept and exercise. */

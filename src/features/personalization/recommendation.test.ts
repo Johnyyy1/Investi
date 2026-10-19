@@ -33,6 +33,14 @@ describe("deterministic recommendations", () => {
       expect(recommendLearning({ profile: preferences, progress: foundationsDone })).toMatchObject({ nextLessonId: "returns-what-is-a-return", reasonCode, exampleContext });
     }
   });
+  it("moves on to Volatility once Returns is finished, in curriculum order", () => {
+    const returnsDone = availableLessons.filter((lesson) => lesson.moduleSlug === "returns").map((lesson) => ({ lessonId: lesson.id, status: "completed" }));
+    expect(recommendLearning({ progress: [...foundationsDone, ...returnsDone] })).toMatchObject({ nextLessonId: "volatility-what-is-volatility", reasonCode: "VOLATILITY_AFTER_RETURNS" });
+    // An unfinished Returns lesson still comes first, even when Volatility was started.
+    const progress = [...foundationsDone, ...returnsDone.slice(1), { lessonId: "volatility-standard-deviation", status: "completed" }];
+    expect(recommendLearning({ progress })).toMatchObject({ nextLessonId: "returns-what-is-a-return" });
+    expect(recommendLearning({ progress: [...foundationsDone, ...returnsDone, { lessonId: "volatility-what-is-volatility", status: "completed" }] }).sessionLessonIds.every((id) => id.startsWith("volatility-"))).toBe(true);
+  });
   it("skips completed recommendations and never returns planned content", () => {
     expect(recommendLearning({ progress: [...foundationsDone, { lessonId: "returns-what-is-a-return", status: "completed" }] }).nextLessonId).toBe("returns-simple-returns");
     const complete = curriculumLessons.map((lesson) => ({ lessonId: lesson.id, status: "completed" }));

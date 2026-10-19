@@ -45,7 +45,8 @@ export function HistoricalReturnsExercise({ mode, history }: { mode: "period" | 
   </section>;
 }
 
-function SourceLabel({ snapshot }: { snapshot: LessonHistorySnapshot }) {
+/** Provenance under a frozen history: real history names its source, fixtures say they are sample data. */
+export function SourceLabel({ snapshot }: { snapshot: Pick<LessonHistorySnapshot, "provenance" | "points" | "currency"> }) {
   const { provenance, points, currency } = snapshot;
   const asOf = formatDay(points[points.length - 1].date);
   return isRealHistory(snapshot)

@@ -6,7 +6,7 @@ import { dateLabel, metricsFor, type Metric } from "./price-metrics-presentation
 /** One instrument's value of a metric; null when that instrument has no price history to compute it from. */
 export type ComparedMetricValue = Pick<Metric, "value" | "meaning" | "tone"> | null;
 
-export type ComparisonMetricRow = Pick<Metric, "id" | "label" | "unit" | "help"> & {
+export type ComparisonMetricRow = Pick<Metric, "id" | "label" | "unit" | "help" | "lesson"> & {
   values: readonly [ComparedMetricValue, ComparedMetricValue];
 };
 
@@ -16,7 +16,7 @@ export function comparisonMetricRows(first: PriceMetrics | null, second: PriceMe
   const template = firstMetrics ?? secondMetrics ?? metricsFor({ startDate: "", endDate: "", observationCount: 0, spanDays: 0, periodReturn: null, annualisedReturn: null, maxDrawdown: null, annualisedVolatility: null });
   return template.map((metric, index) => {
     const value = (side: Metric[] | null): ComparedMetricValue => side ? { value: side[index].value, meaning: side[index].meaning, tone: side[index].tone } : null;
-    return { id: metric.id, label: metric.label, unit: metric.unit, help: metric.help, values: [value(firstMetrics), value(secondMetrics)] };
+    return { id: metric.id, label: metric.label, unit: metric.unit, help: metric.help, lesson: metric.lesson, values: [value(firstMetrics), value(secondMetrics)] };
   });
 }
 

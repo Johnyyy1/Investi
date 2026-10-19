@@ -4,7 +4,7 @@ import { readDiagnostic } from "./diagnostic";
 import { readLearnerProfile, type LearnerProfile } from "./profile";
 
 export type ScaffoldLevel = "guided" | "standard" | "compact";
-export type ReasonCode = "FOUNDATIONS_START" | "FOUNDATIONS_CONTINUE" | "DIAGNOSTIC_REMEDIATION" | "FOUNDATIONS_COMPACT_REVIEW" | "RETURNS_AFTER_FOUNDATIONS" | "RETURNS_FOR_ETF_PATH" | "RETURNS_FOR_STOCK_PATH" | "RETURNS_FOR_PORTFOLIO_PATH" | "RETURNS_FOR_QUANT_PATH" | "CURRICULUM_COMPLETE" | "NO_AVAILABLE_LESSON";
+export type ReasonCode = "FOUNDATIONS_START" | "FOUNDATIONS_CONTINUE" | "DIAGNOSTIC_REMEDIATION" | "FOUNDATIONS_COMPACT_REVIEW" | "RETURNS_AFTER_FOUNDATIONS" | "RETURNS_FOR_ETF_PATH" | "RETURNS_FOR_STOCK_PATH" | "RETURNS_FOR_PORTFOLIO_PATH" | "RETURNS_FOR_QUANT_PATH" | "VOLATILITY_AFTER_RETURNS" | "CURRICULUM_COMPLETE" | "NO_AVAILABLE_LESSON";
 export type RecommendationLesson = { id: string; moduleSlug: string; status: "available" | "planned"; estimatedMinutes: number };
 export type CurriculumPrerequisites = Readonly<Record<string, readonly string[]>>;
 /** Recommendation prerequisites only. Does not confer or change access/entitlement. */
@@ -34,7 +34,9 @@ export function recommendLearning({ profile = readLearnerProfile(), progress = [
   const published = curriculum.filter((lesson) => lesson.status === "available");
   const unfinishedFoundations = published.filter((lesson) => lesson.moduleSlug === "investing-foundations" && !completed.has(lesson.id));
   const eligible = published.filter((lesson) => !completed.has(lesson.id) && (prerequisites[lesson.id] ?? []).every((id) => completed.has(id)) && (prerequisites[lesson.moduleSlug] ?? []).every((id) => completed.has(id)));
-  const candidates = unfinishedFoundations.length ? eligible.filter((lesson) => lesson.moduleSlug === "investing-foundations") : eligible.filter((lesson) => lesson.moduleSlug === "returns");
+  // After Foundations, modules follow curriculum order: Returns, then Volatility.
+  const nextModule = unfinishedFoundations.length ? "investing-foundations" : eligible.find((lesson) => lesson.moduleSlug !== "investing-foundations")?.moduleSlug;
+  const candidates = eligible.filter((lesson) => lesson.moduleSlug === nextModule);
   const next = candidates[0];
   const contexts = { LONG_TERM_ETF: "etf", COMPANIES: "stock", PORTFOLIO: "portfolio", QUANT: "data", CONFIDENCE: "neutral" } as const;
   const exampleContext = (profile.primaryGoal && profile.primaryGoal !== "CONFIDENCE" ? contexts[profile.primaryGoal] : null)
@@ -42,6 +44,7 @@ export function recommendLearning({ profile = readLearnerProfile(), progress = [
   let reasonCode: ReasonCode;
   if (!next) reasonCode = published.length > 0 && published.every((lesson) => completed.has(lesson.id)) ? "CURRICULUM_COMPLETE" : "NO_AVAILABLE_LESSON";
   else if (next.moduleSlug === "investing-foundations") reasonCode = diagnostic?.level === "foundations_needed" ? "DIAGNOSTIC_REMEDIATION" : diagnostic?.level === "strong_foundations" ? "FOUNDATIONS_COMPACT_REVIEW" : published.some((lesson) => lesson.moduleSlug === "investing-foundations" && completed.has(lesson.id)) ? "FOUNDATIONS_CONTINUE" : "FOUNDATIONS_START";
+  else if (next.moduleSlug === "volatility") reasonCode = "VOLATILITY_AFTER_RETURNS";
   else reasonCode = ({ etf: "RETURNS_FOR_ETF_PATH", stock: "RETURNS_FOR_STOCK_PATH", portfolio: "RETURNS_FOR_PORTFOLIO_PATH", data: "RETURNS_FOR_QUANT_PATH", neutral: "RETURNS_AFTER_FOUNDATIONS" } as const)[exampleContext];
   // Planning is approximate, with at most three lessons. A long lesson may span sessions.
   const sessionLessonIds: string[] = [];

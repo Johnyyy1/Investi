@@ -18,7 +18,7 @@ await mkdir(output, { recursive: true });
 const userIds = [];
 const errors = [];
 const lessons = await sql`select l.id,l.title,l.slug,m.slug as module_slug from lesson l join learning_module m on m.id=l.module_id where l.is_published=true order by m.position,l.position`;
-assert.equal(lessons.length, 12);
+assert.equal(lessons.length, 17);
 const foundation = lessons.filter((lesson) => lesson.module_slug === "investing-foundations");
 const returns = lessons.filter((lesson) => lesson.module_slug === "returns");
 const href = (lesson) => `/learn/${lesson.module_slug}/${lesson.slug}`;
@@ -61,8 +61,8 @@ async function render(page, label, { state, xp, count, action, actionHref, lab }
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(`${baseURL}/progress`); await settle();
   assert.equal(await root().getAttribute("data-state"), state, `${label}: state`);
-  assert.equal(await root().getByTestId("total-xp").textContent(), `${xp} XP`);
-  assert.equal(await root().getByTestId("available-progress").textContent(), `${count} z 12 lekcí`);
+  assert.equal(await root().getByTestId("total-xp").textContent(), `${new Intl.NumberFormat("cs-CZ").format(xp)} XP`);
+  assert.equal(await root().getByTestId("available-progress").textContent(), `${count} ze 17 lekcí`);
   assert.equal(await root().getByRole("link", { name: lab.link, exact: true }).getAttribute("href"), "/lab/portfolio");
   assert.equal(await root().getByRole("heading", { name: lab.title, exact: true }).count(), 1, `${label}: Lab card title`);
   assert.equal(await root().getByText("Připravujeme", { exact: true }).count(), 1, `${label}: one upcoming chapter`);
@@ -169,7 +169,7 @@ try {
   assert.equal(await root().locator('[aria-current="step"]').getAttribute("href"), href(returns[0]));
 
   await complete(id, lessons);
-  root = await render(page, "complete", { state: "complete", xp: 720, count: 12, action: "Prozkoumat Lab", actionHref: "/lab", lab: unlocked });
+  root = await render(page, "complete", { state: "complete", xp: 1020, count: 17, action: "Prozkoumat Lab", actionHref: "/lab", lab: unlocked });
   assert.equal(await root().locator('[aria-current="step"]').count(), 0);
   assert.equal((await sql`select * from progression_unlock where user_id=${id}`).length, 1, "no duplicate unlock");
   await root().getByRole("link", { name: "Otevřít Portfolio Lab", exact: true }).click(); await page.waitForURL("**/lab/portfolio"); await page.getByTestId("portfolio-cash").waitFor();

@@ -19,6 +19,7 @@
     "test:log-returns-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-log-returns-persistence.mts",
     "test:log-returns-browser": "node scripts/validate-log-returns.mjs",
     "test:returns-browser": "node scripts/validate-returns-flow.mjs",
+    "test:volatility-browser": "node scripts/validate-volatility.mjs",
     "test:curriculum-seed": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-curriculum-seed.mts",
     "test:product": "node scripts/validate-product-shell.mjs",
     "test:progress-browser": "node scripts/validate-progress.mjs",

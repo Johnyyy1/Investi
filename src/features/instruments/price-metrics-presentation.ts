@@ -1,3 +1,4 @@
+import { volatilityLessonLinks } from "@/features/lessons/volatility/manifest";
 import type { PriceMetrics } from "./price-metrics";
 
 /**
@@ -12,7 +13,8 @@ export function dateLabel(value: string) {
   return new Intl.DateTimeFormat("cs-CZ", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00.000Z`));
 }
 
-export type Metric = { id: string; label: string; value: string | null; unit?: string; meaning: string; help: string; tone: "positive" | "negative" | "neutral" };
+/** `lesson` points to the lesson that explains the metric. */
+export type Metric = { id: string; label: string; value: string | null; unit?: string; meaning: string; help: string; lesson?: { href: string; label: string }; tone: "positive" | "negative" | "neutral" };
 
 export function metricToneClass(tone: Metric["tone"]) {
   return tone === "positive" ? "text-success-ink" : tone === "negative" ? "text-danger-ink" : "text-foreground";
@@ -47,6 +49,7 @@ export function metricsFor(metrics: PriceMetrics): Metric[] {
         ? "V tomto období cena neklesla pod předchozí nejvyšší zavírací cenu."
         : `${dateLabel(drawdown.peakDate)} → ${dateLabel(drawdown.troughDate)}. ${drawdown.recoveryDate ? `Na vrchol se cena vrátila ${dateLabel(drawdown.recoveryDate)}.` : "Vrchol v tomto období zatím nebyl znovu dosažen."}`,
       help: "Největší propad (max. drawdown) měří, o kolik cena klesla od nejvyšší předchozí zavírací ceny k nejnižší následné. Ukazuje, jak hluboký pokles investor v tomto období zažil.",
+      lesson: volatilityLessonLinks.maxDrawdown,
       tone: drawdown === null ? "neutral" : "negative",
     },
     {
@@ -56,6 +59,7 @@ export function metricsFor(metrics: PriceMetrics): Metric[] {
       unit: "ročně",
       meaning: metrics.annualisedVolatility === null ? "Na výpočet je potřeba aspoň dvacet po sobě jdoucích denních výnosů." : "Typické kolísání ceny během roku, odhadnuté z denních změn.",
       help: "Směrodatná odchylka denních jednoduchých výnosů, vynásobená √252. Vyšší hodnota znamená větší kolísání ceny; neříká nic o tom, kterým směrem cena půjde.",
+      lesson: volatilityLessonLinks.volatility,
       tone: "neutral",
     },
   ];
