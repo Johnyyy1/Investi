@@ -28,15 +28,71 @@ export function calculateVolatility(returns: readonly number[], periodsPerYear: 
   if (!Number.isFinite(volatility)) throw new FinancialInputError("Volatilita je pro výpočet příliš vysoká.");
   return volatility;
 }
+/** Change over the whole period, not annualized: 0.25 means +25 % from start to end. */
+export function calculateTotalReturn(start: number, end: number) {
+  positive(start, "Počáteční hodnota");
+  if (!Number.isFinite(end) || end < 0) throw new FinancialInputError("Konečná hodnota musí být nezáporná.");
+  return end / start - 1;
+}
+/**
+ * Annual risk-free rate the Sharpe ratio subtracts. 0 % matches the backtest itself, where cash
+ * earns no interest; it is a stated simplification, not a market rate.
+ */
+export const BACKTEST_RISK_FREE_RATE = 0;
+/**
+ * Annualized mean periodic excess return ÷ annualized sample standard deviation (n − 1) of the
+ * excess returns, i.e. mean ÷ deviation × √periodsPerYear. The annual risk-free rate is spread
+ * geometrically: (1 + rate)^(1 / periodsPerYear) − 1 per period. Fewer than one year of returns,
+ * or returns that never vary, give null: the ratio is undefined then, not infinite or zero.
+ */
+export function calculateSharpeRatio(returns: readonly number[], periodsPerYear: number, riskFreeRate = BACKTEST_RISK_FREE_RATE) {
+  positive(periodsPerYear, "Počet období za rok");
+  if (!Number.isFinite(riskFreeRate) || riskFreeRate <= -1) throw new FinancialInputError("Bezriziková sazba musí být větší než −100 %.");
+  if (returns.some((value) => !Number.isFinite(value) || value < -1)) throw new FinancialInputError("Výnosy musí být platná čísla.");
+  if (returns.length < Math.max(2, periodsPerYear) || returns.every((value) => value === returns[0])) return null;
+  const periodRate = (1 + riskFreeRate) ** (1 / periodsPerYear) - 1;
+  const excess = returns.map((value) => value - periodRate);
+  const mean = excess.reduce((sum, value) => sum + value, 0) / excess.length;
+  const deviation = Math.sqrt(excess.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (excess.length - 1));
+  const ratio = mean / deviation * Math.sqrt(periodsPerYear);
+  return deviation > 0 && Number.isFinite(ratio) ? ratio : null;
+}
 export function calculateGrowthSeries(initial: number, returns: readonly number[]) {
   const values = [initial, ...compoundPeriods(initial, returns).map((period) => period.endValue)];
   if (values.some((value) => !Number.isFinite(value))) throw new FinancialInputError("Růst je pro výpočet příliš vysoký.");
   return values;
 }
+export type BacktestMetrics = {
+  values: number[];
+  finalValue: number;
+  /** Whole period, not annualized. */
+  totalReturn: number;
+  /** Annualized. */
+  cagr: number;
+  maxDrawdown: number;
+  /** Annualized. */
+  volatility: number;
+  /** Annualized; null when undefined (see calculateSharpeRatio). */
+  sharpeRatio: number | null;
+  /** The annual rate sharpeRatio subtracted. */
+  riskFreeRate: number;
+};
+/** Metrics of a value path: values[0] is the start, and returns[i] leads from values[i] to values[i + 1]. */
+export function metricsFromValues(values: readonly number[], returns: readonly number[], periodsPerYear = 12): BacktestMetrics {
+  const finalValue = values.at(-1)!;
+  return {
+    values: [...values],
+    finalValue,
+    totalReturn: calculateTotalReturn(values[0], finalValue),
+    cagr: calculateCagr(values[0], finalValue, returns.length / periodsPerYear),
+    maxDrawdown: calculateMaxDrawdown(values),
+    volatility: calculateVolatility(returns, periodsPerYear),
+    sharpeRatio: calculateSharpeRatio(returns, periodsPerYear, BACKTEST_RISK_FREE_RATE),
+    riskFreeRate: BACKTEST_RISK_FREE_RATE,
+  };
+}
 export function calculateBacktestMetrics(initial: number, returns: readonly number[], periodsPerYear = 12) {
-  const values = calculateGrowthSeries(initial, returns);
-  const volatility = calculateVolatility(returns, periodsPerYear);
-  return { values, finalValue: values.at(-1)!, cagr: calculateCagr(initial, values.at(-1)!, returns.length / periodsPerYear), maxDrawdown: calculateMaxDrawdown(values), volatility };
+  return metricsFromValues(calculateGrowthSeries(initial, returns), returns, periodsPerYear);
 }
 export type MonthlyObservation = { month: string; stocks: number; bonds: number; cash: number };
 export function selectMonthlySample(data: readonly MonthlyObservation[], startYear: number, endYear: number) {

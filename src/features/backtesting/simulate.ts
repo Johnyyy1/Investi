@@ -1,8 +1,6 @@
-import { calculateCagr, calculateMaxDrawdown, calculateVolatility } from "@/features/lab/backtest";
+import { metricsFromValues, type BacktestMetrics } from "@/features/lab/backtest";
 import type { AlignedMonthlyCloses } from "./monthly";
 import { addMonths, BacktestDataError, FULL_WEIGHT_BPS, lookbackMonths, monthRange, type BacktestSpec, type BuyAndHoldBenchmark, type CalendarMonth } from "./spec";
-
-export type BacktestMetrics = { values: number[]; finalValue: number; cagr: number; maxDrawdown: number; volatility: number };
 
 export type SimulationResult = {
   /** The start month's predecessor (start value) followed by every month of the period. */
@@ -19,20 +17,6 @@ export type SimulationResult = {
   switches: number;
   metrics: BacktestMetrics;
 };
-
-const MONTHS_PER_YEAR = 12;
-
-/** Final value, CAGR (months ÷ 12 years), drawdown on month-end values and annualized monthly volatility. */
-export function metricsFromValues(values: readonly number[], returns: readonly number[]): BacktestMetrics {
-  const finalValue = values.at(-1)!;
-  return {
-    values: [...values],
-    finalValue,
-    cagr: calculateCagr(values[0], finalValue, returns.length / MONTHS_PER_YEAR),
-    maxDrawdown: calculateMaxDrawdown(values),
-    volatility: calculateVolatility(returns, MONTHS_PER_YEAR),
-  };
-}
 
 function expectShape(spec: BacktestSpec, data: AlignedMonthlyCloses) {
   const expected = monthRange(addMonths(spec.startMonth, -lookbackMonths(spec.rule)), spec.endMonth);

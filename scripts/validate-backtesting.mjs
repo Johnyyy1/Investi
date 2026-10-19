@@ -142,6 +142,8 @@ try {
   assert.match(await page.getByRole("region", { name: "Výsledek backtestu" }).textContent(), /B · Buy-and-hold akciového vzorku/);
   assert.equal(await text("difference-konečná-hodnota"), "0Kč", "the stock sample held as strategy equals its buy-and-hold benchmark");
   assert.equal(await text("difference-cagr"), "0p.b.");
+  assert.equal(await text("difference-celkový-výnos"), "0p.b.");
+  assert.equal(await text("difference-sharpeho-poměr"), "0,00");
   await button("Změnit nastavení").click();
   assert.equal(await button("Spustit backtest").evaluate((element) => getComputedStyle(element).transitionDuration), "0s");
   await page.getByRole("combobox", { name: "Zvolená strategie" }).selectOption("bonds"); await amount().fill("1.3333"); await button("Spustit backtest").click();
@@ -166,8 +168,15 @@ try {
   assert.match(await sourceLabel.textContent(), /^\s*Ukázková data · ukázková řada SPX · 2016–2025$/);
   assert.equal(await page.locator("main").getByText("Historická data").count(), 0, "deterministic history is never labelled historical");
   assert.match(await page.getByRole("region", { name: "Výsledek backtestu" }).textContent(), /B · Buy-and-hold SPX/);
-  for (const [metric, tolerance] of [["konečná-hodnota", 1], ["cagr", 0.011], ["největší-propad", 0.011], ["volatilita", 0.011]]) await assertDifference(metric, tolerance);
+  for (const [metric, tolerance] of [["konečná-hodnota", 1], ["celkový-výnos", 0.011], ["cagr", 0.011], ["největší-propad", 0.011], ["volatilita", 0.011], ["sharpeho-poměr", 0.011]]) await assertDifference(metric, tolerance);
   const spxBenchmark = await text("benchmark-konečná-hodnota");
+  // Total return is the whole-period change, not CAGR: 10 000 $ → 13 321 $ is +33,21 %.
+  assert.equal(await text("metric-celkový-výnos"), "33,21%");
+  assert.notEqual(await text("metric-celkový-výnos"), await text("metric-cagr"));
+  assert.match(await text("metric-sharpeho-poměr"), /^-?\d+,\d{2}$/);
+  await page.getByRole("link", { name: "Jak se počítá" }).click();
+  assert.equal(await page.locator("#backtest-methodology").evaluate((element) => element.open), true, "the Sharpe row opens the methodology");
+  assert.match(await page.locator("#backtest-methodology").textContent(), /Použitá sazba je 0\s%\sročně/);
   // Another benchmark changes only path B: same months, amount, currency and price-only returns.
   await button("Změnit nastavení").click();
   await benchmarkSelect.selectOption("US-XNAS:NVDA");
@@ -177,7 +186,7 @@ try {
   await page.getByText(/Tvůj tip byl B\./).waitFor();
   assert.equal((await final().textContent()).replace(/\s/g, ""), "13321$", "the strategy path does not depend on the benchmark");
   assert.notEqual(await text("benchmark-konečná-hodnota"), spxBenchmark);
-  for (const [metric, tolerance] of [["konečná-hodnota", 1], ["cagr", 0.011], ["největší-propad", 0.011], ["volatilita", 0.011]]) await assertDifference(metric, tolerance);
+  for (const [metric, tolerance] of [["konečná-hodnota", 1], ["celkový-výnos", 0.011], ["cagr", 0.011], ["největší-propad", 0.011], ["volatilita", 0.011], ["sharpeho-poměr", 0.011]]) await assertDifference(metric, tolerance);
   const nvdaResult = await page.getByRole("region", { name: "Výsledek backtestu" }).textContent();
   assert.match(nvdaResult, /B · Buy-and-hold NVDA/);
   assert.match(nvdaResult, /jiný instrument, NVDA/);
