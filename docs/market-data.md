@@ -7,7 +7,7 @@ investi accesses market data through the server-only normalized `MarketDataServi
 Set `MARKET_DATA_PROVIDER` to one of:
 
 - `deterministic` — the default synthetic dataset for local development, demos, and reproducible tests.
-- `fmp` — Financial Modeling Prep Stable API data. This requires the server-only `FMP_API_KEY` variable.
+- `fmp` — Financial Modeling Prep Stable API for discovery, metadata, quotes, history and equity fundamentals, with TickerInside for ETF analytics. FMP still requires the server-only `FMP_API_KEY` variable. TickerInside needs no key or additional environment configuration.
 
 Set `FX_DATA_PROVIDER` to one of:
 
@@ -89,7 +89,7 @@ The Backtesting Lab loads split-adjusted daily closes of one fixed instrument pe
 
 ## Cache policy
 
-FMP services use a small process-local cache of normalized successful results with lazy expiry:
+External providers use the existing bounded process-local TTL/LRU cache and shared PostgreSQL cache of normalized successful results. PostgreSQL is fail-open: if it is unavailable, the local cache and providers continue to work. The shared entries retain their original expiry, source dates and attribution:
 
 | Data | TTL |
 | --- | ---: |
@@ -99,8 +99,10 @@ FMP services use a small process-local cache of normalized successful results wi
 | Completed daily history | 24 hours |
 | Frankfurter reference FX | 1 hour |
 | Corporate actions hook | 1 hour |
+| ETF info, sectors, countries | 24 hours |
+| ETF holdings | 12 hours |
 
-FX cache keys include provider identity, base currency, quote currency, and request calendar date, so deterministic and Frankfurter entries cannot collide. Identical simultaneous loads are coalesced. Provider errors and malformed responses are not cached. The cache is deliberately neither persistent nor distributed, so separate application processes may each call the external providers.
+FX cache keys include provider identity, base currency, quote currency, and request calendar date, so deterministic and Frankfurter entries cannot collide. Identical simultaneous loads are coalesced. Provider errors and malformed responses are not cached. The application composition supplies `PostgresMarketDataCacheStore` for cross-instance reuse. Provider identity is part of ETF cache keys, so older FMP analytics cannot collide with TickerInside entries. The existing JSONB contract needs no migration; the optional metadata extensions remain backward compatible.
 
 The quote cache stores only normalized provider observations. Its 30-second TTL does not determine whether a quote is usable: session/calendar policy is evaluated again after every cache read.
 
@@ -110,8 +112,51 @@ The server-only readiness diagnostic reports the selected security and FX provid
 
 ## Deferred limitations
 
-Cross-provider security-identity migration, live provider health monitoring, early-close/ad-hoc-closure calendars, additional exchange calendars, historical portfolio FX/performance, corporate-action processing, total-return series, wider Investi currency support, distributed caching, and background refresh are deferred. Equity fundamentals and ETF analytics are current Instrument Detail capabilities. Equity snapshots normalize valuation, profitability, business performance, and balance-sheet metrics with observation/reporting dates and explicit unavailable fields; ETF snapshots normalize holdings/concentration and allocation/exposure metadata. Deterministic fixtures and FMP adapters implement both behind the service boundary. `npm run smoke:fmp-fundamentals` (`scripts/smoke-equity-fundamentals.mts`) remains a manual-only provider/cache check. Estimates, ratings, DCF, news, intraday data, crypto, and streaming remain outside the current scope.
+Cross-provider security-identity migration, live provider health monitoring, early-close/ad-hoc-closure calendars, additional exchange calendars, historical portfolio FX/performance, corporate-action processing, total-return series, wider Investi currency support and background refresh are deferred. Equity fundamentals and ETF analytics are current Instrument Detail capabilities. Equity snapshots normalize valuation, profitability, business performance, and balance-sheet metrics with observation/reporting dates and explicit unavailable fields; ETF snapshots normalize holdings/concentration and allocation/exposure metadata. Deterministic fixtures remain unchanged. FMP supplies equity fundamentals and TickerInside supplies live ETF analytics behind the service boundary. The older FMP ETF adapter is retained for explicit use and tests; the default live path never calls its restricted endpoints or falls back to it. `npm run smoke:fmp-fundamentals` (`scripts/smoke-equity-fundamentals.mts`) remains a manual-only provider/cache check. Estimates, ratings, DCF, news, intraday data, crypto, and streaming remain outside the current scope.
 
 ## Manual FMP smoke test
 
 Set `MARKET_DATA_PROVIDER=fmp`, `FX_DATA_PROVIDER=frankfurter`, and `FMP_API_KEY` locally, then run `npm run smoke:fmp`. This manual-only command searches for one instrument, resolves its profile, fetches its security quote from FMP, fetches USD/CZK from Frankfurter, and—when valuation is eligible—calculates one example CZK value with Investi's fixed-point arithmetic. It prints the exchange/calendar, market-session state, quote usability, valuation/execution eligibility, separate security/FX provenance, FX reference date, and safe readiness result without printing the credential. A weekend result with valuation allowed and immediate execution denied is successful. Automated tests never make external network calls.
+
+
+## TickerInside ETF analytics
+
+In live (`fmp`) mode the split is explicit:
+
+| Capability | Provider |
+| --- | --- |
+| Discovery, profiles, quotes, daily historical prices | FMP |
+| Equity fundamentals | FMP |
+| ETF info, holdings, sectors, countries | TickerInside current fund snapshots |
+| Reference FX | Existing configured ČNB / Frankfurter provider |
+
+The server-only adapter calls only `https://tickerinside.com/api/v1/fund/{ticker}.json`, without authentication. It validates the ETF's provider-qualified FMP ID, symbol, USD quote currency and verified US MIC (`AMEX`/`XASE`, `NASDAQ`/`XNAS`, `NYSE`/`XNYS`), then checks the returned ticker and available identity metadata. AMEX is FMP's existing listing convention for SPY and several NYSE Arca ETFs; source NYSE Arca metadata does not imply a different security. Unknown or conflicting exchanges, European listings and UCITS funds such as VWCE and SXR8 are explicitly unavailable. A ticker on a foreign exchange is never mapped to its US namesake. This conservative boundary can exclude additional US venues until their FMP exchange metadata has been verified.
+
+The optional live smoke check covers SPY, VOO, IVV, QQQ and VTI. Analytics availability is independent of FMP quotes, historical charts, orders and portfolio accounting. There is no sample-data or paid-FMP analytics fallback. No schema, reward, trade or portfolio persistence changes are required.
+
+### Normalization and dates
+
+- `expense_ratio` is in percentage points: 0.09 becomes 0.0009 internally (0.09% when displayed). Zero is valid; missing and invalid fields stay null.
+- `aum_b` is billions of USD, converted to absolute USD with its `aum_date`. For Vanguard it can cover all share classes, which is labeled explicitly. When `etf_class_net_assets_b` is supplied, prefer the ETF share-class assets and its own date, labeled as such. `net_assets` from an SEC filing is a different, often aggregate measure and is never substituted. The AUM date is the provider's market-data read date, not a newly invented valuation date.
+- `positions` counts the holdings map's keys, not the fund's authoritative position count. The official count remains null. The full valid holdings map is retained and sorted, including dotted/international identifiers. Display names are identifiers when the API provides no company name. ISIN, market values and share counts are never inferred.
+- NAV, NAV currency and inception date remain null. `last_close` is a market closing price, not NAV; FMP remains the price source.
+- Holdings and both breakdowns use `holdings_as_of`, which can be months older than `as_of` (the provider's price/return date). The latter is not used for composition. Info has no single `asOf`: expense ratio and assets retain their separate optional field dates, including unknown dates. Every dataset also keeps the actual HTTP retrieval timestamp. Cached reads do not advance it.
+- Sector classification names are preserved in the normalized data; UI labels are translated without regrouping. Country codes become display labels without changing geography. These are classifications of holdings, not country revenue or currency exposures. `sector_coverage_pct`, `no_sector_pct`, `no_country_pct`, rejected rows, unmapped/listed holdings weights and incomplete totals inform completeness. Missing exposure is never fabricated or rescaled to 100%. Sector results below the provider's stated coverage threshold are labeled as inferred. The UI shows known and unclassified coverage.
+
+A recently downloaded file can contain an old SEC N-PORT snapshot. The UI displays its holdings date, identifies regulatory snapshots and warns when composition is at least 90 days old, using the rendering date even on cache hits. Missing sections remain unavailable independently through `Promise.allSettled`. Empty or malformed holdings/breakdowns do not invalidate otherwise usable info. HTTP 404 is unsupported coverage; 429 is rate limited; 5xx/network/10-second timeout failures are provider unavailable; invalid JSON or conflicting identities are malformed responses. These request failures are not cached.
+
+The four adapter methods coalesce requests for the same fund. A bounded 50-fund, one-minute TTL/LRU snapshot bridge also avoids duplicate downloads when independent shared-cache misses finish at slightly different times. It does not retain unused flows, history, HTML or weekly-price fields. Missing sections of an otherwise valid file can be retried after this short bridge expires; normalized successes retain the 12/24-hour service TTLs above. Separate instances can still download simultaneously on a shared-cache cold miss; there is no distributed request lock or background refresh.
+
+### Attribution and reuse
+
+API schema and source conventions: [TickerInside API](https://tickerinside.com/api/). Terms checked on 2026-10-19: [TickerInside legal notice](https://tickerinside.com/legal/).
+
+TickerInside licenses its own work in current snapshots under CC BY 4.0, permitting commercial use with attribution. This grant does **not** grant the original issuers' rights to their holdings publications or third-party rights to prices. Review the original issuer terms before bulk redistribution or commercial reuse; do not assume a free API removes those obligations. There is no guarantee of coverage, timeliness or correctness.
+
+The ETF interface visibly credits “Zdroj ETF dat: TickerInside”, links to the verified fund page when supplied (otherwise its specific current JSON source), and exposes the provider's plain-text citation and license. Each cached dataset preserves this attribution. Provider `cite_html` is discarded; citations are escaped React text and source links are constructed from the validated ticker. Changes in investi are unit conversion, display formatting, sorting and filtering invalid rows; no missing holdings or weights are invented.
+
+Holdings-history and flows endpoints have separate terms and are outside this integration. Although current fund JSON can include a `flows` object, it is not retained or exposed by the adapter.
+
+### Optional live smoke check
+
+Run `npm run smoke:tickerinside` to fetch current SPY, VOO, IVV, QQQ and VTI fund snapshots. No environment variables or API key are required. It verifies one HTTP request per fund across all four methods and prints normalized availability, metric dates, coverage and attribution. A missing metric is allowed; required fund info/holdings failures make the check fail. This command is manual only; the standard test suite uses mocked HTTP responses and never calls TickerInside. FMP price/discovery checks still use `npm run smoke:fmp` and require the existing FMP key.

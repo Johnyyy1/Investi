@@ -87,6 +87,12 @@ export async function loadInstrumentDetail(service: MarketDataService, instrumen
     fundamentals: fundamentalsResult.status === "fulfilled" ? fundamentalsResult.value : null,
     fundamentalsMessage: instrument.assetType === "equity" && fundamentalsResult.status === "rejected" ? "Metriky společnosti teď nejsou dostupné. Cenová historie a investování zůstávají k dispozici." : null,
     etfAnalytics: etfResult.status === "fulfilled" ? etfResult.value : null,
-    etfAnalyticsMessage: instrument.assetType === "etf" && etfResult.status === "rejected" ? "Složení fondu teď není dostupné. Cenová historie a investování zůstávají k dispozici." : null,
+    etfAnalyticsMessage: instrument.assetType === "etf" && etfResult.status === "rejected"
+      ? isMarketDataError(etfResult.reason) && etfResult.reason.code === "UnsupportedInstrument"
+        ? "Složení tohoto fondu zdroj nepokrývá. Cenová historie a investování zůstávají k dispozici."
+        : isMarketDataError(etfResult.reason) && etfResult.reason.code === "RateLimited"
+          ? "Zdroj složení fondu je dočasně omezený. Zkus to za chvíli znovu. Cenová historie a investování zůstávají k dispozici."
+        : "Složení fondu teď není dostupné. Zkus stránku načíst později. Cenová historie a investování zůstávají k dispozici."
+      : null,
   };
 }
