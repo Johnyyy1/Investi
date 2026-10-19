@@ -243,6 +243,35 @@ describe("Financial Modeling Prep normalization", () => {
     expect(Object.fromEntries(historyUrl.searchParams)).toEqual({ symbol: "AAPL", from: "2026-09-17", to: "2026-09-19" });
   });
 
+  it("pages backwards past FMP's 5,000-row cap so a long range keeps its oldest observations", async () => {
+    const day = (offset: number) => new Date(Date.UTC(2026, 8, 19) - offset * 86_400_000).toISOString().slice(0, 10);
+    const row = (date: string) => ({ symbol: "AAPL", date, open: 10, high: 11, low: 9, close: 10.5, volume: 1 });
+    const newest = Array.from({ length: 5_000 }, (_, index) => row(day(index)));
+    const older = [row(day(5_000)), row(day(5_001))];
+    const { fetchMock, provider } = mockedProvider([jsonResponse(newest), jsonResponse(older), jsonResponse(profilePayload)]);
+
+    const series = await provider.getHistoricalPrices({ ...historyRequest(), startDate: "1900-01-01" });
+
+    expect(series.points).toHaveLength(5_002);
+    expect(series.points[0].date).toBe(day(5_001));
+    expect(series.points.at(-1)?.date).toBe("2026-09-19");
+    expect(series.provenance.completeness).toBe("complete");
+    const pages = fetchMock.mock.calls.slice(0, 2).map(([url]) => Object.fromEntries(new URL(url.toString()).searchParams));
+    expect(pages).toEqual([
+      { symbol: "AAPL", from: "1900-01-01", to: "2026-09-19" },
+      { symbol: "AAPL", from: "1900-01-01", to: day(5_000) },
+    ]);
+  });
+
+  it("does not request older pages when the response is below the cap", async () => {
+    const { fetchMock, provider } = mockedProvider([
+      jsonResponse([{ symbol: "AAPL", date: "2026-09-18", open: 242, high: 245, low: 241, close: 244, volume: 1 }]),
+      jsonResponse(profilePayload),
+    ]);
+    await provider.getHistoricalPrices({ ...historyRequest(), startDate: "1900-01-01" });
+    expect(fetchMock.mock.calls.filter(([url]) => url.toString().includes("historical-price-eod"))).toHaveLength(1);
+  });
+
   it("uses FMP's non-split-adjusted Stable endpoint for raw closes", async () => {
     const { fetchMock, provider } = mockedProvider([
       jsonResponse([{ symbol: "AAPL", date: "2026-09-19", open: 244, high: 247, low: 243, close: 246, volume: 1_200 }]),
