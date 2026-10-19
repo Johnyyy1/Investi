@@ -19,6 +19,24 @@ const holdingSchema = z.object({
   weightBps: z.number().int().min(1).max(FULL_WEIGHT_BPS),
 });
 
+/** Upper limits of the cost model: 2 % of each trade and a flat fee of 1 000 in the spec's currency. */
+export const MAX_COST_RATE_BPS = 200;
+export const MAX_FIXED_FEE = 1_000;
+
+/**
+ * What each trade costs: a share of the traded value in integer basis points (10 is 0,1 %), plus
+ * an optional flat fee per trade in the spec's currency. Every purchase and sale of one
+ * instrument is one trade; cash is never traded.
+ */
+export const backtestCostsSchema = z.object({
+  rateBps: z.number().int().min(0).max(MAX_COST_RATE_BPS),
+  fixedFee: z.number().finite().min(0).max(MAX_FIXED_FEE),
+});
+
+export type BacktestCosts = z.infer<typeof backtestCostsSchema>;
+export const NO_COSTS: BacktestCosts = { rateBps: 0, fixedFee: 0 };
+export const hasCosts = (costs: BacktestCosts) => costs.rateBps > 0 || costs.fixedFee > 0;
+
 const ruleSchema = z.discriminatedUnion("kind", [
   /** Fixed target weights; between rebalances the sleeves drift with their prices. */
   z.object({ kind: z.literal("fixed-weights"), rebalance: z.enum(rebalanceRules) }),
@@ -47,6 +65,8 @@ export const backtestSpecSchema = z.object({
   currency: currencySchema,
   /** Split-adjusted closes are price-only: dividends are excluded, never silently mixed in. */
   adjustment: z.literal("split-adjusted"),
+  /** Paid on the initial purchase and on every rebalance or switch. */
+  costs: backtestCostsSchema,
 }).superRefine((spec, context) => {
   const total = spec.holdings.reduce((sum, holding) => sum + holding.weightBps, spec.cashWeightBps);
   if (total !== FULL_WEIGHT_BPS) context.addIssue({ code: "custom", path: ["holdings"], message: "Weights must sum to 100 %." });
@@ -60,7 +80,7 @@ export type BacktestRule = BacktestSpec["rule"];
 
 /**
  * Buy and hold one instrument: a single purchase at the start value, then no rebalancing and no
- * trades. The adjustment is any market-data mode so that a mismatch is refused, not impossible.
+ * trades, so it pays costs only on that purchase. The adjustment is any market-data mode so that a mismatch is refused, not impossible.
  */
 export const buyAndHoldBenchmarkSchema = z.object({
   kind: z.literal("buy-and-hold"),
@@ -71,13 +91,14 @@ export const buyAndHoldBenchmarkSchema = z.object({
   frequency: z.literal("monthly"),
   currency: currencySchema,
   adjustment: z.enum(adjustmentModes),
+  costs: backtestCostsSchema,
 });
 
 export type BuyAndHoldBenchmark = z.infer<typeof buyAndHoldBenchmarkSchema>;
 
 /**
- * A strategy and its benchmark are comparable only on the same period, starting amount, currency
- * and return semantics. Price-only and total-return paths are never compared with each other.
+ * A strategy and its benchmark are comparable only on the same period, starting amount, currency,
+ * return semantics and costs. Price-only and total-return paths are never compared with each other.
  */
 export const backtestComparisonSchema = z.object({ strategy: backtestSpecSchema, benchmark: buyAndHoldBenchmarkSchema }).superRefine(({ strategy, benchmark }, context) => {
   const issue = (field: keyof BuyAndHoldBenchmark, message: string) => context.addIssue({ code: "custom", path: ["benchmark", field], message });
@@ -85,12 +106,13 @@ export const backtestComparisonSchema = z.object({ strategy: backtestSpecSchema,
   if (benchmark.initialAmount !== strategy.initialAmount) issue("initialAmount", "The benchmark must start with the same amount as the strategy.");
   if (benchmark.currency !== strategy.currency) issue("currency", "The benchmark must be in the same currency as the strategy.");
   if (benchmark.adjustment !== strategy.adjustment) issue("adjustment", "The benchmark must use the same return semantics as the strategy.");
+  if (benchmark.costs.rateBps !== strategy.costs.rateBps || benchmark.costs.fixedFee !== strategy.costs.fixedFee) issue("costs", "The benchmark must pay the same costs per trade as the strategy.");
 });
 
-/** The benchmark that buys and holds `instrumentId` over the strategy's own period, amount, currency and semantics. */
+/** The benchmark that buys and holds `instrumentId` over the strategy's own period, amount, currency, semantics and costs. */
 export function buyAndHoldFor(strategy: BacktestSpec, instrumentId: string): BuyAndHoldBenchmark {
-  const { startMonth, endMonth, initialAmount, frequency, currency, adjustment } = strategy;
-  return { kind: "buy-and-hold", instrumentId, startMonth, endMonth, initialAmount, frequency, currency, adjustment };
+  const { startMonth, endMonth, initialAmount, frequency, currency, adjustment, costs } = strategy;
+  return { kind: "buy-and-hold", instrumentId, startMonth, endMonth, initialAmount, frequency, currency, adjustment, costs: { ...costs } };
 }
 
 /** History that is missing, incomplete or inconsistent. It is reported, never filled. */

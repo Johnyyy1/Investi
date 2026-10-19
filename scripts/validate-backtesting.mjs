@@ -75,6 +75,7 @@ try {
   await page.goto(`${baseURL}/lab/backtesting`); await amount().waitFor();
   assert.equal(await page.getByRole("combobox", { name: "Zvolená strategie" }).locator("option").count(), 3);
   assert.equal(await page.getByRole("region", { name: "Výsledek backtestu" }).count(), 0);
+  assert.equal(await page.getByRole("heading", { name: /Náklady obchodů/ }).count(), 0, "the synthetic sample has no cost model");
   await layouts("setup");
   await page.getByRole("radio", { name: "A Zvolená strategie", exact: true }).check();
   // Hold requestAnimationFrame briefly in this test to inspect the real loading state.
@@ -162,6 +163,8 @@ try {
   const benchmarkSelect = page.getByRole("combobox", { name: "Benchmark B · koupit a držet" });
   assert.deepEqual(await benchmarkSelect.locator("option").allTextContents(), ["Buy-and-hold SPX", "Buy-and-hold NVDA"]);
   assert.match(await page.locator("#backtest-configuration").textContent(), /Celá částka jednou koupí SPX \(Ukázková řada indexu S&P 500\) na začátku a drží ho\. Žádné rebalancování ani obchody\./);
+  assert.equal(await page.getByRole("heading", { name: "5 · Náklady obchodů" }).count(), 1);
+  assert.equal(await page.getByRole("radio", { name: /^Bez nákladů Obchody nic nestojí/ }).isChecked(), true, "costs are off until the learner switches them on");
   await button("Spustit backtest").click();
   await page.getByRole("heading", { name: "SPX 60 % + hotovost 40 %", exact: true }).waitFor();
   assert.equal((await final().textContent()).replace(/\s/g, ""), "13321$");
@@ -228,9 +231,50 @@ try {
   assert.match(await page.locator("main article").first().textContent(), /B · Buy-and-hold NVDA/, "period comparisons keep the chosen benchmark");
   await layouts("history");
 
+  // Transaction costs: switched on, the run is compared with the same closes without costs.
+  await button("Změnit nastavení").click();
+  await strategySelect.selectOption("mix-60-40");
+  await page.getByRole("combobox", { name: "Rebalancování" }).selectOption("monthly");
+  await page.getByRole("radio", { name: /^Započítat náklady/ }).check();
+  const rate = page.getByRole("textbox", { name: "Poplatek z objemu obchodu" });
+  const fee = page.getByRole("textbox", { name: "Fixní poplatek za obchod" });
+  assert.equal(await rate.inputValue(), "0,1");
+  assert.equal(await fee.inputValue(), "0");
+  await rate.fill("0,125"); await button("Spustit backtest").click();
+  await page.locator("main").getByRole("alert").filter({ hasText: "dvě desetinná místa" }).waitFor();
+  assert.equal((await final().textContent()).replace(/\s/g, ""), "13092$", "a refused cost input keeps the previous result");
+  await rate.fill("0,25"); await fee.fill("1"); await button("Spustit backtest").click();
+  await page.getByRole("heading", { name: "Co stály náklady" }).waitFor();
+  const withCosts = number(await text("metric-konečná-hodnota"));
+  assert.ok(withCosts < 13412, `costs lower the final value: ${withCosts}`);
+  assert.equal(await text("cost-trades"), "120", "the purchase and 119 monthly rebalances");
+  assert.equal(await text("cost-benchmark-trades"), "1", "buy and hold pays only for its purchase");
+  const headline = await page.getByTestId("cost-headline").textContent();
+  assert.match(headline, /^Náklady tě u strategie A stály [\d\s,]+\s\$ \([\d,]+\sp\.\sb\. ročně\)\.$/);
+  assert.ok(Math.abs(number(headline.split("stály")[1].split("$")[0]) - (13412 - withCosts)) <= 1, `headline is the final-value difference: ${headline}`);
+  assert.match(await text("cost-final-value"), /^-/);
+  assert.match(await text("cost-cagr"), /^-[\d,]+p\.b\.$/);
+  assert.match(await page.locator(".recharts-surface").first().locator("xpath=ancestor::figure").textContent(), /náklady 0,25\s%\sz hodnoty obchodu \+ 1\s\$ za obchod/);
+  const view = (name) => page.getByRole("group", { name: "Zobrazit výsledek" }).getByRole("radio", { name });
+  assert.equal(await view(/^S náklady/).isChecked(), true);
+  await view(/^Bez nákladů/).check();
+  assert.equal((await final().textContent()).replace(/\s/g, ""), "13412$", "the view without costs is the earlier run without them");
+  assert.match(await page.locator(".recharts-surface").first().locator("xpath=ancestor::figure").textContent(), /bez poplatků a daní/);
+  assert.equal(await page.getByRole("heading", { name: "Co stály náklady" }).count(), 1, "the cost summary stays in both views");
+  await view(/^S náklady/).check();
+  assert.equal(number(await text("metric-konečná-hodnota")), withCosts);
+  await layouts("costs");
+  await button("Změnit nastavení").click();
+  await page.getByRole("radio", { name: /^Bez nákladů Obchody nic nestojí/ }).check();
+  await page.getByRole("status").filter({ hasText: "Vstupy se změnily" }).waitFor();
+  await button("Spustit backtest").click();
+  await page.getByRole("heading", { name: "Co stály náklady" }).waitFor({ state: "detached" });
+  assert.equal((await final().textContent()).replace(/\s/g, ""), "13412$", "switching costs off restores the run without them");
+  assert.equal(await page.getByRole("group", { name: "Zobrazit výsledek" }).count(), 0);
+
   assert.deepEqual(await financialState(), before, "backtests leave capital receipts, trades and generations unchanged");
   assert.deepEqual(errors, [], "no browser runtime errors");
-  console.log(`PASS: setup, loading, predictions, exact fixture, all monthly points, chart keyboard tooltip/table, invalid reruns, snapshots, comparisons, all strategies, decimal inputs, price-history runs (sample label, buy-and-hold benchmark choice and A − B differences, rebalancing, trend filter, refused input, period comparison), responsive widths/200% text, reduced motion, untouched portfolio. Screenshots: ${output}`);
+  console.log(`PASS: setup, loading, predictions, exact fixture, all monthly points, chart keyboard tooltip/table, invalid reruns, snapshots, comparisons, all strategies, decimal inputs, price-history runs (sample label, buy-and-hold benchmark choice and A − B differences, rebalancing, trend filter, refused input, period comparison, transaction costs on/off and the with/without-costs view), responsive widths/200% text, reduced motion, untouched portfolio. Screenshots: ${output}`);
 } finally {
   await browser.close(); if (userId) await sql`delete from "user" where id = ${userId}`; await sql.end();
 }

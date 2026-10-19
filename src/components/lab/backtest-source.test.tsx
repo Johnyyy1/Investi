@@ -24,6 +24,15 @@ describe("backtest source labels", () => {
     expect(copy.notes.map((note) => note.detail).join(" ")).toMatch(/Bez převodu na koruny/);
     expect(historySourceCopy(fmp, { years: { start: 2020, end: 2021 }, source: source(false) }).chart.details).toContain("Financial Modeling Prep, načteno 18. 10. 2026");
   });
+  it("says which costs per trade the numbers include", () => {
+    const without = historySourceCopy(fmp);
+    expect(without.chart.details).toContain("bez poplatků a daní");
+    expect(without.notes.find((note) => note.term === "Náklady obchodů")?.detail).toMatch(/^Nezapočítané/);
+    const withCosts = historySourceCopy(fmp, { costs: { rateBps: 10, fixedFee: 1.5 } });
+    expect(withCosts.chart.details.replace(/\s/g, " ")).toMatch(/náklady 0,1 % z hodnoty obchodu \+ 1,5 \$ za obchod, bez daní/);
+    expect(withCosts.notes.find((note) => note.term === "Náklady obchodů")?.detail).toMatch(/benchmark jen při nákupu/);
+    expect(withCosts.notes.find((note) => note.term === "Co v tom není")?.detail).not.toMatch(/poplatky/);
+  });
   it("never calls deterministic or synthetic closes historical", () => {
     for (const copy of [historySourceCopy(deterministic), historySourceCopy(fmp, { years: { start: 2020, end: 2021 }, source: source(true) }), historySourceCopy(deterministic, { benchmark: deterministic.benchmarks[1] }), sampleSourceCopy]) {
       expect(copy.label).toMatch(/^Ukázková data/);

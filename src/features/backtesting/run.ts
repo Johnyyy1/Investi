@@ -4,12 +4,14 @@ import { FinancialInputError, parsePrice } from "@/features/finance/returns";
 import { chartPoints } from "@/features/instruments/history";
 import { adjustmentPolicies, type MarketDataProvenance } from "@/features/market-data/contracts";
 import type { MarketDataService } from "@/features/market-data/service";
-import { benchmarkName, type BacktestHistoryPlan, type BacktestInstrument, type HistoryBacktestResult } from "./catalog";
+import { benchmarkName, type BacktestHistoryPlan, type CostSettings, type BacktestInstrument, type HistoryBacktestResult } from "./catalog";
+import { parseCostRate, parseFixedFee } from "./costs";
 import { alignMonthlyCloses } from "./monthly";
 import { simulateBacktest, simulateBuyAndHold } from "./simulate";
-import { addMonths, backtestComparisonSchema, backtestSpecSchema, BacktestDataError, buyAndHoldFor, lookbackMonths, monthRange, type BacktestSpec, type RebalanceRule } from "./spec";
+import { addMonths, backtestComparisonSchema, backtestSpecSchema, BacktestDataError, buyAndHoldFor, hasCosts, lookbackMonths, monthRange, NO_COSTS, type BacktestCosts, type BacktestSpec, type RebalanceRule } from "./spec";
 
-export type HistoryBacktestRequest = { strategy: string; benchmark: string; rebalance: RebalanceRule; amount: string; periods: readonly { start: number; end: number }[] };
+/** `costs: null` (or none) runs without costs. */
+export type HistoryBacktestRequest = { strategy: string; benchmark: string; rebalance: RebalanceRule; amount: string; costs?: CostSettings | null; periods: readonly { start: number; end: number }[] };
 
 const czechMonth = (month: string) => new Intl.DateTimeFormat("cs-CZ", { month: "long", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));
 const capitalized = (value: string) => value.charAt(0).toLocaleUpperCase("cs-CZ") + value.slice(1);
@@ -30,27 +32,29 @@ async function loadPlanHistory(service: MarketDataService, plan: BacktestHistory
   return { points, currency: series.currency, provenance: series.provenance };
 }
 
-function specFor(plan: BacktestHistoryPlan, strategyId: string, rebalance: RebalanceRule, amount: number, start: number, end: number): BacktestSpec {
+function specFor(plan: BacktestHistoryPlan, strategyId: string, rebalance: RebalanceRule, amount: number, costs: BacktestCosts, start: number, end: number): BacktestSpec {
   const strategy = plan.strategies.find((candidate) => candidate.id === strategyId);
   if (!strategy) throw new FinancialInputError("Vyber dostupnou strategii.");
   if (!Number.isInteger(start) || !Number.isInteger(end) || start > end) throw new FinancialInputError("Zvol počáteční rok, který je stejný nebo dřívější než konečný rok.");
   if (start < plan.firstYear || end > plan.lastYear) throw new FinancialInputError(`Historie je k dispozici pro roky ${plan.firstYear}–${plan.lastYear}.`);
   const rule = strategy.spec.rule.kind === "fixed-weights" ? { kind: "fixed-weights" as const, rebalance } : strategy.spec.rule;
-  return backtestSpecSchema.parse({ holdings: strategy.spec.holdings, cashWeightBps: strategy.spec.cashWeightBps, rule, startMonth: `${start}-01`, endMonth: `${end}-12`, initialAmount: amount, frequency: "monthly", currency: plan.currency, adjustment: "split-adjusted" });
+  return backtestSpecSchema.parse({ holdings: strategy.spec.holdings, cashWeightBps: strategy.spec.cashWeightBps, rule, startMonth: `${start}-01`, endMonth: `${end}-12`, initialAmount: amount, frequency: "monthly", currency: plan.currency, adjustment: "split-adjusted", costs });
 }
 
 /**
  * Runs one strategy over one or more periods on closes the server loaded itself. Each run is
  * compared with buying and holding the chosen benchmark instrument over the same months, from the
- * same amount, in the same currency and with the same price-only returns.
+ * same amount, in the same currency, with the same price-only returns and the same costs. A run
+ * with costs is simulated a second time without them, on the same closes, for the comparison.
  */
 export async function runHistoryBacktests(service: MarketDataService, plan: BacktestHistoryPlan, request: HistoryBacktestRequest): Promise<HistoryBacktestResult[]> {
   const amount = parsePrice(request.amount, "Počáteční částka");
   if (amount <= 0) throw new FinancialInputError("Počáteční částka musí být větší než nula.");
   const benchmarkInstrument = plan.benchmarks.find((candidate) => candidate.instrumentId === request.benchmark);
   if (!benchmarkInstrument) throw new FinancialInputError("Vyber dostupný benchmark.");
+  const costs = request.costs ? { rateBps: parseCostRate(request.costs.rate), fixedFee: parseFixedFee(request.costs.fixedFee) } : NO_COSTS;
   const comparisons = request.periods.map(({ start, end }) => {
-    const spec = specFor(plan, request.strategy, request.rebalance, amount, start, end);
+    const spec = specFor(plan, request.strategy, request.rebalance, amount, costs, start, end);
     return backtestComparisonSchema.parse({ strategy: spec, benchmark: buyAndHoldFor(spec, benchmarkInstrument.instrumentId) });
   });
   const sameInstrument = benchmarkInstrument.instrumentId === plan.instrument.instrumentId;
@@ -64,10 +68,12 @@ export async function runHistoryBacktests(service: MarketDataService, plan: Back
     const result = simulateBacktest(spec, aligned);
     const baseMonth = addMonths(spec.startMonth, -1);
     // The benchmark's month-end closes are paired with the strategy's by calendar month.
-    const benchmark = simulateBuyAndHold(benchmarkSpec, alignMonthlyCloses([{ label: benchmarkInstrument.symbol, points: benchmarkHistory.points }], monthRange(baseMonth, spec.endMonth)));
+    const benchmarkCloses = alignMonthlyCloses([{ label: benchmarkInstrument.symbol, points: benchmarkHistory.points }], monthRange(baseMonth, spec.endMonth));
+    const benchmark = simulateBuyAndHold(benchmarkSpec, benchmarkCloses);
+    const gross = hasCosts(costs) ? { strategy: simulateBacktest({ ...spec, costs: NO_COSTS }, aligned), benchmark: simulateBuyAndHold({ ...benchmarkSpec, costs: NO_COSTS }, benchmarkCloses) } : null;
     const lastClose = history.points.filter((point) => point.date.startsWith(spec.endMonth)).at(-1)!;
     return {
-      config: { source: "history", strategy: strategy.id, benchmark: benchmarkInstrument.instrumentId, start, end, amount: request.amount, rebalance: request.rebalance },
+      config: { source: "history", strategy: strategy.id, benchmark: benchmarkInstrument.instrumentId, start, end, amount: request.amount, rebalance: request.rebalance, costs: request.costs ? { ...request.costs } : null },
       strategy: { id: strategy.id, name: strategy.name, description: strategy.description },
       benchmarkName: benchmarkName(benchmarkInstrument.symbol),
       currency: history.currency,
@@ -77,6 +83,13 @@ export async function runHistoryBacktests(service: MarketDataService, plan: Back
       period: `${capitalized(czechMonth(spec.startMonth))} ${start} – ${czechMonth(spec.endMonth)} ${end}`,
       months: result.returns.length,
       points: result.months.map((label, point) => ({ label, value: result.values[point], benchmark: benchmark.values[point] })),
+      costs,
+      trading: { strategy: result.trading, benchmark: benchmark.trading },
+      withoutCosts: gross && {
+        metrics: gross.strategy.metrics,
+        benchmark: gross.benchmark.metrics,
+        points: gross.strategy.months.map((label, point) => ({ label, value: gross.strategy.values[point], benchmark: gross.benchmark.values[point] })),
+      },
       rebalances: result.rebalanceMonths.length,
       monthsInvested: result.exposure.filter((share) => share > 0).length,
       switches: result.switches,

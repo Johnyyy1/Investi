@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { calculateBacktestMetrics } from "@/features/lab/backtest";
 import { syntheticMonthlyData } from "@/features/lab/sample-data";
-import { backtestPeriods, buildBacktestResult, formatBacktestMoney, formatBacktestMoneyDifference, formatBacktestMonth, formatPercentagePoints, formatSharpeDifference, formatSharpeRatio } from "./backtest-model";
+import type { HistoryBacktestResult } from "@/features/backtesting/catalog";
+import { backtestPeriods, buildBacktestResult, formatBacktestMoney, formatBacktestMoneyDifference, formatBacktestMonth, formatCostRate, formatPercentagePoints, formatSharpeDifference, formatSharpeRatio, viewWithCosts } from "./backtest-model";
 
 const config = { strategy: "mixed", start: 2015, end: 2025, amount: "100000" };
 describe("Backtesting presentation snapshots", () => {
@@ -87,5 +88,27 @@ describe("Backtesting presentation snapshots", () => {
   it("keeps small amounts readable at the presentation boundary", () => {
     expect(formatBacktestMoney(0.25)).toBe("0,25 Kč");
     expect(formatBacktestMoney(159732.4758937891)).toBe("159 732 Kč");
+  });
+  it("formats cost rates and unsigned percentage points", () => {
+    expect(formatCostRate(10)).toBe("0,1\u00a0%");
+    expect(formatCostRate(25)).toBe("0,25\u00a0%");
+    expect(formatCostRate(200)).toBe("2\u00a0%");
+    expect(formatPercentagePoints(0.0017, { signed: false })).toBe("0,17 p. b.");
+    expect(formatPercentagePoints(0.0017)).toBe("+0,17 p. b.");
+  });
+});
+
+describe("result with and without costs", () => {
+  const sample = buildBacktestResult(config);
+  const gross = { metrics: sample.benchmark, benchmark: sample.metrics, points: [{ label: "2014-12", value: 1, benchmark: 2 }] };
+  const history = { ...sample, source: { kind: "history" }, withoutCosts: gross } as unknown as HistoryBacktestResult;
+
+  it("shows the run with costs by default and the same closes without them on request", () => {
+    expect(viewWithCosts(history, "with")).toBe(history);
+    expect(viewWithCosts(history, "without")).toMatchObject({ metrics: gross.metrics, benchmark: gross.benchmark, points: gross.points, strategy: sample.strategy });
+  });
+  it("leaves a run without costs and the synthetic sample unchanged", () => {
+    expect(viewWithCosts({ ...history, withoutCosts: null }, "without").metrics).toBe(sample.metrics);
+    expect(viewWithCosts(sample, "without")).toBe(sample);
   });
 });

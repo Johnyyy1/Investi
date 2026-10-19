@@ -1,4 +1,5 @@
 import { metricsFromValues, type BacktestMetrics } from "@/features/lab/backtest";
+import { noTrading, tradeToTargets, type Book, type TradingSummary } from "./costs";
 import type { AlignedMonthlyCloses } from "./monthly";
 import { addMonths, BacktestDataError, FULL_WEIGHT_BPS, lookbackMonths, monthRange, type BacktestSpec, type BuyAndHoldBenchmark, type CalendarMonth } from "./spec";
 
@@ -15,6 +16,8 @@ export type SimulationResult = {
   rebalanceMonths: CalendarMonth[];
   /** How often a trend filter moved between the instrument and cash. */
   switches: number;
+  /** Every purchase and sale, including the initial purchase, and what they cost. */
+  trading: TradingSummary;
   metrics: BacktestMetrics;
 };
 
@@ -31,8 +34,13 @@ function expectShape(spec: BacktestSpec, data: AlignedMonthlyCloses) {
 
 /**
  * Month-by-month simulation without look-ahead: the value at month t uses closes up to t, and a
- * trend-filter decision for month t uses closes up to t − 1. No costs, taxes, dividends, interest
- * on cash or further contributions.
+ * trend-filter decision for month t uses closes up to t − 1. No taxes, dividends, interest on cash
+ * or further contributions.
+ *
+ * Costs are paid on every trade: the initial purchase, each rebalance and each switch between the
+ * instrument and cash. A month-end value is the value before that close's trades, so the costs
+ * of a trade show in the following month's return, and the start value is the initial amount.
+ * Nothing is sold at the end.
  */
 export function simulateBacktest(spec: BacktestSpec, data: AlignedMonthlyCloses): SimulationResult {
   const months = expectShape(spec, data);
@@ -40,57 +48,61 @@ export function simulateBacktest(spec: BacktestSpec, data: AlignedMonthlyCloses)
   const base = lookbackMonths(spec.rule) - 1;
   const initial = spec.initialAmount;
   const values = [initial], returns: number[] = [], exposure: number[] = [], rebalanceMonths: CalendarMonth[] = [];
+  const trading = noTrading();
   let switches = 0;
 
   if (spec.rule.kind === "fixed-weights") {
     const { rebalance } = spec.rule;
-    const weights = spec.holdings.map((holding) => holding.weightBps / FULL_WEIGHT_BPS);
-    const cashWeight = spec.cashWeightBps / FULL_WEIGHT_BPS;
-    let sleeves = weights.map((weight) => initial * weight);
-    let cash = initial * cashWeight;
+    const weights = spec.holdings.map((holding) => holding.weightBps);
+    const target = (book: Book) => tradeToTargets(book, weights, spec.cashWeightBps, spec.costs, trading);
+    let book = target({ sleeves: weights.map(() => 0), cash: initial });
     for (let t = base + 1; t < months.length; t += 1) {
       const before = values.at(-1)!;
-      exposure.push(sleeves.reduce((sum, value) => sum + value, 0) / before);
-      sleeves = sleeves.map((value, index) => value * (closes[index][t] / closes[index][t - 1]));
-      const value = sleeves.reduce((sum, sleeve) => sum + sleeve, cash);
+      const invested = book.sleeves.reduce((sum, value) => sum + value, 0);
+      exposure.push(invested / (invested + book.cash));
+      book = { sleeves: book.sleeves.map((value, index) => value * (closes[index][t] / closes[index][t - 1])), cash: book.cash };
+      const value = book.sleeves.reduce((sum, sleeve) => sum + sleeve, book.cash);
       values.push(value);
       returns.push(value / before - 1);
       const last = t === months.length - 1;
       if (!last && (rebalance === "monthly" || (rebalance === "annual" && months[t].endsWith("-12")))) {
-        sleeves = weights.map((weight) => value * weight);
-        cash = value * cashWeight;
+        book = target(book);
         rebalanceMonths.push(months[t]);
       }
     }
   } else {
     const { smaMonths } = spec.rule;
     const series = closes[0];
+    let book: Book = { sleeves: [0], cash: initial };
     let previous: boolean | undefined;
     for (let t = base + 1; t < months.length; t += 1) {
       const window = series.slice(t - smaMonths, t);
       const average = window.reduce((sum, close) => sum + close, 0) / smaMonths;
       const invested = series[t - 1] > average;
       if (previous !== undefined && previous !== invested) switches += 1;
+      // The first decision buys or stays in cash; each switch sells or buys everything.
+      if (previous !== invested) book = tradeToTargets(book, [invested ? FULL_WEIGHT_BPS : 0], invested ? 0 : FULL_WEIGHT_BPS, spec.costs, trading);
       previous = invested;
       const before = values.at(-1)!;
-      const value = invested ? before * (series[t] / series[t - 1]) : before;
+      book = { sleeves: [book.sleeves[0] * (series[t] / series[t - 1])], cash: book.cash };
+      const value = book.sleeves[0] + book.cash;
       exposure.push(invested ? 1 : 0);
       values.push(value);
       returns.push(value / before - 1);
     }
   }
   if (values.some((value) => !Number.isFinite(value))) throw new BacktestDataError("Výsledek nelze spočítat z dostupných cen.", "incomplete");
-  return { months: months.slice(base), values, returns, exposure, rebalanceMonths, switches, metrics: metricsFromValues(values, returns) };
+  return { months: months.slice(base), values, returns, exposure, rebalanceMonths, switches, trading, metrics: metricsFromValues(values, returns) };
 }
 
 /**
  * Buy and hold: the whole amount buys the benchmark at the start value's close and is never
- * rebalanced or traded. It runs through the same month-by-month simulation as a strategy, so a
+ * rebalanced or traded, so it pays costs only on that purchase. It runs through the same month-by-month simulation as a strategy, so a
  * strategy that holds the same instrument at 100 % without rebalancing produces the same curve.
  */
 export function simulateBuyAndHold(benchmark: BuyAndHoldBenchmark, data: AlignedMonthlyCloses): SimulationResult {
   if (benchmark.adjustment !== "split-adjusted") throw new BacktestDataError("Benchmark musí mít stejnou sémantiku výnosu jako strategie: jen cenu bez dividend.", "incomplete");
-  const { instrumentId, startMonth, endMonth, initialAmount, frequency, currency, adjustment } = benchmark;
-  const spec: BacktestSpec = { holdings: [{ instrumentId, weightBps: FULL_WEIGHT_BPS }], cashWeightBps: 0, rule: { kind: "fixed-weights", rebalance: "none" }, startMonth, endMonth, initialAmount, frequency, currency, adjustment };
+  const { instrumentId, startMonth, endMonth, initialAmount, frequency, currency, adjustment, costs } = benchmark;
+  const spec: BacktestSpec = { holdings: [{ instrumentId, weightBps: FULL_WEIGHT_BPS }], cashWeightBps: 0, rule: { kind: "fixed-weights", rebalance: "none" }, startMonth, endMonth, initialAmount, frequency, currency, adjustment, costs };
   return simulateBacktest(spec, data);
 }

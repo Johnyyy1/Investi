@@ -4,6 +4,7 @@ import { addMonths, backtestComparisonSchema, backtestSpecSchema, buyAndHoldFor,
 const valid = {
   holdings: [{ instrumentId: "A", weightBps: 6_000 }], cashWeightBps: 4_000, rule: { kind: "fixed-weights", rebalance: "annual" },
   startMonth: "2020-01", endMonth: "2020-12", initialAmount: 1000, frequency: "monthly", currency: "USD", adjustment: "split-adjusted",
+  costs: { rateBps: 10, fixedFee: 1.5 },
 };
 
 describe("backtest specification", () => {
@@ -25,6 +26,12 @@ describe("backtest specification", () => {
     ["total-return data", { adjustment: "total-return" }],
     ["a malformed currency", { currency: "usd" }],
     ["a trend filter on a mix", { rule: { kind: "trend-filter", smaMonths: 10 } }],
+    ["a cost rate above 2 %", { costs: { rateBps: 201, fixedFee: 0 } }],
+    ["fractional basis points of cost", { costs: { rateBps: 12.5, fixedFee: 0 } }],
+    ["a negative cost rate", { costs: { rateBps: -1, fixedFee: 0 } }],
+    ["a negative flat fee", { costs: { rateBps: 10, fixedFee: -0.01 } }],
+    ["a flat fee above 1 000", { costs: { rateBps: 10, fixedFee: 1_000.01 } }],
+    ["no cost model", { costs: undefined }],
     ["a one-month moving average", { holdings: [{ instrumentId: "A", weightBps: 10_000 }], cashWeightBps: 0, rule: { kind: "trend-filter", smaMonths: 1 } }],
   ])("rejects %s", (_, change) => expect(backtestSpecSchema.safeParse({ ...valid, ...change }).success).toBe(false));
   it("accepts a trend filter that switches one instrument between 100 % and cash", () => {
@@ -37,7 +44,7 @@ describe("strategy and buy-and-hold benchmark", () => {
   const benchmark = buyAndHoldFor(strategy, "B");
 
   it("inherits the strategy's period, amount, currency and return semantics", () => {
-    expect(benchmark).toEqual({ kind: "buy-and-hold", instrumentId: "B", startMonth: "2020-01", endMonth: "2020-12", initialAmount: 1000, frequency: "monthly", currency: "USD", adjustment: "split-adjusted" });
+    expect(benchmark).toEqual({ kind: "buy-and-hold", instrumentId: "B", startMonth: "2020-01", endMonth: "2020-12", initialAmount: 1000, frequency: "monthly", currency: "USD", adjustment: "split-adjusted", costs: { rateBps: 10, fixedFee: 1.5 } });
     expect(backtestComparisonSchema.safeParse({ strategy, benchmark }).success).toBe(true);
     expect(backtestComparisonSchema.safeParse({ strategy, benchmark: buyAndHoldFor(strategy, "A") }).success).toBe(true);
   });
@@ -48,6 +55,8 @@ describe("strategy and buy-and-hold benchmark", () => {
     ["another start month", { startMonth: "2020-02" }, "startMonth"],
     ["another end month", { endMonth: "2020-11" }, "startMonth"],
     ["another amount", { initialAmount: 1000.01 }, "initialAmount"],
+    ["another cost rate", { costs: { rateBps: 25, fixedFee: 1.5 } }, "costs"],
+    ["no flat fee", { costs: { rateBps: 10, fixedFee: 0 } }, "costs"],
   ])("rejects a benchmark with %s", (_, change, field) => {
     const result = backtestComparisonSchema.safeParse({ strategy, benchmark: { ...benchmark, ...change } });
     expect(result.success).toBe(false);

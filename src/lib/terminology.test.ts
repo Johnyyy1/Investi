@@ -12,6 +12,7 @@ const retiredTerms: [RegExp, string][] = [
   // Drawdown used as a word in copy; identifiers and the bracketed supplement pass.
   [/(?<![\p{L}(.-]|max\. )drawdown(u|em)?(?= \p{Ll}| \d|[.,"](?!\p{L}))/iu, "propad (drawdown) / Největší propad (max. drawdown)"],
   [/(?<!\p{L})body (za lekce|nemění)/iu, "XP"],
+  [/(?<!\p{L})transakční\p{L}* náklad/iu, "Náklady obchodů"],
   [/aria-label="[^"]*investi(!| —)/u, "investi · …"],
 ];
 const czech = /[ěščřžýáíéůúňťď]/i;
