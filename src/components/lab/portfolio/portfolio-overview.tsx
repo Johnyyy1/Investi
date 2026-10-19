@@ -2,12 +2,13 @@
 
 import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
+import { volatilityLessonLinks } from "@/features/lessons/volatility/manifest";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowDownRight, ArrowLeftRight, ArrowRight, ArrowUpRight, BookOpen, ChartLine, ChartNoAxesColumn, ChevronDown, CircleAlert,
-  CircleCheck, CircleOff, Ellipsis, Hourglass, Info, Minus, Moon, ReceiptText, RotateCcw, Sparkles,
+  CircleCheck, CircleOff, Ellipsis, Info, Minus, Moon, ReceiptText, RotateCcw, Sparkles,
   TrendingDown, TrendingUp, TriangleAlert, Wallet, X,
 } from "lucide-react";
 import { instrumentDetailHref } from "@/features/instruments/routes";
@@ -309,7 +310,7 @@ function Story({ view, contributions, story }: { view: PortfolioView; contributi
     <div className={styles.storyFoot}>
       <p className={styles.honesty}><Info size={15} aria-hidden="true" />Popis toho, co se už stalo, ne předpověď. Ceny se mění oběma směry.</p>
       <Link className={styles.textLink} href={PORTFOLIO_LESSON_HREF}><BookOpen size={16} aria-hidden="true" />Lekce: Portfolio, váhy a diverzifikace<ArrowRight size={16} aria-hidden="true" /></Link>
-      <p className={styles.meta}><Hourglass size={14} aria-hidden="true" />Připravujeme: Volatilita · kapitola 03</p>
+      <Link className={styles.textLink} href={volatilityLessonLinks.volatility.href}><BookOpen size={16} aria-hidden="true" />{volatilityLessonLinks.volatility.label}<ArrowRight size={16} aria-hidden="true" /></Link>
     </div>
   </section>;
 }

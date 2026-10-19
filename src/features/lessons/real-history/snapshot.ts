@@ -121,7 +121,7 @@ export function freezeLessonHistory(series: HistoricalSeries, plan: LessonHistor
 }
 
 /** Only provider-reported, non-deterministic history may be called historical; everything else is sample data. */
-export function isRealHistory(snapshot: LessonHistorySnapshot) {
+export function isRealHistory(snapshot: Pick<LessonHistorySnapshot, "provenance">) {
   return snapshot.provenance.dataKind === "historical" && !snapshot.provenance.isDeterministic;
 }
 

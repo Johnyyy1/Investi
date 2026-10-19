@@ -1,4 +1,5 @@
-import { CircleHelp } from "lucide-react";
+import { BookOpen, CircleHelp } from "lucide-react";
+import { AppLink as Link } from "@/components/shell/app-link";
 import type { PriceMetrics } from "@/features/instruments/price-metrics";
 import { dateLabel, metricsFor, metricToneClass } from "@/features/instruments/price-metrics-presentation";
 import type { Currency } from "@/features/market-data/contracts";
@@ -17,8 +18,14 @@ export function InstrumentReturnAnalytics({ metrics, currency }: { metrics: Pric
         <details className="mt-3 text-small">
           <summary className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 font-semibold text-primary-hover focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-primary"><CircleHelp aria-hidden="true" className="size-4" />Co to znamená?</summary>
           <p className="mt-1 max-w-[30rem] text-microcopy leading-relaxed text-secondary">{metric.help}</p>
+          {metric.lesson ? <MetricLessonLink lesson={metric.lesson} /> : null}
         </details>
       </div>)}
     </dl> : <p role="status" className="mt-6 text-small text-secondary">Výnosové ukazatele nejsou pro toto období dostupné. Chybí dostatek zavíracích cen.</p>}
   </section>;
+}
+
+/** Shared by the detail and the comparison: the metric's "Co to znamená?" leads to its lesson. */
+export function MetricLessonLink({ lesson }: { lesson: { href: string; label: string } }) {
+  return <Link href={lesson.href} className="mt-1 inline-flex min-h-11 items-center gap-1.5 text-small font-semibold text-primary-hover focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-primary"><BookOpen aria-hidden="true" className="size-4" />{lesson.label}</Link>;
 }

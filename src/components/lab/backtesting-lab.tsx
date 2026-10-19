@@ -1,6 +1,7 @@
 "use client";
 
 import { AppLink as Link } from "@/components/shell/app-link";
+import { volatilityLessonLinks } from "@/features/lessons/volatility/manifest";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, FlaskConical, Info, RotateCcw, SlidersHorizontal } from "lucide-react";
@@ -55,8 +56,8 @@ function Metrics({ result, onMethodology }: { result: BacktestResult; onMethodol
     { label: "Konečná hodnota", detail: "Poslední bod grafu po zvoleném období.", value: money(result, a.finalValue), benchmark: money(result, b.finalValue), difference: formatBacktestMoneyDifference(a.finalValue - b.finalValue, result.currency) },
     { label: "Celkový výnos", detail: "Změna od počáteční částky za celé období. Není přepočtený na rok.", ...ratio("totalReturn") },
     { label: "CAGR", detail: "Přepočteno na rok: stálé roční tempo od začátku do konce. Ne výnos každého roku.", ...ratio("cagr") },
-    { label: "Největší propad", detail: "Největší pokles od předchozího maxima, měřený na konci měsíce (max. drawdown).", ...ratio("maxDrawdown") },
-    { label: "Volatilita", detail: "Anualizované kolísání měsíčních výnosů. Ne každý typ rizika.", ...ratio("volatility") },
+    { label: "Největší propad", detail: <>Největší pokles od předchozího maxima, měřený na konci měsíce (max. drawdown). <Link href={volatilityLessonLinks.maxDrawdown.href} className={styles.inlineLink}>{volatilityLessonLinks.maxDrawdown.label}</Link></>, ...ratio("maxDrawdown") },
+    { label: "Volatilita", detail: <>Anualizované kolísání měsíčních výnosů. Ne každý typ rizika. <Link href={volatilityLessonLinks.volatility.href} className={styles.inlineLink}>{volatilityLessonLinks.volatility.label}</Link></>, ...ratio("volatility") },
     { label: "Sharpeho poměr", detail: <>Anualizovaný výnos nad bezrizikovou sazbou ({formatPercentage(a.riskFreeRate)}) na jednotku volatility (Sharpe ratio). Vyšší znamená víc výnosu za stejné kolísání. Za krátké období je nestabilní. <a href="#backtest-methodology" className={styles.inlineLink} onClick={onMethodology}>Jak se počítá</a></>, value: formatSharpeRatio(a.sharpeRatio), benchmark: formatSharpeRatio(b.sharpeRatio), difference: formatSharpeDifference(a.sharpeRatio, b.sharpeRatio) },
   ];
   return <section className={styles.metrics} aria-labelledby="journey-heading">

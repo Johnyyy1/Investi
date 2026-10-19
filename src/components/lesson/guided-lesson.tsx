@@ -10,6 +10,7 @@ import { getModuleBySlug } from "@/features/learning/catalog";
 import { evaluateQuestion, isQuestion } from "@/features/lessons/question-evaluation";
 import type { AuthoredLesson } from "@/features/lessons/types";
 import type { LessonHistoryEntry } from "@/features/lessons/real-history/snapshot";
+import type { RiskHistoryEntry } from "@/features/lessons/real-history/risk-window";
 import { completeLessonAction, markLessonStartedAction, saveLessonPositionAction } from "@/features/progress/actions";
 import type { CompletionRewardPresentation, LearningMomentum } from "@/features/progress/contracts";
 import { formatPracticeCapitalMinor, type SerializedPracticeCapitalMinor } from "@/features/rewards/presentation";
@@ -23,12 +24,14 @@ import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, Leaf, RotateCcw } fro
 
 const primaryClassName = "min-w-0 flex-1 whitespace-nowrap px-3 min-[420px]:px-6 md:flex-none";
 
-export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref, guest = false, history }: {
+export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref, guest = false, history, riskHistory }: {
   lesson: AuthoredLesson; initialStatus: "not_started" | "in_progress" | "completed"; initialPosition: number; initialCompletedLessons: number; initialLearningMomentum: LearningMomentum; initialEarnedPracticeCapitalMinor: SerializedPracticeCapitalMinor; nextHref: string;
   /** A guest's finished lesson leads to saving an account first (Pen onboarding step 6). */
   guest?: boolean;
   /** Frozen history for the lesson's historical-data figures, loaded on the server. */
   history?: readonly LessonHistoryEntry[];
+  /** Frozen daily closes for the Volatility lessons' historical figures. */
+  riskHistory?: readonly RiskHistoryEntry[];
 }) {
   const router = useRouter();
   const learningModule = getModuleBySlug(lesson.moduleSlug)!;
@@ -149,7 +152,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
             <h2 ref={headingRef} id="step-title" tabIndex={-1} lang="cs" className="scroll-mt-8 text-[28px]/8 font-semibold tracking-[-0.9px] [overflow-wrap:normal] md:text-[38px]/[44px] md:tracking-[-1.3px]">{step.title}</h2>
             {mastery ? <p className="text-sm/5 text-muted">Bez časového limitu. Když odpověď nevyjde, ukážeme proč a zkusíš to znovu.</p> : null}
           </div>
-          {step.blocks.filter((block) => !isQuestion(block)).map((block) => <GuidedBlock key={block.id} block={block} history={history} />)}
+          {step.blocks.filter((block) => !isQuestion(block)).map((block) => <GuidedBlock key={block.id} block={block} history={history} riskHistory={riskHistory} />)}
           {question ? <div ref={questionRef} className="flex flex-col">
             {mastery && verdict ? <MasteryGuide /> : null}
             <div className="relative z-[1]"><GuidedQuestion block={question} answers={answers} verdict={verdict} mastery={mastery} onAnswer={(id, value) => setAnswers((current) => ({ ...current, [id]: value }))} /></div>
