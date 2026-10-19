@@ -146,6 +146,25 @@ try {
   await page.getByRole("button", { name: "P/E TTM" }).click();
   await page.getByText(/Cena akcie vůči zisku na akcii za posledních 12 měsíců/).waitFor();
   await page.getByRole("button", { name: "P/E TTM" }).click();
+  for (const [id, label, explanation] of [["pb", "P/B TTM", "Proč pozor:"], ["operating-margin", "Provozní marže TTM", "Proč příznivé:"]]) {
+    const valueButton = page.locator(`[data-metric="${id}"]`).getByRole("button");
+    const labelButton = page.getByRole("button", { name: label, exact: true });
+    const help = page.locator(`#metric-help-${id}`);
+    assert.equal(await valueButton.getAttribute("aria-expanded"), "false");
+    await valueButton.locator("svg").click();
+    assert.equal(await help.isVisible(), true, "the status icon opens its metric explanation");
+    assert.match(await help.innerText(), new RegExp(explanation));
+    assert.equal(await labelButton.getAttribute("aria-expanded"), "true", "both triggers share the open state");
+    await labelButton.click();
+    assert.equal(await valueButton.getAttribute("aria-expanded"), "false", "the question mark closes the same explanation");
+    await valueButton.focus();
+    await page.keyboard.press("Enter");
+    assert.equal(await help.isVisible(), true, "the metric value opens from the keyboard");
+    await page.keyboard.press("Space");
+    assert.equal(await help.isVisible(), false, "the metric value toggles closed from the keyboard");
+    assert.equal(await valueButton.evaluate((element) => element === document.activeElement), true, "focus stays on the disclosure trigger");
+  }
+  await targetsAtLeast44(page, ['[data-metric][data-signal="positive"] button', '[data-metric][data-signal="caution"] button']);
   const equityScreenshotStyle = await page.addStyleTag({ content: 'header.sticky { position: static !important; } nav[aria-label="Mobilní navigace"] { position: static !important; }' });
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-1y-1440.png`, fullPage: true });
   await page.locator('section[aria-labelledby="key-metrics-heading"]').screenshot({ path: `${screenshotDir}/instrument-equity-metrics-clean.png` });

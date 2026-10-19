@@ -33,9 +33,9 @@ describe("equity key metrics fallback", () => {
     expect(html).toContain("Nejde o investiční hodnocení");
     expect(html).toContain("Proč příznivé:</span> Nad orientační hranicí 10 %.");
     expect(html).toContain("Jak to číst:</span> Mezi orientačními hranicemi 15× a 30×");
-    expect(html).toMatch(/data-metric="pb" data-signal="caution"[^>]*>(<svg[^>]*lucide-triangle-alert)/);
-    expect(html).toMatch(/data-metric="gross-margin" data-signal="positive"[^>]*>(<svg[^>]*lucide-circle-check)/);
-    expect(html).toContain("Proč, vysvětlí otazník u ukazatele.");
+    expect(html).toMatch(/data-metric="pb" data-signal="caution"[^>]*><button[^>]*aria-controls="metric-help-pb"[^>]*>(<svg[^>]*lucide-triangle-alert)/);
+    expect(html).toMatch(/data-metric="gross-margin" data-signal="positive"[^>]*><button[^>]*aria-controls="metric-help-gross-margin"[^>]*>(<svg[^>]*lucide-circle-check)/);
+    expect(html).toContain("Klikni na označenou hodnotu nebo otazník u ukazatele.");
   });
   it("colors a negative net-debt ratio only when net cash is confirmed", async () => {
     const sample = await createDeterministicMarketDataService().getEquityFundamentals("US-XNAS:MSFT");
