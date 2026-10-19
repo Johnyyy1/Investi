@@ -81,6 +81,14 @@ describe("trend filter", () => {
       expect(result.values).not.toEqual(full.values);
     }
   });
+  it("a filter that stays in cash all year has no Sharpe ratio, rather than zero", () => {
+    const falling = monthRange("2019-10", "2020-12");
+    const result = simulateBacktest(trend("2020-01", "2020-12"), { months: falling, closes: [falling.map((_, index) => 100 - index)] });
+    expect(result.exposure).toEqual(Array(12).fill(0));
+    expect(result.metrics.totalReturn).toBe(0);
+    expect(result.metrics.volatility).toBe(0);
+    expect(result.metrics.sharpeRatio).toBeNull();
+  });
   it("refuses to start without the whole moving-average window", () => {
     expect(() => simulateBacktest(trend("2020-01", "2020-06"), { months: months.slice(1), closes: [closes.slice(1)] })).toThrow(BacktestDataError);
   });

@@ -1,5 +1,5 @@
 import type { CalendarDate, Currency, InstrumentId, UtcTimestamp } from "@/features/market-data/contracts";
-import type { BacktestMetrics } from "./simulate";
+import type { BacktestMetrics } from "@/features/lab/backtest";
 import { FULL_WEIGHT_BPS, type BacktestSpec, type CalendarMonth, type RebalanceRule } from "./spec";
 
 export type BacktestStrategyDefinition = {

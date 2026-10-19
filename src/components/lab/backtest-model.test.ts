@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { calculateBacktestMetrics } from "@/features/lab/backtest";
 import { syntheticMonthlyData } from "@/features/lab/sample-data";
-import { backtestPeriods, buildBacktestResult, formatBacktestMoney, formatBacktestMoneyDifference, formatBacktestMonth, formatPercentagePoints } from "./backtest-model";
+import { backtestPeriods, buildBacktestResult, formatBacktestMoney, formatBacktestMoneyDifference, formatBacktestMonth, formatPercentagePoints, formatSharpeDifference, formatSharpeRatio } from "./backtest-model";
 
 const config = { strategy: "mixed", start: 2015, end: 2025, amount: "100000" };
 describe("Backtesting presentation snapshots", () => {
@@ -65,6 +65,24 @@ describe("Backtesting presentation snapshots", () => {
     expect(formatBacktestMoneyDifference(3321.4, "USD").replace(/\s/g, " ")).toBe("+3 321 $");
     expect(formatBacktestMoneyDifference(-0.25).replace(/\s/g, " ")).toBe("-0,25 Kč");
     expect(formatBacktestMoneyDifference(0).replace(/\s/g, " ")).toBe("0 Kč");
+  });
+  it("shows an undefined Sharpe ratio as unavailable, never as zero", () => {
+    expect(formatSharpeRatio(Math.sqrt(11) / 3)).toBe("1,11");
+    expect(formatSharpeRatio(-0.5)).toBe("-0,50");
+    expect(formatSharpeRatio(0)).toBe("0,00");
+    expect(formatSharpeRatio(null)).toBe("Nedostupné");
+    expect(formatSharpeDifference(1.25, 0.5)).toBe("+0,75");
+    expect(formatSharpeDifference(0.5, 0.5)).toBe("0,00");
+    expect(formatSharpeDifference(0.46, 0.76)).toBe("-0,30");
+    expect(formatSharpeDifference(null, 0.5)).toBe("Nedostupné");
+  });
+  it("reports total return and Sharpe ratio for the strategy and the benchmark", () => {
+    const result = buildBacktestResult(config);
+    expect(result.metrics.totalReturn).toBeCloseTo(result.metrics.finalValue / 100000 - 1, 12);
+    expect(result.benchmark.totalReturn).toBeCloseTo(result.benchmark.finalValue / 100000 - 1, 12);
+    expect(result.metrics.sharpeRatio).toEqual(expect.any(Number));
+    expect(result.benchmark.sharpeRatio).toEqual(expect.any(Number));
+    expect(result.metrics.riskFreeRate).toBe(0);
   });
   it("keeps small amounts readable at the presentation boundary", () => {
     expect(formatBacktestMoney(0.25)).toBe("0,25 Kč");

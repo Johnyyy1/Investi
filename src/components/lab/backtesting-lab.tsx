@@ -12,8 +12,9 @@ import { runHistoryBacktestAction } from "@/features/backtesting/actions";
 import { benchmarkName, type BacktestHistoryView, type HistoryBacktestResult } from "@/features/backtesting/catalog";
 import type { RebalanceRule } from "@/features/backtesting/spec";
 import { FinancialInputError } from "@/features/finance/returns";
+import { BACKTEST_RISK_FREE_RATE } from "@/features/lab/backtest";
 import { formatPercentage } from "@/lib/formatters";
-import { backtestPeriods, backtestStrategies, backtestYears, buildBacktestResult, formatBacktestMoney, formatBacktestMoneyDifference, formatPercentagePoints, sampleBenchmarkName, type BacktestPrediction, type BacktestResult } from "./backtest-model";
+import { backtestPeriods, backtestStrategies, backtestYears, buildBacktestResult, formatBacktestMoney, formatBacktestMoneyDifference, formatPercentagePoints, formatSharpeDifference, formatSharpeRatio, sampleBenchmarkName, type BacktestPrediction, type BacktestResult } from "./backtest-model";
 import { historySourceCopy, rebalanceOptions, sampleSourceCopy, type BacktestSourceCopy, type BacktestSourceKind } from "./backtest-source";
 import styles from "./backtesting-lab.module.css";
 
@@ -39,14 +40,16 @@ function DataCard({ copy }: { copy: BacktestSourceCopy }) {
   return <details ref={details} className={styles.dataCard}><summary>Data pokusu <FlaskConical size={16} aria-hidden="true" /><ChevronDown size={16} aria-hidden="true" /></summary><p className={styles.hint}>{copy === sampleSourceCopy ? "Ukázková data · žádné historické tržní ceny." : `${copy.label} · jen cena, bez dividend.`}</p><DataNotes copy={copy} /></details>;
 }
 
-function Metrics({ result }: { result: BacktestResult }) {
+function Metrics({ result, onMethodology }: { result: BacktestResult; onMethodology: () => void }) {
   const { metrics: a, benchmark: b } = result;
-  const ratio = (key: "cagr" | "maxDrawdown" | "volatility") => ({ value: formatPercentage(a[key]), benchmark: formatPercentage(b[key]), difference: formatPercentagePoints(a[key] - b[key]) });
-  const rows = [
+  const ratio = (key: "totalReturn" | "cagr" | "maxDrawdown" | "volatility") => ({ value: formatPercentage(a[key]), benchmark: formatPercentage(b[key]), difference: formatPercentagePoints(a[key] - b[key]) });
+  const rows: { label: string; detail: React.ReactNode; value: string; benchmark: string; difference: string }[] = [
     { label: "Konečná hodnota", detail: "Poslední bod grafu po zvoleném období.", value: money(result, a.finalValue), benchmark: money(result, b.finalValue), difference: formatBacktestMoneyDifference(a.finalValue - b.finalValue, result.currency) },
-    { label: "CAGR", detail: "Stálé roční tempo od začátku do konce. Ne výnos každého roku.", ...ratio("cagr") },
+    { label: "Celkový výnos", detail: "Změna od počáteční částky za celé období. Není přepočtený na rok.", ...ratio("totalReturn") },
+    { label: "CAGR", detail: "Přepočteno na rok: stálé roční tempo od začátku do konce. Ne výnos každého roku.", ...ratio("cagr") },
     { label: "Největší propad", detail: "Největší pokles od předchozího maxima, měřený na konci měsíce (max. drawdown).", ...ratio("maxDrawdown") },
     { label: "Volatilita", detail: "Anualizované kolísání měsíčních výnosů. Ne každý typ rizika.", ...ratio("volatility") },
+    { label: "Sharpeho poměr", detail: <>Anualizovaný výnos nad bezrizikovou sazbou ({formatPercentage(a.riskFreeRate)}) na jednotku volatility (Sharpe ratio). Vyšší znamená víc výnosu za stejné kolísání. Za krátké období je nestabilní. <a href="#backtest-methodology" className={styles.inlineLink} onClick={onMethodology}>Jak se počítá</a></>, value: formatSharpeRatio(a.sharpeRatio), benchmark: formatSharpeRatio(b.sharpeRatio), difference: formatSharpeDifference(a.sharpeRatio, b.sharpeRatio) },
   ];
   return <section className={styles.metrics} aria-labelledby="journey-heading">
     <h2 id="journey-heading">Jak se ta cesta cítila</h2>
@@ -148,6 +151,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
   const configuration = useRef<HTMLFormElement>(null);
   const comparisonHeading = useRef<HTMLHeadingElement>(null);
   const inFlight = useRef(false);
+  const methodology = useRef<HTMLDetailsElement>(null);
   const options = source === "history" && history ? historyOptions(history, benchmark) : sampleOptions;
   const selected = options.strategies.find((item) => item.id === strategy) ?? options.strategies[0];
   const selectedKind = source === "history" ? history?.strategies.find((item) => item.id === selected.id)?.kind : undefined;
@@ -280,7 +284,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
     </div>
     {result && <section className={styles.results} aria-label="Výsledek backtestu" aria-busy={running || comparing}>
       <BacktestChart data={result.points} strategyLabel={result.strategy.name} benchmarkLabel={result.benchmarkName} currency={result.currency} source={resultCopy.chart} initial={result.amount} />
-      <Metrics result={result} />
+      <Metrics result={result} onMethodology={() => { if (methodology.current) methodology.current.open = true; }} />
       <PredictionResult result={result} copy={resultCopy} />
       <div className={styles.retryBar}><Button className={styles.primary} onClick={() => void compare()} disabled={running} loading={comparing}><RotateCcw size={18} aria-hidden="true" />{comparing ? "Počítám období…" : "Zkusit jiné období"}</Button><Link href="/learn/foundations/your-first-portfolio" className={styles.textLink}><BookOpen size={16} aria-hidden="true" />Zpět k lekci o portfoliu</Link></div>
       {comparison && <section className={styles.comparison} aria-labelledby="comparison-heading">
@@ -296,7 +300,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
       </section>}
       <details className={styles.quiz}><summary>Ověř si porozumění <ChevronDown size={18} aria-hidden="true" /></summary><section aria-labelledby="lab-question"><h2 id="lab-question">Která metrika ukazuje největší pokles od předchozího maxima?</h2><fieldset className={styles.quizOptions}><legend className="sr-only">Vyber metriku</legend>{["CAGR", "Největší propad", "Volatilita"].map((value) => <AnswerOption key={value} name="backtest-question" value={value} checked={answer === value} disabled={checked} onChange={setAnswer}>{value}</AnswerOption>)}</fieldset><Button variant="secondary" disabled={!answer || checked} onClick={() => setChecked(true)}>Zkontrolovat odpověď</Button>{checked && <p role="status" className={styles.feedback}>{answer === "Největší propad" ? "Správně." : "Zaměř se na největší propad."} Sleduje největší pokles od vrcholu ke dnu. CAGR popisuje začátek a konec; volatilita popisuje kolísání.</p>}</section></details>
     </section>}
-    <details className={styles.methodology}><summary><Info size={16} aria-hidden="true" />Data a předpoklady výpočtu<ChevronDown size={16} aria-hidden="true" /></summary><div><DataNotes copy={resultCopy} />{resultCopy.method.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}<p>CAGR používá počet měsíčních intervalů dělený 12. Volatilita je výběrová směrodatná odchylka (n − 1) násobená √12. Největší propad (max. drawdown) je kladná velikost ztráty; zahrnuje počáteční investici a hodnoty na konci měsíce. Nezachytí větší propady uvnitř měsíce.</p><p>Výnosy se aplikují v pořadí, bez znalosti budoucích měsíců. Chybějící, duplicitní, neseřazená nebo neplatná pozorování se odmítají. Výpočet období nezkracuje a data nedoplňuje. Zaokrouhluje se až při zobrazení.</p></div></details>
+    <details ref={methodology} id="backtest-methodology" className={styles.methodology}><summary><Info size={16} aria-hidden="true" />Data a předpoklady výpočtu<ChevronDown size={16} aria-hidden="true" /></summary><div><DataNotes copy={resultCopy} />{resultCopy.method.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}<p>Celkový výnos je konečná hodnota ÷ počáteční částka − 1 za celé období, bez přepočtu na rok. CAGR je totéž přepočtené na rok: používá počet měsíčních intervalů dělený 12. Volatilita je výběrová směrodatná odchylka (n − 1) měsíčních výnosů násobená √12. Největší propad (max. drawdown) je kladná velikost ztráty; zahrnuje počáteční investici a hodnoty na konci měsíce. Nezachytí větší propady uvnitř měsíce.</p><p>Sharpeho poměr (Sharpe ratio) = průměrný měsíční nadvýnos × 12 ÷ (výběrová směrodatná odchylka nadvýnosů × √12). Nadvýnos je měsíční výnos minus měsíční bezriziková sazba. Použitá sazba je {formatPercentage(result?.metrics.riskFreeRate ?? BACKTEST_RISK_FREE_RATE)} ročně: stejně jako hotovost v backtestu nic nevydělává. Není to tržní sazba; s kladnou sazbou by vyšel nižší. Bez kolísání nebo s méně než 12 měsíci je Sharpeho poměr nedostupný. Nad krátkým obdobím je nestabilní: pár měsíců ho může výrazně posunout.</p><p>Výnosy se aplikují v pořadí, bez znalosti budoucích měsíců. Chybějící, duplicitní, neseřazená nebo neplatná pozorování se odmítají. Výpočet období nezkracuje a data nedoplňuje. Zaokrouhluje se až při zobrazení.</p></div></details>
     <footer className={styles.footer}><strong>investi!</strong><p>Výukový nástroj, ne investiční doporučení. Ukázkový ani minulý výsledek nezaručuje budoucí výnosy.</p><Link href="/lab" className={styles.textLink}>Zpět do Labu<ArrowRight size={16} aria-hidden="true" /></Link></footer>
   </main>;
 }

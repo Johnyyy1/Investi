@@ -105,6 +105,7 @@
 .metricRow dt strong { display: block; font-weight: 600; }
 .metricRow dt > span { display: block; margin-top: 4px; color: var(--color-muted); font-size: .8125rem; }
 .metricRow dd { min-width: 0; }
+.inlineLink { color: var(--color-primary); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .metricRow dd > strong { display: block; margin-top: 8px; font-size: 1.25rem; line-height: 1.25; font-variant-numeric: tabular-nums; }
 .metricRow .metricDifference { grid-column: 1 / -1; }
 .metricRow .metricDifference > strong { font-size: 1.0625rem; font-weight: 600; color: var(--color-secondary); }

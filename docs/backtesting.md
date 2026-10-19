@@ -19,8 +19,25 @@ The synthetic sample stays the default. It keeps deterministic tests and demos s
 2. **Catalog** (`catalog.ts`). There is a fixed plan per market-data provider: the instrument, the benchmark choices, the year range, the fetch window, the strategies and the period presets. The browser sends only a strategy id, a benchmark id from the plan, a rebalancing rule, an amount and years. It never sends a price or a value.
 3. **Normalized history** (`run.ts`, `monthly.ts`). The server loads the plan's whole window once per run, validates it like the instrument chart does, and takes the **month-end close**: the last close inside each calendar month. That close must lie within 7 days of the month end. Instruments are paired by calendar month. A month that is missing, or whose data stops mid-month, refuses the run with a message naming the month. Nothing is forward-filled or interpolated.
 4. **Simulation** (`simulate.ts`). The simulation runs month by month without look-ahead. The value at month *t* uses closes up to *t*. A trend-filter decision for month *t* uses closes up to *t − 1*: it holds the instrument when the previous month-end close was above the mean of the last 10 month-end closes (about 200 trading days), otherwise cash. Annual rebalancing happens at each December close. No rebalance is counted after the last month.
-5. **Metrics**. These are the same conventions as the sample: final value, CAGR over months ÷ 12, maximum drawdown on month-end values including the start, and sample volatility of monthly returns × √12.
+5. **Metrics** (`metricsFromValues` in `src/features/lab/backtest.ts`). The sample and history runs share one function, see [Metrics](#metrics).
 6. **Presentation** (`src/components/lab/backtest-source.ts`, `backtesting-lab.tsx`). Copy, labels and the chart's currency and benchmark come from the result's source.
+
+## Metrics
+
+Every metric is computed for strategy A and benchmark B from the month-end values and the simple monthly returns between them.
+
+| Metric | UI label | Convention | Annualized |
+| --- | --- | --- | --- |
+| `finalValue` | Konečná hodnota | last month-end value | – |
+| `totalReturn` | Celkový výnos | final value ÷ initial amount − 1 | no |
+| `cagr` | CAGR | (final ÷ initial)^(12 ÷ months) − 1 | yes |
+| `maxDrawdown` | Největší propad | largest fall from a previous peak, including the start value | – |
+| `volatility` | Volatilita | sample standard deviation (n − 1) of monthly returns × √12 | yes |
+| `sharpeRatio` | Sharpeho poměr | mean monthly excess return ÷ sample standard deviation (n − 1) of the excess returns × √12 | yes |
+
+The labels keep total return and CAGR apart: total return is the whole period, CAGR is per year.
+
+**Sharpe ratio.** Excess return is the monthly return minus the monthly risk-free rate, `(1 + annual rate)^(1/12) − 1`. The annual rate is `BACKTEST_RISK_FREE_RATE`, a fixed **0 %**. That matches the simulation, where cash earns nothing too; it is a stated simplification, not a market rate, and every result carries the rate it used (`riskFreeRate`) so the UI can say it. With a constant rate the deviation of excess returns equals the volatility above. The ratio is `null` („Nedostupné“) when there are fewer than 12 monthly returns or the returns never vary (for example a trend filter that stays in cash all period). It is never shown as 0 or infinity. The methodology warns that a Sharpe ratio over a short period is unstable. A historical rate series (for example the CNB 2T repo rate, or US T-bills for USD runs) would need its own provenance and is not part of this change.
 
 ## Benchmark
 
@@ -30,7 +47,7 @@ Every result compares strategy A with benchmark B, a **buy and hold**: the whole
 - **Same terms.** `buyAndHoldFor(strategy, instrumentId)` builds B from the strategy's own period, amount, currency and return semantics. `backtestComparisonSchema` refuses a pair that differs in any of them, including a total-return or raw benchmark against a price-only strategy. At run time, a benchmark series in another quote currency or with another adjustment mode is refused (`BacktestDataError`), never converted or mixed in.
 - **Same months.** B's month-end closes are resampled like the strategy's and paired by calendar month from the start value to the last month. A month missing only in B's history refuses the run.
 - **Same simulation.** `simulateBuyAndHold` runs B through `simulateBacktest` as one holding at 100 % with no rebalancing. A strategy that holds the benchmark's instrument at 100 % without rebalancing therefore has an identical curve (`simulate.test.ts`, `run.test.ts`).
-- **Comparison.** The chart draws A and B. The metric table shows A, B and the difference A − B: money for the final value, percentage points (p. b.) for CAGR, drawdown and volatility. The difference is neutral: no colour or wording says which path „won“. The prediction stays optional and is never scored.
+- **Comparison.** The chart draws A and B. The metric table shows A, B and the difference A − B: money for the final value, percentage points (p. b.) for total return, CAGR, drawdown and volatility, and a plain number for the Sharpe ratio (unavailable when either side is). The difference is neutral: no colour or wording says which path „won“. The prediction stays optional and is never scored.
 - **Labels.** A run is „Historická data“ only when both series are historical. When B is another instrument, the source notes, the chart note and the explanation name both symbols, and the explanation says that the difference includes the difference between the instruments.
 
 The synthetic sample has no instruments. Its benchmark is the stock sample bought once and held („Buy-and-hold akciového vzorku“), and it is not selectable.
@@ -64,6 +81,7 @@ The deterministic SPX fixture is an invented weekday series with stress windows 
 
 ## Tests
 
+- `src/features/lab/backtest.test.ts` covers the metrics: a hand-computed Sharpe ratio (√11 ÷ 3 for twelve months alternating +2 % and −1 %), a non-zero rate, negative excess return, zero volatility and short periods (`null`), decimal edge cases, and total return versus CAGR.
 - `spec.test.ts`, `monthly.test.ts`, `simulate.test.ts` cover the specification, the strategy/benchmark comparison rules, month-end resampling and alignment, a missing month, rebalancing rules, the trend filter, buy and hold, no look-ahead, and decimal amounts. Monthly rebalancing on price indices reproduces the synthetic Mix 60 / 30 / 10 exactly.
 - `run.test.ts` is an integration test with the deterministic provider and with a mocked FMP: labels, the single cached request, identical curves for a benchmark on the strategy's own instrument, another benchmark instrument, refused currency and return semantics, refused input, and a missing month in either series.
 - `npm run test:backtesting-browser` covers the synthetic flow, the history flow in deterministic mode with both benchmarks and the A − B differences, responsive layouts, 200 % text, and an unchanged portfolio and Practice Capital.
