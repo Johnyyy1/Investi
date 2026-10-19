@@ -57,6 +57,13 @@ async function layouts(state) {
   await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
   await page.setViewportSize({ width: 1440, height: 900 });
 }
+const simulation = () => page.getByRole("region", { name: "Co by mohlo nastat dál?" });
+/** P5 … P95 at the horizon, in display order, must never cross. */
+async function assertOrderedRange() {
+  const [inner, median, outer] = await Promise.all([text("simulation-inner"), text("simulation-median"), text("simulation-outer")]);
+  const [p25, p75] = inner.split("–").map(number), [p5, p95] = outer.split("–").map(number);
+  assert.ok(p5 <= p25 && p25 <= number(median) && number(median) <= p75 && p75 <= p95, `ordered percentiles: ${outer} ⊇ ${inner} ∋ ${median}`);
+}
 async function financialState() {
   return {
     rewards: await sql`select lesson_id, practice_capital_minor from lesson_award where user_id = ${userId} order by lesson_id`,
@@ -98,6 +105,42 @@ try {
   await chart.focus(); await chart.press("ArrowRight");
   await page.locator(".recharts-tooltip-wrapper").filter({ hasText: /2015|2014/ }).waitFor();
   await page.mouse.click(5, 5);
+
+  // The simulation step: future paths drawn from A's 132 monthly returns, framed as uncertainty, not a forecast.
+  assert.match(await simulation().textContent(), /Není to předpověď ani doporučení\. Rozsah ukazuje nejistotu\. Vychází jen z minulých dat a minulost se nemusí opakovat\./);
+  assert.match(await simulation().textContent(), /132 měsíců, Mix 60 \/ 30 \/ 10/);
+  assert.equal(await page.getByRole("textbox", { name: "Vklad na začátku" }).inputValue(), "100000");
+  assert.equal(await page.getByRole("combobox", { name: "Horizont" }).inputValue(), "10");
+  assert.equal(await simulation().getByText(/pravděpodobnost zisku/i).count(), 0, "no probability-of-profit metric");
+  await button("Spustit simulaci").click();
+  await page.getByTestId("simulation-result").waitFor();
+  assert.equal(await page.getByRole("heading", { name: /^Za 10 let · start 100\s000\sKč$/ }).evaluate((element) => element === document.activeElement), true, "focus moves to the simulation result");
+  assert.equal(await text("simulation-contributed"), "100000Kč");
+  await assertOrderedRange();
+  const fan = page.getByTestId("simulation-chart");
+  await fan.locator(".recharts-surface").waitFor();
+  assert.match(await fan.getByRole("img").getAttribute("aria-label"), /^Simulace 1\s000 cest\. Za 10 let je prostřední cesta \(medián\) .+ Polovina cest skončila mezi .+, 90 % cest mezi .+\. Vloženo celkem 100\s000\sKč\.$/);
+  for (const label of ["P95", "P75", "Medián", "P25", "P5"]) assert.equal(await fan.locator("svg text").filter({ hasText: new RegExp(`^${label}$`) }).count(), 1, `in-chart label ${label}`);
+  const median = await text("simulation-median");
+  await button("Spustit znovu").click(); await settle();
+  assert.equal(await text("simulation-median"), median, "the same settings and seed give the same paths");
+  await button("Nové losování").click();
+  await page.locator("main").getByText(/seed 20260202/).waitFor({ state: "attached" });
+  await page.getByRole("combobox", { name: "Horizont" }).selectOption("20");
+  await page.getByRole("textbox", { name: "Měsíční vklad" }).fill("1000");
+  await simulation().getByRole("status").filter({ hasText: "Nastavení se změnilo" }).waitFor();
+  await button("Spustit znovu").click();
+  await page.getByRole("heading", { name: /^Za 20 let · start 100\s000\sKč \+ 1\s000\sKč měsíčně$/ }).waitFor();
+  assert.equal(await text("simulation-contributed"), "340000Kč", "100 000 Kč plus 240 monthly contributions; deposits are not returns");
+  await assertOrderedRange();
+  await page.getByRole("textbox", { name: "Měsíční vklad" }).fill("-5"); await button("Spustit znovu").click();
+  await simulation().getByRole("alert").filter({ hasText: "nesmí být záporný" }).waitFor();
+  assert.equal(await text("simulation-contributed"), "340000Kč", "a refused simulation keeps the previous result");
+  await page.getByRole("textbox", { name: "Měsíční vklad" }).fill("1000"); await button("Spustit znovu").click();
+  await simulation().getByRole("alert").waitFor({ state: "detached" });
+  await fan.getByText("Zobrazit tabulku dat", { exact: true }).click();
+  assert.equal(await fan.getByRole("row").count(), 22, "the start, 20 year ends and the header");
+  await fan.getByText("Zobrazit tabulku dat", { exact: true }).click();
   await layouts("result");
   await openQuiz();
   await page.getByRole("radio", { name: "CAGR", exact: true }).check(); await button("Zkontrolovat odpověď").click();
@@ -113,7 +156,7 @@ try {
   await page.getByLabel("Od ledna", { exact: true }).selectOption("2025"); await page.getByLabel("Do prosince", { exact: true }).selectOption("2020");
   await button("Spustit backtest").click(); await page.getByRole("alert").filter({ hasText: "počáteční rok" }).waitFor();
   await page.getByLabel("Od ledna", { exact: true }).selectOption("2020");
-  await button("Spustit backtest").click(); await page.getByText(/Leden 2020 – prosinec 2020/).waitFor();
+  await button("Spustit backtest").click(); await page.getByText(/^Leden 2020 – prosinec 2020 · /).waitFor();
   await settle();
   const shortTicks = await page.locator(".recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value").allTextContents();
   assert.ok(shortTicks.length >= 3 && shortTicks.every((tick) => /^\d{1,2}\/\d{2}$/.test(tick)), `short-period month/year labels: ${JSON.stringify(shortTicks)}`);
@@ -122,6 +165,8 @@ try {
   await openQuiz();
   await page.getByRole("radio", { name: "Největší propad", exact: true }).check(); await button("Zkontrolovat odpověď").click();
   await page.getByRole("status").filter({ hasText: "Správně." }).waitFor();
+  assert.match(await page.getByTestId("simulation-unavailable").textContent(), /alespoň 24 měsíců historie, tento backtest má 12/, "one year of returns is too short to simulate from");
+  assert.equal(await button("Spustit simulaci").count(), 0);
   // Changes in draft inputs must not leak into the snapshot used for comparisons.
   await button("Změnit nastavení").click(); await amount().fill("42");
   await page.getByRole("status").filter({ hasText: "Vstupy se změnily" }).waitFor();
@@ -263,6 +308,16 @@ try {
   assert.equal(await page.getByRole("heading", { name: "Co stály náklady" }).count(), 1, "the cost summary stays in both views");
   await view(/^S náklady/).check();
   assert.equal(number(await text("metric-konečná-hodnota")), withCosts);
+  // The simulation draws from the shown run, so switching the cost view starts it afresh.
+  assert.match(await simulation().textContent(), /120 měsíců, SPX 60 % \+ hotovost 40 % · .+ · s náklady obchodů/);
+  await button("Spustit simulaci").click();
+  await page.getByRole("heading", { name: /^Za 10 let · start 10\s000\s\$$/ }).waitFor();
+  assert.match(await page.getByTestId("simulation-chart").textContent(), /Simulace · Ukázková data/, "the simulation keeps the backtest's sample label");
+  await assertOrderedRange();
+  await view(/^Bez nákladů/).check();
+  assert.equal(await page.getByTestId("simulation-result").count(), 0);
+  assert.match(await simulation().textContent(), /bez nákladů obchodů/);
+  await view(/^S náklady/).check();
   await layouts("costs");
   await button("Změnit nastavení").click();
   await page.getByRole("radio", { name: /^Bez nákladů Obchody nic nestojí/ }).check();
@@ -274,7 +329,7 @@ try {
 
   assert.deepEqual(await financialState(), before, "backtests leave capital receipts, trades and generations unchanged");
   assert.deepEqual(errors, [], "no browser runtime errors");
-  console.log(`PASS: setup, loading, predictions, exact fixture, all monthly points, chart keyboard tooltip/table, invalid reruns, snapshots, comparisons, all strategies, decimal inputs, price-history runs (sample label, buy-and-hold benchmark choice and A − B differences, rebalancing, trend filter, refused input, period comparison, transaction costs on/off and the with/without-costs view), responsive widths/200% text, reduced motion, untouched portfolio. Screenshots: ${output}`);
+  console.log(`PASS: setup, loading, predictions, exact fixture, all monthly points, chart keyboard tooltip/table, invalid reruns, snapshots, comparisons, all strategies, decimal inputs, price-history runs (sample label, buy-and-hold benchmark choice and A − B differences, rebalancing, trend filter, refused input, period comparison, transaction costs on/off and the with/without-costs view), simulation step (framing, focus, ordered percentiles, in-chart labels, same seed same result, redraw, contributions, refused input, table, too-short history, cost view reset), responsive widths/200% text, reduced motion, untouched portfolio. Screenshots: ${output}`);
 } finally {
   await browser.close(); if (userId) await sql`delete from "user" where id = ${userId}`; await sql.end();
 }

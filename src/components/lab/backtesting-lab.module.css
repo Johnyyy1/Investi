@@ -137,6 +137,29 @@
 .comparisonCard > dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; padding: 8px 0; border-bottom: 1px solid var(--color-divider); font-size: .8125rem; }
 .comparisonCard > dl dd { font-weight: 700; font-variant-numeric: tabular-nums; }
 .comparisonCard > button { margin-top: 16px; width: 100%; font-size: .875rem; }
+.simulation { padding-top: 28px; border-top: 1px solid var(--color-border); min-width: 0; }
+.simulation > h2 { margin-top: 8px; font-size: 1.5rem; line-height: 1.2; }
+.simulation > p:not(.eyebrow):not(.notice) { margin-top: 8px; color: var(--color-muted); font-size: .9375rem; max-width: 70ch; }
+.simulation > p.simulationFrame { display: flex; align-items: flex-start; gap: 8px; margin-top: 16px; padding: 12px 14px; border-radius: 8px; background: var(--color-info-soft); color: var(--color-info-ink); }
+.simulationFrame svg { margin-top: 3px; }
+.simulation > .notice { margin: 16px 0 0; }
+.simulationForm { display: grid; gap: 16px; margin-top: 20px; padding: 20px; background: var(--color-surface); border-radius: 12px; }
+.simulationFields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: 16px; min-width: 0; }
+.simulationForm > button { justify-self: start; }
+.simulationResult { display: grid; gap: 20px; margin-top: 24px; min-width: 0; }
+.simulationResult > h3 { font-size: 1.25rem; line-height: 1.3; }
+.simulationResult > h3:focus-visible { outline: 3px solid var(--color-foreground); outline-offset: 3px; }
+.simulationResult .methodology { margin-top: 0; }
+.simulationOutcomes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 0 24px; padding: 4px 18px; background: var(--color-surface); border-radius: 12px; }
+.simulationOutcomes > div { padding: 14px 0; border-bottom: 1px solid var(--color-divider); }
+.simulationOutcomes dt { font-size: .8125rem; color: var(--color-muted); }
+.simulationOutcomes dd:first-of-type { margin-top: 6px; font-size: 1.125rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.simulationOutcomes > div:first-child dd:first-of-type { color: var(--color-primary); }
+.simulationOutcomes dd + dd { margin-top: 4px; font-size: .8125rem; color: var(--color-secondary); }
+.simulationRedraw { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
+.simulationRedraw .hint { flex: 1 1 18rem; }
+.innerBandSwatch, .outerBandSwatch { width: 20px; height: 12px; flex: none; border-radius: 2px; background: color-mix(in srgb, var(--color-primary) 30%, transparent); }
+.outerBandSwatch { background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
 .quiz, .methodology { padding: 12px 0; border-top: 1px solid var(--color-border); }
 .quiz summary, .methodology summary { display: flex; gap: 8px; align-items: center; min-height: 48px; cursor: pointer; list-style: none; font-size: .9375rem; font-weight: 600; color: var(--color-primary); }
 .quiz summary svg:last-child, .methodology summary svg:last-child { margin-left: auto; }
@@ -189,7 +212,8 @@
   .chart { padding: 24px 28px 16px; }
   .chartCanvas { height: 310px; }
   .metrics { padding: 28px 28px 8px; }
-  .metrics h2, .reflection h2, .comparison h2 { font-size: 1.75rem; }
+  .metrics h2, .reflection h2, .comparison h2, .simulation > h2 { font-size: 1.75rem; }
+  .simulationForm { padding: 24px 28px; }
   .metricRow { grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 1fr)); gap: 24px; align-items: center; }
   .metricRow dt, .metricRow .metricDifference { grid-column: auto; }
   .metricRow.costRow { grid-template-columns: minmax(0, 1.3fr) repeat(2, minmax(0, 1fr)); }
