@@ -5,12 +5,14 @@ import styles from "@/components/personalization/personalization-flow.module.css
 import { DemoButton } from "./demo-button";
 
 /** Returning-learner entry in the same paper frame as onboarding; new learners start at /onboarding instead. */
-export function AuthLayout({ title, description, guide, children, footer }: {
+export function AuthLayout({ title, description, guide, children, footer, demo = true }: {
   title: string;
   description: string;
   guide: string;
   children: ReactNode;
-  footer: ReactNode;
+  footer?: ReactNode;
+  /** Account recovery screens leave out the demo entry; it is not a way back into an account. */
+  demo?: boolean;
 }) {
   return (
     <main className={styles.flow}>
@@ -25,8 +27,8 @@ export function AuthLayout({ title, description, guide, children, footer }: {
           <p className={styles.helper}>{description}</p>
           <div className={styles.authFields}>{children}</div>
         </section>
-        <p className={styles.authFooter}>{footer}</p>
-        <DemoButton className={styles.authDemo} buttonClassName="w-full border-transparent bg-transparent text-secondary shadow-none hover:border-transparent hover:bg-surface-muted" />
+        {footer && <p className={styles.authFooter}>{footer}</p>}
+        {demo && <DemoButton className={styles.authDemo} buttonClassName="w-full border-transparent bg-transparent text-secondary shadow-none hover:border-transparent hover:bg-surface-muted" />}
         <p className={styles.disclosure}>Vzdělávání, ne investiční doporučení. <Link href="/privacy">Ochrana osobních údajů</Link> · <Link href="/terms">Podmínky použití</Link></p>
       </div>
     </main>

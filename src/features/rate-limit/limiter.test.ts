@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { RateLimiter, RequestRateLimitedError, type RateLimitCount, type RateLimitCounter, type RateLimitStore } from "./limiter";
 import {
-  authIpRules, marketDataBuckets, marketDataLimitMessage, MARKET_DATA_DAILY_RULE, MARKET_DATA_DAILY_SCOPE, marketDataMinuteRules,
+  authIpRules, CHANGE_PASSWORD_USER_RULE, EMAIL_LINK_ACCOUNT_RULE, marketDataBuckets, marketDataLimitMessage, MARKET_DATA_DAILY_RULE, MARKET_DATA_DAILY_SCOPE, marketDataMinuteRules,
   normalizeAccountSubject, retryAfterSeconds, splitBetterAuthKey, type RateLimitBucket,
 } from "./policy";
 
@@ -112,6 +112,12 @@ describe("RateLimiter", () => {
 describe("rate-limit policy", () => {
   it("is stricter than Better Auth's default 3 per 10 s for password and account endpoints", () => {
     for (const path of ["/sign-in/email", "/sign-up/email"] as const) expect(authIpRules[path].max / authIpRules[path].window).toBeLessThan(3 / 10);
+  });
+
+  it("caps e-mailed links per address and password changes per user", () => {
+    for (const path of ["/request-password-reset", "/send-verification-email", "/change-password"] as const) expect(authIpRules[path].window).toBeGreaterThanOrEqual(60);
+    expect(EMAIL_LINK_ACCOUNT_RULE).toEqual({ window: 3600, max: 5 });
+    expect(CHANGE_PASSWORD_USER_RULE.max).toBeLessThanOrEqual(5);
   });
 
   it("gives every market-data read a per-user minute bucket and the shared daily budget", () => {

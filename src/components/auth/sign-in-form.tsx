@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/learning/text-input";
@@ -22,7 +23,10 @@ export function SignInForm() {
   }
   return <form action={onSubmit} className="space-y-5">
     <TextInput label="E-mail" type="email" name="email" autoComplete="email" placeholder="ty@example.com" required />
-    <TextInput label="Heslo" type="password" name="password" autoComplete="current-password" required />
+    <div>
+      <TextInput label="Heslo" type="password" name="password" autoComplete="current-password" required />
+      <Link href="/forgot-password" className="mt-1 inline-flex min-h-11 items-center text-small font-semibold text-primary underline underline-offset-4">Zapomenuté heslo?</Link>
+    </div>
     {errorMessage ? <p className="text-small text-danger-ink" role="alert">{errorMessage}</p> : null}
     <Button className="w-full" type="submit" loading={isSubmitting}>{isSubmitting ? "Přihlašuji…" : "Přihlásit se"}</Button>
   </form>;

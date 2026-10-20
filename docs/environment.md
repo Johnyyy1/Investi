@@ -13,6 +13,8 @@ Use `.env.example` as the template and keep all credential-bearing files ignored
 | `MARKET_DATA_PROVIDER` | Optional in production | `deterministic` default or explicit `fmp`; no silent fallback |
 | `FX_DATA_PROVIDER` | Optional with deterministic; required with FMP | `deterministic`, `cnb` (ČNB daily fixing, recommended) or `frankfurter` reference FX |
 | `FMP_API_KEY` | Required only with FMP | Server-only provider credential |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Required in production for password reset and e-mail verification | Server-only Resend key and a sender on a domain verified in Resend. Without both nothing is sent: `next dev` prints the link to the server log, production logs a configuration error. Reserved test domains (`example.com`, `.test`, …) are never sent to |
+| `EMAIL_OUTBOX_DIR` | Local QA only | Writes each e-mail as a JSON file into this directory instead of sending it; ignored when Resend is configured |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional in production | Both must be present to enable Google sign-in |
 | `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` | Optional in production | Both must be present to enable Facebook sign-in |
 | `DETERMINISTIC_MARKET_NOW` | Development/test-only intended usage | Optional fixed UTC instant for reproducible sample market-session states; ignored in FMP mode |
@@ -55,5 +57,6 @@ All browser app URLs must be loopback. Most suites also refuse non-loopback DB U
 | `PERSONALIZATION_QA_FOCUS` | Optional focused Settings browser run |
 | `AUTH_TEST_URL`, `AUTH_DISABLED_TEST_URL` | Two auth runtimes, fake enabled providers versus disabled providers; dedicated `investi_6a4_qa` DB |
 | `AUTH_SCREENSHOT_DIR`, `AUTH_SKIP_SCREENSHOTS` | Auth browser output controls |
+| `RECOVERY_TEST_URL`, `RECOVERY_OUTBOX_DIR`, `RECOVERY_SCREENSHOT_DIR` | `test:account-recovery-browser`: a server started with `RESEND_API_KEY` empty and `EMAIL_OUTBOX_DIR` set to `RECOVERY_OUTBOX_DIR` |
 
 Vitest/configuration and framework tools also manage their own environment. No secret values are documented here. See [onboarding](onboarding.md) for the stricter fresh-database guard and [authentication](authentication.md) for callback setup.

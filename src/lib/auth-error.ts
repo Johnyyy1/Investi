@@ -20,6 +20,11 @@ export function getAuthErrorMessage(error: AuthError, fallback: string) {
       return "Zadej platný e-mail.";
     case "PASSWORD_TOO_SHORT":
       return "Použij heslo dlouhé alespoň 8 znaků.";
+    case "PASSWORD_TOO_LONG":
+      return "Heslo může mít nejvýše 128 znaků.";
+    case "INVALID_TOKEN":
+    case "TOKEN_EXPIRED":
+      return "Odkaz už neplatí. Požádej o nový.";
     default:
       return error?.message ?? fallback;
   }

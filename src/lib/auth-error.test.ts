@@ -20,6 +20,12 @@ describe("getAuthErrorMessage", () => {
     );
   });
 
+  it("explains an expired or used reset link and an over-long password", () => {
+    expect(getAuthErrorMessage({ code: "INVALID_TOKEN" }, "Fallback")).toBe("Odkaz už neplatí. Požádej o nový.");
+    expect(getAuthErrorMessage({ code: "TOKEN_EXPIRED" }, "Fallback")).toBe("Odkaz už neplatí. Požádej o nový.");
+    expect(getAuthErrorMessage({ code: "PASSWORD_TOO_LONG" }, "Fallback")).toBe("Heslo může mít nejvýše 128 znaků.");
+  });
+
   it("uses the service message for unexpected errors", () => {
     expect(getAuthErrorMessage({ message: "Service unavailable" }, "Fallback")).toBe("Service unavailable");
   });

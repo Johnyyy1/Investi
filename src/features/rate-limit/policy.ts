@@ -37,6 +37,12 @@ export const authIpRules = {
   "/sign-up/email": { window: MINUTE, max: 5 },
   // Guests and demos both start here; the demo seed has its own hourly cap below.
   "/sign-in/anonymous": { window: MINUTE, max: 5 },
+  // E-mailed links: a few retries for a typo, far too few to flood an inbox from one IP.
+  "/request-password-reset": { window: MINUTE, max: 5 },
+  "/send-verification-email": { window: MINUTE, max: 5 },
+  // The 24-character reset token cannot be guessed; this only caps scripted attempts.
+  "/reset-password": { window: MINUTE, max: 10 },
+  "/change-password": { window: MINUTE, max: 5 },
 } as const satisfies Record<string, RateLimitRule>;
 
 /** Password guessing against one account, whichever IPs it comes from. */
@@ -45,6 +51,10 @@ export const SIGN_IN_ACCOUNT_RULE: RateLimitRule = { window: 15 * MINUTE, max: 1
 export const DEMO_CREATION_IP_RULE: RateLimitRule = { window: HOUR, max: 20 };
 /** Password guesses through the account-deletion confirmation, per signed-in user. */
 export const ACCOUNT_DELETION_USER_RULE: RateLimitRule = { window: 15 * MINUTE, max: 5 };
+/** Password-reset and verification e-mails sent to one address, whichever IPs ask for them. */
+export const EMAIL_LINK_ACCOUNT_RULE: RateLimitRule = { window: HOUR, max: 5 };
+/** Current-password guesses through Settings › change password, per signed-in user. */
+export const CHANGE_PASSWORD_USER_RULE: RateLimitRule = { window: 15 * MINUTE, max: 5 };
 /** Full personal-data exports per user; each one reads every row the user owns. */
 export const ACCOUNT_EXPORT_USER_RULE: RateLimitRule = { window: HOUR, max: 10 };
 

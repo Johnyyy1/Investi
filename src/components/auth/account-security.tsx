@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { EmailVerification, PasswordChange } from "./account-credentials";
 import type { AuthProviderAvailability } from "@/lib/auth-providers";
 import { authClient } from "@/lib/auth-client";
 import { mapLinkedAccounts, type LinkedAccountState } from "@/lib/auth-accounts";
@@ -32,10 +33,12 @@ function getAccountSecurityErrorMessage(code?: string) {
   }
 }
 
-export function AccountSecurity({ providers, initialError, initialAccounts }: {
+export function AccountSecurity({ providers, initialError, initialAccounts, email }: {
   providers: AuthProviderAvailability;
   initialError?: string;
   initialAccounts?: LinkedAccountState | null;
+  /** Saved accounts only; demos and guests have no mailbox to verify or password to change. */
+  email?: { address: string; verified: boolean };
 }) {
   const [accounts, setAccounts] = useState<LinkedAccountState | undefined>(initialAccounts ?? undefined);
   const [error, setError] = useState(initialError);
@@ -127,6 +130,8 @@ export function AccountSecurity({ providers, initialError, initialAccounts }: {
         {(["google", "facebook"] as const).map((provider) => <AccountRow key={provider} label={providerLabels[provider]} connected={Boolean(accounts[provider])} available={providers[provider]} disabled={Boolean(pending)} pending={pending === provider || pending === `unlink-${provider}`} onConnect={() => void connect(provider)} onDisconnect={(event) => { disconnectTrigger.current = event.currentTarget; setDisconnecting(provider); setError(undefined); dialog.current?.showModal(); }} />)}
       </div> : pending === "load" ? <p className="mt-3 text-small text-secondary" role="status">Načítám způsoby přihlášení…</p> : <Button variant="secondary" size="compact" onClick={() => void refreshAccounts()}>Zkusit načíst znovu</Button>}
     </div>
+    {email && <EmailVerification email={email.address} verified={email.verified} />}
+    {email && accounts && <PasswordChange hasPassword={Boolean(accounts.credential)} />}
     <dialog ref={dialog} className={styles.dialog} aria-labelledby="unlink-title" aria-describedby="unlink-description" onCancel={(event) => { if (pending) event.preventDefault(); }} onClose={() => disconnectTrigger.current?.focus()}><h2 id="unlink-title">Odpojit {disconnecting && providerLabels[disconnecting]}?</h2><p id="unlink-description">Tento způsob už nebude sloužit k přihlášení. Poslední způsob přihlášení nelze odpojit. Tvůj účet, lekce a portfolio zůstanou.</p>{error && <p className={styles.error} role="alert">{error}</p>}<div className={styles.actions}><Button variant="secondary" size="compact" autoFocus disabled={Boolean(pending)} onClick={() => dialog.current?.close()}>Ponechat připojení</Button><Button variant="danger" size="compact" loading={Boolean(pending)} onClick={() => { if (disconnecting) void disconnect(disconnecting); }}>Odpojit</Button></div></dialog>
   </section>;
 }
