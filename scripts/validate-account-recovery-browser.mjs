@@ -39,8 +39,9 @@ async function reflow(label, target) {
     if (width !== 1440) await shoot(`${output}/${label}-${width}.png`);
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${label}: overflow at 320 and 200% text`);
+  // Captured before the check so a failing run leaves the evidence behind.
   await shoot(`${output}/${label}-320-text-200.png`);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${label}: overflow at 320 and 200% text`);
   await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
   await page.setViewportSize({ width: 1440, height: 1000 });
 }

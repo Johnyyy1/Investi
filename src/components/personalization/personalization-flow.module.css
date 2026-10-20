@@ -104,7 +104,8 @@
   .progressRow { flex-basis: 100%; order: 3; }
 }
 @container onboarding (width < 14em) {
-  .questionTitle { hyphens: auto; }
+  /* Browsers without a Czech hyphenation dictionary (Linux, many Androids) still need to break a long word. */
+  .questionTitle { hyphens: auto; overflow-wrap: break-word; }
   .choice { grid-template-columns: minmax(0, 1fr); gap: 8px; padding-inline: 8px; }
   .choiceMark { justify-self: end; }
   .choice input { top: auto; bottom: 12px; right: 8px; transform: none; }
