@@ -37,7 +37,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   // Rendered per request, so freshness is measured now; the server checks it again on deletion.
   const fresh = session ? isFreshForAccountDeletion(new Date(session.createdAt)) : false;
   return <SettingsExperience section={section}
-    identity={{ name: user.name, email: user.email, demo: isDemoIdentity(user), guest: isGuestIdentity(user), since: formatDate(user.createdAt, { timeZone: profile?.timeZone ?? "UTC" }), completed: summary.completed.length, total: summary.lessons.length }}
+    identity={{ name: user.name, email: user.email, emailVerified: user.emailVerified, demo: isDemoIdentity(user), guest: isGuestIdentity(user), since: formatDate(user.createdAt, { timeZone: profile?.timeZone ?? "UTC" }), completed: summary.completed.length, total: summary.lessons.length }}
     initialPreferences={{ primaryGoal: learner.primaryGoal, interests: learner.interests, selfAssessedExperience: learner.selfAssessedExperience, preferredSessionMinutes: learner.preferredSessionMinutes }}
     personalized={learner.personalized} hasDiagnostic={Boolean(learner.diagnostic)} providers={authProviderAvailability} initialAccounts={accounts}
     initialError={errorCode ? getSocialAuthErrorMessage(errorCode) : undefined} portfolioUnlocked={unlock.unlocked} timeZone={profile?.timeZone ?? "UTC"}

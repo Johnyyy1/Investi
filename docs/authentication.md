@@ -28,13 +28,24 @@ Better Auth's built-in scopes request Google identity/email/profile and Facebook
 
 Keep Better Auth's safe defaults: implicit linking requires a matching email, a verified local email, and a verified provider email (there is no trusted-provider override). `allowDifferentEmails` is not enabled. Existing linked accounts continue to use their provider account identity.
 
-**Current limitation:** email/password registration does not verify email. Settings provides explicit link/unlink controls, but implicit linking retains the verified-email safeguards. Signing in socially with an existing unverified local email therefore returns `account_not_linked`; it does not create a second user. The page asks the learner to sign in using their original method. Facebook profiles lacking a verified email claim cannot implicitly link even to a verified local account. Do not disable `requireLocalEmailVerified` or force provider trust to bypass this.
+Email/password registration sends a verification e-mail (see below) but does not require it. Settings provides explicit link/unlink controls, and implicit linking retains the verified-email safeguards. Signing in socially with an existing **unverified** local email therefore returns `account_not_linked`; it does not create a second user. The page asks the learner to sign in using their original method. Facebook profiles lacking a verified email claim cannot implicitly link even to a verified local account. Do not disable `requireLocalEmailVerified` or force provider trust to bypass this.
 
 Both social buttons call `authClient.signIn.social` with `callbackURL: "/learn"`. The existing authenticated layout decides whether a new learner needs onboarding; returning learners retain their normal destination. Email registration keeps its existing `/onboarding` redirect. Authentication adds no lesson progress or rewards.
 
 ## Demo access
 
 Anonymous demo profiles can use all published lessons, Portfolio Lab (including instrument details, buy/sell and reset), and Backtesting Lab immediately. The server reads the stored anonymous identity when evaluating Portfolio Lab access; no client flag can unlock a regular account. First access records a single `demo_access` entitlement with 5,000 Kč of virtual Practice Capital in the existing unlock ledger. Existing sessions get this access on their next visit without reseeding lesson history. Existing unlock receipts and portfolios keep their original capital; reloads, lesson completion and portfolio resets never repeat the grant. Normal accounts retain the Foundations/420 XP requirements. Planned content remains unpublished.
+
+## Password reset, e-mail verification and password change
+
+Transactional e-mail goes through Resend (`src/features/email`): `RESEND_API_KEY` plus `EMAIL_FROM` on a verified domain. See [environment](environment.md). Delivery runs after the response (`after()`), so a request for an existing account takes as long as one for an unknown address. Failures are logged without the recipient or the link.
+
+- **Reset** (`/forgot-password` → e-mail → `/api/auth/reset-password/:token` → `/reset-password?token=…`). Better Auth answers every request with the same body; the form shows the same confirmation either way. Tokens live 30 minutes (`PASSWORD_RESET_TOKEN_SECONDS`) and are consumed in the same transaction as the password change, so a link works once. A reset ends **every** session (`revokeSessionsOnPasswordReset`) and lands on `/sign-in?password=reset`. Opening the link proves the mailbox, so a reset also marks the address verified. A social-only account can set its first password this way.
+- **Verification.** Sign-up sends a link valid for 24 hours that lands on `/verify-email`. It is a reminder, not a gate: the guest → account save step (`/onboarding/save`) keeps the learner signed in and learning. Settings › Účet marks an unverified address, and Settings › Přihlášení a zabezpečení resends the link.
+- **Password change** in Settings › Přihlášení a zabezpečení asks for the current password. "Odhlásit ostatní zařízení" is on by default; this device gets a fresh session.
+- **Limits** (shared Postgres store): per IP, `/request-password-reset` and `/send-verification-email` 5/min, `/reset-password` 10/min and `/change-password` 5/min. Per address, 5 e-mailed links per hour whether or not the account exists. Per user, 5 password-change attempts per 15 minutes.
+
+`npm run test:account-recovery` drives the real Better Auth handler on a disposable local DB. `npm run test:account-recovery-browser` runs the whole flow in a browser against a fresh production server whose e-mails go to `EMAIL_OUTBOX_DIR`.
 
 ## Failure and loading behavior
 

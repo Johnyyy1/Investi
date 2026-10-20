@@ -68,7 +68,8 @@ try {
     console.log(`PASS: final screenshots and reflow for every Settings section at all five widths and 200% text. Artifacts: ${output}`);
   } else {
   await go(); await page.getByRole('heading', { name: 'Účet', exact: true }).waitFor();
-  assert.ok(await root().getByText(email, { exact: true }).isVisible());
+  // The security section repeats the address with its verification status; it is hidden here.
+  assert.ok(await root().getByText(email, { exact: true }).filter({ visible: true }).isVisible());
   assert.ok(await root().getByText('E-mail a heslo', { exact: true }).first().isVisible());
   await matrix('account-overview');
   await page.setViewportSize({ width: 390, height: 844 }); await go();

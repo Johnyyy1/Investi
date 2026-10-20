@@ -17,7 +17,8 @@ import * as schema from "@/db/schema";
 import { env } from "@/lib/env";
 import { createSocialAuthConfig } from "@/lib/auth-providers";
 import { rateLimiter } from "@/features/rate-limit";
-import { ACCOUNT_DELETION_USER_RULE, authIpRules, DEMO_CREATION_IP_RULE, NO_TRUSTED_IP_SUBJECT, normalizeAccountSubject, SIGN_IN_ACCOUNT_RULE, type RateLimitBucket } from "@/features/rate-limit/policy";
+import { ACCOUNT_DELETION_USER_RULE, authIpRules, CHANGE_PASSWORD_USER_RULE, DEMO_CREATION_IP_RULE, EMAIL_LINK_ACCOUNT_RULE, NO_TRUSTED_IP_SUBJECT, normalizeAccountSubject, SIGN_IN_ACCOUNT_RULE, type RateLimitBucket } from "@/features/rate-limit/policy";
+import { EMAIL_VERIFICATION_TOKEN_SECONDS, passwordResetEmail, PASSWORD_RESET_TOKEN_SECONDS, sendEmailAfterResponse, verificationEmail } from "@/features/email";
 
 const socialAuth = createSocialAuthConfig(env);
 export const authProviderAvailability = socialAuth.availability;
@@ -39,8 +40,14 @@ async function guardAccountDeletion(ctx: Parameters<Parameters<typeof createAuth
   return { scope: "auth:delete-account", subject: current.user.id, rule: ACCOUNT_DELETION_USER_RULE } satisfies RateLimitBucket;
 }
 
-/** Limits Better Auth's per-IP rules cannot express: per account for passwords, seeded demos per IP and
- * account-deletion confirmations per user, which are checked first. */
+/** Better Auth paths that e-mail a link to the address in the body; each address has its own hourly budget. */
+const emailLinkScopes = new Map([
+  ["/request-password-reset", "auth:password-reset-account"],
+  ["/send-verification-email", "auth:verification-email-account"],
+]);
+
+/** Limits Better Auth's per-IP rules cannot express: per account for passwords and e-mailed links, seeded
+ * demos per IP, and account-deletion confirmations and password changes per user, which are checked first. */
 const authAttemptLimits = createAuthMiddleware(async (ctx) => {
   const buckets: RateLimitBucket[] = [];
   if (ctx.path === "/delete-user") {
@@ -49,6 +56,14 @@ const authAttemptLimits = createAuthMiddleware(async (ctx) => {
   } else if (ctx.path === "/sign-in/email") {
     const account = normalizeAccountSubject((ctx.body as { email?: unknown } | undefined)?.email);
     if (account) buckets.push({ scope: "auth:sign-in-account", subject: account, rule: SIGN_IN_ACCOUNT_RULE });
+  } else if (emailLinkScopes.has(ctx.path)) {
+    // Counted whether or not the account exists, so a denial reveals nothing about the address.
+    const account = normalizeAccountSubject((ctx.body as { email?: unknown } | undefined)?.email);
+    if (account) buckets.push({ scope: emailLinkScopes.get(ctx.path)!, subject: account, rule: EMAIL_LINK_ACCOUNT_RULE });
+  } else if (ctx.path === "/change-password") {
+    // Better Auth answers an unauthenticated request with its own 401.
+    const current = await getSessionFromCtx(ctx);
+    if (current) buckets.push({ scope: "auth:change-password", subject: current.user.id, rule: CHANGE_PASSWORD_USER_RULE });
   } else if (ctx.path === "/sign-in/anonymous" && ctx.headers?.get(GUEST_KIND_HEADER) !== "guest") {
     const ip = ctx.headers ? getIP(ctx.headers, ctx.context.options) : null;
     buckets.push({ scope: "auth:demo-creation", subject: ip ?? NO_TRUSTED_IP_SUBJECT, rule: DEMO_CREATION_IP_RULE });
@@ -65,7 +80,25 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", schema }),
-  emailAndPassword: { enabled: true },
+  emailAndPassword: {
+    enabled: true,
+    // Reset links are single-use (Better Auth consumes the token with the password change) and short-lived.
+    resetPasswordTokenExpiresIn: PASSWORD_RESET_TOKEN_SECONDS,
+    // A reset is how a learner locks out whoever knew the old password, so every session ends with it.
+    revokeSessionsOnPasswordReset: true,
+    // Better Auth answers the same way for unknown addresses; the send runs after the response so timing matches too.
+    sendResetPassword: async ({ user, url }) => sendEmailAfterResponse(passwordResetEmail({ to: user.email, url })),
+    // Opening the reset link proves the learner reads this mailbox.
+    onPasswordReset: async ({ user }) => {
+      if (!user.emailVerified) await db.update(schema.user).set({ emailVerified: true, updatedAt: new Date() }).where(eq(schema.user.id, user.id));
+    },
+  },
+  // Verification is a reminder, not a gate: a guest who saves progress keeps learning without opening their mailbox.
+  emailVerification: {
+    sendOnSignUp: true,
+    expiresIn: EMAIL_VERIFICATION_TOKEN_SECONDS,
+    sendVerificationEmail: async ({ user, url }) => sendEmailAfterResponse(verificationEmail({ to: user.email, url })),
+  },
   user: {
     additionalFields: { anonymousKind: { type: "string", required: false, input: false } },
     // Deleting the user row cascades every learner-owned row; shared curriculum and market data stay.

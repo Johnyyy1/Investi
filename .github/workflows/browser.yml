@@ -27,6 +27,8 @@ env:
   BROWSER_CHANNEL: chrome
   APP_URL: http://localhost:3104
   SCREENSHOTS: ${{ github.workspace }}/browser-screenshots
+  # No Resend key in CI: the server writes every e-mail here and the account-recovery suite reads it back.
+  EMAIL_OUTBOX_DIR: ${{ github.workspace }}/email-outbox
 
 jobs:
   browser:
@@ -114,6 +116,13 @@ jobs:
         env:
           MARKETING_TEST_URL: ${{ env.APP_URL }}
           MARKETING_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/marketing
+      - name: Account recovery
+        if: ${{ !cancelled() }}
+        run: npm run test:account-recovery-browser
+        env:
+          RECOVERY_TEST_URL: ${{ env.APP_URL }}
+          RECOVERY_OUTBOX_DIR: ${{ env.EMAIL_OUTBOX_DIR }}
+          RECOVERY_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/account-recovery
       - name: Upload screenshots and server log
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7

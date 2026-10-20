@@ -19,7 +19,8 @@ export function SignUpForm({ redirectTo = "/onboarding" }: { redirectTo?: string
       name: String(formData.get("name") ?? ""),
       email: String(formData.get("email") ?? ""),
       password: String(formData.get("password") ?? ""),
-      callbackURL: redirectTo,
+      // Where the verification e-mail link lands; the form itself continues to redirectTo.
+      callbackURL: "/verify-email",
     });
     if (error) { setErrorMessage(getAuthErrorMessage(error, "Účet se nepodařilo vytvořit. Zkus to znovu.")); setIsSubmitting(false); return; }
     router.replace(redirectTo); router.refresh();

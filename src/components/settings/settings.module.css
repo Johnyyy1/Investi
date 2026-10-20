@@ -31,6 +31,7 @@
 .rows > div + div { border-top: 1px solid var(--color-divider); }
 .rows dt { width: 160px; flex-shrink: 0; font-size: .875rem; font-weight: 500; color: var(--color-muted); }
 .rows dd { flex: 1; min-width: 0; font-size: 1rem; font-weight: 500; overflow-wrap: anywhere; }
+.unverified { display: block; margin-top: 2px; font-size: .8125rem; font-weight: 500; color: var(--color-muted); }
 .textButton, .textLink { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; gap: 8px; color: var(--color-primary); font-size: .875rem; font-weight: 600; text-align: left; }
 .textButton { cursor: pointer; flex-shrink: 0; }
 .overviewPreferences { margin-top: 56px; }
