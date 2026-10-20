@@ -1,10 +1,12 @@
 import { AppLink as Link } from "@/components/shell/app-link";
 import { notFound, redirect } from "next/navigation";
 import { InstrumentDetailView } from "@/components/lab/instrument-detail";
+import { metricFormulas } from "@/components/lab/metric-formula";
 import { PageFrame } from "@/components/shell/page-frame";
 import { Feedback } from "@/components/ui/feedback";
 import { loadInstrumentDetail } from "@/features/instruments/detail";
 import { parseChartRange } from "@/features/instruments/history";
+import { priceMetricIds } from "@/features/instruments/price-metrics-presentation";
 import { parseChartType } from "@/features/instruments/price-chart-presentation";
 import { resolveInstrumentRouteParam } from "@/features/instruments/routes";
 import type { HistoricalPricePoint } from "@/features/market-data/contracts";
@@ -51,7 +53,7 @@ export default async function InstrumentPage({ params, searchParams }: { params:
       observedAt: detail.quote.observedAt,
       status: detail.quote.usability.status,
       marketState: detail.quote.usability.marketState,
-    } : null} quoteMessage={detail.quoteMessage} historyMessage={detail.historyMessage} points={chartPayload(detail.points)} historyPartial={detail.historyPartial} homeCurrency={detail.homeCurrency} homeCurrencyMessage={detail.homeCurrencyMessage} fundamentals={detail.fundamentals} fundamentalsMessage={detail.fundamentalsMessage} etfAnalytics={detail.etfAnalytics} etfAnalyticsMessage={detail.etfAnalyticsMessage} initialRange={range} chartType={parseChartType(query.chart)} asOf={detail.endDate} portfolio={portfolio} />
+    } : null} quoteMessage={detail.quoteMessage} historyMessage={detail.historyMessage} points={chartPayload(detail.points)} historyPartial={detail.historyPartial} homeCurrency={detail.homeCurrency} homeCurrencyMessage={detail.homeCurrencyMessage} fundamentals={detail.fundamentals} fundamentalsMessage={detail.fundamentalsMessage} etfAnalytics={detail.etfAnalytics} etfAnalyticsMessage={detail.etfAnalyticsMessage} initialRange={range} chartType={parseChartType(query.chart)} asOf={detail.endDate} portfolio={portfolio} metricFormulas={metricFormulas(priceMetricIds)} />
       : <div className="mt-6"><h1 className="text-page-title font-bold">Instrument není dostupný</h1><Feedback state="warning" role="status" className="mt-5">{detail.metadataMessage}</Feedback></div>}
   </PageFrame>;
 }

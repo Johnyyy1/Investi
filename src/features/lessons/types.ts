@@ -1,3 +1,5 @@
+import type { MetricId } from "@/features/learning/metric-glossary";
+
 export type LessonSection = { id: string; label: string };
 
 type BaseBlock = { id: string };
@@ -14,7 +16,8 @@ export type LessonBlock =
   | (BaseBlock & { type: "multiNumericQuestion"; prompt: string; answers: { id: string; label: string; answer: number; tolerance: number; unit: string }[]; correctExplanation: string; incorrectExplanation: string })
   | (BaseBlock & { type: "explanation"; title: string; content: string })
   | (BaseBlock & { type: "takeaway"; title: string; content: string })
-  | (BaseBlock & { type: "labBridge"; title: string; content: string })
+  /** `metric` adds a „Vyzkoušej v Labu“ link to that metric, on the lesson's own instrument when it has one. */
+  | (BaseBlock & { type: "labBridge"; title: string; content: string; metric?: MetricId })
   | (BaseBlock & { type: "lessonSummary"; title: string; content: string })
   | (BaseBlock & { type: "checkpoint"; label: string; content: string });
 

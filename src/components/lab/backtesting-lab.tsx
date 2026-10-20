@@ -1,7 +1,7 @@
 "use client";
 
 import { AppLink as Link } from "@/components/shell/app-link";
-import { volatilityLessonLinks } from "@/features/lessons/volatility/manifest";
+import { metricAnchor, metricEntry, metricExplanation, metricLessonLink, type MetricId } from "@/features/learning/metric-glossary";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, BookOpen, ChevronDown, FlaskConical, Info, RotateCcw, SlidersHorizontal } from "lucide-react";
@@ -52,20 +52,24 @@ function DataCard({ copy }: { copy: BacktestSourceCopy }) {
 function Metrics({ result, onMethodology }: { result: BacktestResult; onMethodology: () => void }) {
   const { metrics: a, benchmark: b } = result;
   const ratio = (key: "totalReturn" | "cagr" | "maxDrawdown" | "volatility") => ({ value: formatPercentage(a[key]), benchmark: formatPercentage(b[key]), difference: formatPercentagePoints(a[key] - b[key]) });
-  const rows: { label: string; detail: React.ReactNode; value: string; benchmark: string; difference: string }[] = [
+  const glossary = (id: MetricId, note?: React.ReactNode) => {
+    const lesson = metricLessonLink(id);
+    return { label: metricEntry(id).shortName ?? metricEntry(id).name, anchor: metricAnchor(id), detail: <>{metricExplanation(id, "backtest")}{note}{lesson ? <> <Link href={lesson.href} className={styles.inlineLink}>{lesson.label}</Link></> : null}</> };
+  };
+  const rows: { label: string; anchor?: string; detail: React.ReactNode; value: string; benchmark: string; difference: string }[] = [
     { label: "Konečná hodnota", detail: "Poslední bod grafu po zvoleném období.", value: money(result, a.finalValue), benchmark: money(result, b.finalValue), difference: formatBacktestMoneyDifference(a.finalValue - b.finalValue, result.currency) },
-    { label: "Celkový výnos", detail: "Změna od počáteční částky za celé období. Není přepočtený na rok.", ...ratio("totalReturn") },
-    { label: "CAGR", detail: "Přepočteno na rok: stálé roční tempo od začátku do konce. Ne výnos každého roku.", ...ratio("cagr") },
-    { label: "Největší propad", detail: <>Největší pokles od předchozího maxima, měřený na konci měsíce (max. drawdown). <Link href={volatilityLessonLinks.maxDrawdown.href} className={styles.inlineLink}>{volatilityLessonLinks.maxDrawdown.label}</Link></>, ...ratio("maxDrawdown") },
-    { label: "Volatilita", detail: <>Anualizované kolísání měsíčních výnosů. Ne každý typ rizika. <Link href={volatilityLessonLinks.volatility.href} className={styles.inlineLink}>{volatilityLessonLinks.volatility.label}</Link></>, ...ratio("volatility") },
-    { label: "Sharpeho poměr", detail: <>Anualizovaný výnos nad bezrizikovou sazbou ({formatPercentage(a.riskFreeRate)}) na jednotku volatility (Sharpe ratio). Vyšší znamená víc výnosu za stejné kolísání. Za krátké období je nestabilní. <a href="#backtest-methodology" className={styles.inlineLink} onClick={onMethodology}>Jak se počítá</a></>, value: formatSharpeRatio(a.sharpeRatio), benchmark: formatSharpeRatio(b.sharpeRatio), difference: formatSharpeDifference(a.sharpeRatio, b.sharpeRatio) },
+    { ...glossary("cumulative-return"), ...ratio("totalReturn") },
+    { ...glossary("annualised-return"), ...ratio("cagr") },
+    { ...glossary("max-drawdown"), ...ratio("maxDrawdown") },
+    { ...glossary("volatility"), ...ratio("volatility") },
+    { ...glossary("sharpe-ratio", <> Bezriziková sazba je {formatPercentage(a.riskFreeRate)}. <a href="#backtest-methodology" className={styles.inlineLink} onClick={onMethodology}>Jak se počítá</a></>), value: formatSharpeRatio(a.sharpeRatio), benchmark: formatSharpeRatio(b.sharpeRatio), difference: formatSharpeDifference(a.sharpeRatio, b.sharpeRatio) },
   ];
   return <section className={styles.metrics} aria-labelledby="journey-heading">
     <h2 id="journey-heading">Jak se ta cesta cítila</h2>
     <p>Konečná hodnota je jen poslední bod grafu. Porovnej i kolísání a propady. Rozdíl je A minus B. U procent je v procentních bodech (p. b.).</p>
     <dl className={styles.metricRows}>{rows.map((row) => {
       const slug = row.label.toLowerCase().replaceAll(" ", "-");
-      return <div key={row.label} className={styles.metricRow}>
+      return <div key={row.label} id={row.anchor} className={styles.metricRow}>
         <dt><strong>{row.label}</strong><span>{row.detail}</span></dt>
         <dd><span className={styles.metricSeries}><Badge>A</Badge> {result.strategy.name}</span><strong data-testid={`metric-${slug}`}>{row.value}</strong></dd>
         <dd><span className={styles.metricSeries}><Badge>B</Badge> {result.benchmarkName}</span><strong data-testid={`benchmark-${slug}`}>{row.benchmark}</strong></dd>

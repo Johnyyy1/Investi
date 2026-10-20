@@ -12,7 +12,7 @@ import { getAuthoredLesson } from "../registry";
 import { getGuidedSteps } from "../returns/guided-flow";
 import type { AuthoredLesson, LessonBlock } from "../types";
 import { annualisingVolatilityLesson } from "./annualising-volatility";
-import { volatilityLessonLinks, volatilityLessons, VOLATILITY_MODULE_ID } from "./manifest";
+import { volatilityLessons, VOLATILITY_MODULE_ID } from "./manifest";
 import { maxDrawdownLesson } from "./max-drawdown";
 import { annualiseVolatility, drawdownPath, periodStandardDeviation } from "./model";
 import { standardDeviationLesson } from "./standard-deviation";
@@ -164,13 +164,8 @@ describe("Lab metrics lead to the Volatility lessons", () => {
   it("links Volatility and Největší propad to authored lessons", () => {
     const metrics = metricsFor(priceMetrics([{ date: "2024-01-02", close: 100 }, { date: "2024-01-03", close: 90 }])!);
     const lessonOf = (id: string) => metrics.find((metric) => metric.id === id)?.lesson;
-    expect(lessonOf("volatility")).toEqual(volatilityLessonLinks.volatility);
-    expect(lessonOf("max-drawdown")).toEqual(volatilityLessonLinks.maxDrawdown);
-    expect(lessonOf("simple-return")).toBeUndefined();
-    for (const link of Object.values(volatilityLessonLinks)) {
-      const [, , moduleSlug, lessonSlug] = link.href.split("/");
-      const lesson = getAuthoredLesson(moduleSlug, lessonSlug)!;
-      expect(link.label).toBe(`Lekce: ${lesson.title}`);
-    }
+    expect(lessonOf("volatility")).toEqual({ href: "/learn/volatility/what-is-volatility", label: `Lekce: ${volatilityLessons[0].title}` });
+    expect(lessonOf("max-drawdown")).toEqual({ href: "/learn/volatility/max-drawdown", label: `Lekce: ${volatilityLessons[3].title}` });
+    expect(lessonOf("simple-return")?.href).toBe("/learn/returns/what-is-a-return");
   });
 });

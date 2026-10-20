@@ -42,8 +42,6 @@ export function correlationReading(coefficient: number): { label: string; meanin
     : { label: "Silná záporná korelace", meaning: "Denní výnosy se většinou pohybovaly opačným směrem. Pohyby jednoho tak často tlumily pohyby druhého." };
 }
 
-export const CORRELATION_HELP = "Pearsonova korelace denních cenových výnosů za dny, kdy se obchodovaly oba instrumenty. +1 znamená, že se výnosy pohybovaly vždy spolu, −1 vždy opačně a 0, že mezi nimi nebyl lineární vztah. Každý instrument zůstává ve své měně, bez přepočtu do korun. Korelace se v čase mění a neříká nic o tom, jak velké pohyby byly.";
-
 export type CorrelationView =
   | { status: "ok"; value: string; label: string; meaning: string; basis: string }
   | { status: "unavailable"; message: string; basis: string | null };

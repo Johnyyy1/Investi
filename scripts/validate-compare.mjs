@@ -26,7 +26,8 @@ async function overflow(page) {
     wide: document.documentElement.scrollWidth > innerWidth,
     outside: [...document.querySelectorAll("main *")].filter((element) => {
       const box = element.getBoundingClientRect();
-      if (box.width === 0 || element.closest(".sr-only")) return false;
+      // KaTeX keeps a visually hidden MathML copy for screen readers (like .sr-only) and draws a √ as a 400em SVG clipped by its own `.hide-tail`.
+      if (box.width === 0 || element.closest(".sr-only, .katex-mathml, .katex .hide-tail")) return false;
       return box.right > innerWidth + 1 || box.left < -1;
     }).slice(0, 5).map((element) => `${element.tagName} "${element.textContent?.trim().slice(0, 40)}"`),
   }));

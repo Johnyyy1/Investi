@@ -37,6 +37,13 @@ describe("instrument return analytics", () => {
     expect(html).toContain("V tomto období cena neklesla pod předchozí nejvyšší zavírací cenu.");
     expect(html).not.toContain("+0,0 %");
   });
+  it("anchors each metric and shows its formula and lesson from the glossary", () => {
+    const html = renderToStaticMarkup(createElement(InstrumentReturnAnalytics, { metrics, currency: "USD", formulas: { volatility: createElement("span", { "data-formula": "volatility" }) } }));
+    for (const id of ["simple-return", "annualised-return", "max-drawdown", "volatility"]) expect(html).toContain(`id="metric-${id}"`);
+    expect(html).toContain("data-formula=\"volatility\"");
+    expect(html).toContain("href=\"/learn/returns/what-is-a-return\"");
+    expect(html).toContain("href=\"/learn/volatility/max-drawdown\"");
+  });
   it("explains that the metrics are unavailable when there is no price history", () => {
     expect(render(null)).toContain("Chybí dostatek zavíracích cen.");
   });
