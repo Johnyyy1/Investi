@@ -96,7 +96,7 @@ try {
     const status = page.getByRole("main").getByRole("status").filter({ hasText: "Pokud k adrese" });
     await status.waitFor();
     assert.equal((await status.innerText()).replace(address, "<adresa>"), "Pokud k adrese <adresa> existuje účet, poslali jsme na ni odkaz pro nastavení nového hesla. Odkaz platí 30 minut.");
-    assert.ok(await status.evaluate((e) => e === document.activeElement), "focus moves to the confirmation");
+    assert.ok(await page.waitForFunction(() => document.activeElement?.matches("main [role=status]"), null, { timeout: 5_000 }).then(() => true, () => false), "focus moves to the confirmation");
   }
   await reflow("forgot-password-sent");
   await noMailFor(unknown);
