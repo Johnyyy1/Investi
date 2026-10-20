@@ -1,9 +1,9 @@
-import { volatilityLessonLinks } from "@/features/lessons/volatility/manifest";
+import { metricEntry, metricExplanation, metricLessonLink, type MetricId, type MetricLessonLink } from "@/features/learning/metric-glossary";
 import type { PriceMetrics } from "./price-metrics";
 
 /**
- * Labels, values and explanations of the price-only metrics. The instrument detail and the
- * comparison both render from here, so a metric keeps one name and one explanation.
+ * Values of the price-only metrics. Names, explanations and lesson links come from the metric
+ * glossary, so the instrument detail and the comparison say the same thing as every other Lab.
  */
 export function percent(value: number, digits = 1) {
   const formatted = new Intl.NumberFormat("cs-CZ", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(Math.abs(value) * 100);
@@ -14,10 +14,17 @@ export function dateLabel(value: string) {
 }
 
 /** `lesson` points to the lesson that explains the metric. */
-export type Metric = { id: string; label: string; value: string | null; unit?: string; meaning: string; help: string; lesson?: { href: string; label: string }; tone: "positive" | "negative" | "neutral" };
+export type Metric = { id: MetricId; label: string; value: string | null; unit?: string; meaning: string; help: string; lesson?: MetricLessonLink; tone: "positive" | "negative" | "neutral" };
 
 export function metricToneClass(tone: Metric["tone"]) {
   return tone === "positive" ? "text-success-ink" : tone === "negative" ? "text-danger-ink" : "text-foreground";
+}
+
+/** The metrics `metricsFor` returns, in order. */
+export const priceMetricIds = ["simple-return", "annualised-return", "max-drawdown", "volatility"] as const satisfies readonly MetricId[];
+
+function glossary(id: MetricId) {
+  return { id, label: metricEntry(id).name, help: metricExplanation(id, "instrument"), lesson: metricLessonLink(id) ?? undefined };
 }
 
 export function metricsFor(metrics: PriceMetrics): Metric[] {
@@ -25,41 +32,31 @@ export function metricsFor(metrics: PriceMetrics): Metric[] {
   const drawdown = metrics.maxDrawdown;
   return [
     {
-      id: "simple-return",
-      label: "Jednoduchý výnos",
+      ...glossary("simple-return"),
       value: periodReturn === null ? null : percent(periodReturn),
-      meaning: periodReturn === null ? "Pro výpočet jsou potřeba aspoň dvě zavírací ceny." : "Změna ceny mezi první a poslední zavírací cenou období.",
-      help: "Výnos = konečná cena ÷ počáteční cena − 1. Dividendy se nezahrnují, proto jde o cenový výnos.",
+      meaning: periodReturn === null ? "Pro výpočet jsou potřeba aspoň dvě zavírací ceny." : metricEntry("simple-return").summary,
       tone: periodReturn === null || periodReturn === 0 ? "neutral" : periodReturn > 0 ? "positive" : "negative",
     },
     {
-      id: "annualised-return",
-      label: "Roční výnos",
+      ...glossary("annualised-return"),
       value: metrics.annualisedReturn === null ? null : percent(metrics.annualisedReturn),
       unit: "ročně",
       meaning: metrics.annualisedReturn === null ? "Pro období kratší než jeden rok se výnos nepřepočítává na rok." : "Průměrná roční změna ceny se složeným úročením.",
-      help: "Roční výnos je geometrický průměr: (1 + výnos období)^(365,25 ÷ počet dní) − 1. Stejný výnos každý rok by vedl ke stejnému výsledku; skutečné roky byly nerovné.",
       tone: metrics.annualisedReturn === null || metrics.annualisedReturn === 0 ? "neutral" : metrics.annualisedReturn > 0 ? "positive" : "negative",
     },
     {
-      id: "max-drawdown",
-      label: "Největší propad",
+      ...glossary("max-drawdown"),
       value: drawdown === null ? null : percent(drawdown.depth),
       meaning: drawdown === null
         ? "V tomto období cena neklesla pod předchozí nejvyšší zavírací cenu."
         : `${dateLabel(drawdown.peakDate)} → ${dateLabel(drawdown.troughDate)}. ${drawdown.recoveryDate ? `Na vrchol se cena vrátila ${dateLabel(drawdown.recoveryDate)}.` : "Vrchol v tomto období zatím nebyl znovu dosažen."}`,
-      help: "Největší propad (max. drawdown) měří, o kolik cena klesla od nejvyšší předchozí zavírací ceny k nejnižší následné. Ukazuje, jak hluboký pokles investor v tomto období zažil.",
-      lesson: volatilityLessonLinks.maxDrawdown,
       tone: drawdown === null ? "neutral" : "negative",
     },
     {
-      id: "volatility",
-      label: "Volatilita",
+      ...glossary("volatility"),
       value: metrics.annualisedVolatility === null ? null : `${new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 1 }).format(metrics.annualisedVolatility * 100)} %`,
       unit: "ročně",
       meaning: metrics.annualisedVolatility === null ? "Na výpočet je potřeba aspoň dvacet po sobě jdoucích denních výnosů." : "Typické kolísání ceny během roku, odhadnuté z denních změn.",
-      help: "Směrodatná odchylka denních jednoduchých výnosů, vynásobená √252. Vyšší hodnota znamená větší kolísání ceny; neříká nic o tom, kterým směrem cena půjde.",
-      lesson: volatilityLessonLinks.volatility,
       tone: "neutral",
     },
   ];

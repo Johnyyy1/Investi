@@ -3,11 +3,13 @@ import { ChevronRight, CircleHelp } from "lucide-react";
 import { ComparePicker } from "@/components/lab/compare-picker";
 import { InstrumentComparisonChart, SeriesSwatch } from "@/components/lab/instrument-comparison-chart";
 import { MetricLessonLink } from "@/components/lab/instrument-return-analytics";
+import { MetricFormula } from "@/components/lab/metric-formula";
 import { Feedback } from "@/components/ui/feedback";
 import type { ComparedInstrument, InstrumentComparison } from "@/features/instruments/comparison-loader";
-import { comparisonDataLabel, comparisonMetricRows, correlationView, CORRELATION_HELP, formatIndexLevel, type ComparedMetricValue } from "@/features/instruments/comparison-presentation";
+import { comparisonDataLabel, comparisonMetricRows, correlationView, formatIndexLevel, type ComparedMetricValue } from "@/features/instruments/comparison-presentation";
 import { chartRanges, type ChartRange } from "@/features/instruments/history";
 import { dateLabel, metricToneClass } from "@/features/instruments/price-metrics-presentation";
+import { metricExplanation, metricLessonLink, type MetricId, type MetricLessonLink as Lesson } from "@/features/learning/metric-glossary";
 import { instrumentCompareHref, instrumentDetailHref } from "@/features/instruments/routes";
 
 const periodOptionLabels: Record<ChartRange, string> = { "1M": "1M", "3M": "3M", "6M": "6M", YTD: "Letos", "1Y": "1R", "5Y": "5L", Max: "Max" };
@@ -26,9 +28,10 @@ function MetricMeaning({ value }: { value: ComparedMetricValue }) {
   return <p className="mt-1 text-microcopy leading-relaxed text-secondary">{value === null ? "Chybí cenová historie tohoto instrumentu." : value.meaning}</p>;
 }
 
-function MetricHelp({ help, lesson }: { help: string; lesson?: { href: string; label: string } }) {
+function MetricHelp({ id, help, lesson }: { id: MetricId; help: string; lesson?: Lesson | null }) {
   return <details className="mt-1 text-small">
     <summary className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 font-semibold text-primary-hover focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-primary"><CircleHelp aria-hidden="true" className="size-4" />Co to znamená?</summary>
+    <MetricFormula id={id} />
     <p className="mt-1 max-w-[30rem] text-microcopy leading-relaxed text-secondary">{help}</p>
     {lesson ? <MetricLessonLink lesson={lesson} /> : null}
   </details>;
@@ -90,7 +93,7 @@ export function InstrumentComparisonView({ data, sample }: { data: InstrumentCom
         <caption className="sr-only">Ukazatele A a B za společné období</caption>
         <thead><tr className="border-b border-border-strong"><th scope="col" className="w-[30%] py-3 pr-4 font-semibold text-secondary">Ukazatel</th>{instruments.map((side, index) => <th key={letters[index]} scope="col" className="py-3 pr-4 font-semibold"><span className="flex min-w-0 items-center gap-2"><SeriesSwatch series={seriesKeys[index]} /><span className="wrap-anywhere">{letters[index]} · {symbolOf(side)}</span></span></th>)}</tr></thead>
         <tbody>{rows.map((row) => <tr key={row.id} className="border-b border-border align-top">
-          <th scope="row" className="py-4 pr-4 font-semibold">{row.label}<MetricHelp help={row.help} lesson={row.lesson} /></th>
+          <th scope="row" className="py-4 pr-4 font-semibold">{row.label}<MetricHelp id={row.id} help={row.help} lesson={row.lesson} /></th>
           {row.values.map((value, index) => <td key={letters[index]} className="py-4 pr-4"><MetricValue value={value} unit={row.unit} /><MetricMeaning value={value} /></td>)}
         </tr>)}</tbody>
       </table>
@@ -101,7 +104,7 @@ export function InstrumentComparisonView({ data, sample }: { data: InstrumentCom
             <dt className="flex items-center gap-2 text-microcopy font-semibold text-secondary"><SeriesSwatch series={seriesKeys[index]} />{letters[index]} · {symbolOf(instruments[index])}</dt>
             <dd className="mt-1"><MetricValue value={value} unit={row.unit} /><MetricMeaning value={value} /></dd>
           </div>)}</dl>
-          <MetricHelp help={row.help} lesson={row.lesson} />
+          <MetricHelp id={row.id} help={row.help} lesson={row.lesson} />
         </li>)}
       </ul>
     </section>
@@ -115,7 +118,7 @@ export function InstrumentComparisonView({ data, sample }: { data: InstrumentCom
         </> : <p role="status" className="mt-3 text-small leading-relaxed text-secondary"><span className="font-bold text-foreground">Nedostupné.</span> {correlation.message}</p>}
         {correlation.basis ? <p className="mt-2 text-microcopy text-secondary">{correlation.basis}</p> : null}
         {differentExchanges ? <p className="mt-2 text-microcopy text-secondary">Burzy {first.instrument!.exchangeMic} a {second.instrument!.exchangeMic} zavírají v různý čas, takže denní korelace může vyjít nižší, než je skutečná souvislost.</p> : null}
-        <MetricHelp help={CORRELATION_HELP} />
+        <MetricHelp id="correlation" help={metricExplanation("correlation", "instrument")} lesson={metricLessonLink("correlation")} />
       </div>
       <div className="min-w-0 self-start rounded-panel bg-surface-muted p-5">
         <h3 className="text-card-title font-bold">Férové srovnání</h3>

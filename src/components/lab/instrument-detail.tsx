@@ -7,6 +7,7 @@ import { useMemo, useRef, useState, useTransition, type MouseEvent } from "react
 import { BuyReview } from "@/components/lab/buy-review";
 import { InstrumentPriceChart } from "@/components/lab/instrument-price-chart";
 import { InstrumentReturnAnalytics } from "@/components/lab/instrument-return-analytics";
+import type { MetricFormulas } from "@/components/lab/metric-formula";
 import { EquityKeyMetrics } from "@/components/lab/equity-key-metrics";
 import { EtfAnalytics } from "@/components/lab/etf-analytics";
 import { Button, ButtonLink, IconButton } from "@/components/ui/button";
@@ -77,7 +78,7 @@ function czkValue(price: number, homeCurrency: NonNullable<HomeCurrency>) {
   return new Intl.NumberFormat("cs-CZ", { maximumFractionDigits: 0 }).format(price * homeCurrency.rate);
 }
 
-export function InstrumentDetailView({ instrument, quote, quoteMessage, points: history, historyMessage, historyPartial, homeCurrency, homeCurrencyMessage, fundamentals, fundamentalsMessage, etfAnalytics, etfAnalyticsMessage, initialRange, chartType, asOf, portfolio: initialPortfolio }: { instrument: Instrument; quote: QuoteView | null; quoteMessage: string | null; points: HistoricalPricePoint[]; historyMessage: string | null; historyPartial: boolean; homeCurrency: HomeCurrency; homeCurrencyMessage: string | null; fundamentals: EquityFundamentalsSnapshot | null; fundamentalsMessage: string | null; etfAnalytics: EtfAnalyticsSnapshot | null; etfAnalyticsMessage: string | null; initialRange: ChartRange; chartType: ChartType; asOf: string; portfolio: PortfolioView }) {
+export function InstrumentDetailView({ instrument, quote, quoteMessage, points: history, historyMessage, historyPartial, homeCurrency, homeCurrencyMessage, fundamentals, fundamentalsMessage, etfAnalytics, etfAnalyticsMessage, initialRange, chartType, asOf, portfolio: initialPortfolio, metricFormulas }: { instrument: Instrument; quote: QuoteView | null; quoteMessage: string | null; points: HistoricalPricePoint[]; historyMessage: string | null; historyPartial: boolean; homeCurrency: HomeCurrency; homeCurrencyMessage: string | null; fundamentals: EquityFundamentalsSnapshot | null; fundamentalsMessage: string | null; etfAnalytics: EtfAnalyticsSnapshot | null; etfAnalyticsMessage: string | null; initialRange: ChartRange; chartType: ChartType; asOf: string; portfolio: PortfolioView; metricFormulas?: MetricFormulas }) {
   const router = useRouter();
   // The whole history is already here; a timeframe is a slice of it, so switching never fetches.
   const [range, setRange] = useState(initialRange);
@@ -179,7 +180,7 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points: 
 
     <div className="mt-6"><InstrumentPriceChart key={instrument.instrumentId} range={range} onRangeChange={setRange} points={timeframe.points} bounds={timeframe.bounds} coverageStart={timeframe.coverageStart} currency={instrument.quoteCurrency} message={historyMessage ?? "Cenová historie pro toto období není dostupná."} partial={historyPartial} metrics={timeframe.metrics} initialChartType={chartType} /></div>
 
-    <div className="mt-6"><InstrumentReturnAnalytics metrics={timeframe.metrics} currency={instrument.quoteCurrency} /></div>
+    <div className="mt-6"><InstrumentReturnAnalytics metrics={timeframe.metrics} currency={instrument.quoteCurrency} formulas={metricFormulas} /></div>
 
     {holding ? <section aria-labelledby="position-heading" className="mt-8 border-t border-border pt-7"><div className="flex flex-wrap items-center justify-between gap-4"><h2 id="position-heading" className="text-section-title font-bold">Tvoje pozice</h2><div className="flex w-full flex-wrap gap-2 sm:w-auto">{canInvest ? <Button size="compact" onClick={openBuy}>Koupit další</Button> : null}<Button size="compact" variant="secondary" onClick={openSell}>Prodat</Button></div></div><dl className="mt-5 grid gap-4 text-small sm:grid-cols-4"><div><dt className="text-secondary">Množství</dt><dd className="mt-1 font-bold tabular-nums">{quantity(holding.quantity)} pozic</dd></div><div><dt className="text-secondary">Tržní hodnota</dt><dd className="mt-1 font-bold tabular-nums">{holding.marketValueMinor === null ? "Nedostupné" : formatPracticeCapitalMinor(holding.marketValueMinor)}</dd></div><div><dt className="text-secondary">Zisk / ztráta</dt><dd className={`mt-1 font-bold tabular-nums ${gainLossState(holding.gainLossMinor) === "positive" ? "text-success-ink" : gainLossState(holding.gainLossMinor) === "negative" ? "text-danger-ink" : ""}`}>{signedMoney(holding.gainLossMinor)}</dd></div><div><dt className="text-secondary">Váha v portfoliu</dt><dd className="mt-1 font-bold tabular-nums">{holding.allocationBasisPoints === null ? "Nedostupné" : formatPercentage(Number(holding.allocationBasisPoints) / 10_000)}</dd></div></dl></section> : null}
 

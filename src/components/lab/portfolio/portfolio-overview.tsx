@@ -2,7 +2,7 @@
 
 import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
-import { volatilityLessonLinks } from "@/features/lessons/volatility/manifest";
+import { metricLessonLink } from "@/features/learning/metric-glossary";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { LucideIcon } from "lucide-react";
@@ -26,6 +26,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const PORTFOLIO_LESSON_HREF = "/learn/investing-foundations/your-first-portfolio";
+const volatilityLesson = metricLessonLink("volatility");
 const TIME_ZONE = "Europe/Prague";
 
 function dateLabel(value: string, withYear = true) {
@@ -310,7 +311,7 @@ function Story({ view, contributions, story }: { view: PortfolioView; contributi
     <div className={styles.storyFoot}>
       <p className={styles.honesty}><Info size={15} aria-hidden="true" />Popis toho, co se už stalo, ne předpověď. Ceny se mění oběma směry.</p>
       <Link className={styles.textLink} href={PORTFOLIO_LESSON_HREF}><BookOpen size={16} aria-hidden="true" />Lekce: Portfolio, váhy a diverzifikace<ArrowRight size={16} aria-hidden="true" /></Link>
-      <Link className={styles.textLink} href={volatilityLessonLinks.volatility.href}><BookOpen size={16} aria-hidden="true" />{volatilityLessonLinks.volatility.label}<ArrowRight size={16} aria-hidden="true" /></Link>
+      {volatilityLesson ? <Link className={styles.textLink} href={volatilityLesson.href}><BookOpen size={16} aria-hidden="true" />{volatilityLesson.label}<ArrowRight size={16} aria-hidden="true" /></Link> : null}
     </div>
   </section>;
 }

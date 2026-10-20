@@ -7,9 +7,3 @@ export const volatilityLessons = [
   { id: "volatility-max-drawdown", slug: "max-drawdown", title: "Největší propad a zotavení", summary: "Najdi nejhlubší pokles od vrcholu a spočítej, kolik stojí návrat.", estimatedMinutes: 12, status: "available" as const },
   { id: "volatility-checkpoint", slug: "volatility-checkpoint", title: "Kontrola: volatilita a propad", summary: "Propoj směrodatnou odchylku, anualizaci a propad v jednom ověření.", estimatedMinutes: 10, status: "available" as const },
 ] as const;
-
-/** Lab metrics link to the lesson that explains them. */
-export const volatilityLessonLinks = {
-  volatility: { href: `/learn/volatility/${volatilityLessons[0].slug}`, label: `Lekce: ${volatilityLessons[0].title}` },
-  maxDrawdown: { href: `/learn/volatility/${volatilityLessons[3].slug}`, label: `Lekce: ${volatilityLessons[3].title}` },
-} as const;
