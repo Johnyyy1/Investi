@@ -15,7 +15,7 @@ Each concept has one name in the interface. The UI is Czech; an English term app
 | Sharpe ratio | **Sharpeho poměr** | Sharpe | Add „(Sharpe ratio)“ in the explanation, not in the label. Always name the risk-free rate it used. Unavailable is „Nedostupné“, never 0. |
 | Trading costs in a backtest | **Náklady obchodů** | transakční náklady | „Poplatek z objemu obchodu“ is the rate, „Fixní poplatek za obchod“ the flat fee. The result switch says „S náklady / Bez nákladů“. |
 | Traded value of all trades | **Obrat** | turnover (alone) | Add „(turnover)“ in the explanation, not in the label. |
-| Learning progress points | **XP** | body, body za lekce | XP stays visible and gates the Portfolio Lab unlock until issue #35 decides otherwise. |
+| Learning progress points | **XP** | body, body za lekce | XP stays visible and gates the Portfolio Lab unlock (decided in issue #35). Show it as a secondary learning measure, never as spendable value: Practice Capital leads. |
 | Product name | **investi** | investi! in text | `investi!` is the typeset wordmark only. Running text, page titles and aria-labels say „investi“; a wordmark link names its target: „investi · úvodní stránka“, „investi · Učení“. |
 
 Metric labels in Backtesting and the instrument detail should eventually come from one registry (#33); until then, change both places together.

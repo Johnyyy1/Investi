@@ -72,6 +72,7 @@ try {
   const { page, id } = await signUp("New learner");
   await page.goto(`${baseURL}/progress`);
   await page.getByTestId("total-xp").filter({ hasText: "0 XP" }).waitFor();
+  await page.getByTestId("total-practice-capital").filter({ hasText: /^0\sKč$/ }).waitFor();
   await page.screenshot({ path: `${screenshotDir}/progress-zero-1440.png`, fullPage: true });
   await page.goto(`${baseURL}/lab`);
   await page.getByRole("heading", { name: "Otevře se po Základech investování" }).waitFor();
@@ -133,6 +134,7 @@ try {
   await page.goto(`${baseURL}/progress`);
   await page.getByTestId("total-xp").filter({ hasText: "420 XP" }).waitFor();
   await page.getByTestId("total-practice-capital").filter({ hasText: /5\s000\sKč/ }).waitFor();
+  await page.getByRole("list", { name: "Za co je cvičný kapitál" }).getByText("Odemčení Portfolio Labu", { exact: true }).waitFor();
   await layout(page, "progress-unlocked");
   await page.goto(`${baseURL}/lab/portfolio`);
   await page.getByTestId("portfolio-cash").filter({ hasText: /5\s000\sKč/ }).waitFor();

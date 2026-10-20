@@ -8,7 +8,7 @@ import { LESSON_XP } from "@/features/gamification/domain";
 import type { PortfolioLedgerSummary } from "@/features/portfolio/ledger-summary";
 import type { evaluateUnlock } from "@/features/progression/unlocks";
 import { PORTFOLIO_LAB_UNLOCK_ID, progressionUnlocks } from "@/features/progression/unlocks";
-import { LESSON_PRACTICE_CAPITAL_MINOR } from "@/features/rewards/practice-capital";
+import { LESSON_PRACTICE_CAPITAL_MINOR, type PracticeCapitalLedger } from "@/features/rewards/practice-capital";
 import { formatPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { czechPlural, formatCount, formatDate, formatDecimal } from "@/lib/formatters";
 import { progressModel, type LessonStatus, type OutcomeIcon, type ProgressSummary } from "./progress-model";
@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 type Summary = ProgressSummary & {
   user?: { name?: string | null } | null;
   gamification?: { totalXp: number; timeZone: string } | null;
-  practiceCapital: { earnedPracticeCapitalMinor: bigint };
 };
 type Unlock = Pick<ReturnType<typeof evaluateUnlock>, "unlocked" | "totalXp" | "xpRequired" | "completedPrerequisiteLessons" | "requiredPrerequisiteLessons">;
 type Model = ReturnType<typeof progressModel>;
@@ -35,6 +34,9 @@ const lessonCount = (count: number) => formatCount(count, ["lekce", "lekce", "le
 const lessonGenitive = (count: number) => `${formatDecimal(count)} ${count === 1 ? "lekce" : "lekcí"}`;
 const outcomeIcons: Record<OutcomeIcon, LucideIcon> = { layers: Layers, receipt: Receipt, scale: Scale };
 const markers: Record<LessonStatus, LucideIcon> = { done: CircleCheck, active: CircleDot, next: CircleDot, todo: Circle };
+const unlockReasons: Record<string, string> = { learning_requirements: "Základy investování hotové", demo_access: "Ukázkový účet" };
+/** Receipts beyond this many wait behind a disclosure, newest first, so the side column stays short. */
+const VISIBLE_RECEIPTS = 5;
 const chips = { done: { label: "Hotovo", icon: CircleCheck }, started: { label: "Rozpracováno", icon: CircleDot }, todo: { label: "Nezačato", icon: Circle } } as const;
 
 function doneSummary(done: number, active: number) {
@@ -73,9 +75,32 @@ function ChapterBlock({ chapter }: { chapter: Chapter }) {
   </ResponsiveDisclosure>;
 }
 
-function PortfolioCard({ summary, unlock, portfolio, model, timeZone }: { summary: Summary; unlock: Unlock | null; portfolio: PortfolioLedgerSummary | null | undefined; model: Model; timeZone: string }) {
+function Receipts({ entries, timeZone }: { entries: PracticeCapitalLedger["entries"]; timeZone: string }) {
+  return entries.map((entry) => <li key={entry.kind === "lesson" ? entry.lessonId : entry.unlockId}>
+    <div><p className={styles.receiptTitle}>{entry.kind === "lesson" ? entry.title : "Odemčení Portfolio Labu"}</p><p className={styles.meta}>{entry.kind === "lesson" ? "První dokončení lekce" : unlockReasons[entry.reason] ?? "Jednorázové odemčení"} · <time dateTime={entry.receivedAt.toISOString()}>{formatDate(entry.receivedAt, { timeZone })}</time></p></div>
+    <span className={styles.amount}>+{formatPracticeCapitalMinor(entry.amountMinor)}</span>
+  </li>);
+}
+
+/** Read from stored receipts only: the total and every line are the entitlement, never a number derived from XP. */
+function CapitalCard({ capital, unlock, timeZone }: { capital: PracticeCapitalLedger; unlock: Unlock | null; timeZone: string }) {
+  const visible = capital.entries.slice(0, VISIBLE_RECEIPTS);
+  const older = capital.entries.slice(VISIBLE_RECEIPTS);
+  const unlockReward = progressionUnlocks[PORTFOLIO_LAB_UNLOCK_ID].rewardPracticeCapitalMinor;
+  return <section className={styles.lab} aria-labelledby="capital-title">
+    <p className={styles.eyebrow}>Odměny za učení</p>
+    <div className={styles.labHead}><h2 id="capital-title">Cvičný kapitál</h2><p>Vzdělávací vklad do Portfolio Labu, ne skutečné peníze.</p></div>
+    <p className={styles.capitalTotal}><span data-testid="total-practice-capital">{formatPracticeCapitalMinor(capital.totalMinor)}</span><span className={styles.meta}>získáno celkem</span></p>
+    {capital.entries.length > 0 ? <>
+      <ol className={styles.receipts} aria-label="Za co je cvičný kapitál"><Receipts entries={visible} timeZone={timeZone} /></ol>
+      {older.length > 0 && <details className={styles.more}><summary>Starší odměny ({older.length})<ChevronDown size={18} aria-hidden="true" /></summary><ol className={styles.receipts} aria-label="Starší odměny"><Receipts entries={older} timeZone={timeZone} /></ol></details>}
+    </> : <p className={styles.note}><Info size={15} aria-hidden="true" />Cvičný kapitál přibývá učením. Odemčení Portfolio Labu po Základech investování přidá {formatPracticeCapitalMinor(unlockReward)}, první dokončení každé další lekce {formatPracticeCapitalMinor(LESSON_PRACTICE_CAPITAL_MINOR)}.</p>}
+    {capital.totalMinor > 0n && unlock && !unlock.unlocked && <p className={styles.note}><LockKeyhole size={15} aria-hidden="true" />Kapitál počká na odemčení Portfolio Labu. Pak ho můžeš investovat.</p>}
+  </section>;
+}
+
+function PortfolioCard({ unlock, portfolio, model, timeZone }: { unlock: Unlock | null; portfolio: PortfolioLedgerSummary | null | undefined; model: Model; timeZone: string }) {
   const unlocked = Boolean(unlock?.unlocked);
-  const earned = summary.practiceCapital.earnedPracticeCapitalMinor;
   const reward = progressionUnlocks[PORTFOLIO_LAB_UNLOCK_ID].rewardPracticeCapitalMinor;
   const last = portfolio?.lastTrade;
   const title = !unlocked ? "Zatím zamčený" : portfolio === undefined ? "Uložené údaje se nenačetly" : !portfolio ? "Cvičné portfolio" : portfolio.holdingsCount ? `${formatCount(portfolio.holdingsCount, ["pozice", "pozice", "pozic"])} v portfoliu` : "Připravené k prvnímu nákupu";
@@ -92,7 +117,6 @@ function PortfolioCard({ summary, unlock, portfolio, model, timeZone }: { summar
         <div><dt>Otevřeno</dt><dd>{formatDate(portfolio.openedAt, { timeZone })}</dd></div>
         <div><dt>Poslední změna</dt><dd>{formatDate(last?.executedAt ?? portfolio.openedAt, { timeZone })} · {last ? `${last.side === "BUY" ? "nákup" : "prodej"} ${last.symbol}` : "založení"}</dd></div>
       </>}
-      {(unlocked || earned > 0n) && portfolio !== undefined && <div><dt>Cvičný kapitál</dt><dd data-testid="total-practice-capital">{formatPracticeCapitalMinor(earned)}</dd></div>}
       {unlocked && portfolio && <div><dt>Volná hotovost</dt><dd>{formatPracticeCapitalMinor(portfolio.availableCashMinor)}</dd></div>}
     </dl>
     {unlocked && portfolio === undefined && <p className={styles.note} role="status"><Info size={15} aria-hidden="true" />Portfolio zůstává uložené. Údaje teď neumíme načíst, proto neukazujeme žádná čísla.</p>}
@@ -126,7 +150,7 @@ function Milestone({ milestone, next }: { milestone: NonNullable<Model["mileston
   </section>;
 }
 
-export function ProgressOverview({ summary, unlock, portfolio }: { summary: Summary; unlock: Unlock | null; portfolio: PortfolioLedgerSummary | null | undefined }) {
+export function ProgressOverview({ summary, unlock, portfolio, capital }: { summary: Summary; unlock: Unlock | null; portfolio: PortfolioLedgerSummary | null | undefined; capital: PracticeCapitalLedger }) {
   const model = progressModel(summary);
   const { milestone, current } = model;
   const complete = summary.allComplete;
@@ -155,7 +179,14 @@ export function ProgressOverview({ summary, unlock, portfolio }: { summary: Summ
           <h1>{title}</h1>
           {subtitle && <p className={styles.subtitle}>{subtitle}</p>}
           {milestone && <p className={styles.milestoneMeta}>{lessonCount(milestone.chapter.lessons.length)}{milestone.completedAt && <> · dokončeno <time dateTime={milestone.completedAt.toISOString()}>{formatDate(milestone.completedAt, { timeZone, weekday: "short" })}</time></>}</p>}
-          <p className={styles.stats}><span data-testid="available-progress">{summary.completed.length} {from(summary.lessons.length)} {lessonGenitive(summary.lessons.length)}</span><span aria-hidden="true">·</span><span data-testid="total-xp">{formatDecimal(totalXp)} XP</span><span className={styles.statsNote}>XP nejsou závod. Jsou malá odměna za pochopení.</span></p>
+          <dl className={styles.summary} aria-label="Souhrn pokroku">
+            <div><dt>Hotové lekce</dt><dd data-testid="available-progress">{summary.completed.length} / {summary.lessons.length}</dd></div>
+            <div><dt>Cvičný kapitál</dt><dd data-testid="earned-practice-capital">{formatPracticeCapitalMinor(capital.totalMinor)}</dd></div>
+            <div><dt>Další krok</dt><dd className={styles.nextStep}>{complete
+              ? <Link className={styles.textLink} href="/lab">Vyzkoušet Lab<ArrowRight size={15} aria-hidden="true" /></Link>
+              : <><Link className={styles.textLink} href={model.continueHref}>{summary.next.title}<ArrowRight size={15} aria-hidden="true" /></Link><span className={styles.meta}>{current ? `krok ${step}` : `≈ ${summary.next.estimatedMinutes} min`}</span></>}</dd></div>
+          </dl>
+          <p className={styles.xp}><span data-testid="total-xp">{formatDecimal(totalXp)} XP</span> · XP měří učení. Nedají se utratit a nejsou závod.</p>
         </div>
         {guide && <div className={styles.guideWrap}><div className={styles.bubble}><p>{guide.line}</p></div><GuideImage className={styles.guide} pose={guide.pose} sizes={milestone ? "(max-width: 767px) 180px, 280px" : "(max-width: 767px) 270px, (max-width: 1199px) 380px, 566px"} alt="" preload /></div>}
       </header>
@@ -192,10 +223,13 @@ export function ProgressOverview({ summary, unlock, portfolio }: { summary: Summ
           {model.planned && <div className={styles.planned}><span className={styles.chapterNumber}>{model.planned.number}</span><span className={styles.chapterName}><h3>{model.planned.title}</h3><span>{model.planned.topics.join(" · ")}</span></span><span className={styles.chapterStatus}><span className={styles.chip} data-status="planned"><Clock3 size={13} aria-hidden="true" />Připravujeme</span></span></div>}
           <ul className={styles.legend} aria-label="Stavy lekcí"><li data-status="done">hotovo</li><li data-status="active">rozpracováno</li><li data-status="todo">nezačato</li></ul>
         </section>
-        <PortfolioCard summary={summary} unlock={unlock} portfolio={portfolio} model={model} timeZone={timeZone} />
+        <div className={styles.side}>
+          <CapitalCard capital={capital} unlock={unlock} timeZone={timeZone} />
+          <PortfolioCard unlock={unlock} portfolio={portfolio} model={model} timeZone={timeZone} />
+        </div>
       </div>
 
-      <details className={styles.explanation}><summary>Jak funguje pokrok<ChevronDown size={18} aria-hidden="true" /></summary><p>První dokončení lekce přidá {LESSON_XP} XP. XP měří učení a nedají se utratit. Portfolio Lab se odemkne po dokončení všech {definition.prerequisiteLessonIds.length} lekcí Základů investování a získání {formatDecimal(definition.xpRequired)} XP. Odemčení jednorázově přidá {formatPracticeCapitalMinor(definition.rewardPracticeCapitalMinor)} cvičného kapitálu. Každé první dokončení lekce mimo Základy přidá {formatPracticeCapitalMinor(LESSON_PRACTICE_CAPITAL_MINOR)}; když ji dokončíš dřív, kapitál počká na odemčení. Opakování lekce další XP ani kapitál nepřidává.</p><p>Cvičný kapitál je vzdělávací vklad do Portfolio Labu. Nejsou to skutečné peníze ani investiční výnos.</p></details>
+      <details className={styles.explanation}><summary>Jak funguje pokrok<ChevronDown size={18} aria-hidden="true" /></summary><p>První dokončení lekce přidá {LESSON_XP} XP. XP měří učení a nedají se utratit. Portfolio Lab se odemkne po dokončení všech {definition.prerequisiteLessonIds.length} lekcí Základů investování a získání {formatDecimal(definition.xpRequired)} XP. Odemčení jednorázově přidá {formatPracticeCapitalMinor(definition.rewardPracticeCapitalMinor)} cvičného kapitálu. Každé první dokončení lekce mimo Základy přidá {formatPracticeCapitalMinor(LESSON_PRACTICE_CAPITAL_MINOR)}; když ji dokončíš dřív, kapitál počká na odemčení. Opakování lekce další XP ani kapitál nepřidává.</p><p>Cvičný kapitál se počítá jen z uložených odměn za lekce a z odemčení, nikdy z XP. Je to vzdělávací vklad do Portfolio Labu. Nejsou to skutečné peníze ani investiční výnos.</p></details>
 
       <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi · Učení">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
     </div>

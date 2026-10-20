@@ -7,6 +7,7 @@ import { getAuthoredLesson } from "@/features/lessons/registry";
 import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
 import type { PortfolioLedgerSummary } from "@/features/portfolio/ledger-summary";
 import { evaluateUnlock, PORTFOLIO_LAB_UNLOCK_ID } from "@/features/progression/unlocks";
+import { practiceCapitalLedger, type PracticeCapitalLedger, type PracticeCapitalReceipt } from "@/features/rewards/practice-capital";
 import ProgressError from "@/app/(app)/progress/error";
 import { AppRouteFallback as ProgressLoading } from "@/components/shell/app-route-fallback";
 import { firstSentence, progressModel } from "./progress-model";
@@ -18,15 +19,17 @@ const started = (lessonId: string, lastPosition: number): LearnerState => ({ les
 const foundations = availableLessons.filter((lesson) => lesson.moduleSlug === "investing-foundations");
 const returns = availableLessons.filter((lesson) => lesson.moduleSlug === "returns");
 
-function learner(states: LearnerState[] = [], earned = 0n) {
-  return { user: { name: "Jana Nováková" }, gamification: { totalXp: 0, timeZone: "Europe/Prague" }, practiceCapital: { earnedPracticeCapitalMinor: earned }, ...getLearnerSummary(states), states };
+function learner(states: LearnerState[] = []) {
+  return { user: { name: "Jana Nováková" }, gamification: { totalXp: 0, timeZone: "Europe/Prague" }, ...getLearnerSummary(states), states };
 }
 /** XP mirrors the receipts of published completions; an explicit `portfolio: undefined` means the ledger failed. */
-function render(states: LearnerState[] = [], options: { earned?: bigint; portfolio?: PortfolioLedgerSummary | null } = {}) {
-  const summary = learner(states, options.earned);
+function render(states: LearnerState[] = [], options: { capital?: PracticeCapitalLedger; portfolio?: PortfolioLedgerSummary | null } = {}) {
+  const summary = learner(states);
   const unlock = evaluateUnlock(PORTFOLIO_LAB_UNLOCK_ID, { totalXp: summary.completed.length * 60, completedLessonIds: new Set(summary.completed.map((lesson) => lesson.id)) });
-  return renderToStaticMarkup(createElement(ProgressOverview, { summary, unlock, portfolio: "portfolio" in options ? options.portfolio : null }));
+  return renderToStaticMarkup(createElement(ProgressOverview, { summary, unlock, portfolio: "portfolio" in options ? options.portfolio : null, capital: options.capital ?? practiceCapitalLedger([]) }));
 }
+const receipt = (lessonId: string, amountMinor: bigint, date: number): PracticeCapitalReceipt => ({ kind: "lesson", lessonId, title: availableLessons.find((lesson) => lesson.id === lessonId)?.title ?? lessonId, amountMinor, receivedAt: day(date) });
+const grant = (amountMinor: bigint, date: number, reason = "learning_requirements"): PracticeCapitalReceipt => ({ kind: "unlock", unlockId: PORTFOLIO_LAB_UNLOCK_ID, reason, amountMinor, receivedAt: day(date) });
 const ledger: PortfolioLedgerSummary = { openedAt: "2026-09-08T08:00:00.000Z", earnedPracticeCapitalMinor: "500000", availableCashMinor: "12345678", holdingsCount: 3, tradeCount: 4, lastTrade: { side: "BUY", symbol: "VWCE", executedAt: "2026-09-10T08:00:00.000Z" } };
 const count = (html: string, text: string) => html.split(text).length - 1;
 
@@ -35,12 +38,15 @@ describe("Progress presentation model", () => {
     const html = render();
     expect(progressModel(learner()).knowledge).toEqual([]);
     expect(html).toContain("Tvoje police je zatím prázdná.");
-    expect(html).toContain("0 ze 17 lekcí");
+    expect(html).toContain('data-testid="available-progress">0 / 17<');
     expect(html).toContain("0 XP");
     expect(html).toContain('href="/learn/investing-foundations/why-invest"');
     expect(html).toContain("Začít první lekci");
     expect(html).not.toContain("18-bookshelf");
-    expect(html).not.toContain("total-practice-capital");
+    expect(html).toMatch(/data-testid="total-practice-capital">0\sKč</);
+    expect(html).toMatch(/data-testid="earned-practice-capital">0\sKč</);
+    expect(html).toMatch(/Cvičný kapitál přibývá učením\. Odemčení Portfolio Labu po Základech investování přidá 5\s000\sKč, první dokončení každé další lekce 2\s000\sKč\./);
+    expect(html).not.toContain("Za co je cvičný kapitál");
     expect(html).toContain("Zatím zamčený");
   });
 
@@ -48,7 +54,7 @@ describe("Progress presentation model", () => {
     const html = render([started(foundations[0].id, 2)]);
     expect(html).toContain("První lekci máš rozdělanou.");
     expect(html).toContain("Pokračovat od kroku 3");
-    expect(html).toContain("0 ze 17 lekcí");
+    expect(html).toContain('data-testid="available-progress">0 / 17<');
   });
 
   it("derives the shelf from completed published lessons and their authored step", () => {
@@ -71,7 +77,7 @@ describe("Progress presentation model", () => {
     const html = render(states);
     expect(html).toContain("Co už umíš, Jana.");
     expect(html).toContain("Tři lekce hotové, jedna rozdělaná.");
-    expect(html).toContain("3 ze 17 lekcí");
+    expect(html).toContain('data-testid="available-progress">3 / 17<');
     expect(html).toContain("180 XP");
     expect(html).toContain("ze 3 lekcí");
     expect(html).toContain("Pokračovat od kroku 3");
@@ -103,7 +109,7 @@ describe("Progress presentation model", () => {
     expect(html).toContain("jak poznat, jestli se investici daří?");
     expect(html).toContain('href="/learn/returns/what-is-a-return"');
     expect(html).toContain("Začít lekcí Co je výnos?");
-    expect(html).toContain("7 ze 17 lekcí");
+    expect(html).toContain('data-testid="available-progress">7 / 17<');
     expect(html).toContain("420 XP");
     expect(html).not.toContain("ročním nákladům fondu");
     // Starting the next chapter ends the milestone.
@@ -127,7 +133,7 @@ describe("Progress presentation model", () => {
     expect(model.continueHref).toBe("/lab");
     expect(model.knowledge).toHaveLength(17);
     expect(model.planned).toEqual({ number: "04", title: "Riziko", topics: ["Korelace", "Diverzifikace"] });
-    const html = render(states, { earned: 123_456n, portfolio: ledger });
+    const html = render(states, { capital: practiceCapitalLedger([grant(100_000n, 1), receipt(returns[0].id, 23_456n, 2)]), portfolio: ledger });
     expect(html).toContain("Všechno, co zatím je, máš za sebou.");
     expect(html).toContain("Prozkoumat Lab");
     expect(html).toContain('href="/lab"');
@@ -139,21 +145,65 @@ describe("Progress presentation model", () => {
 
   it("reads the Lab card from the saved ledger only and never turns missing data into zero", () => {
     const states = foundations.map((lesson) => done(lesson.id));
-    const unlocked = render(states, { earned: 500_000n, portfolio: ledger });
+    const capital = practiceCapitalLedger([grant(500_000n, 8)]);
+    const unlocked = render(states, { capital, portfolio: ledger });
     expect(unlocked).toContain("3 pozice v portfoliu");
     expect(unlocked).toContain("nákup VWCE");
     expect(unlocked).toContain("123 456,78 Kč");
     expect(unlocked).toMatch(/data-testid="total-practice-capital">5\s000\sKč/);
     expect(unlocked).toContain("Hodnotu podle aktuálních cen ukazuje Lab.");
-    const failed = render(states, { earned: 500_000n, portfolio: undefined });
+    const failed = render(states, { capital, portfolio: undefined });
     expect(failed).toContain("Uložené údaje se nenačetly");
-    expect(failed).not.toContain("total-practice-capital");
+    expect(failed).not.toContain("Volná hotovost");
+    // Capital comes from receipts, not from the Lab ledger, so it stays visible when the ledger fails.
+    expect(failed).toMatch(/data-testid="total-practice-capital">5\s000\sKč/);
     expect(failed).not.toMatch(/>0\s?Kč/);
     const xpWithoutPrerequisites = render([...foundations.slice(0, 3), ...returns.slice(0, 4)].map((lesson) => done(lesson.id)));
     expect(xpWithoutPrerequisites).toContain("Zatím zamčený");
     expect(xpWithoutPrerequisites).toContain("3 / 7");
     expect(xpWithoutPrerequisites).toContain("420 / 420 XP");
     expect(xpWithoutPrerequisites).toContain("Odemkne se po dokončení všech lekcí Základů investování.");
+  });
+
+  it("summarises lessons, receipt-derived capital and the next step, with XP as a quiet secondary line", () => {
+    const states = [...foundations.slice(0, 3).map((lesson) => done(lesson.id)), started("foundations-markets", 2)];
+    const html = render(states);
+    expect(html).toContain('aria-label="Souhrn pokroku"');
+    expect(html).toContain('data-testid="available-progress">3 / 17<');
+    const markets = foundations.find((lesson) => lesson.id === "foundations-markets")!;
+    expect(html).toContain(`href="/learn/investing-foundations/${markets.slug}">${markets.title}`);
+    expect(html).toMatch(/krok 3\u00a0z\u00a0\d+/);
+    expect(html).toContain('data-testid="total-xp">180 XP</span> · XP měří učení.');
+  });
+
+  it("breaks capital down by receipt, newest first, and never derives it from XP", () => {
+    const states = foundations.map((lesson) => done(lesson.id));
+    const receipts = [grant(500_000n, 8), ...returns.slice(0, 5).map((lesson, index) => receipt(lesson.id, 200_000n, 10 + index)), receipt(foundations[0].id, 0n, 1)];
+    const html = render(states, { capital: practiceCapitalLedger(receipts), portfolio: ledger });
+    expect(html).toMatch(/data-testid="total-practice-capital">15\s000\sKč/);
+    expect(html).toMatch(/data-testid="earned-practice-capital">15\s000\sKč/);
+    expect(count(html, "+2\u00a0000\u00a0Kč")).toBe(5);
+    expect(count(html, "+5\u00a0000\u00a0Kč")).toBe(1);
+    expect(html).not.toContain("+0\u00a0Kč");
+    // Newest first: the fifth Returns lesson leads, the unlock is the oldest and waits behind the disclosure.
+    const list = html.slice(html.indexOf('aria-label="Za co je cvičný kapitál"'));
+    expect(list.indexOf(returns[4].title)).toBeGreaterThan(0);
+    expect(list.indexOf(returns[4].title)).toBeLessThan(list.indexOf(returns[3].title));
+    expect(list).toContain("Starší odměny (1)");
+    expect(list.indexOf("Starší odměny")).toBeLessThan(list.indexOf("Odemčení Portfolio Labu"));
+    expect(html).toContain("Základy investování hotové");
+    expect(html).not.toContain("Kapitál počká na odemčení");
+    // XP in the hundreds never shows up as capital: 7 × 60 XP stays 420 XP.
+    expect(render(states, { portfolio: ledger })).toMatch(/data-testid="total-practice-capital">0\sKč/);
+  });
+
+  it("says that capital earned before the unlock waits for Portfolio Lab", () => {
+    const states = [...foundations.slice(0, 3), returns[0]].map((lesson) => done(lesson.id));
+    const html = render(states, { capital: practiceCapitalLedger([receipt(returns[0].id, 200_000n, 3)]) });
+    expect(html).toContain("Zatím zamčený");
+    expect(html).toMatch(/data-testid="total-practice-capital">2\s000\sKč/);
+    expect(html).toContain("Kapitál počká na odemčení Portfolio Labu.");
+    expect(html).toContain("První dokončení lekce");
   });
 
   it("connects the latest finished lesson to practice with its authored Lab bridge", () => {
