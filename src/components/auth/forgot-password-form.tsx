@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/learning/text-input";
 import { authClient } from "@/lib/auth-client";
@@ -12,6 +12,8 @@ export function ForgotPasswordForm() {
   const [errorMessage, setErrorMessage] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const status = useRef<HTMLParagraphElement>(null);
+  // Focus once the confirmation has committed; an action's state update can land after the next frame.
+  useEffect(() => { if (sentTo) status.current?.focus(); }, [sentTo]);
 
   async function onSubmit(formData: FormData) {
     const email = String(formData.get("email") ?? "").trim();
@@ -20,7 +22,6 @@ export function ForgotPasswordForm() {
       const { error } = await authClient.requestPasswordReset({ email, redirectTo: "/reset-password" });
       if (error) { setErrorMessage(getAuthErrorMessage(error, "Odkaz se nepodařilo odeslat. Zkus to znovu.")); return; }
       setSentTo(email);
-      requestAnimationFrame(() => status.current?.focus());
     } catch { setErrorMessage("Připojení se nepodařilo. Zkus to znovu."); }
     finally { setIsSubmitting(false); }
   }
