@@ -36,16 +36,18 @@ async function learner(name) {
   await sql`update learning_profile set time_zone='Europe/Prague',daily_goal_minutes=10 where user_id=${user.id}`;
   return { page, id: user.id };
 }
-/** Receipts mirror the production reward policy: 60 XP and no per-lesson capital. */
+/** Receipts mirror reward policy v3: 60 XP each, no capital in Foundations and 2,000 Kč beyond it. */
 async function complete(userId, items) {
   for (const item of items) {
+    const capital = item.module_slug === "investing-foundations" ? 0 : 200000;
     await sql`insert into lesson_progress(user_id,lesson_id,status,last_position,completed_at,updated_at) values(${userId},${item.id},'completed',0,clock_timestamp(),clock_timestamp()) on conflict(user_id,lesson_id) do update set status='completed',completed_at=clock_timestamp(),updated_at=clock_timestamp()`;
-    await sql`insert into lesson_award(user_id,lesson_id,xp,practice_capital_minor,reward_policy_version,learning_date,time_zone,awarded_at) values(${userId},${item.id},60,0,2,(now() at time zone 'Europe/Prague')::date,'Europe/Prague',now()) on conflict(user_id,lesson_id) do nothing`;
+    await sql`insert into lesson_award(user_id,lesson_id,xp,practice_capital_minor,reward_policy_version,learning_date,time_zone,awarded_at) values(${userId},${item.id},60,${capital},3,(now() at time zone 'Europe/Prague')::date,'Europe/Prague',clock_timestamp()) on conflict(user_id,lesson_id) do nothing`;
   }
 }
+const koruna = (minor) => `${new Intl.NumberFormat("cs-CZ").format(minor / 100)}\u00a0Kč`;
 const start = (userId, lesson, position) => sql`insert into lesson_progress(user_id,lesson_id,status,last_position,updated_at) values(${userId},${lesson.id},'in_progress',${position},clock_timestamp()) on conflict(user_id,lesson_id) do update set status='in_progress',last_position=${position},updated_at=clock_timestamp()`;
 
-async function render(page, label, { state, xp, count, action, actionHref, lab }) {
+async function render(page, label, { state, xp, capital, count, action, actionHref, lab }) {
   const root = () => page.locator("[data-investi-progress]:visible");
   async function settle() {
     await root().waitFor();
@@ -62,7 +64,10 @@ async function render(page, label, { state, xp, count, action, actionHref, lab }
   await page.goto(`${baseURL}/progress`); await settle();
   assert.equal(await root().getAttribute("data-state"), state, `${label}: state`);
   assert.equal(await root().getByTestId("total-xp").textContent(), `${new Intl.NumberFormat("cs-CZ").format(xp)} XP`);
-  assert.equal(await root().getByTestId("available-progress").textContent(), `${count} ze 17 lekcí`);
+  assert.equal(await root().getByTestId("available-progress").textContent(), `${count} / 17`);
+  // Capital is read from receipts and agrees in the summary and the breakdown card.
+  assert.equal(await root().getByTestId("total-practice-capital").textContent(), koruna(capital), `${label}: capital`);
+  assert.equal(await root().getByTestId("earned-practice-capital").textContent(), koruna(capital), `${label}: summary capital`);
   assert.equal(await root().getByRole("link", { name: lab.link, exact: true }).getAttribute("href"), "/lab/portfolio");
   assert.equal(await root().getByRole("heading", { name: lab.title, exact: true }).count(), 1, `${label}: Lab card title`);
   assert.equal(await root().getByText("Připravujeme", { exact: true }).count(), 1, `${label}: one upcoming chapter`);
@@ -118,19 +123,20 @@ try {
   const markets = foundation.find((lesson) => lesson.id === "foundations-markets");
   const locked = { link: "Zobrazit podmínky", title: "Zatím zamčený" };
 
-  let root = await render(page, "zero", { state: "empty", xp: 0, count: 0, action: "Začít první lekci", actionHref: href(foundation[0]), lab: locked });
+  let root = await render(page, "zero", { state: "empty", xp: 0, capital: 0, count: 0, action: "Začít první lekci", actionHref: href(foundation[0]), lab: locked });
   assert.equal(await root().getByText("Tvoje police je zatím prázdná.", { exact: true }).count(), 1);
   assert.equal(await root().locator("img").count(), 0, "no guide for an expected empty state");
+  assert.equal(await root().getByText(/^Cvičný kapitál přibývá učením\./).count(), 1, "zero capital explains how to earn it");
   assert.equal((await sql`select * from lesson_award where user_id=${id}`).length, 0, "visiting Progress awards nothing");
 
   await start(id, markets, 2);
-  root = await render(page, "returning", { state: "empty", xp: 0, count: 0, action: "Pokračovat od kroku 3", actionHref: href(markets), lab: locked });
+  root = await render(page, "returning", { state: "empty", xp: 0, capital: 0, count: 0, action: "Pokračovat od kroku 3", actionHref: href(markets), lab: locked });
   await root().getByRole("link", { name: "Pokračovat od kroku 3", exact: true }).click(); await page.waitForURL(`**${href(markets)}`);
   await page.getByText("Krok 3", { exact: true }).waitFor();
   assert.equal((await sql`select last_position from lesson_progress where user_id=${id} and lesson_id='foundations-markets'`)[0].last_position, 2, "resume keeps the saved cursor");
 
   await complete(id, foundation.slice(0, 3));
-  root = await render(page, "partial", { state: "partial", xp: 180, count: 3, action: "Pokračovat od kroku 3", actionHref: href(markets), lab: locked });
+  root = await render(page, "partial", { state: "partial", xp: 180, capital: 0, count: 3, action: "Pokračovat od kroku 3", actionHref: href(markets), lab: locked });
   assert.equal(await root().getByRole("heading", { name: "Co už umíš, Jana.", level: 1 }).count(), 1);
   assert.equal(await root().getByText("Tři lekce hotové, jedna rozdělaná. Rostou znalosti, ne tlak.", { exact: true }).count(), 1);
   assert.equal(await root().locator('[aria-current="step"]').getAttribute("href"), href(markets));
@@ -157,30 +163,35 @@ try {
   await complete(id, foundation);
   await page.goto(`${baseURL}/lab`); // The existing qualifying-account repair grants the unlock once.
   const unlocked = { link: "Otevřít Portfolio Lab", title: "Připravené k prvnímu nákupu" };
-  root = await render(page, "chapter-complete", { state: "milestone", xp: 420, count: 7, action: "Začít lekcí Co je výnos?", actionHref: href(returns[0]), lab: unlocked });
+  root = await render(page, "chapter-complete", { state: "milestone", xp: 420, capital: 500000, count: 7, action: "Začít lekcí Co je výnos?", actionHref: href(returns[0]), lab: unlocked });
   assert.equal(await root().getByRole("heading", { name: "Základy investování máš za sebou.", level: 1 }).count(), 1);
   assert.equal(await root().getByText("Kapitola 01 hotová", { exact: true }).count(), 1);
-  assert.match(await root().getByTestId("total-practice-capital").textContent(), /^5\s000\sKč$/);
+  assert.equal(await root().getByRole("list", { name: "Za co je cvičný kapitál" }).getByRole("listitem").count(), 1, "one unlock grant, no XP-only receipts");
   assert.equal(await root().getByText("založení", { exact: false }).count(), 1, "fresh generation shows its opening, not a value");
   assert.equal((await sql`select * from progression_unlock where user_id=${id}`).length, 1);
 
   await start(id, returns[0], 1);
-  root = await render(page, "next-chapter", { state: "partial", xp: 420, count: 7, action: "Pokračovat od kroku 2", actionHref: href(returns[0]), lab: unlocked });
+  root = await render(page, "next-chapter", { state: "partial", xp: 420, capital: 500000, count: 7, action: "Pokračovat od kroku 2", actionHref: href(returns[0]), lab: unlocked });
   assert.equal(await root().locator('[aria-current="step"]').getAttribute("href"), href(returns[0]));
 
   await complete(id, lessons);
-  root = await render(page, "complete", { state: "complete", xp: 1020, count: 17, action: "Prozkoumat Lab", actionHref: "/lab", lab: unlocked });
+  root = await render(page, "complete", { state: "complete", xp: 1020, capital: 2500000, count: 17, action: "Prozkoumat Lab", actionHref: "/lab", lab: unlocked });
   assert.equal(await root().locator('[aria-current="step"]').count(), 0);
+  assert.equal(await root().getByRole("list", { name: "Za co je cvičný kapitál" }).getByRole("listitem").count(), 5, "newest five receipts");
+  assert.equal(await root().getByText("Starší odměny (6)", { exact: true }).count(), 1, "older receipts wait behind a disclosure");
+  const entitlement = await sql`select (select coalesce(sum(practice_capital_minor),0) from lesson_award where user_id=${id}) + (select coalesce(sum(practice_capital_minor),0) from progression_unlock where user_id=${id}) as total`;
+  assert.equal(Number(entitlement[0].total), 2500000, "breakdown total equals the stored entitlement");
   assert.equal((await sql`select * from progression_unlock where user_id=${id}`).length, 1, "no duplicate unlock");
   await root().getByRole("link", { name: "Otevřít Portfolio Lab", exact: true }).click(); await page.waitForURL("**/lab/portfolio"); await page.getByTestId("portfolio-cash").waitFor();
 
   const other = await learner("Petr");
   await complete(other.id, [...foundation.slice(0, 3), ...returns.slice(0, 4)]);
-  root = await render(other.page, "xp-without-prerequisites", { state: "partial", xp: 420, count: 7, action: "Začít lekci", actionHref: href(returns[4]), lab: locked });
+  root = await render(other.page, "xp-without-prerequisites", { state: "partial", xp: 420, capital: 800000, count: 7, action: "Začít lekci", actionHref: href(returns[4]), lab: locked });
   assert.equal(await root().getByText("420 / 420 XP", { exact: true }).count(), 1);
+  assert.equal(await root().getByText("Kapitál počká na odemčení Portfolio Labu. Pak ho můžeš investovat.", { exact: true }).count(), 1, "capital earned before the unlock waits");
   assert.match(await root().getByText(/^Odemkne se po dokončení všech lekcí Základů investování\./).textContent(), /není skutečné peníze/);
   assert.equal((await sql`select * from progression_unlock where user_id=${other.id}`).length, 0, "XP alone does not unlock");
 
   assert.deepEqual(errors, []);
-  console.log(`PASS: zero, returning/saved cursor, partial, chapter milestone, next chapter, all complete, XP without prerequisites; authored shelf and Lab bridge, review invariants, authoritative XP/capital/ledger, six widths plus 320/200% text, keyboard/focus/targets, reduced motion, real links, no browser errors. Screenshots: ${output}`);
+  console.log(`PASS: zero, returning/saved cursor, partial, chapter milestone, next chapter, all complete, XP without prerequisites; authored shelf and Lab bridge, review invariants, authoritative XP/capital/ledger, receipt-derived capital breakdown, six widths plus 320/200% text, keyboard/focus/targets, reduced motion, real links, no browser errors. Screenshots: ${output}`);
 } finally { await browser.close(); for (const id of userIds) await sql`delete from "user" where id=${id}`; await sql.end(); }

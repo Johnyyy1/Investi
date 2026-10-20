@@ -342,7 +342,7 @@ Do not change lesson completion semantics while doing visual work.
 
 9. Practice Capital
 
-Practice Capital is the spendable learning reward for Portfolio Lab. XP measures learning progress, stays visible to the learner, and gates the Portfolio Lab unlock. Whether XP stays visible is an open product decision (issue #35); until it is decided, do not hide XP or remove it from the unlock condition.
+Practice Capital is the spendable learning reward for Portfolio Lab. XP measures learning progress, stays visible to the learner, and gates the Portfolio Lab unlock. Issue #35 decided to keep XP visible but secondary: Progress leads with completed lessons and receipt-derived Practice Capital, and shows XP as a quiet learning measure. Do not hide XP or remove it from the unlock condition without a new product decision.
 
 Reward policy
 

@@ -10,6 +10,7 @@ import {
   XP_ONLY_REWARD_POLICY_VERSION,
   getPracticeCapitalSummary,
   lessonReward,
+  practiceCapitalLedger,
 } from "./practice-capital";
 
 const foundations = availableLessons.filter((lesson) => lesson.moduleId === FOUNDATIONS_MODULE_ID);
@@ -60,5 +61,34 @@ describe("Practice Capital entitlement", () => {
     const awards = [receipt, { ...receipt, xp: 999_999, practiceCapitalMinor: 999_999n }];
 
     expect(getPracticeCapitalSummary(awards)).toEqual({ earnedPracticeCapitalMinor: LEGACY_LESSON_PRACTICE_CAPITAL_MINOR });
+  });
+});
+
+describe("Practice Capital ledger", () => {
+  const at = (day: number) => new Date(Date.UTC(2026, 8, day, 10));
+  const lesson = (lessonId: string, amountMinor: bigint, day: number) => ({ kind: "lesson" as const, lessonId, title: lessonId, amountMinor, receivedAt: at(day) });
+  const unlock = (amountMinor: bigint, day: number, reason = "learning_requirements") => ({ kind: "unlock" as const, unlockId: "PORTFOLIO_LAB", reason, amountMinor, receivedAt: at(day) });
+
+  it("lists the paying receipts newest first and sums every receipt exactly", () => {
+    const receipts = [lesson("foundations-a", 0n, 1), unlock(500_000n, 2), lesson("returns-a", 200_000n, 3), lesson("legacy-a", LEGACY_LESSON_PRACTICE_CAPITAL_MINOR, 1)];
+    const ledger = practiceCapitalLedger(receipts);
+    expect(ledger.totalMinor).toBe(900_000n);
+    expect(ledger.entries.map((entry) => entry.kind === "lesson" ? entry.lessonId : entry.unlockId)).toEqual(["returns-a", "PORTFOLIO_LAB", "legacy-a"]);
+    expect(ledger.entries.reduce((total, entry) => total + entry.amountMinor, 0n)).toBe(ledger.totalMinor);
+  });
+
+  it("keeps amounts that do not round to whole koruna and never shows zero receipts", () => {
+    const ledger = practiceCapitalLedger([lesson("a", 1n, 1), lesson("b", 133n, 2), unlock(0n, 3, "existing_portfolio")]);
+    expect(ledger.totalMinor).toBe(134n);
+    expect(ledger.entries).toHaveLength(2);
+  });
+
+  it("puts an unlock before a lesson receipt written in the same instant", () => {
+    const ledger = practiceCapitalLedger([lesson("returns-a", 200_000n, 2), unlock(500_000n, 2)]);
+    expect(ledger.entries.map((entry) => entry.kind)).toEqual(["unlock", "lesson"]);
+  });
+
+  it("is zero and empty without receipts", () => {
+    expect(practiceCapitalLedger([])).toEqual({ totalMinor: 0n, entries: [] });
   });
 });

@@ -3,6 +3,8 @@ import { loadLearner } from "@/features/learning/load-learner";
 import { loadPortfolioLedgerSummary, type PortfolioLedgerSummary } from "@/features/portfolio/ledger-summary";
 import { perfMeasure, perfSegment } from "@/lib/perf";
 import { loadPortfolioLabUnlockStatus } from "@/features/progression/repository";
+import { practiceCapitalLedger } from "@/features/rewards/practice-capital";
+import { loadPracticeCapitalLedger } from "@/features/rewards/repository";
 import { getCurrentUser } from "@/lib/session";
 
 export const metadata = { title: "Pokrok" };
@@ -13,9 +15,13 @@ export default function ProgressPage() {
 
 async function renderProgressPage() {
   const user = await getCurrentUser();
-  // The unlock and the saved Lab facts depend only on the user id, so they load alongside the learner reads.
-  const [summary, { unlock, portfolio }] = await Promise.all([loadLearner(), user ? loadPortfolioCard(user.id) : { unlock: null, portfolio: null }]);
-  return <ProgressOverview summary={summary} unlock={unlock} portfolio={portfolio} />;
+  // The unlock, the saved Lab facts and the capital receipts depend only on the user id, so they load alongside the learner reads.
+  const [summary, { unlock, portfolio }, capital] = await Promise.all([
+    loadLearner(),
+    user ? loadPortfolioCard(user.id) : { unlock: null, portfolio: null },
+    user ? perfMeasure("rewards.loadLedger", "db", () => loadPracticeCapitalLedger(user.id)) : practiceCapitalLedger([]),
+  ]);
+  return <ProgressOverview summary={summary} unlock={unlock} portfolio={portfolio} capital={capital} />;
 }
 
 async function loadPortfolioCard(userId: string) {

@@ -11,7 +11,7 @@ import { lessonSteps } from "../src/features/progress/transition";
 import { completeLesson } from "../src/features/progress/repository";
 import { loadPortfolioLabUnlock, loadPortfolioLabUnlockStatus, requirePortfolioLabUnlock } from "../src/features/progression/repository";
 import { progressionUnlocks } from "../src/features/progression/unlocks";
-import { loadPracticeCapitalSummary, readPracticeCapitalEntitlementMinor } from "../src/features/rewards/repository";
+import { loadPracticeCapitalLedger, loadPracticeCapitalSummary, readPracticeCapitalEntitlementMinor } from "../src/features/rewards/repository";
 import { loadPortfolioView } from "../src/features/portfolio/service";
 import { executeTrade, resetActivePortfolio } from "../src/features/portfolio/repository";
 import { ensureDemoSeed } from "../src/features/demo/repository";
@@ -116,6 +116,11 @@ try {
   assert.ok(awardRows.filter((row) => (required as readonly string[]).includes(row.lessonId)).every((row) => row.practiceCapitalMinor === 0n), "Foundations lessons earn XP only");
   assert.equal(awardRows.find((row) => row.lessonId === "returns-what-is-a-return")?.practiceCapitalMinor, 200_000n, "a lesson beyond Foundations earns 2,000 Kč, even when completed with the unlock");
   assert.equal((await loadPracticeCapitalSummary(learner)).earnedPracticeCapitalMinor, 700_000n);
+  // The Progress breakdown reads the same receipts: one unlock grant and one paid lesson, no XP-only lines.
+  const learnerLedger = await loadPracticeCapitalLedger(learner);
+  assert.equal(learnerLedger.totalMinor, 700_000n, "breakdown total equals the entitlement");
+  assert.deepEqual(learnerLedger.entries.map((entry) => [entry.kind, entry.amountMinor]).sort(), [["lesson", 200_000n], ["unlock", 500_000n]]);
+  assert.ok(learnerLedger.entries.every((entry) => entry.receivedAt instanceof Date && (entry.kind === "unlock" || entry.title.length > 0)), "dated lines; lesson lines carry their title");
   const view = await loadPortfolioView(learner);
   assert.equal(view.earnedPracticeCapitalMinor, "700000");
   assert.equal(view.availableCashMinor, "700000");
@@ -226,6 +231,9 @@ try {
   assert.equal(mixedRows.find((row) => row.lessonId === required[0])?.practiceCapitalMinor, 200_000n, "v1 receipt remains unchanged");
   assert.equal(mixedRows.find((row) => row.lessonId === required[1])?.rewardPolicyVersion, 3, "new receipt records v3");
   assert.equal((await loadPracticeCapitalSummary(legacy)).earnedPracticeCapitalMinor, 200_000n, "mixed v1/v3 capital preserves the historical amount");
+  const legacyLedger = await loadPracticeCapitalLedger(legacy);
+  assert.equal(legacyLedger.totalMinor, 200_000n);
+  assert.deepEqual(legacyLedger.entries.map((entry) => entry.kind === "lesson" && entry.lessonId), [required[0]], "the v1 receipt is listed; the grandfathered zero grant and the v3 Foundations receipt are not");
 
   const backfill = await owner();
   await db.insert(lessonAward).values({ userId: backfill, lessonId: required[1], xp: 60, practiceCapitalMinor: 200_000n, rewardPolicyVersion: 1, learningDate: "2026-09-22", timeZone: "UTC", awardedAt: new Date() });
@@ -288,9 +296,13 @@ try {
   assert.equal(await readPracticeCapitalEntitlementMinor(db, exact), expectedExact);
   assert.equal(await db.transaction((tx) => readPracticeCapitalEntitlementMinor(tx, exact)), expectedExact, "same value inside a transaction");
   assert.equal((await loadPracticeCapitalSummary(exact)).earnedPracticeCapitalMinor, expectedExact);
+  const exactLedger = await loadPracticeCapitalLedger(exact);
+  assert.equal(exactLedger.totalMinor, expectedExact, "breakdown total is exact beyond float precision");
+  assert.equal(exactLedger.entries.reduce((sum, entry) => sum + entry.amountMinor, 0n), expectedExact, "breakdown lines add up to the total");
+  assert.deepEqual(await loadPracticeCapitalLedger(await owner()), { totalMinor: 0n, entries: [] }, "no receipts is an empty breakdown");
   assert.equal(await readPracticeCapitalEntitlementMinor(db, await owner()), 0n, "no receipts is exactly zero");
 
-  console.log("PASS: demo access, isolated trading/reset, concurrent one-time demo grant, preserved learning history, XP, concurrent learning unlock, lock-free side-effect-free status reads, locked-path recording, concurrent legacy repair, uncached status outside a render, exact one-statement entitlement, grandfathering, accounting, and migration rerun.");
+  console.log("PASS: demo access, isolated trading/reset, concurrent one-time demo grant, preserved learning history, XP, concurrent learning unlock, lock-free side-effect-free status reads, locked-path recording, concurrent legacy repair, uncached status outside a render, exact one-statement entitlement, receipt breakdown, grandfathering, accounting, and migration rerun.");
 } finally {
   await db.delete(user).where(eq(user.id, ids[0] ?? ""));
   for (const id of ids.slice(1)) await db.delete(user).where(eq(user.id, id));
