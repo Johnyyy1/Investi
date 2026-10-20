@@ -18,7 +18,7 @@ await mkdir(output, { recursive: true });
 const userIds = [];
 const errors = [];
 const lessons = await sql`select l.id,l.title,l.slug,m.slug as module_slug from lesson l join learning_module m on m.id=l.module_id where l.is_published=true order by m.position,l.position`;
-assert.equal(lessons.length, 17);
+assert.equal(lessons.length, 27);
 const foundation = lessons.filter((lesson) => lesson.module_slug === "investing-foundations");
 const returns = lessons.filter((lesson) => lesson.module_slug === "returns");
 const href = (lesson) => `/learn/${lesson.module_slug}/${lesson.slug}`;
@@ -64,13 +64,13 @@ async function render(page, label, { state, xp, capital, count, action, actionHr
   await page.goto(`${baseURL}/progress`); await settle();
   assert.equal(await root().getAttribute("data-state"), state, `${label}: state`);
   assert.equal(await root().getByTestId("total-xp").textContent(), `${new Intl.NumberFormat("cs-CZ").format(xp)} XP`);
-  assert.equal(await root().getByTestId("available-progress").textContent(), `${count} / 17`);
+  assert.equal(await root().getByTestId("available-progress").textContent(), `${count} / 27`);
   // Capital is read from receipts and agrees in the summary and the breakdown card.
   assert.equal(await root().getByTestId("total-practice-capital").textContent(), koruna(capital), `${label}: capital`);
   assert.equal(await root().getByTestId("earned-practice-capital").textContent(), koruna(capital), `${label}: summary capital`);
   assert.equal(await root().getByRole("link", { name: lab.link, exact: true }).getAttribute("href"), "/lab/portfolio");
   assert.equal(await root().getByRole("heading", { name: lab.title, exact: true }).count(), 1, `${label}: Lab card title`);
-  assert.equal(await root().getByText("Připravujeme", { exact: true }).count(), 1, `${label}: one upcoming chapter`);
+  assert.equal(await root().getByText("Připravujeme", { exact: true }).count(), 0, `${label}: every chapter is published`);
   assert.equal(await root().getByText(/^(?:\d+ )?(?:streak|série)/i).count(), 0, `${label}: no streaks`);
   const continuation = root().getByRole("link", { name: action, exact: true });
   assert.equal(await continuation.count(), 1, `${label}: one ${action} link`);
@@ -175,12 +175,12 @@ try {
   assert.equal(await root().locator('[aria-current="step"]').getAttribute("href"), href(returns[0]));
 
   await complete(id, lessons);
-  root = await render(page, "complete", { state: "complete", xp: 1020, capital: 2500000, count: 17, action: "Prozkoumat Lab", actionHref: "/lab", lab: unlocked });
+  root = await render(page, "complete", { state: "complete", xp: 1620, capital: 4500000, count: 27, action: "Prozkoumat Lab", actionHref: "/lab", lab: unlocked });
   assert.equal(await root().locator('[aria-current="step"]').count(), 0);
   assert.equal(await root().getByRole("list", { name: "Za co je cvičný kapitál" }).getByRole("listitem").count(), 5, "newest five receipts");
-  assert.equal(await root().getByText("Starší odměny (6)", { exact: true }).count(), 1, "older receipts wait behind a disclosure");
+  assert.equal(await root().getByText("Starší odměny (16)", { exact: true }).count(), 1, "older receipts wait behind a disclosure");
   const entitlement = await sql`select (select coalesce(sum(practice_capital_minor),0) from lesson_award where user_id=${id}) + (select coalesce(sum(practice_capital_minor),0) from progression_unlock where user_id=${id}) as total`;
-  assert.equal(Number(entitlement[0].total), 2500000, "breakdown total equals the stored entitlement");
+  assert.equal(Number(entitlement[0].total), 4500000, "breakdown total equals the stored entitlement");
   assert.equal((await sql`select * from progression_unlock where user_id=${id}`).length, 1, "no duplicate unlock");
   await root().getByRole("link", { name: "Otevřít Portfolio Lab", exact: true }).click(); await page.waitForURL("**/lab/portfolio"); await page.getByTestId("portfolio-cash").waitFor();
 

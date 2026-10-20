@@ -1,6 +1,6 @@
 # Returns and compounding
 
-Five Returns lessons are published at `/learn/returns`, following Investing Foundations. They use the shared authored lesson registry, guided blocks, question evaluation, persisted cursor, and completion transaction. No provider-specific lesson engine exists.
+Six Returns lessons are published at `/learn/returns`, following Investing Foundations. They use the shared authored lesson registry, guided blocks, question evaluation, persisted cursor, and completion transaction. No provider-specific lesson engine exists.
 
 | Order | Stable ID / slug | Focus |
 | --- | --- | --- |
@@ -9,7 +9,7 @@ Five Returns lessons are published at `/learn/returns`, following Investing Foun
 | 3 | `returns-compounding` / `compounding-and-cumulative-returns` | Growth factors, cumulative return, ending value, and loss recovery |
 | 4 | `returns-comparing` / `comparing-investments` | Price versus total return and a common comparison basis |
 | 5 | `returns-log-returns` / `log-returns` | Positive-price log return, time additivity, conversion, small-return approximation |
-| Planned | `returns-checkpoint` / `returns-checkpoint` | Integrated transfer exercise; no authored content or publication |
+| 6 | `returns-checkpoint` / `returns-checkpoint` | Checkpoint on one invented fund (200 → 250 → 200 → 240 Kč, 6 Kč payout): period returns, compounding, recovery, price vs total return, summed log returns |
 
 Published IDs, slugs, and numeric step positions are persistence contracts. The learner summary prioritizes active learning; recommendations use published prerequisites. Planned routes/actions remain unavailable. A streamed Next.js unavailable page may have HTTP 200: validate the unavailable UI, `noindex`, and absence of progress writes rather than assuming an HTTP status alone.
 
@@ -33,7 +33,7 @@ Log returns add through time for one return series; they do not substitute for p
 
 ## Correlation
 
-`features/instruments/correlation.ts` computes the Pearson correlation of two instruments' simple **price returns**, never of prices. Each series stays in its own quote currency with split-adjusted closes: it is not a correlation in CZK, applies no FX and excludes dividends. Only dates both series traded are paired; nothing is forward-filled. Daily frequency (the default) pairs returns between consecutive common dates and excludes, rather than bridges, gaps longer than `MAX_VOLATILITY_GAP_DAYS`, as volatility does. Weekly frequency pairs returns between the last common close of consecutive ISO weeks (Monday–Sunday, UTC) and excludes a week with no common date; it softens the close-time mismatch of exchanges such as XNAS and XETR. Fewer than 20 paired returns give `insufficient-data`, and a series without variation gives `no-variation`; both return a `null` coefficient, never 0. The result `{ coefficient, observationCount, startDate, endDate, frequency }` carries the actually paired dates and an unrounded coefficient in [−1, 1]; rounding belongs to presentation. `correlation-loader.ts` loads both histories through `MarketDataService` on the server and keeps their provenance, so the coefficient is never computed from client-sent closes.
+`features/instruments/correlation.ts` computes the Pearson correlation of two instruments' simple **price returns**, never of prices. Each series stays in its own quote currency with split-adjusted closes: it is not a correlation in CZK, applies no FX and excludes dividends. Only dates both series traded are paired; nothing is forward-filled. Daily frequency (the default) pairs returns between consecutive common dates and excludes, rather than bridges, gaps longer than `MAX_VOLATILITY_GAP_DAYS`, as volatility does. Weekly frequency pairs returns between the last common close of consecutive ISO weeks (Monday–Sunday, UTC) and excludes a week with no common date; it softens the close-time mismatch of exchanges such as XNAS and XETR. Fewer than 20 paired returns give `insufficient-data`, and a series without variation gives `no-variation`; both return a `null` coefficient, never 0. The result `{ coefficient, observationCount, startDate, endDate, frequency }` carries the actually paired dates and an unrounded coefficient in [−1, 1]; rounding belongs to presentation. The coefficient itself is `pearsonCorrelation`, which the Correlation lessons also call on their short invented series, so a lesson number and a Lab number follow one formula. `correlation-loader.ts` loads both histories through `MarketDataService` on the server and keeps their provenance, so the coefficient is never computed from client-sent closes.
 
 ## Comparing two instruments
 

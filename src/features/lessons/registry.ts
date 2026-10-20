@@ -12,8 +12,18 @@ import { standardDeviationLesson } from "./volatility/standard-deviation";
 import { annualisingVolatilityLesson } from "./volatility/annualising-volatility";
 import { maxDrawdownLesson } from "./volatility/max-drawdown";
 import { volatilityCheckpointLesson } from "./volatility/volatility-checkpoint";
+import { returnsCheckpointLesson } from "./returns/returns-checkpoint";
+import { whatIsCorrelationLesson } from "./correlation/what-is-correlation";
+import { notCausationLesson } from "./correlation/not-causation";
+import { correlationInCrisesLesson } from "./correlation/correlation-in-crises";
+import { correlationRealDataLesson } from "./correlation/correlation-real-data";
+import { concentrationLesson } from "./diversification/concentration";
+import { sectorsAndCountriesLesson } from "./diversification/sectors-and-countries";
+import { etfLookThroughLesson } from "./diversification/etf-look-through";
+import { correlationAndRiskLesson } from "./diversification/correlation-and-risk";
+import { diversificationScenarioLesson } from "./diversification/diversification-scenario";
 
-export const authoredLessons = [...foundationsContent, whatIsAReturnLesson, simpleReturnsLesson, compoundingAndCumulativeReturnsLesson, comparingInvestmentsLesson, logReturnsLesson, whatIsVolatilityLesson, standardDeviationLesson, annualisingVolatilityLesson, maxDrawdownLesson, volatilityCheckpointLesson] as const;
+export const authoredLessons = [...foundationsContent, whatIsAReturnLesson, simpleReturnsLesson, compoundingAndCumulativeReturnsLesson, comparingInvestmentsLesson, logReturnsLesson, returnsCheckpointLesson, whatIsVolatilityLesson, standardDeviationLesson, annualisingVolatilityLesson, maxDrawdownLesson, volatilityCheckpointLesson, whatIsCorrelationLesson, notCausationLesson, correlationInCrisesLesson, correlationRealDataLesson, concentrationLesson, sectorsAndCountriesLesson, etfLookThroughLesson, correlationAndRiskLesson, diversificationScenarioLesson] as const;
 
 export function getAuthoredLesson(moduleSlug: string, lessonSlug: string) {
   return authoredLessons.find((lesson) => lesson.moduleSlug === moduleSlug && lesson.slug === lessonSlug);

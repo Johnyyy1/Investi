@@ -19,7 +19,7 @@ export const logReturnsLesson: AuthoredLesson = {
     { id: "comparison", label: "Ověř si porozumění" },
     { id: "summary", label: "Shrň si to" },
   ],
-  navigation: { previous: { href: "/learn/returns/comparing-investments", label: returnsLessons[3].title } },
+  navigation: { previous: { href: "/learn/returns/comparing-investments", label: returnsLessons[3].title }, next: { href: `/learn/returns/${returnsLessons[5].slug}`, label: returnsLessons[5].title } },
   blocks: [
     {
       id: "prediction", type: "multipleChoiceQuestion",

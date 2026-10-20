@@ -75,13 +75,13 @@ try {
   await next("Shrň si to");
   await button("Dokončit lekci").click();
   await heading("Lekce dokončena");
-  // Completing Foundations fixtures may unlock Lab; module path still publishes the next lesson.
+  // Completing Foundations fixtures may unlock Lab; module path still publishes the next lesson. The fixture already completed the checkpoint.
   await page.getByRole("link", { name: "Zobrazit modul", exact: true }).click();
   await heading("Výnos a složené zhodnocení");
-  assert.equal(await page.getByTestId("module-progress").textContent(), "4 / 5 lekcí dokončeno");
+  assert.equal(await page.getByTestId("module-progress").textContent(), "5 / 6 lekcí dokončeno");
   const items = page.getByRole("listitem");
   assert.match((await items.allTextContents()).join("|"), /Cenový a celkový výnos.*\|.*Logaritmické výnosy.*\|.*Kontrola výnosů/s);
-  assert.equal(await items.filter({ hasText: "Kontrola výnosů" }).getByRole("button").count(), 0);
+  assert.equal(await items.filter({ hasText: "Kontrola výnosů" }).getByRole("button", { name: "Zopakovat lekci" }).count(), 1, "the checkpoint is published and reviewable");
   const before = await snapshot();
   await items.filter({ hasText: "Logaritmické výnosy" }).getByRole("button", { name: "Začít lekci" }).click();
   await heading(titles[0]);
@@ -148,7 +148,7 @@ try {
   await button("Dokončit lekci").click();
   await heading("Lekce dokončena");
   assert.equal(await page.getByLabel("Získáno 60 XP", { exact: true }).count(), 1);
-  assert.match(await page.getByTestId("completion-progress").textContent(), /: 5/);
+  assert.match(await page.getByTestId("completion-progress").textContent(), /: 6 /);
   const completed = await snapshot();
   const receipt = completed.awards.find((award) => award.lesson_id === "returns-log-returns");
   assert.equal(receipt.xp, 60);
@@ -161,7 +161,7 @@ try {
   await page.waitForURL("**/lab");
   await page.goto(`${baseURL}/learn/returns`);
   await heading("Výnos a složené zhodnocení");
-  assert.equal(await page.getByTestId("module-progress").textContent(), "5 / 5 lekcí dokončeno");
+  assert.equal(await page.getByTestId("module-progress").textContent(), "6 / 6 lekcí dokončeno");
   await items.filter({ hasText: "Logaritmické výnosy" }).getByRole("button", { name: "Zopakovat lekci" }).click();
   for (let step = 0; step < titles.length; step++) {
     await heading(titles[step]);
@@ -181,12 +181,12 @@ try {
   await heading("Opakování dokončeno");
   assert.equal(await page.getByLabel("Získáno 60 XP", { exact: true }).count(), 0);
   assert.deepEqual(await snapshot(), completed, "full replay preserves all receipts and persisted progress");
-  await page.goto(`${baseURL}/learn/returns/returns-checkpoint`);
+  await page.goto(`${baseURL}/learn/investing-foundations/foundations-checkpoint`);
   // Next streams notFound with HTTP 200 after headers have been sent.
   await heading("Tahle lekce zatím není k dispozici");
   assert.ok(await page.locator('meta[name="robots"][content="noindex"]').count() >= 1);
   assert.equal(await page.locator("#step-title").count(), 0);
-  assert.equal((await sql`select * from lesson_progress where user_id = ${userId} and lesson_id = 'returns-checkpoint'`).length, 0);
+  assert.equal((await sql`select * from lesson_progress where user_id = ${userId} and lesson_id = 'foundations-checkpoint'`).length, 0);
   const actionable = errors.filter((message) => !message.startsWith("You have Reduced Motion enabled on your device.") && !message.includes("404 (Not Found)"));
   assert.deepEqual(actionable, []);
   console.log(`PASS: L4→L5 path, all eight steps at six widths, formulas, keyboard/retry/focus, resume/Previous, 200% text, reduced motion, 60 XP once, full review preservation, Lab navigation and planned not-found. Screenshots: ${screenshotDir}`);

@@ -23,6 +23,8 @@ export type MetricGlossaryEntry = {
   lesson: { moduleSlug: string; lessonSlug: string } | null;
   /** Lab page where a learner can try the metric when a lesson has no concrete instrument to open. */
   labHref: string;
+  /** A metric of two instruments: it lives on the comparison, never on one instrument's detail. */
+  pairwise?: true;
 };
 
 export const metricGlossary = {
@@ -96,8 +98,9 @@ export const metricGlossary = {
     summary: "Jak moc se výnosy dvou instrumentů pohybovaly spolu: od −1 přes 0 do +1.",
     formula: "r = \\frac{\\operatorname{cov}(r_A, r_B)}{\\sigma_A \\, \\sigma_B}",
     conventions: { instrument: "Pearsonova korelace denních cenových výnosů za dny, kdy se obchodovaly oba instrumenty. +1 znamená, že se výnosy pohybovaly vždy spolu, −1 vždy opačně a 0, že mezi nimi nebyl lineární vztah. Každý instrument zůstává ve své měně, bez přepočtu do korun. Korelace se v čase mění a neříká nic o tom, jak velké pohyby byly." },
-    lesson: null,
+    lesson: { moduleSlug: "correlation", lessonSlug: "what-is-correlation" },
     labHref: "/lab/compare",
+    pairwise: true,
   },
 } as const satisfies Record<MetricId, MetricGlossaryEntry>;
 
@@ -133,6 +136,6 @@ export function metricAnchor(id: MetricId) {
  */
 export function metricLabLink(id: MetricId, instrumentHref: string | null = null): { href: string; label: string } {
   const entry = metricEntry(id);
-  const href = instrumentHref && entry.conventions.instrument ? `${instrumentHref}#${metricAnchor(id)}` : entry.labHref;
+  const href = instrumentHref && entry.conventions.instrument && !entry.pairwise ? `${instrumentHref}#${metricAnchor(id)}` : entry.labHref;
   return { href, label: `Vyzkoušej v Labu: ${entry.name}` };
 }

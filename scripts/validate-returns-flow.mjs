@@ -53,7 +53,7 @@ try {
   assert.equal(await page.getByRole("list", { name: "Lekce kapitoly Výnosy", exact: true }).locator(`a[href="${route}"]`).count(), 1, "Learn lists the Returns lessons");
   await page.goto(`${baseURL}/learn/returns`);
   await heading("Výnos a složené zhodnocení");
-  assert.equal(await page.getByTestId("module-progress").textContent(), "0 / 5 lekcí dokončeno");
+  assert.equal(await page.getByTestId("module-progress").textContent(), "0 / 6 lekcí dokončeno");
   const compounding = page.getByRole("listitem").filter({ hasText: "Složené a kumulativní výnosy" });
   for (const width of [320, 375, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -61,7 +61,7 @@ try {
     const mobileNav = page.getByRole("navigation", { name: "Mobilní navigace" });
     assert.equal(await mobileNav.isVisible(), width < 1024);
   }
-  assert.equal(await page.getByRole("listitem").filter({ hasText: "Kontrola výnosů" }).getByRole("button").count(), 0);
+  assert.equal(await page.getByRole("listitem").filter({ hasText: "Kontrola výnosů" }).getByRole("button", { name: "Začít lekci" }).count(), 1, "the checkpoint is published");
   await compounding.getByRole("button", { name: "Začít lekci" }).click();
   await heading("Od jednoho období k posloupnosti");
   assert.equal(await page.getByRole("navigation", { name: /^(Hlavní|Mobilní) navigace$/ }).count(), 0, "Lesson mode has no app navigation");
@@ -217,15 +217,15 @@ try {
   assert.equal(completed.status, "completed");
   await page.getByRole("link", { name: "Zobrazit modul", exact: true }).click();
   await heading("Výnos a složené zhodnocení");
-  assert.equal(await page.getByTestId("module-progress").textContent(), "1 / 5 lekcí dokončeno");
+  assert.equal(await page.getByTestId("module-progress").textContent(), "1 / 6 lekcí dokončeno");
   await page.reload();
   await heading("Výnos a složené zhodnocení");
-  assert.equal(await page.getByTestId("module-progress").textContent(), "1 / 5 lekcí dokončeno");
+  assert.equal(await page.getByTestId("module-progress").textContent(), "1 / 6 lekcí dokončeno");
   await signOut();
   await signIn();
   await page.goto(`${baseURL}/learn/returns`);
   await heading("Výnos a složené zhodnocení");
-  assert.equal(await page.getByTestId("module-progress").textContent(), "1 / 5 lekcí dokončeno");
+  assert.equal(await page.getByTestId("module-progress").textContent(), "1 / 6 lekcí dokončeno");
   await compounding.getByRole("button", { name: "Zopakovat lekci" }).click();
   await heading("Od jednoho období k posloupnosti");
   await page.emulateMedia({ reducedMotion: "reduce" });

@@ -9,16 +9,16 @@ import { logReturnsLesson as lesson } from "./log-returns";
 import { returnsLessons } from "./manifest";
 
 describe("log returns lesson", () => {
-  it("publishes only L5 after L4 with eight steps and an assessed opening prediction", () => {
+  it("publishes L5 after L4 with eight steps and an assessed opening prediction", () => {
     const steps = getGuidedSteps(lesson);
     expect(steps).toHaveLength(8);
     expect(steps[0].blocks).toHaveLength(1);
     expect(steps[0].blocks[0]).toMatchObject({ id: "prediction", type: "multipleChoiceQuestion" });
-    expect(returnsLessons.map((item) => item.status)).toEqual(["available", "available", "available", "available", "available", "planned"]);
+    expect(returnsLessons.map((item) => item.status)).toEqual(["available", "available", "available", "available", "available", "available"]);
     expect(returnsLessons.slice(3).map((item) => item.id)).toEqual(["returns-comparing", "returns-log-returns", "returns-checkpoint"]);
     expect(comparingInvestmentsLesson.navigation?.next?.href).toBe(`/learn/returns/${lesson.slug}`);
     expect(lesson.navigation?.previous?.href).toBe("/learn/returns/comparing-investments");
-    expect(lesson.navigation?.next).toBeUndefined();
+    expect(lesson.navigation?.next?.href).toBe("/learn/returns/returns-checkpoint");
   });
 
   it.each([

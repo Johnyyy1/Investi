@@ -29,6 +29,8 @@ export const reasonLabels: Record<ReasonCode, string> = {
   RETURNS_FOR_PORTFOLIO_PATH: "Výnosy jsou dalším krokem k pochopení výsledků vlastního portfolia.",
   RETURNS_FOR_QUANT_PATH: "Výnosy tvoří základ pro pozdější práci s daty a analýzu rizika.",
   VOLATILITY_AFTER_RETURNS: "Výnosy máš hotové. Dalším krokem je měřit, jak moc kolísají.",
+  CORRELATION_AFTER_VOLATILITY: "Kolísání jedné investice umíš změřit. Teď zjistíš, jak se dvě investice pohybují spolu.",
+  DIVERSIFICATION_AFTER_CORRELATION: "Korelaci máš za sebou. Teď ji použiješ k rozložení rizika v portfoliu.",
   CURRICULUM_COMPLETE: "Všechny dostupné lekce máš hotové. Kdykoli se k nim můžeš vrátit.",
   NO_AVAILABLE_LESSON: "Doporučení teď není dostupné. Prohlédni si celé učení nebo stránku načti znovu.",
 };

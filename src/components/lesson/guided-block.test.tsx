@@ -20,6 +20,14 @@ describe("lab bridge", () => {
     expect(renderToStaticMarkup(<GuidedBlock block={bridge} riskHistory={unavailable} />)).toContain("href=\"/lab/compare\"");
   });
 
+  it("sends a two-instrument metric to the comparison, never to the lesson's own instrument", () => {
+    const riskHistory = [{ status: "ok", snapshot: { ...aapl, labHref: "/lab/instruments/FMP%3ANASDAQ%3AAAPL" } }] as unknown as RiskHistoryEntry[];
+    const correlation: LessonBlock = { ...bridge, metric: "correlation" };
+    const html = renderToStaticMarkup(<GuidedBlock block={correlation} riskHistory={riskHistory} />);
+    expect(html).toContain("href=\"/lab/compare\"");
+    expect(html).toContain("Vyzkoušej v Labu: Korelace výnosů");
+  });
+
   it("stays plain text without a metric", () => {
     const plain: LessonBlock = { ...bridge, metric: undefined };
     expect(renderToStaticMarkup(<GuidedBlock block={plain} />)).not.toContain("<a ");

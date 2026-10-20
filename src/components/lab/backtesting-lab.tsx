@@ -1,6 +1,7 @@
 "use client";
 
 import { AppLink as Link } from "@/components/shell/app-link";
+import { lessonLink } from "@/features/learning/catalog";
 import { metricAnchor, metricEntry, metricExplanation, metricLessonLink, type MetricId } from "@/features/learning/metric-glossary";
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
@@ -30,6 +31,7 @@ function Badge({ children }: { children: React.ReactNode }) {
   return <span className={styles.badge}>{children}</span>;
 }
 
+const diversificationLesson = lessonLink("diversification-correlation-risk");
 const isHistory = (result: BacktestResult): result is HistoryBacktestResult & Pick<BacktestResult, "prediction"> => result.source.kind === "history";
 const sourceOf = (result: BacktestResult): BacktestSourceKind => isHistory(result) ? "history" : "sample";
 const money = (result: BacktestResult, value: number) => formatBacktestMoney(value, result.currency);
@@ -359,7 +361,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
       </form>
       <aside className={styles.rail} aria-label="O pokusu">
         <DataCard key={source} copy={copy} />
-        <div className={styles.learningLink}><BookOpen size={16} aria-hidden="true" /><h2>Proč záleží na rozložení?</h2><p>Lekce vysvětlí váhy portfolia a rozkládání rizika.</p><Link href="/learn/foundations/your-first-portfolio" className={styles.textLink}>Portfolio, váhy a diverzifikace <ArrowRight size={16} aria-hidden="true" /></Link></div>
+        <div className={styles.learningLink}><BookOpen size={16} aria-hidden="true" /><h2>Proč záleží na rozložení?</h2><p>Lekce vysvětlí, jak korelace mezi investicemi mění kolísání portfolia.</p>{diversificationLesson ? <Link href={diversificationLesson.href} className={styles.textLink}>{diversificationLesson.label} <ArrowRight size={16} aria-hidden="true" /></Link> : null}</div>
       </aside>
     </div>
     {result && shown && <section className={styles.results} aria-label="Výsledek backtestu" aria-busy={running || comparing}>

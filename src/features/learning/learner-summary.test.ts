@@ -25,7 +25,7 @@ describe("real learner summary", () => {
   it("continues a module after completion even if the recommendation changed", () => {
     const summary = getLearnerSummary([row("returns-what-is-a-return", "completed")]);
     expect(summary.next.id).toBe("returns-simple-returns");
-    expect(summary.percentage).toBe(6);
+    expect(summary.percentage).toBe(4);
     expect(getLearnerSummary([row("foundations-why-invest", "completed")], "returns").next.id).toBe("foundations-stocks");
   });
   it("moves to Returns when all available Foundations lessons are completed", () => {
@@ -38,12 +38,12 @@ describe("real learner summary", () => {
     expect(summary.next.id).toBe("returns-log-returns");
     expect(getLearnerSummary([...prior, row("returns-log-returns", "completed")]).allComplete).toBe(true);
   });
-  it("counts only implemented learning and offers review when all seventeen are complete", () => {
+  it("counts only implemented learning and offers review when all twenty-seven are complete", () => {
     const summary = getLearnerSummary(curriculumLessons.map((lesson) => row(lesson.id, "completed")));
     expect(summary.percentage).toBe(100);
     expect(summary.allComplete).toBe(true);
-    expect(summary.completed).toHaveLength(17);
-    expect(summary.recent).toHaveLength(17);
+    expect(summary.completed).toHaveLength(27);
+    expect(summary.recent).toHaveLength(27);
   });
   it("ignores unknown/planned progress and never unlocks upcoming lessons", () => {
     const states = [row("foundations-checkpoint", "completed"), row("unknown", "in_progress")];
