@@ -41,6 +41,14 @@ describe("deterministic recommendations", () => {
     expect(recommendLearning({ progress })).toMatchObject({ nextLessonId: "returns-what-is-a-return" });
     expect(recommendLearning({ progress: [...foundationsDone, ...returnsDone, { lessonId: "volatility-what-is-volatility", status: "completed" }] }).sessionLessonIds.every((id) => id.startsWith("volatility-"))).toBe(true);
   });
+  it("follows the curriculum through Correlation and Diversification", () => {
+    const doneUpTo = (...modules: string[]) => availableLessons.filter((lesson) => modules.includes(lesson.moduleSlug)).map((lesson) => ({ lessonId: lesson.id, status: "completed" }));
+    expect(recommendLearning({ progress: doneUpTo("investing-foundations", "returns") })).toMatchObject({ nextLessonId: "volatility-what-is-volatility" });
+    expect(recommendLearning({ progress: doneUpTo("investing-foundations", "returns").filter((state) => state.lessonId !== "returns-checkpoint") })).toMatchObject({ nextLessonId: "returns-checkpoint" });
+    expect(recommendLearning({ progress: doneUpTo("investing-foundations", "returns", "volatility") })).toMatchObject({ nextLessonId: "correlation-what-is-correlation", reasonCode: "CORRELATION_AFTER_VOLATILITY" });
+    expect(recommendLearning({ progress: doneUpTo("investing-foundations", "returns", "volatility", "correlation") })).toMatchObject({ nextLessonId: "diversification-concentration", reasonCode: "DIVERSIFICATION_AFTER_CORRELATION" });
+    expect(recommendLearning({ progress: doneUpTo("investing-foundations", "returns", "volatility", "correlation", "diversification") })).toMatchObject({ nextLessonId: null, reasonCode: "CURRICULUM_COMPLETE" });
+  });
   it("skips completed recommendations and never returns planned content", () => {
     expect(recommendLearning({ progress: [...foundationsDone, { lessonId: "returns-what-is-a-return", status: "completed" }] }).nextLessonId).toBe("returns-simple-returns");
     const complete = curriculumLessons.map((lesson) => ({ lessonId: lesson.id, status: "completed" }));

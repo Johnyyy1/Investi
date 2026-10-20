@@ -25,7 +25,7 @@ try {
   await markLessonInProgress(userId, lessonId);
   await assert.rejects(() => completeLesson(userId, lessonId));
   await assert.rejects(() => saveLessonProgress(userId, { lessonId, status: "in_progress", lastPosition: 7 }));
-  await assert.rejects(() => saveLessonProgress(userId, { lessonId: "returns-checkpoint", status: "in_progress", lastPosition: 0 }));
+  await assert.rejects(() => saveLessonProgress(userId, { lessonId: "foundations-checkpoint", status: "in_progress", lastPosition: 0 }));
   const steps = lessonSteps(lessonId);
   for (let step = 0; step < steps.length - 1; step++) {
     const question = steps[step].blocks.find(isQuestion);

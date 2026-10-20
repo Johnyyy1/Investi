@@ -29,9 +29,10 @@ describe("metric glossary", () => {
     expect(metricLessonLink("max-drawdown")?.href).toBe("/learn/volatility/max-drawdown");
   });
 
-  it("leaves a metric unlinked rather than pointing at a planned module", () => {
-    expect(metricGlossary.correlation.lesson).toBeNull();
-    expect(metricLessonLink("correlation")).toBeNull();
+  it("links correlation to its lesson and leaves a metric without one unlinked", () => {
+    expect(metricLessonLink("correlation")).toEqual({ href: "/learn/correlation/what-is-correlation", label: "Lekce: Co je korelace" });
+    expect(metricGlossary["sharpe-ratio"].lesson).toBeNull();
+    expect(metricLessonLink("sharpe-ratio")).toBeNull();
   });
 
   it("renders every formula with KaTeX in strict mode, breakable on narrow screens", () => {
@@ -51,6 +52,8 @@ describe("metric glossary", () => {
     expect(metricLabLink("max-drawdown", "/lab/instruments/US-XNAS%3AAAPL")).toEqual({ href: "/lab/instruments/US-XNAS%3AAAPL#metric-max-drawdown", label: "Vyzkoušej v Labu: Největší propad" });
     expect(metricLabLink("max-drawdown").href).toBe("/lab/compare");
     expect(metricLabLink("sharpe-ratio", "/lab/instruments/X").href).toBe("/lab/backtesting");
+    // Correlation needs two instruments, so a lesson's own instrument never replaces the comparison.
+    expect(metricLabLink("correlation", "/lab/instruments/X").href).toBe("/lab/compare");
   });
 
   it("only sends lessons to Lab routes that exist", () => {
@@ -59,6 +62,6 @@ describe("metric glossary", () => {
 
   it("links the lessons that teach a metric back to it in the Lab", () => {
     const bridged = authoredLessons.flatMap((lesson) => lesson.blocks.flatMap((block) => block.type === "labBridge" && block.metric ? [`${lesson.moduleSlug}/${lesson.slug} → ${block.metric}`] : []));
-    expect(bridged).toEqual(expect.arrayContaining(["volatility/what-is-volatility → volatility", "volatility/max-drawdown → max-drawdown", "returns/comparing-investments → simple-return"]));
+    expect(bridged).toEqual(expect.arrayContaining(["volatility/what-is-volatility → volatility", "volatility/max-drawdown → max-drawdown", "returns/comparing-investments → simple-return", "correlation/what-is-correlation → correlation", "diversification/correlation-and-portfolio-risk → correlation"]));
   });
 });

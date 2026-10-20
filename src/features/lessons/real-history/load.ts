@@ -9,7 +9,8 @@ import { freezeRiskHistory, riskHistoryPlans, riskHistoryRequest, type RiskHisto
 import { freezeLessonHistory, lessonHistoryPlans, lessonHistoryRequest, unavailableMessage, type LessonHistoryEntry } from "./snapshot";
 
 export const historyFigures = ["historical-period-returns", "historical-cumulative-returns"] as const;
-export const riskHistoryFigures = ["historical-volatility", "historical-drawdown"] as const;
+/** The Volatility exercises and the Correlation exercise share one fixed year of two instruments. */
+export const riskHistoryFigures = ["historical-volatility", "historical-drawdown", "historical-correlation"] as const;
 
 function usesFigure(lesson: AuthoredLesson, figures: readonly string[]) {
   return lesson.blocks.some((block) => block.type === "interactiveFigure" && figures.includes(block.figure));

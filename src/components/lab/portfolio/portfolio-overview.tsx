@@ -2,6 +2,7 @@
 
 import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
+import { lessonLink } from "@/features/learning/catalog";
 import { metricLessonLink } from "@/features/learning/metric-glossary";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -27,6 +28,7 @@ import { cn } from "@/lib/utils";
 
 export const PORTFOLIO_LESSON_HREF = "/learn/investing-foundations/your-first-portfolio";
 const volatilityLesson = metricLessonLink("volatility");
+const exposureLesson = lessonLink("diversification-sectors-countries");
 const TIME_ZONE = "Europe/Prague";
 
 function dateLabel(value: string, withYear = true) {
@@ -410,7 +412,7 @@ function ExposureSplit({ dimension, exposure, holdingsCount }: { dimension: Excl
       {facts.headline ? <p className={styles.exposureRule} data-testid={`exposure-${dimension}-largest`}>{facts.headline}</p> : null}
       <p>{facts.explanation}</p>
       {facts.notes.map((note) => <p key={note} className={styles.exposureNote}><Info size={15} aria-hidden="true" /><span>{note}</span></p>)}
-      <Link className={styles.textLink} href={PORTFOLIO_LESSON_HREF}>Lekce: Portfolio, váhy a diverzifikace<ArrowRight size={16} aria-hidden="true" /></Link>
+      {exposureLesson ? <Link className={styles.textLink} href={exposureLesson.href}>{exposureLesson.label}<ArrowRight size={16} aria-hidden="true" /></Link> : null}
     </div>
   </>;
 }

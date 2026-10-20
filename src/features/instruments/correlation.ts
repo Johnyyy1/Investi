@@ -102,24 +102,33 @@ export function returnCorrelation(
     frequency,
   };
   if (returns.length < MIN_CORRELATION_OBSERVATIONS) return { status: "insufficient-data", coefficient: null, ...window };
+  const coefficient = pearsonCorrelation(returns.map((value) => value.first), returns.map((value) => value.second));
+  if (coefficient === null) return { status: "no-variation", coefficient: null, ...window };
+  return { status: "ok", coefficient, observationCount: returns.length, startDate: returns[0].startDate, endDate: returns[returns.length - 1].endDate, frequency };
+}
 
-  const meanFirst = returns.reduce((sum, value) => sum + value.first, 0) / returns.length;
-  const meanSecond = returns.reduce((sum, value) => sum + value.second, 0) / returns.length;
+/**
+ * Pearson coefficient of two equally long, already paired series; null when either has no
+ * variation. It applies no minimum length: returnCorrelation adds that for market data, while
+ * lessons use it on short invented series so their numbers follow the Lab's arithmetic.
+ */
+export function pearsonCorrelation(first: readonly number[], second: readonly number[]): number | null {
+  if (first.length !== second.length) throw new RangeError("Both series need the same number of values.");
+  if (first.length < 2) return null;
+  const meanFirst = first.reduce((sum, value) => sum + value, 0) / first.length;
+  const meanSecond = second.reduce((sum, value) => sum + value, 0) / second.length;
   let covariance = 0;
   let varianceFirst = 0;
   let varianceSecond = 0;
-  for (const value of returns) {
-    const deviationFirst = value.first - meanFirst;
-    const deviationSecond = value.second - meanSecond;
+  for (const [index, value] of first.entries()) {
+    const deviationFirst = value - meanFirst;
+    const deviationSecond = second[index] - meanSecond;
     covariance += deviationFirst * deviationSecond;
     varianceFirst += deviationFirst ** 2;
     varianceSecond += deviationSecond ** 2;
   }
-  const degreesOfFreedom = returns.length - 1;
-  if (Math.sqrt(varianceFirst / degreesOfFreedom) <= MIN_RETURN_DEVIATION || Math.sqrt(varianceSecond / degreesOfFreedom) <= MIN_RETURN_DEVIATION) {
-    return { status: "no-variation", coefficient: null, ...window };
-  }
+  const degreesOfFreedom = first.length - 1;
+  if (Math.sqrt(varianceFirst / degreesOfFreedom) <= MIN_RETURN_DEVIATION || Math.sqrt(varianceSecond / degreesOfFreedom) <= MIN_RETURN_DEVIATION) return null;
   // The n−1 factors cancel; the clamp only removes floating-point overshoot such as 1.0000000000000002.
-  const coefficient = Math.min(1, Math.max(-1, covariance / Math.sqrt(varianceFirst * varianceSecond)));
-  return { status: "ok", coefficient, observationCount: returns.length, startDate: returns[0].startDate, endDate: returns[returns.length - 1].endDate, frequency };
+  return Math.min(1, Math.max(-1, covariance / Math.sqrt(varianceFirst * varianceSecond)));
 }

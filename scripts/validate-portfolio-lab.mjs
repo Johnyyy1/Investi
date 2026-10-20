@@ -435,6 +435,7 @@ try {
   assert.equal(sectorRows.some(({ label }) => label === "Neznámé"), false, "the sample fund's sectors cover 100 %");
   assert.match(clean(await legend.getByTestId("exposure-sector-largest").textContent()), /^Největší sektor: Technologie \d+,\d %$/, "an explainable rule, not a score");
   assert.equal(await legend.getByText(/\d+\s?\/\s?100|skóre/).count(), 0, "no composite score");
+  assert.equal(await legend.getByRole("link", { name: "Lekce: Sektory a země", exact: true }).getAttribute("href"), "/learn/diversification/sectors-and-countries", "the split leads to the diversification lesson");
   await splitSwitch.getByRole("button", { name: "Země", exact: true }).click();
   const countryRows = await exposureRows("country");
   assert.equal(countryRows[0].label, "Spojené státy", "AAPL's US and VWCE's United States meet in one country");

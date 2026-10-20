@@ -2,6 +2,8 @@ import type { AuthoredLesson } from "../types";
 import { compoundingSteps } from "./compounding-flow";
 import { foundationsSteps } from "../foundations/content";
 import { volatilitySteps } from "../volatility/flow";
+import { correlationSteps } from "../correlation/flow";
+import { diversificationSteps } from "../diversification/flow";
 import { availableLessons } from "../../learning/catalog";
 import { returnsLessons } from "./manifest";
 
@@ -50,14 +52,26 @@ const logSteps: Step[] = [
   { title: "Spoj dvě období správně", kind: "mastery", blocks: ["comparison", "comparison-check"] },
   { title: "Shrň si to", blocks: ["summary", "takeaway", "checkpoint"] },
 ];
+const checkpointSteps: Step[] = [
+  { title: "Dvě akcie, jedna otázka", blocks: ["intro", "opening-check"] },
+  { title: "Výnos každého roku", blocks: ["scenario", "period-check"] },
+  { title: "Celé období", blocks: ["cumulative-check"] },
+  { title: "Cesta zpět na vrchol", blocks: ["recovery-check"] },
+  { title: "Cenový a celkový výnos", blocks: ["total-check"] },
+  { title: "Sečti logaritmy", kind: "mastery", blocks: ["log-check"] },
+  { title: "Shrň si to", blocks: ["lab-bridge", "summary", "takeaway", "checkpoint"] },
+];
 export function getStepDefinitions(lessonId: string): readonly Step[] {
   if (lessonId === returnsLessons[0].id) return introductionSteps;
   if (lessonId === returnsLessons[1].id) return simpleSteps;
   if (lessonId === returnsLessons[2].id) return compoundingSteps;
   if (lessonId === returnsLessons[3].id) return comparingSteps;
   if (lessonId === returnsLessons[4].id) return logSteps;
+  if (lessonId === returnsLessons[5].id) return checkpointSteps;
   if (foundationsSteps[lessonId]) return foundationsSteps[lessonId];
   if (volatilitySteps[lessonId]) return volatilitySteps[lessonId];
+  if (correlationSteps[lessonId]) return correlationSteps[lessonId];
+  if (diversificationSteps[lessonId]) return diversificationSteps[lessonId];
   throw new Error("This lesson is not available.");
 }
 /** Presentation only: the authored lessons remain the source of every concept and exercise. */

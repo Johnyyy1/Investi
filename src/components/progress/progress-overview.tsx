@@ -164,9 +164,9 @@ export function ProgressOverview({ summary, unlock, portfolio, capital }: { summ
     ? { pose: "07-small-joy" as const, line: "Celá kapitola je uložená. Tohle už ti zůstane." }
     : { pose: "18-bookshelf" as const, line: complete ? "Police je plná všeho, co zatím máme. Další knihy chystáme." : "Každá hotová lekce je kniha v polici. Kdykoli si ji můžeš otevřít znovu." };
   const title = milestone ? `${milestone.chapter.title} máš za sebou.` : complete ? "Všechno, co zatím je, máš za sebou." : empty ? "Tvoje police je zatím prázdná." : firstName ? `Co už umíš, ${firstName}.` : "Co už umíš.";
-  const subtitle = milestone ? undefined : complete ? `Všech ${summary.lessons.length} lekcí je hotových. Další kapitolu připravujeme.` : empty ? current ? "Jednu lekci máš rozdělanou. Uložený krok na tebe počká." : "První kniha přibude s první hotovou lekcí. Žádný spěch." : doneSummary(summary.completed.length, model.activeCount);
+  const subtitle = milestone ? undefined : complete ? `Všech ${summary.lessons.length} lekcí je hotových.${model.planned ? " Další kapitolu připravujeme." : ""}` : empty ? current ? "Jednu lekci máš rozdělanou. Uložený krok na tebe počká." : "První kniha přibude s první hotovou lekcí. Žádný spěch." : doneSummary(summary.completed.length, model.activeCount);
   const footnote = milestone || empty ? undefined : complete
-    ? { icon: CircleCheck, text: `Všechny dostupné lekce máš hotové. Kapitola ${model.planned?.title ?? "další"} se připravuje.`, label: "Prozkoumat Lab" }
+    ? { icon: CircleCheck, text: model.planned ? `Všechny dostupné lekce máš hotové. Kapitola ${model.planned.title} se připravuje.` : "Všechny dostupné lekce máš hotové. Teď si je vyzkoušej v Labu.", label: "Prozkoumat Lab" }
     : current ? { icon: CircleDot, text: `Myšlenky z lekce ${summary.next.title} přibudou, až ji dokončíš. Teď jsi na kroku ${step}.`, label: `Pokračovat od kroku ${summary.position + 1}` }
     : { icon: Circle, text: `Další na řadě: ${summary.next.title} · ≈ ${summary.next.estimatedMinutes} min.`, label: "Začít lekci" };
   const FootnoteIcon = footnote?.icon;
