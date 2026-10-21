@@ -42,8 +42,8 @@ export function ArtifactData() {
       const result = await deleteArtifact({ id: artifact.id });
       if (result.ok) {
         setConfirming(undefined);
-        setArtifacts((current) => current?.filter((item) => item.kind !== artifact.kind));
-        setMessage(`${artifactLabels[artifact.kind]}: všechny verze jsou smazané.`);
+        setArtifacts((current) => current?.filter((item) => item.id !== artifact.id));
+        setMessage(`${(artifact.title ?? artifactLabels[artifact.kind])}: všechny verze jsou smazané.`);
         heading.current?.focus();
       } else setError(result.message);
     } catch { setError("Výstup se nepodařilo smazat. Zkus to znovu."); }
@@ -56,10 +56,10 @@ export function ArtifactData() {
     {artifacts?.length === 0 && <p className={styles.hint}>Zatím tu nemáš žádné uložené výstupy.</p>}
     {artifacts && artifacts.length > 0 && <ul className="divide-y divide-divider">
       {artifacts.map((artifact) => <li key={artifact.id} className="py-4">
-        <div className={styles.contentRow}><div className="min-w-0"><h3>{artifactLabels[artifact.kind]}</h3><p className={styles.hint}>Verze {artifact.version} · {formatDate(new Date(artifact.createdAt))}</p></div>
-          <Button variant="dangerQuiet" size="compact" disabled={Boolean(pending)} onClick={(event) => { deleteTrigger.current = event.currentTarget; setConfirming(artifact.id); setError(undefined); setMessage(undefined); }} aria-label={`Smazat: ${artifactLabels[artifact.kind]}`}>Smazat…</Button></div>
+        <div className={styles.contentRow}><div className="min-w-0"><h3>{(artifact.title ?? artifactLabels[artifact.kind])}</h3><p className={styles.hint}>Verze {artifact.version} · {formatDate(new Date(artifact.createdAt))}</p></div>
+          <Button variant="dangerQuiet" size="compact" disabled={Boolean(pending)} onClick={(event) => { deleteTrigger.current = event.currentTarget; setConfirming(artifact.id); setError(undefined); setMessage(undefined); }} aria-label={`Smazat: ${(artifact.title ?? artifactLabels[artifact.kind])}`}>Smazat…</Button></div>
         {confirming === artifact.id && <div className="mt-3 space-y-3">
-          <p>Trvale smazat výstup „{artifactLabels[artifact.kind]}“ a všechny předchozí verze? Výstup bude potřeba pro navazující cvičení vytvořit znovu.</p>
+          <p>Trvale smazat výstup „{(artifact.title ?? artifactLabels[artifact.kind])}“ a všechny předchozí verze? Výstup bude potřeba pro navazující cvičení vytvořit znovu.</p>
           <div className={styles.actions}><Button variant="secondary" size="compact" disabled={Boolean(pending)} onClick={() => { setConfirming(undefined); deleteTrigger.current?.focus(); }}>Ponechat výstup</Button><Button variant="danger" size="compact" loading={pending === artifact.id} onClick={() => void remove(artifact)}>Smazat všechny verze</Button></div>
         </div>}
       </li>)}

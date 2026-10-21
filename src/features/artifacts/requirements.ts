@@ -8,9 +8,9 @@ export class ArtifactRequiredError extends Error {
 export async function requireArtifacts(
   requirements: readonly (ArtifactRequirement | undefined)[],
   lessonId: string,
-  hasArtifact: (kind: ArtifactKind, sourceLessonId?: string) => Promise<boolean>,
+  hasArtifact: (kind: ArtifactKind, sourceLessonId?: string, blockId?: string) => Promise<boolean>,
 ) {
   for (const requirement of requirements) {
-    if (requirement && !await hasArtifact(requirement.kind, requirement.source === "any_lesson" ? undefined : lessonId)) throw new ArtifactRequiredError();
+    if (requirement && !await hasArtifact(requirement.kind, requirement.source === "any_lesson" ? undefined : lessonId, requirement.blockId)) throw new ArtifactRequiredError();
   }
 }

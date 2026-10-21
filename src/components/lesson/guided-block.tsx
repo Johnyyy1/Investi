@@ -1,3 +1,5 @@
+import { DecisionTree } from "./decision-tree";
+import { LessonOutput } from "./lesson-output";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 import type { ReactNode } from "react";
@@ -30,8 +32,11 @@ const eyebrow = "text-[11px] font-semibold tracking-[0.9px] uppercase md:text-xs
 const blockTitle = "text-[19px]/6 font-semibold tracking-[-0.3px] md:text-[21px]/[26px]";
 
 /** Presentation adapter for existing authored blocks, not a second content source. */
-export function GuidedBlock({ block, history, riskHistory }: { block: LessonBlock; history?: readonly LessonHistoryEntry[]; riskHistory?: readonly RiskHistoryEntry[] }) {
+export function GuidedBlock({ block, history, riskHistory, lessonId, guest, onOutputReady }: { block: LessonBlock; lessonId?: string; guest?: boolean; onOutputReady?: (blockId: string, ready: boolean) => void; history?: readonly LessonHistoryEntry[]; riskHistory?: readonly RiskHistoryEntry[] }) {
   switch (block.type) {
+    case "decisionTree": return <DecisionTree block={block} />;
+    case "checklist":
+    case "rubricSelfAssessment": return lessonId ? <LessonOutput block={block} lessonId={lessonId} guest={guest} onReady={onOutputReady} /> : null;
     case "heading": return <div className="flex flex-col gap-2"><h3 className="text-[21px]/[26px] font-semibold tracking-[-0.5px] md:text-2xl/[30px]">{block.title}</h3>{block.body ? <p className="text-base/[25px] text-secondary">{block.body}</p> : null}</div>;
     case "paragraph": return <p className="text-base/[25px] text-secondary">{block.content}</p>;
     case "formula": return <Formula latex={block.latex ?? block.expression} variables={block.variables} />;

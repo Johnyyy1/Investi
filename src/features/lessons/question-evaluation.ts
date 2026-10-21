@@ -1,6 +1,7 @@
+import { evaluateCategorize, evaluateDocumentSearch, evaluateFindError, evaluateOrder } from "./exercise-evaluation";
 import type { LessonBlock } from "./types";
 
-const questionTypes = ["multipleChoiceQuestion", "numericQuestion", "multiNumericQuestion", "fadedExample", "documentTap", "findError"] as const;
+const questionTypes = ["multipleChoiceQuestion", "numericQuestion", "multiNumericQuestion", "fadedExample", "documentTap", "findError", "categorizeQuestion", "orderQuestion", "documentSearchQuestion", "findErrorQuestion"] as const;
 export type QuestionBlock = Extract<LessonBlock, { type: (typeof questionTypes)[number] }>;
 export function isQuestion(block: LessonBlock): block is QuestionBlock {
   return (questionTypes as readonly string[]).includes(block.type);
@@ -32,6 +33,10 @@ function hasNumber(raw: string | undefined) {
  */
 export function evaluateQuestion(block: QuestionBlock, answers: Record<string, string>) {
   switch (block.type) {
+    case "categorizeQuestion": return evaluateCategorize(block, answers);
+    case "orderQuestion": return evaluateOrder(block, answers);
+    case "documentSearchQuestion": return evaluateDocumentSearch(block, answers, parseNumericAnswer);
+    case "findErrorQuestion": return evaluateFindError(block, answers);
     case "multipleChoiceQuestion":
       if (!block.options.some((option) => option.id === answers.answer)) return undefined;
       return answers.answer === block.correctOptionId;

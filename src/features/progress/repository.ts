@@ -3,8 +3,8 @@ import { and, count, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { learningProfile, lesson, lessonAward, lessonProgress, progressionUnlock, user } from "@/db/schema";
 import { type SaveLessonProgress, saveLessonProgressSchema } from "./schemas";
-import { validateCompletion, validateMove } from "./transition";
-import { getStepDefinitions } from "@/features/lessons/steps";
+import { lessonSteps, validateCompletion, validateMove } from "./transition";
+import { stepArtifactRequirements } from "@/features/lessons/output-contract";
 import { hasValidArtifact } from "@/features/artifacts/repository";
 import { requireArtifacts } from "@/features/artifacts/requirements";
 import { getGamification, learningDate, LESSON_XP } from "@/features/gamification/domain";
@@ -22,8 +22,8 @@ export async function saveLessonProgress(userId: string, input: SaveLessonProgre
     if (current?.status === "completed") return;
     validateMove(progress.lessonId, current?.lastPosition ?? 0, progress.lastPosition, answers);
     if (progress.lastPosition > (current?.lastPosition ?? 0)) {
-      await requireArtifacts([getStepDefinitions(progress.lessonId)[current?.lastPosition ?? 0].requiredArtifact], progress.lessonId,
-        (kind, source) => hasValidArtifact(tx, userId, kind, source));
+      await requireArtifacts(stepArtifactRequirements(lessonSteps(progress.lessonId)[current?.lastPosition ?? 0]), progress.lessonId,
+        (kind, source, blockId) => hasValidArtifact(tx, userId, kind, source, blockId));
     }
     await tx.insert(lessonProgress).values({ userId, ...progress, updatedAt: new Date() }).onConflictDoUpdate({
       target: [lessonProgress.userId, lessonProgress.lessonId],
@@ -46,8 +46,8 @@ export async function completeLesson(userId: string, lessonId: string) {
     validateCompletion(lessonId, current);
     // Recheck every required output: a learner may have deleted it after crossing its step.
     // Lifetime completions and their original reward receipts remain valid on review.
-    if (current.status !== "completed") await requireArtifacts(getStepDefinitions(lessonId).map((step) => step.requiredArtifact), lessonId,
-      (kind, source) => hasValidArtifact(tx, userId, kind, source));
+    if (current.status !== "completed") await requireArtifacts(lessonSteps(lessonId).flatMap(stepArtifactRequirements), lessonId,
+      (kind, source, blockId) => hasValidArtifact(tx, userId, kind, source, blockId));
     const [profile] = await tx.select().from(learningProfile).where(eq(learningProfile.userId, userId));
     const timeZone = profile?.timeZone ?? "UTC";
     const now = new Date();

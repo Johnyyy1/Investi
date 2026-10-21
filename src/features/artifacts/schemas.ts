@@ -20,6 +20,12 @@ const checklistItem = z.strictObject({ label: shortText, checked: z.boolean() })
 
 /** Payload contracts v1. Readiness stores categories and a next step, never budget/debt amounts. */
 export const artifactPayloadSchemas = {
+  lesson_output: z.discriminatedUnion("type", [
+    z.strictObject({ type: z.literal("checklist"), blockId: shortText.max(100), checkedItemIds: z.array(shortText.max(100)).max(10).refine((ids) => new Set(ids).size === ids.length) }),
+    z.strictObject({ type: z.literal("rubricSelfAssessment"), blockId: shortText.max(100), text: explanation,
+      ratings: z.array(z.strictObject({ criterionId: shortText.max(100), level: z.number().int().min(1).max(4) })).min(1).max(10)
+        .refine((ratings) => new Set(ratings.map((rating) => rating.criterionId)).size === ratings.length) }),
+  ]),
   goal_map: z.strictObject({ goals: z.array(goal).min(1).max(10) }),
   financial_checkup: z.strictObject({
     budget: z.enum(["reviewed", "needs_review", "prefer_not_to_say"]),
@@ -69,6 +75,7 @@ export type ArtifactContent = { [K in ArtifactKind]: { kind: K; payload: Artifac
 
 const variant = <K extends ArtifactKind>(kind: K) => z.strictObject({ kind: z.literal(kind), payload: artifactPayloadSchemas[kind] });
 export const artifactContentSchema = z.discriminatedUnion("kind", [
+  variant("lesson_output"),
   variant("goal_map"), variant("financial_checkup"), variant("fee_profile"), variant("etf_checklist"), variant("safeguards"),
   variant("investment_plan"), variant("trade_checklist"), variant("business_map"), variant("investment_thesis"), variant("journal"),
 ]);
@@ -83,6 +90,6 @@ export type SaveArtifactInput = z.input<typeof saveArtifactSchema>;
 export const listArtifactsSchema = z.strictObject({ kind: artifactKindSchema.optional() });
 export const deleteArtifactSchema = z.strictObject({ id: z.uuid() });
 
-/** One current document per kind. Revisions are separate from payload schema evolution. */
-export type LearnerArtifact = ArtifactContent & { id: string; version: number; sourceLessonId: string | null; createdAt: string };
-export type ArtifactRequirement = { kind: ArtifactKind; source?: "current_lesson" | "any_lesson" };
+/** Ordinary kinds have one current document; lesson outputs are scoped to a source lesson and block. */
+export type LearnerArtifact = ArtifactContent & { id: string; version: number; sourceLessonId: string | null; createdAt: string; title?: string };
+export type ArtifactRequirement = { kind: ArtifactKind; source?: "current_lesson" | "any_lesson"; blockId?: string };

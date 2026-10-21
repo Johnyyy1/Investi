@@ -66,8 +66,9 @@ try {
   await assert.rejects(() => saveInput(owner, { ...input(), consent: false }));
   assert.equal((await list(guest)).length, 0, "guest outputs are never persisted");
   await saveInput(demo, input());
-  for (const kind of artifactKinds.filter((kind) => kind !== "goal_map")) await saveInput(owner, input(kind));
-  assert.equal((await list(owner)).length, artifactKinds.length);
+  // Authored-block-bound lesson_output has its own real progression/lifecycle suite: validate-lesson-exercises.mts.
+  for (const kind of artifactKinds.filter((kind) => kind !== "goal_map" && kind !== "lesson_output")) await saveInput(owner, input(kind));
+  assert.equal((await list(owner)).length, artifactKinds.length - 1);
 
   const { readAccountExportRows, buildAccountExport, serializeAccountExport } = await import("../src/features/account/export");
   const rows = (await readAccountExportRows(db, owner))!;

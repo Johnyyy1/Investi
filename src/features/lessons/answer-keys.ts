@@ -8,6 +8,10 @@ import { serializeSelection, type QuestionBlock } from "./question-evaluation";
 export function correctAnswers(block: QuestionBlock, { decimalComma = false } = {}): Record<string, string> {
   const number = (value: number) => decimalComma ? String(value).replace(".", ",") : String(value);
   switch (block.type) {
+    case "categorizeQuestion": return Object.fromEntries(block.items.map((item) => [item.id, item.categoryId]));
+    case "orderQuestion": return Object.fromEntries(block.correctOrder.map((id, index) => [String(index), id]));
+    case "documentSearchQuestion": return { answer: block.target.type === "region" ? block.target.regionId : number(block.target.answer) };
+    case "findErrorQuestion": return { answer: block.incorrectStepId };
     case "multipleChoiceQuestion": return { answer: block.correctOptionId };
     case "numericQuestion": return { answer: number(block.answer) };
     case "multiNumericQuestion": return Object.fromEntries(block.answers.map((field) => [field.id, String(field.answer)]));
@@ -21,6 +25,10 @@ export function correctAnswers(block: QuestionBlock, { decimalComma = false } = 
 export function wrongAnswers(block: QuestionBlock, { firstFieldOnly = false } = {}): Record<string, string> {
   const miss = (answer: number, tolerance: number) => String(answer + tolerance * 10 + 1);
   switch (block.type) {
+    case "categorizeQuestion": return { ...correctAnswers(block), [block.items[0].id]: block.categories.find((category) => category.id !== block.items[0].categoryId)!.id };
+    case "orderQuestion": return Object.fromEntries([...block.correctOrder].reverse().map((id, index) => [String(index), id]));
+    case "documentSearchQuestion": return { answer: block.target.type === "region" ? block.document.regions.find((region) => block.target.type === "region" && region.id !== block.target.regionId)!.id : miss(block.target.answer, block.target.tolerance) };
+    case "findErrorQuestion": return { answer: block.steps.find((step) => step.id !== block.incorrectStepId)!.id };
     case "multipleChoiceQuestion": return { answer: block.options.find((option) => option.id !== block.correctOptionId)!.id };
     case "numericQuestion": return { answer: miss(block.answer, block.tolerance) };
     case "multiNumericQuestion": return firstFieldOnly

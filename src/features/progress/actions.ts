@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { lessonAnswersSchema } from "@/features/lessons/answer-contract";
 import { getCurrentUser } from "@/lib/session";
 import { completeLesson, getModuleProgress, markLessonInProgress, saveLessonProgress } from "./repository";
 import { availableLessons } from "@/features/learning/catalog";
@@ -66,7 +67,7 @@ export async function saveLessonPositionAction(lessonId: string, position: numbe
     if (!user) return { ok: false, message: "Relace skončila. Přihlas se znovu a ulož postup." };
     const id = lessonIdSchema.parse(lessonId);
     const lastPosition = z.number().int().min(0).max(getStepDefinitions(id).length - 1).parse(position);
-    const attempt = answers === undefined ? undefined : z.record(z.string().max(100), z.string().max(100)).refine((value) => Object.keys(value).length <= 10).parse(answers);
+    const attempt = answers === undefined ? undefined : lessonAnswersSchema.parse(answers);
     await saveLessonProgress(user.id, { lessonId: id, status: "in_progress", lastPosition }, attempt);
     return { ok: true };
   } catch (error) {

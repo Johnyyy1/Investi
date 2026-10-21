@@ -1,8 +1,8 @@
 # Typy kroků lekce: katalog pro autory a agenty
 
-Lekce se skládají **výhradně** z typů bloků v [`types.ts`](../../src/features/lessons/types.ts). Každý typ má hotový renderer v [`src/components/lesson`](../../src/components/lesson) a schválený návrh v [`docs/design/lesson-steps`](../design/lesson-steps). Při tvorbě lekce nekresli nové UI, nepřidávej styly ani nové komponenty: vyber typ kroku z tohoto katalogu a vyplň jeho data. Když lekce potřebuje typ, který tu není, zastav se a napiš to do PR jako navazující práci.
+Lekce se skládají **výhradně** z typů bloků v [`types.ts`](../../src/features/lessons/types.ts). Každý typ má hotový renderer v [`src/components/lesson`](../../src/components/lesson). Schválené návrhy Pen F–M jsou v [`docs/design/lesson-steps`](../design/lesson-steps); referenční snímky rozšíření enginu #121 jsou uvedené níže. Při tvorbě lekce nekresli nové UI, nepřidávej styly ani nové komponenty: vyber typ kroku z tohoto katalogu a vyplň jeho data. Když lekce potřebuje typ, který tu není, zastav se a napiš to do PR jako navazující práci.
 
-- **Živý náhled:** `npm run dev` → [`/dev/lesson-steps`](http://localhost:3000/dev/lesson-steps). Každý typ na referenčním obsahu včetně Zkontrolovat → zpětná vazba → Zkusit znovu.
+- **Živý náhled:** `npm run dev` → [`/dev/lesson-steps`](http://localhost:3000/dev/lesson-steps). Typy F–M na referenčním obsahu včetně Zkontrolovat → zpětná vazba → Zkusit znovu. Rozšíření #121 ověřuje jeho browser suite a přiložené referenční snímky.
 - **Referenční data:** [`specimens/time-test.ts`](../../src/features/lessons/specimens/time-test.ts). Kopíruj odsud tvar dat, ne text.
 - **Zdroj návrhů:** Pen soubor `investi-design.pen`, nástěnky F–N a „00 · Nové komponenty“. PNG v repozitáři jsou exporty z 21. 10. 2026. Kdo nemá Pen, řídí se PNG.
 
@@ -87,7 +87,7 @@ Nehodnotí se. `persona.facts` ukazují data i dopočítané lhůty vedle sebe, 
 
 - **N · Konec lekce a Denní opakování** (`n-*.png`): potřebují model stavu dovednosti a plánovač opakování (#122, #123). Dokud nejsou, zůstává současná závěrečná obrazovka. Nestav je jako součást lekce.
 - **Data z Labu v misi** (NQ-01, NQ-02) a **daňová mapa tranší v Labu**: finanční doménová práce mimo lekce.
-- **Ukládání psaných odpovědí** (NQ-11) a **promítnutí rubriky do zvládnutí** (NQ-12).
+- **Ukládání typu `writtenReflection`** (NQ-11) a **promítnutí rubriky do zvládnutí** (NQ-12). Pro samostatně uložený výstup s čtyřúrovňovým sebehodnocením použij `rubricSelfAssessment` níže.
 - **Tokeny faktů v textu** (`{{klíč}}`) a redakční workflow ověření (#132, #133). Registr je zatím minimální a jeho fakta čekají na ověření.
 
 Otevřené otázky NQ-01 až NQ-14 jsou popsané na nástěnkách v Pen souboru.
@@ -95,3 +95,19 @@ Otevřené otázky NQ-01 až NQ-14 jsou popsané na nástěnkách v Pen souboru.
 ## Komponenty (00 · Nové komponenty)
 
 Exporty v [`docs/design/lesson-steps/components`](../design/lesson-steps/components) ukazují stavební prvky: lišty, zpětné vazby, řádky výpisu, kartu persony, daňový blok a štítek, zaškrtávátko rubriky. Většina z nich je v kódu součástí rendereru příslušného typu. Škála dovednosti a štítek lekce patří k části N a v kódu zatím nejsou.
+
+## Rozšíření enginu #121
+
+Následující typy doplňují stávající katalog. Používají stejnou kartu otázky, formulářové prvky, zpětnou vazbu a akce lekce. [Kontrakty, limity a ukládání](lesson-exercises.md) platí na klientu i serveru; [referenční data](../../src/features/lessons/exercise-fixtures.ts) jsou fiktivní ukázky enginu, nikoli publikované lekce. [Snímky rendererů](../design/lesson-exercises/README.md) ukazují podobu při 390 a 1440 px.
+
+| Úloha | Typ | Hodnocený | Použití |
+| --- | --- | --- | --- |
+| Zařadit každou položku do kategorie | `categorizeQuestion` | ano | Výběr kategorie u každé položky, bez přetahování. |
+| Seřadit položky | `orderQuestion` | ano | Výběr jedinečné položky pro každé pořadí. |
+| Najít jednu oblast nebo číselnou hodnotu v dokumentu | `documentSearchQuestion` | ano | Jednoduchý textový dokument; pro označení více řádků výpisu použij stávající `documentTap`. |
+| Najít jediný chybný krok | `findErrorQuestion` | ano | Označení kroku; pro označení i výběr opravy použij stávající `findError`. |
+| Projít větvený průvodce k výsledku | `decisionTree` | ne | Všechny větve dovolují pokračování; lze se vracet. |
+| Uložit i rozpracovaný kontrolní seznam | `checklist` | ne | Uložení se souhlasem je dobrovolné, prázdný seznam neblokuje postup. |
+| Odevzdat psaný výstup a posoudit kritéria ve čtyřech úrovních | `rubricSelfAssessment` | ne | Uloží se přes úložiště výstupů; pokračování vyžaduje odevzdání, nikoli správnost či minimální úroveň. |
+
+`writtenReflection` si zachovává dosavadní dočasnou reflexi s ukázkovou odpovědí; nejde o stejný kontrakt jako uložený `rubricSelfAssessment`. Žádný z nových typů nepřidává hodnocení volného textu pomocí AI ani odměnu za obchod. Pro hodnocené typy platí také `isQuestion`, `evaluateQuestion`, `feedbackFor`, sdílené `answer-keys`, nejvýše jedna otázka na krok a žádná na závěrečném kroku.
