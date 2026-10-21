@@ -26,7 +26,7 @@ function timestamp(value: unknown): string | null {
   const parsed = Date.parse(value.replace(" ", "T") + (/Z$|[+-]\d\d:\d\d$/.test(value) ? "" : "Z"));
   return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
 }
-/** FMP weightPercentage and expenseRatio are percentage points; Investi stores decimal fractions. */
+/** FMP weightPercentage and expenseRatio are percentage points; Investník stores decimal fractions. */
 export function fmpPercent(value: unknown): number | null {
   const n = typeof value === "string" && value.trim().endsWith("%") ? finite(value.trim().slice(0, -1)) : finite(value);
   return n !== null && n >= 0 && n <= 100 ? n / 100 : null;

@@ -224,7 +224,7 @@ try {
   await sql`insert into learning_profile(user_id,experience_level,goals,interests,daily_goal_minutes,time_zone,onboarding_completed_at) values(${deletable.id},'BASIC','{CONFIDENCE}','{}',10,'Europe/Prague',now())`;
   await go('data'); await matrix('data');
   const [download] = await Promise.all([page.waitForEvent('download'), page.getByRole('button', { name: 'Stáhnout data' }).click()]);
-  assert.match(download.suggestedFilename(), /^investi-moje-data-\d{4}-\d{2}-\d{2}\.json$/);
+  assert.match(download.suggestedFilename(), /^investnik-moje-data-\d{4}-\d{2}-\d{2}\.json$/);
   const exported = JSON.parse(await readFile(await download.path(), 'utf8'));
   assert.equal(exported.user.email, owner.email); assert.equal(exported.learningProfile.dailyGoalMinutes, 10);
   await page.getByRole('status').filter({ hasText: 'se stahuje' }).waitFor();

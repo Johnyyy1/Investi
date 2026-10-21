@@ -3,7 +3,7 @@ import { AuthLayout } from "@/components/auth/auth-layout";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 import { buttonVariants } from "@/components/ui/button";
 
-export const metadata = { title: "Nové heslo" };
+export const metadata = { title: "Nové heslo", robots: { index: false, follow: false } };
 
 /** Better Auth's e-mailed link checks the token and lands here with ?token=…, or with ?error=INVALID_TOKEN. */
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string | string[]; error?: string | string[] }> }) {

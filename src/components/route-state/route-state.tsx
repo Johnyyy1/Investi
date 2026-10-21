@@ -4,6 +4,7 @@ import { GuideImage, type GuidePoseName } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import styles from "./route-state.module.css";
 import { buttonVariants } from "@/components/ui/button";
+import { Wordmark } from "@/components/brand/wordmark";
 
 type RouteLink = { href: string; label: string };
 type RouteAction = RouteLink | { onClick: () => void; label: string };
@@ -24,7 +25,7 @@ export function RouteState({ eyebrow, title, children, action, link, standalone 
   pose?: GuidePoseName;
 }) {
   return <main className={`${styles.page} ${standalone ? styles.standalone : ""}`}>
-    {standalone ? <header className={styles.header}><Link className={styles.brand} href="/" aria-label="investi · úvodní stránka">investi!</Link></header> : null}
+    {standalone ? <header className={styles.header}><Link className={styles.brand} href="/" aria-label="Investník · úvodní stránka"><Wordmark /></Link></header> : null}
     <div className={styles.column}>
       <div className={styles.guideZone}><GuideImage className={styles.guide} pose={pose} alt="" sizes="(max-width: 767px) 132px, 200px" /></div>
       <section className={styles.card} aria-labelledby="route-state-title">

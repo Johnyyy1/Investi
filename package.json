@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "knip": "knip",
+    "brand:assets": "node scripts/generate-brand-assets.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

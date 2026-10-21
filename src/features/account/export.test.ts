@@ -49,6 +49,6 @@ describe("account export", () => {
   });
 
   it("names the download after the export day", () => {
-    expect(accountExportFilename(at)).toBe("investi-moje-data-2026-10-16.json");
+    expect(accountExportFilename(at)).toBe("investnik-moje-data-2026-10-16.json");
   });
 });

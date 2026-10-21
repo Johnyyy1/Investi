@@ -1,6 +1,6 @@
 # Marketing surface
 
-The public landing page lives in `src/app/(marketing)` and remains public for signed-in users. `PenLanding` (`src/components/marketing/pen-landing.tsx`) renders it; its layout scopes the Manrope/Inter display fonts and `pen-landing.module.css`, and the GSAP/Lenis motion layer lives in `src/components/marketing/motion`. The brand is the typeset `investi!` wordmark, shared with auth, onboarding, legal pages and the app shell; there is no raster logo. Product screens use the quieter shared design system.
+The public landing page lives in `src/app/(marketing)` and remains public for signed-in users. `PenLanding` (`src/components/marketing/pen-landing.tsx`) renders it; its layout scopes the Manrope/Inter display fonts and `pen-landing.module.css`, and the GSAP/Lenis motion layer lives in `src/components/marketing/motion`. The brand is the shared `Wordmark` (í symbol plus typeset „Investník“), used by auth, onboarding, legal pages and the app shell; the only raster brand files are the generated icons and social image listed in [brand.md](brand.md). Product screens use the quieter shared design system.
 
 Sign-up/sign-in actions use the existing authentication routes. Protected Learn/Lab links retain authentication gates and disable speculative lab prefetch. Explore demo uses the existing anonymous identity and server seed; it does not share a login or overwrite an existing demo portfolio. Mobile navigation uses native `details` semantics.
 

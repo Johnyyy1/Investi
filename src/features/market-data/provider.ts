@@ -17,7 +17,7 @@ import type {
 /** A normalized observation; MarketDataService adds policy-based freshness. */
 export interface ProviderQuote {
   instrumentId: InstrumentId;
-  /** Provider's current/last price field; never a bid, ask, or Investi execution price. */
+  /** Provider's current/last price field; never a bid, ask, or Investník execution price. */
   price: number;
   currency: Currency;
   observedAt: UtcTimestamp;

@@ -10,13 +10,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 AGENTS.md
 
-Project: investi
+Project: Investník
 
-investi is an interactive investing-education product built around the principle:
+Investník is an interactive investing-education product built around the principle:
 
 Learn investing by doing.
 
-The product prepares people to start investing and maintain a plan: financial readiness, practical Czech investing workflows, costs, taxes, and behavior come before advanced analysis. Concepts and quantitative tools serve decisions. investi remains educational, without pretending to be a real broker or giving investment advice.
+The product prepares people to start investing and maintain a plan: financial readiness, practical Czech investing workflows, costs, taxes, and behavior come before advanced analysis. Concepts and quantitative tools serve decisions. Investník remains educational, without pretending to be a real broker or giving investment advice.
 
 This file defines how coding agents should work in this repository.
 
@@ -132,7 +132,7 @@ Do not infer real-money readiness or a causal education effect from simulated re
 
 Product positioning
 
-investi is:
+Investník is:
 
 educational;
 
@@ -148,7 +148,7 @@ focused on planning, long-term habits, and explainable decisions;
 
 progressively more analytical through optional advanced tracks.
 
-investi is not:
+Investník is not:
 
 a real broker;
 
@@ -224,9 +224,11 @@ Brand
 
 Always write the product name as:
 
-investi
+Investník
 
-The typeset logo (wordmark) is the only place that shows investi! with an exclamation mark. Running text, page titles and aria-labels always say investi.
+The product was called investi until 2026-10-21. Use investnik without diacritics only in the domain (https://investnik.cz is canonical; www redirects to it), technical identifiers, slugs and filenames; never write Investnik in visible Czech copy. The wordmark is the shared Wordmark component (the í symbol plus the typeset name); a wordmark link names its target in aria-label ("Investník · úvodní stránka", "Investník · Učení"). docs/brand.md records the identity, assets and domain setup.
+
+Existing technical identifiers that start with investi (browser-storage keys, market-data provider and dataset IDs, fee-profile IDs, the anonymous-kind header, CSS hooks, log prefixes, INVESTI_PERF_DEBUG, QA database names, public/investi-assets) are persisted or relied on elsewhere. Keep them; do not rename them for cosmetic consistency.
 
 UI terms follow the glossary in docs/terminology.md.
 
@@ -640,7 +642,7 @@ Market data is provider-agnostic.
 
 Conceptual boundary:
 
-Investi domain/application
+Investník domain/application
         ↓
 MarketDataService
         ↓
@@ -885,7 +887,7 @@ The supplied direction brief is a product/research input, not an independently v
 
 Keep securities and crypto rules distinct, sale proceeds distinct from gains, trading FX distinct from tax FX, and individual tax lots distinct from aggregate holdings. Educational tax maps are not a personalized tax filing service.
 
-Keep the brief's maintenance cadence: annual January tax/rate checks, filing-season checks, monthly macro inputs, semiannual product/research reviews, and ad hoc legislative updates. These are content-maintenance requirements, not an instruction to create scheduled jobs automatically. Record the sample, period, and limitations behind research claims; do not present findings from other learning domains or paper portfolios as proven effects for investi.
+Keep the brief's maintenance cadence: annual January tax/rate checks, filing-season checks, monthly macro inputs, semiannual product/research reviews, and ad hoc legislative updates. These are content-maintenance requirements, not an instruction to create scheduled jobs automatically. Record the sample, period, and limitations behind research claims; do not present findings from other learning domains or paper portfolios as proven effects for Investník.
 
 21. Demo users
 

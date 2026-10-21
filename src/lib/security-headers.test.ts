@@ -56,12 +56,12 @@ describe("contentSecurityPolicyHeaderName", () => {
 
 describe("proxy", () => {
   it("sends a fresh nonce policy on every page response and forwards it to rendering", () => {
-    const policies = [0, 1].map(() => proxy(new NextRequest("https://investi.test/learn")).headers.get("Content-Security-Policy"));
+    const policies = [0, 1].map(() => proxy(new NextRequest("https://investnik.test/learn")).headers.get("Content-Security-Policy"));
     expect(policies[0]).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
     expect(policies[0]).toContain("frame-ancestors 'none'");
     expect(policies[0]).not.toBe(policies[1]);
 
-    const response = proxy(new NextRequest("https://investi.test/"));
+    const response = proxy(new NextRequest("https://investnik.test/"));
     const nonce = response.headers.get("Content-Security-Policy")?.match(/'nonce-([^']+)'/)?.[1];
     expect(response.headers.get("x-middleware-request-x-nonce")).toBe(nonce);
     expect(response.headers.get("x-middleware-request-content-security-policy")).toBe(response.headers.get("Content-Security-Policy"));

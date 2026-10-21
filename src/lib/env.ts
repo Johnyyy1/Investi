@@ -10,7 +10,7 @@ export const env = createEnv({
     DATABASE_URL: z.url(),
     /** Resend API key for password-reset and verification e-mails; without it (or EMAIL_FROM) nothing is sent. */
     RESEND_API_KEY: z.string().trim().min(1).optional(),
-    /** Sender on a domain verified in Resend, e.g. "investi <ucet@example.com>". */
+    /** Sender on a domain verified in Resend, e.g. "Investník <ucet@example.com>". */
     EMAIL_FROM: z.string().trim().min(3).optional(),
     /** Local QA only: write e-mails as JSON files here instead of sending them. Ignored when Resend is configured. */
     EMAIL_OUTBOX_DIR: z.string().trim().min(1).optional(),

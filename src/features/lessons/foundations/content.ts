@@ -77,7 +77,7 @@ const returnsAndCompounding: AuthoredStep[] = [
   { title: "Násob přes měnící se základ", blocks: [figure("compounding", "compounding-explorer", "Složené zhodnocení", "Začni na 100 a použij +20 % a potom −20 %. Aritmetický součet je 0 %, ale součin růstových faktorů dává 96 a celkový výnos −4 %.")] },
   mastery("Ověření znalostí · výpočet ztráty", numeric("mastery-negative", "Hodnota klesla ze 100 na 80. Jaký je výnos v procentech?", -20, "%", "(80 − 100) ÷ 100 = −0,20 = −20 %.", "Změna je −20. Vyděl ji počáteční hodnotou 100 a převeď na procenta.")),
   mastery("Ověření znalostí · složení dvou změn", numeric("mastery-compound", "Hodnota 100 vzroste o 20 % a potom klesne o 20 %. Jaká je konečná hodnota?", 96, "", "100 × 1,20 × 0,80 = 96. Celkový výnos je −4 %.", "Použij postupně oba růstové faktory: nejdřív 1,20 a potom 0,80.")),
-  { title: "Přenášej nový základ dál", blocks: [bridge("Na tomhle výpočtu stojí procenta výnosu a grafy růstu napříč investi."), summary("Jednoduchý výnos měří relativní změnu. Výnos R odpovídá růstovému faktoru 1 + R. Mezi obdobími se růstové faktory násobí, proto se stejně velký růst a pokles nevyruší.")] },
+  { title: "Přenášej nový základ dál", blocks: [bridge("Na tomhle výpočtu stojí procenta výnosu a grafy růstu napříč Investníkem."), summary("Jednoduchý výnos měří relativní změnu. Výnos R odpovídá růstovému faktoru 1 + R. Mezi obdobími se růstové faktory násobí, proto se stejně velký růst a pokles nevyruší.")] },
 ];
 
 const portfolio: AuthoredStep[] = [

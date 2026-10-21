@@ -34,7 +34,7 @@ describe("GET /api/account/export", () => {
     expect(response.status).toBe(200);
     expect(mocks.read).toHaveBeenCalledWith({ marker: "db" }, "u1");
     expect(response.headers.get("cache-control")).toBe("no-store");
-    expect(response.headers.get("content-disposition")).toMatch(/^attachment; filename="investi-moje-data-\d{4}-\d{2}-\d{2}\.json"$/);
+    expect(response.headers.get("content-disposition")).toMatch(/^attachment; filename="investnik-moje-data-\d{4}-\d{2}-\d{2}\.json"$/);
     expect((await response.json()).user).toMatchObject({ id: "u1", email: "klara@example.com" });
   });
 

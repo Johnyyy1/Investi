@@ -76,7 +76,7 @@ const authAttemptLimits = createAuthMiddleware(async (ctx) => {
 });
 
 export const auth = betterAuth({
-  appName: "investi",
+  appName: "Investník",
   baseURL: env.BETTER_AUTH_URL,
   secret: env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, { provider: "pg", schema }),

@@ -39,7 +39,7 @@ function files(dir: string, suffix: string): string[] {
   });
 }
 
-describe("investi design tokens", () => {
+describe("Investník design tokens", () => {
   it("keeps the approved core palette", () => {
     expect(["background", "foreground", "surface", "primary", "primary-hover", "primary-pressed", "primary-soft", "progress", "warning", "danger"].map(color))
       .toEqual(["#f7f2e8", "#171717", "#fffcf7", "#236f66", "#1c665e", "#195b53", "#e6f0e9", "#2f8f83", "#f1c75b", "#a63d28"]);

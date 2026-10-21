@@ -6,7 +6,7 @@ import {
 } from "@/db/schema";
 
 /**
- * Personal-data export (GDPR art. 15 and 20): every row investi keeps about one user, in a stable,
+ * Personal-data export (GDPR art. 15 and 20): every row Investník keeps about one user, in a stable,
  * machine-readable shape. Secrets are never selected: no password hash, OAuth tokens or session tokens.
  * Money stays in integer minor units and decimals stay as the exact strings PostgreSQL returns.
  */
@@ -90,5 +90,5 @@ export function serializeAccountExport(data: ReturnType<typeof buildAccountExpor
 }
 
 export function accountExportFilename(exportedAt: Date) {
-  return `investi-moje-data-${exportedAt.toISOString().slice(0, 10)}.json`;
+  return `investnik-moje-data-${exportedAt.toISOString().slice(0, 10)}.json`;
 }

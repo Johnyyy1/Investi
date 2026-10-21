@@ -55,7 +55,7 @@ try {
     assert.ok(await page.getByLabel("E-mail", { exact: true }).isVisible());
     await page.goto(`${baseURL}/${mode}`);
     assert.equal(await page.getByRole("button", { name: /Pokračovat přes/ }).count(), 2);
-    assert.equal(await page.getByRole("link", { name: "investi · úvodní stránka", exact: true }).getAttribute("href"), "/");
+    assert.equal(await page.getByRole("link", { name: "Investník · úvodní stránka", exact: true }).getAttribute("href"), "/");
     for (const width of [1440, 390, 320]) {
       await page.setViewportSize({ width, height: 1000 }); await reflow();
       if (process.env.AUTH_SKIP_SCREENSHOTS !== "1" && width !== 320) await page.screenshot({ path: `${output}/${mode}-${width}.png`, fullPage: true });

@@ -141,7 +141,7 @@ async function snapshot(owner) {
 }
 try {
   await page.goto(baseURL);
-  assert.equal(await page.title(), "Peníze jsou vážné. Učení nemusí být. · investi");
+  assert.equal(await page.title(), "Investník – nauč se investovat od základů po vlastní plán");
   assert.equal(await page.locator("h1").count(), 1);
   assert.equal(await page.locator("main > section").count(), 6);
   assert.deepEqual(await page.locator("main > section").evaluateAll(sections => sections.map(section => section.querySelector("h1,h2").textContent)), [

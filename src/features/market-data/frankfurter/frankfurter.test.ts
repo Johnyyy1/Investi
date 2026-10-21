@@ -95,7 +95,7 @@ describe("Frankfurter v2 FX normalization", () => {
     });
   });
 
-  it("rejects unsupported Investi currencies before HTTP", async () => {
+  it("rejects unsupported Investník currencies before HTTP", async () => {
     const fetchMock = vi.fn();
     const provider = new FrankfurterFxProvider(new FrankfurterClient({ fetch: fetchMock }), () => new Date(NOW));
     await expect(provider.getFxRate("GBP" as Currency, "CZK", AS_OF)).rejects.toMatchObject({

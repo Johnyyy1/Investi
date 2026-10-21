@@ -7,6 +7,7 @@ import { MotionRoot } from "./motion/motion-root";
 import { CountUp, SplitHeading, magneticProps } from "./motion/reveal";
 import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./pen-landing.module.css";
+import { Wordmark } from "@/components/brand/wordmark";
 
 export function PenLanding() {
   return <MotionRoot className={styles.landing}>
@@ -15,7 +16,7 @@ export function PenLanding() {
     <header className={styles.siteHeader} data-nav>
       <span className={styles.navBg} data-nav-bg aria-hidden="true"/>
       <div className={styles.container}>
-        <Link href="/" className={styles.wordmark} aria-label="investi · úvodní stránka">investi!</Link>
+        <Link href="/" className={styles.wordmark} aria-label="Investník · úvodní stránka"><Wordmark /></Link>
         <nav className={styles.topNav} aria-label="Hlavní navigace">
           <a href="#jak-to-funguje">Jak to funguje</a>
           <a href="#portfolio-lab">Portfolio Lab</a>
@@ -37,7 +38,7 @@ export function PenLanding() {
           </div>
           <div className={styles.heroLessonWrap} data-hero-card role="group" aria-label="Ukázka lekce; nezapisuje pokrok ani neuděluje XP">
             <Image className={styles.heroArt} data-hero-art src="/marketing/v14-curiosity-cropped.webp" alt="" aria-hidden="true" width={512} height={519} sizes="(max-width: 500px) 98px, (max-width: 1100px) 194px, 256px" preload />
-            <div className={styles.lessonBrowserHeader}><span className={styles.smallWordmark}>investi!</span><span>Základy investování / Portfolio, váhy a diverzifikace</span><span>Lekce 7 ze 7 · ≈ 10 min</span><span>Ukázka lekce</span></div>
+            <div className={styles.lessonBrowserHeader}><Wordmark className={styles.smallWordmark} /><span>Základy investování / Portfolio, váhy a diverzifikace</span><span>Lekce 7 ze 7 · ≈ 10 min</span><span>Ukázka lekce</span></div>
             <LessonPreview hero />
           </div>
           <p className={styles.microDisclaimer}>Ukázka lekce · odpověď a vysvětlení</p>
@@ -97,9 +98,9 @@ export function PenLanding() {
         </div>
       </section>
       <section className={styles.closing} aria-labelledby="closing-title">
-        <div className={styles.container}><Image className={styles.closingArt} data-closing-art src="/marketing/generated-19.webp" alt="" aria-hidden="true" width={1000} height={747} sizes="(max-width: 500px) 300px, (max-width: 780px) 500px, 360px" /><SplitHeading id="closing-title" mode="chars">Zvědavost stačí.<br/>Začni první lekcí.</SplitHeading><p data-reveal data-reveal-delay="0.3">Nemusíš mít všechno nastudované.<br/> Právě od toho je tu investi.</p><div className={styles.closingActions} data-reveal data-reveal-delay="0.4"><Link href="/onboarding" prefetch={false} className={`${styles.primaryButton} ${styles.shimmerHost}`} data-lift data-press {...magneticProps}>Začít se učit <ArrowRight aria-hidden="true" size={18}/><span className={styles.shimmer} data-shimmer aria-hidden="true"/></Link><DemoButton compact className={styles.demoButtonWrap} buttonClassName={styles.secondaryButton}/></div></div>
+        <div className={styles.container}><Image className={styles.closingArt} data-closing-art src="/marketing/generated-19.webp" alt="" aria-hidden="true" width={1000} height={747} sizes="(max-width: 500px) 300px, (max-width: 780px) 500px, 360px" /><SplitHeading id="closing-title" mode="chars">Zvědavost stačí.<br/>Začni první lekcí.</SplitHeading><p data-reveal data-reveal-delay="0.3">Nemusíš mít všechno nastudované.<br/> Právě od toho je tu Investník.</p><div className={styles.closingActions} data-reveal data-reveal-delay="0.4"><Link href="/onboarding" prefetch={false} className={`${styles.primaryButton} ${styles.shimmerHost}`} data-lift data-press {...magneticProps}>Začít se učit <ArrowRight aria-hidden="true" size={18}/><span className={styles.shimmer} data-shimmer aria-hidden="true"/></Link><DemoButton compact className={styles.demoButtonWrap} buttonClassName={styles.secondaryButton}/></div></div>
       </section>
     </main>
-    <footer className={styles.footer} data-footer><div className={styles.container}><Link href="/" className={styles.wordmark} aria-label="investi · úvodní stránka">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><nav aria-label="Patička"><a href="#jak-to-funguje">Jak to funguje</a><Link href="/sign-in" prefetch={false}>Přihlásit se</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href} prefetch={false}>{link.label}</Link>)}</nav></div></footer>
+    <footer className={styles.footer} data-footer><div className={styles.container}><Link href="/" className={styles.wordmark} aria-label="Investník · úvodní stránka"><Wordmark /></Link><p>Vzdělávání, ne investiční doporučení.</p><nav aria-label="Patička"><a href="#jak-to-funguje">Jak to funguje</a><Link href="/sign-in" prefetch={false}>Přihlásit se</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href} prefetch={false}>{link.label}</Link>)}</nav></div></footer>
   </MotionRoot>;
 }

@@ -46,7 +46,7 @@ try {
   assert.ok((await page.request.post(`${baseURL}/api/auth/sign-up/email`, { headers: { origin: baseURL }, data: { name: "Returns integration QA", email, password } })).ok());
   await page.goto(`${baseURL}/onboarding`);
   await finishOnboarding(page); // Ends on /learn (Studovna) for a fresh learner.
-  await page.getByRole("heading", { level: 1, name: "Vítej v investi, Returns.", exact: true }).waitFor();
+  await page.getByRole("heading", { level: 1, name: "Vítej v Investníku, Returns.", exact: true }).waitFor();
   [{ id: userId }] = await sql`select id from "user" where email = ${email}`;
   assert.equal(await page.locator(".investi-theme").count(), 1, "Learn uses the shared theme");
   // Studovna chapters list lessons directly; the Returns module page has no link from /learn any more.
