@@ -4,6 +4,9 @@ import { db } from "@/db";
 import { learningProfile, lesson, lessonAward, lessonProgress, progressionUnlock, user } from "@/db/schema";
 import { type SaveLessonProgress, saveLessonProgressSchema } from "./schemas";
 import { validateCompletion, validateMove } from "./transition";
+import { getStepDefinitions } from "@/features/lessons/steps";
+import { hasValidArtifact } from "@/features/artifacts/repository";
+import { requireArtifacts } from "@/features/artifacts/requirements";
 import { getGamification, learningDate, LESSON_XP } from "@/features/gamification/domain";
 import { getLearnerSummary } from "@/features/learning/learner-summary";
 import { getPracticeCapitalSummary, lessonReward } from "@/features/rewards/practice-capital";
@@ -18,6 +21,10 @@ export async function saveLessonProgress(userId: string, input: SaveLessonProgre
     const [current] = await tx.select().from(lessonProgress).where(where);
     if (current?.status === "completed") return;
     validateMove(progress.lessonId, current?.lastPosition ?? 0, progress.lastPosition, answers);
+    if (progress.lastPosition > (current?.lastPosition ?? 0)) {
+      await requireArtifacts([getStepDefinitions(progress.lessonId)[current?.lastPosition ?? 0].requiredArtifact], progress.lessonId,
+        (kind, source) => hasValidArtifact(tx, userId, kind, source));
+    }
     await tx.insert(lessonProgress).values({ userId, ...progress, updatedAt: new Date() }).onConflictDoUpdate({
       target: [lessonProgress.userId, lessonProgress.lessonId],
       set: { lastPosition: progress.lastPosition, updatedAt: new Date() },
@@ -37,6 +44,10 @@ export async function completeLesson(userId: string, lessonId: string) {
     const where = and(eq(lessonProgress.userId, userId), eq(lessonProgress.lessonId, lessonId));
     const [current] = await tx.select().from(lessonProgress).where(where);
     validateCompletion(lessonId, current);
+    // Recheck every required output: a learner may have deleted it after crossing its step.
+    // Lifetime completions and their original reward receipts remain valid on review.
+    if (current.status !== "completed") await requireArtifacts(getStepDefinitions(lessonId).map((step) => step.requiredArtifact), lessonId,
+      (kind, source) => hasValidArtifact(tx, userId, kind, source));
     const [profile] = await tx.select().from(learningProfile).where(eq(learningProfile.userId, userId));
     const timeZone = profile?.timeZone ?? "UTC";
     const now = new Date();

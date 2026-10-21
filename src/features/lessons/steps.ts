@@ -16,7 +16,7 @@ export function getStepDefinitions(lessonId: string): readonly StepDefinition[] 
 }
 /** Presentation only: the authored lessons remain the source of every concept and exercise. */
 export function getGuidedSteps(lesson: AuthoredLesson) {
-  return getStepDefinitions(lesson.id).map((step) => ({ title: step.title, kind: step.kind, blocks: step.blocks.map((id) => {
+  return getStepDefinitions(lesson.id).map((step) => ({ title: step.title, kind: step.kind, requiredArtifact: step.requiredArtifact, blocks: step.blocks.map((id) => {
     const block = lesson.blocks.find((item) => item.id === id);
     if (!block) throw new Error(`Missing authored block: ${id}`);
     return block;

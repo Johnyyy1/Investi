@@ -65,7 +65,9 @@
     "test:rate-limit": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-rate-limit.mts",
     "test:account-recovery": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-account-recovery.mts",
     "test:account-recovery-browser": "node scripts/validate-account-recovery-browser.mjs",
-    "test:prepared-statements": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-prepared-statements.mts"
+    "test:prepared-statements": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-prepared-statements.mts",
+    "test:artifacts-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-artifacts.mts",
+    "test:artifacts-browser": "node scripts/validate-artifacts-browser.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.10",

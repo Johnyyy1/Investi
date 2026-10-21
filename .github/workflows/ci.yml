@@ -93,6 +93,12 @@ jobs:
       - run: npm run test:progression-persistence
       - run: npm run test:log-returns-persistence
       - run: npm run test:guest-claim
+      - name: Artifact migrations, versions and lifecycle
+        run: |
+          node --input-type=module -e 'import postgres from "postgres"; const sql = postgres(process.env.DATABASE_URL); await sql`CREATE DATABASE investi_artifacts_qa`; await sql.end();'
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/investi_artifacts_qa npm run test:artifacts-persistence
+        env:
+          ARTIFACTS_QA_DISPOSABLE: "1"
       # Deletes every session in the database that expired more than 30 days ago.
       - name: npm run test:account-deletion
         run: npm run test:account-deletion

@@ -1,4 +1,5 @@
 import type { DiagnosticResult } from "../features/personalization/diagnostic";
+import { artifactKinds, type ArtifactContent } from "../features/artifacts/schemas";
 import { sql } from "drizzle-orm";
 import { experienceValues, goalValues, interestValues } from "../features/onboarding/domain";
 import {
@@ -142,6 +143,25 @@ export const lessonProgress = pgTable(
     index("lesson_progress_user_idx").on(table.userId),
   ],
 );
+
+export const learnerArtifactKind = pgEnum("learner_artifact_kind", artifactKinds);
+
+/** Append-only revisions; only an explicit document/account deletion removes history. */
+export const learnerArtifact = pgTable("learner_artifact", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  kind: learnerArtifactKind("kind").notNull(),
+  version: integer("version").notNull(),
+  payload: jsonb("payload").$type<ArtifactContent["payload"]>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  sourceLessonId: text("source_lesson_id").references(() => lesson.id, { onDelete: "set null" }),
+  requestId: text("request_id").notNull(),
+}, (table) => [
+  uniqueIndex("learner_artifact_user_kind_version_idx").on(table.userId, table.kind, table.version),
+  uniqueIndex("learner_artifact_user_request_idx").on(table.userId, table.requestId),
+  check("learner_artifact_version_positive", sql`${table.version} > 0`),
+  check("learner_artifact_payload_object", sql`jsonb_typeof(${table.payload}) = 'object'`),
+]);
 
 export const experienceLevelEnum = pgEnum("experience_level", experienceValues);
 export const learningGoalEnum = pgEnum("learning_goal", goalValues);
