@@ -92,7 +92,7 @@ export function IpsBuilder({ history, goals, portfolioId, sample }: { history: P
     <header className={styles.header}>
       <a className={styles.link} href="/lab">Zpět do Labu</a>
       <h1 ref={headingRef} tabIndex={-1}>Můj investiční plán</h1>
-      <p>Sepiš si cíle a pravidla pro klidné i náročné období. IPS je tvoje vlastní rozhodnutí. investi nenavrhuje doporučené portfolio.</p>
+      <p>Sepiš si cíle a pravidla pro klidné i náročné období. IPS je tvoje vlastní rozhodnutí. Nenabízíme doporučené portfolio.</p>
       <p className={styles.hint}>Do uložení zůstává koncept jen na této stránce. Nezadávej čísla účtů ani citlivé podrobnosti.</p>
       {current && !("schemaVersion" in current.payload) && <p className={styles.hint}>Máš uložený původní plán. Doplň nová pole; uložením vznikne další verze a původní zůstane v historii.</p>}
     </header>
