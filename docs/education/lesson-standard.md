@@ -99,14 +99,14 @@ Zachovej záznamy odemčení Labu, XP, cvičný kapitál i verze historických �
 
 ## 6. Šablony a zapojení do produktu
 
-V repozitáři jsou kopírovatelné soubory [lesson.ts](templates/lesson.ts) a [lesson.test.ts](templates/lesson.test.ts). Obsahují fiktivní porovnání poplatků, částečně řešený příklad, samostatnou úlohu, rozhodnutí a závěr. Jsou pouze vzor, nejsou registrovanou ani publikovanou lekcí a neimplementují poplatky Labu. Částky jsou vstupy modelu, nikoli právní či tržní fakta.
+V repozitáři jsou kopírovatelné soubory [lesson.ts.template](templates/lesson.ts.template) a [lesson.test.ts.template](templates/lesson.test.ts.template). Obsahují fiktivní porovnání poplatků, částečně řešený příklad, samostatnou úlohu, rozhodnutí a závěr. Jsou pouze vzor, nejsou registrovanou ani publikovanou lekcí a neimplementují poplatky Labu. Částky jsou vstupy modelu, nikoli právní či tržní fakta. Přípona `.template` je drží mimo aplikační TypeScript a kontrolu nepoužitého kódu; ověřují se až jako zkopírované soubory `.ts`.
 
 Pro vyzkoušení šablony z kořene repozitáře (cílová složka musí být nová):
 
 ```sh
 mkdir src/features/lessons/authoring-sandbox
-cp docs/education/templates/lesson.ts src/features/lessons/authoring-sandbox/lesson.ts
-cp docs/education/templates/lesson.test.ts src/features/lessons/authoring-sandbox/lesson.test.ts
+cp docs/education/templates/lesson.ts.template src/features/lessons/authoring-sandbox/lesson.ts
+cp docs/education/templates/lesson.test.ts.template src/features/lessons/authoring-sandbox/lesson.test.ts
 npm test -- src/features/lessons/authoring-sandbox/lesson.test.ts
 npx next typegen
 npm run typecheck

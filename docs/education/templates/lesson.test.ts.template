@@ -4,7 +4,7 @@ import { block, correctAnswers, wrongAnswers } from "@/features/lessons/lesson-t
 import { evaluateQuestion, isQuestion } from "@/features/lessons/question-evaluation";
 import { exampleDefinition, exampleLesson, exampleSteps } from "./lesson";
 
-// Vitest hledá testy v src. Postup je v docs/education/lesson-standard.md.
+// Kopíruj jako lesson.test.ts do src. Postup je v docs/education/lesson-standard.md.
 // Po publikaci spusť i registry, curriculum a transition testy; tato lokální
 // strukturální kontrola sama neověřuje zapojení do serverového průchodu.
 const steps = exampleSteps[exampleLesson.id].map((step) => ({

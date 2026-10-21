@@ -1,6 +1,6 @@
 import type { AuthoredLesson, StepDefinition } from "@/features/lessons/types";
 
-// Kopíruj spolu s lesson.test.ts; postup je v docs/education/lesson-standard.md.
+// Kopíruj jako lesson.ts spolu s testem; postup je v docs/education/lesson-standard.md.
 // Jde o nepublikovaný autorský vzor, nikoli o nový modul nebo ceník Labu.
 export const exampleDefinition = {
   id: "authoring-example-comparing-fees",
