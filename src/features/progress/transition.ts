@@ -1,6 +1,6 @@
 import { availableLessons } from "@/features/learning/catalog";
 import { getAuthoredLesson } from "@/features/lessons/registry";
-import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
+import { getGuidedSteps } from "@/features/lessons/steps";
 import { evaluateQuestion, isQuestion } from "@/features/lessons/question-evaluation";
 
 export function lessonSteps(lessonId: string) {

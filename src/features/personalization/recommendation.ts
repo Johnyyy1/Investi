@@ -1,5 +1,5 @@
 import { curriculumLessons } from "@/features/learning/catalog";
-import { foundationsLessons } from "@/features/lessons/foundations/manifest";
+import { lessonPlacements } from "@/features/learning/curriculum";
 import { readDiagnostic } from "./diagnostic";
 import { readLearnerProfile, type LearnerProfile } from "./profile";
 
@@ -7,10 +7,8 @@ export type ScaffoldLevel = "guided" | "standard" | "compact";
 export type ReasonCode = "FOUNDATIONS_START" | "FOUNDATIONS_CONTINUE" | "DIAGNOSTIC_REMEDIATION" | "FOUNDATIONS_COMPACT_REVIEW" | "RETURNS_AFTER_FOUNDATIONS" | "RETURNS_FOR_ETF_PATH" | "RETURNS_FOR_STOCK_PATH" | "RETURNS_FOR_PORTFOLIO_PATH" | "RETURNS_FOR_QUANT_PATH" | "VOLATILITY_AFTER_RETURNS" | "CORRELATION_AFTER_VOLATILITY" | "DIVERSIFICATION_AFTER_CORRELATION" | "CURRICULUM_COMPLETE" | "NO_AVAILABLE_LESSON";
 export type RecommendationLesson = { id: string; moduleSlug: string; status: "available" | "planned"; estimatedMinutes: number };
 export type CurriculumPrerequisites = Readonly<Record<string, readonly string[]>>;
-/** Recommendation prerequisites only. Does not confer or change access/entitlement. */
-export const recommendationPrerequisites: CurriculumPrerequisites = {
-  returns: foundationsLessons.filter((lesson) => lesson.status === "available").map((lesson) => lesson.id),
-};
+/** Recommendation prerequisites only, by lesson ID from the curriculum registry. Does not confer or change access/entitlement. */
+export const recommendationPrerequisites: CurriculumPrerequisites = Object.fromEntries(lessonPlacements.map((placement) => [placement.lessonId, placement.prerequisites]));
 export type LearningRecommendation = {
   nextLessonId: string | null;
   reasonCode: ReasonCode;
@@ -33,11 +31,11 @@ export function recommendLearning({ profile = readLearnerProfile(), progress = [
   const completed = new Set(progress.filter((state) => state.status === "completed").map((state) => state.lessonId));
   const published = curriculum.filter((lesson) => lesson.status === "available");
   const unfinishedFoundations = published.filter((lesson) => lesson.moduleSlug === "investing-foundations" && !completed.has(lesson.id));
-  const eligible = published.filter((lesson) => !completed.has(lesson.id) && (prerequisites[lesson.id] ?? []).every((id) => completed.has(id)) && (prerequisites[lesson.moduleSlug] ?? []).every((id) => completed.has(id)));
-  // After Foundations, modules follow curriculum order: Returns, Volatility, Correlation, Diversification.
+  const ready = (lesson: RecommendationLesson, done: ReadonlySet<string>) => [lesson.id, lesson.moduleSlug].every((key) => (prerequisites[key] ?? []).every((id) => done.has(id)));
+  const eligible = published.filter((lesson) => !completed.has(lesson.id) && ready(lesson, completed));
+  // After Foundations, modules follow the registry's storage order.
   const nextModule = unfinishedFoundations.length ? "investing-foundations" : eligible.find((lesson) => lesson.moduleSlug !== "investing-foundations")?.moduleSlug;
-  const candidates = eligible.filter((lesson) => lesson.moduleSlug === nextModule);
-  const next = candidates[0];
+  const next = eligible.find((lesson) => lesson.moduleSlug === nextModule);
   const contexts = { LONG_TERM_ETF: "etf", COMPANIES: "stock", PORTFOLIO: "portfolio", QUANT: "data", CONFIDENCE: "neutral" } as const;
   const exampleContext = (profile.primaryGoal && profile.primaryGoal !== "CONFIDENCE" ? contexts[profile.primaryGoal] : null)
     ?? (profile.interests.some((interest) => ["DATA", "QUANT", "BACKTESTING"].includes(interest)) ? "data" : profile.interests.includes("ETFS") ? "etf" : profile.interests.some((interest) => ["STOCKS", "FUNDAMENTALS"].includes(interest)) ? "stock" : profile.interests.includes("PORTFOLIO") ? "portfolio" : "neutral");
@@ -49,11 +47,15 @@ export function recommendLearning({ profile = readLearnerProfile(), progress = [
   else if (next.moduleSlug === "diversification") reasonCode = "DIVERSIFICATION_AFTER_CORRELATION";
   else reasonCode = ({ etf: "RETURNS_FOR_ETF_PATH", stock: "RETURNS_FOR_STOCK_PATH", portfolio: "RETURNS_FOR_PORTFOLIO_PATH", data: "RETURNS_FOR_QUANT_PATH", neutral: "RETURNS_AFTER_FOUNDATIONS" } as const)[exampleContext];
   // Planning is approximate, with at most three lessons. A long lesson may span sessions.
+  // A lesson planned earlier in the session counts as done for the prerequisites of the next one.
   const sessionLessonIds: string[] = [];
+  const planned = new Set(completed);
   let minutes = 0;
-  for (const lesson of candidates.slice(0, 3)) {
+  for (const lesson of published.filter((candidate) => candidate.moduleSlug === nextModule && !completed.has(candidate.id))) {
+    if (sessionLessonIds.length === 3) break;
+    if (!ready(lesson, planned)) continue;
     if (sessionLessonIds.length && minutes + lesson.estimatedMinutes > profile.preferredSessionMinutes) break;
-    sessionLessonIds.push(lesson.id); minutes += lesson.estimatedMinutes;
+    sessionLessonIds.push(lesson.id); planned.add(lesson.id); minutes += lesson.estimatedMinutes;
   }
   return { nextLessonId: next?.id ?? null, reasonCode, scaffoldLevel, exampleContext, sessionLessonIds, splitLessonAcrossSessions: Boolean(next && next.estimatedMinutes > profile.preferredSessionMinutes) };
 }

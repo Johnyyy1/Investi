@@ -2,7 +2,7 @@ import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import { ArrowRight, ArrowRightCircle, BookOpen, ChevronDown, Circle, CircleCheck, Clock3 } from "lucide-react";
 import { getModuleLessons, moduleCatalog } from "@/features/learning/catalog";
-import { getStepDefinitions } from "@/features/lessons/returns/guided-flow";
+import { getStepDefinitions } from "@/features/lessons/steps";
 import type { PortfolioView } from "@/features/portfolio/service";
 import { formatPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { PersonalizationPrompt } from "@/components/personalization/personalization-prompt";

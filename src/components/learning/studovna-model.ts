@@ -1,6 +1,6 @@
 import type { loadLearner } from "@/features/learning/load-learner";
 import { getAuthoredLesson } from "@/features/lessons/registry";
-import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
+import { getGuidedSteps } from "@/features/lessons/steps";
 import type { LessonBlock } from "@/features/lessons/types";
 import type { PortfolioView } from "@/features/portfolio/service";
 import { roundDivide } from "@/features/portfolio/decimal";

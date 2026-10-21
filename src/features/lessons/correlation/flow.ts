@@ -1,9 +1,8 @@
+import type { StepDefinition } from "../types";
 import { correlationLessons } from "./manifest";
 
-type Step = { title: string; kind?: "lesson" | "mastery"; blocks: readonly string[] };
-
 /** Presentation order only. Explanations, examples and answers stay in the authored lessons. */
-export const correlationSteps: Record<string, readonly Step[]> = {
+export const correlationSteps: Record<string, readonly StepDefinition[]> = {
   [correlationLessons[0].id]: [
     { title: "Stejný směr, jiná velikost", blocks: ["prediction"] },
     { title: "Pohyb spolu", blocks: ["meaning", "range"] },

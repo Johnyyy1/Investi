@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { availableLessons } from "@/features/learning/catalog";
 import { getLearnerSummary, type LearnerState } from "@/features/learning/learner-summary";
 import { getAuthoredLesson } from "@/features/lessons/registry";
-import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
+import { getGuidedSteps } from "@/features/lessons/steps";
 import type { PortfolioLedgerSummary } from "@/features/portfolio/ledger-summary";
 import { evaluateUnlock, PORTFOLIO_LAB_UNLOCK_ID } from "@/features/progression/unlocks";
 import { practiceCapitalLedger, type PracticeCapitalLedger, type PracticeCapitalReceipt } from "@/features/rewards/practice-capital";

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/session";
 import { completeLesson, getModuleProgress, markLessonInProgress, saveLessonProgress } from "./repository";
 import { availableLessons } from "@/features/learning/catalog";
-import { getStepDefinitions } from "@/features/lessons/returns/guided-flow";
+import { getStepDefinitions } from "@/features/lessons/steps";
 import { serializePracticeCapitalMinor } from "@/features/rewards/presentation";
 import { toLearningMomentum, type CompletionRewardPresentation } from "./contracts";
 

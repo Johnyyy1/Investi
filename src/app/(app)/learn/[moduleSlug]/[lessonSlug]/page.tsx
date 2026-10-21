@@ -7,7 +7,7 @@ import { getLessonProgress, getModuleProgress } from "@/features/progress/reposi
 import { getCurrentUser } from "@/lib/session";
 import { serializePracticeCapitalMinor } from "@/features/rewards/presentation";
 import { toLearningMomentum } from "@/features/progress/contracts";
-import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
+import { getGuidedSteps } from "@/features/lessons/steps";
 import { isGuestIdentity } from "@/features/guest/identity";
 import { loadLessonHistory, loadLessonRiskHistory, lessonUsesHistory, lessonUsesRiskHistory } from "@/features/lessons/real-history/load";
 import { getConfiguredMarketDataProviderName, getConfiguredMarketDataService } from "@/features/market-data/environment";

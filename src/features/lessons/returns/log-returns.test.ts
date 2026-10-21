@@ -4,7 +4,7 @@ import { cumulativeReturn, logReturn, simpleReturn, simpleReturnFromLog } from "
 import { validateCompletion, validateMove } from "@/features/progress/transition";
 import { evaluateQuestion, isQuestion } from "../question-evaluation";
 import { comparingInvestmentsLesson } from "./comparing-investments";
-import { getGuidedSteps } from "./guided-flow";
+import { getGuidedSteps } from "../steps";
 import { logReturnsLesson as lesson } from "./log-returns";
 import { returnsLessons } from "./manifest";
 
