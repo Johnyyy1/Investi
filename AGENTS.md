@@ -16,9 +16,11 @@ investi is an interactive investing-education product built around the principle
 
 Learn investing by doing.
 
-The product should teach users concepts, let them make decisions, show consequences, and gradually prepare them for real-world investing workflows without pretending to be a real broker or giving investment advice.
+The product prepares people to start investing and maintain a plan: financial readiness, practical Czech investing workflows, costs, taxes, and behavior come before advanced analysis. Concepts and quantitative tools serve decisions. investi remains educational, without pretending to be a real broker or giving investment advice.
 
 This file defines how coding agents should work in this repository.
+
+The product direction adopted on 2026-10-21 is recorded in [docs/product-direction.md](docs/product-direction.md). Read it before changing curriculum, learning progression, Lab behavior, rewards, or product priorities. It defines the target direction; inspect code and [docs/product-reset.md](docs/product-reset.md) for current implementation and compatibility contracts. Older descriptions of a metrics-first course or portfolio-value-first hierarchy do not override this direction.
 
 1. Start every task by inspecting the repository
 
@@ -48,6 +50,10 @@ Do not switch branches unless explicitly requested.
 
 2. Product north star
 
+The primary product promise is milestone A: "Připraven/a začít". A learner can assess financial readiness, verify and compare brokers, understand total costs and Czech tax obligations, and write an investment policy statement (IPS) tested in a simulated crisis.
+
+Prioritize decisions that prevent costly mistakes: financial readiness, costs, taxes, planning, and behavior. Expand stock analysis, valuation, and quantitative methods after the practical path. Advanced tracks are optional; they are not prerequisites for becoming a capable passive investor.
+
 The core learning loop is:
 
 LEARN
@@ -56,6 +62,7 @@ LEARN
 → TEST / REVEAL
 → SEE CONSEQUENCES
 → UNDERSTAND WHY
+→ SET A PERSONAL SAFEGUARD / UPDATE THE PLAN
 → RETRY / CONTINUE
 
 The major product areas are:
@@ -67,6 +74,61 @@ Learn
 → Backtesting Lab
 
 These should feel like one connected product, not separate tools.
+
+Curriculum architecture
+
+The target is seven levels and one continuous behavioral strand:
+
+| Level | Learner-facing name | Focus |
+| --- | --- | --- |
+| 0 | Než začneš investovat | Budget, expensive debt, reserve, goals, retirement saving, fraud prevention |
+| 1 | Jak investice fungují | Existing Foundations plus fund types and active vs passive investing |
+| 2 | Investování v Česku v praxi | Broker/account, total costs, EU products and ETF selection, Czech taxes, IPS and a first practice purchase |
+| 3 | Portfolio: stavba, údržba, měření | Returns, risk, diversification, allocation, contributions and rebalancing |
+| 4 | Analýza akcií | Base rates before stock picking, business analysis, financial statements, ratios and their limitations |
+| 5 | Oceňování a investiční teze | Valuation, scenarios, reverse DCF, thesis, pre-mortem and review |
+| 6 | Kvantitativní metody | Return mathematics, factors, risk models, backtest bias and uncertainty |
+| B | Investor v zrcadle | Behavioral practice woven through lessons and decisions in Lab |
+
+Optional modules on leverage/derivatives, crypto, and critical examination of technical analysis teach risks and limitations. They do not expand the persistent portfolio's trading permissions.
+
+Milestones:
+
+- A — "Připraven/a začít": readiness outcomes from levels 0–2, behavioral core B1–B4 and B9, IPS, a practice purchase, and the B10 crisis exercise. Level 0 is recommended and can be tested out of; its financial check-up is not pass/fail.
+- B — "Samostatný pasivní investor": A + level 3 + the full behavioral strand and portfolio-maintenance capstone.
+- C — "Samostatný analytik akcií": B + levels 4–5 and a documented analysis/valuation/thesis capstone.
+- D — "Kvantitativní investor": B + level 6. C is not a prerequisite for D.
+
+Do not mark milestone A complete before its practical and crisis outcomes exist, even if foundational content ships in an earlier phase.
+
+Curriculum continuity
+
+Preserve every existing lesson and stable internal ID, saved progress, original completion timestamps, reward receipts, and recorded Lab access. Display codes such as 3.1.1 are not persistence identities. The source brief describes an earlier product inventory; verify current published/authored content in code rather than treating historical counts as a live inventory.
+
+The curriculum registry in src/features/learning/curriculum.ts separates level, pedagogical module, order, prerequisites, skill tags, and required/optional status from stable identity. Reuse this registry and preserve existing routes or provide compatibility redirects when moving lessons.
+
+Map Foundations to level 1; ordinary Returns to 3.1; volatility to 3.2; correlation/diversification to 3.3; log returns to 6.1; real-data correlation to 6.2; correlation vs causation to B8. Do not delete advanced lessons to simplify the beginner path.
+
+Completed lessons count in their new location, but do not imply completion of newly added material. An expanded module can become in progress while its old lesson completions remain intact. Any mastery state is separate from lifetime completion and reward eligibility.
+
+Curriculum placement must not accidentally alter rewards or unlock prerequisites. Policy v4 resolves reward eligibility from the registered curriculum level, independently of the storage module. Preserve its eligibility semantics or change them through a deliberate versioned domain migration. Adding new level-1 lessons must not expand the frozen seven-lesson Lab prerequisite, relock existing learners, or repeat their unlock grant.
+
+Implementation order
+
+1. Foundations for milestone A: lesson registry/remapping, dated fact registry, level 0, costs (2.2), taxes (2.4), broker/account (2.1), IPS template, and explainable process feedback with realistic Lab costs, conversion and tax-lot education.
+2. Behavior and maintenance: B1–B4/B9/B10, decision-time cards, MWR/TWR, ETF selection, allocation/rebalancing, spaced review/mastery, baseline measurement, and prospective Practice Capital changes.
+3. Complete milestone B: remaining behavior lessons, capstone, adaptive entry assessment, retention checks and evaluation of decision-time cards.
+4. Stock analysis, financial statements and contextual ratio limitations.
+5. Valuation, reverse DCF and a thesis journal with later review.
+6. Quantitative methods, backtest overfitting exercises and optional modules.
+
+This is prioritization for scoped implementation tasks, not a live implementation checklist. Inspect completed work first, reuse the existing curriculum registry, learner artifacts and Portfolio Lab costs, and implement the remaining scope. Complete explicitly requested maintenance or fixes without using the roadmap to expand their scope.
+
+Success measures
+
+The target north star is the share of milestone-A learners who follow their own IPS during a simulated crisis, supported by retained skills at "Zvládnuté" or above. Assess knowledge, delayed retention, rubric-based outputs, and behavior in simulation. Time in app, streak length, trade count, and investment return are not success measures.
+
+Do not infer real-money readiness or a causal education effect from simulated returns. Real-world follow-up is voluntary and opt-in. Review schedules, mastery thresholds, and experiment designs in the brief are design proposals to validate, not research-established constants.
 
 Product positioning
 
@@ -80,9 +142,11 @@ beginner-friendly;
 
 data-aware;
 
-progressively more analytical;
+grounded in Czech investing practice;
 
-suitable for a path from first investing concepts toward quantitative thinking.
+focused on planning, long-term habits, and explainable decisions;
+
+progressively more analytical through optional advanced tracks.
 
 investi is not:
 
@@ -344,9 +408,31 @@ mobile usability.
 
 Do not change lesson completion semantics while doing visual work.
 
+Learning design target
+
+Teach in the order of real decisions. Use a worked example, a partially completed example, an independent task, retrieval questions, and a short self-explanation. Tie each new metric to a decision, its assumptions, and when it misleads.
+
+Modules end in mixed checkpoints; levels end in practical projects assessed with an explicit four-level rubric. Prefer tasks using fictional broker tariffs, KIDs, statements, ETF checklists, IPS templates, and Lab missions over calculation-only quizzes.
+
+The target progression is a prerequisite/skill graph with an adaptive entry assessment (including "Nevím"), a test-out route, and spaced mixed review. Preserve the dominant Continue action while recommending eligible next lessons and relevant review.
+
+Target mastery labels are "Zkoušeno → Známé → Zvládnuté → Ovládnuté". The highest state requires delayed mixed retrieval and may decline with evidence; this must never erase lifetime lesson completion, revoke recorded access, or reissue first-completion rewards. Exact thresholds, question counts and scheduling models belong in an explicit implementation specification.
+
+Behavioral learning follows experience in simulation → explanation using the learner's decisions → a learner-chosen safeguard. Use IPS, automation, checklists, turnover budgets, review frequency, and pre-mortems as concrete outputs. Address home bias and familiarity as well as overconfidence, loss aversion, disposition effect, FOMO, anchoring, and mental accounting.
+
+Decision-time cards should explain relevant consequences at the point of action: turnover and costs, selling winners while holding losers, repeated backtest selection, or a tax-lot timing decision. Triggers need explicit rules and data; do not diagnose a bias as fact from a single action.
+
 9. Practice Capital
 
 Practice Capital is the spendable learning reward for Portfolio Lab. XP measures learning progress, stays visible to the learner, and gates the Portfolio Lab unlock. Issue #35 decided to keep XP visible but secondary: Progress leads with completed lessons and receipt-derived Practice Capital, and shows XP as a quiet learning measure. Do not hide XP or remove it from the unlock condition without a new product decision.
+
+Reward direction
+
+Reward learning, retained understanding, and documented process. Never grant XP or Practice Capital for placing trades, trading frequency, taking more risk, or achieving a return. No return leaderboards, trade confetti, lottery rewards, or prompts to trade because of inactivity. Do not add price-movement notifications. Learning streaks should support learning/review rather than Lab activity.
+
+The target evolution is mastery-linked awards, monthly Practice Capital income in an isolated simulated-time training portfolio (#139), and process milestones such as an IPS or completing a crisis exercise according to plan. Keep the personal portfolio's receipt-derived entitlement intact. Implement these prospectively through a versioned reward/disbursement policy with explicit eligibility, scheduling, idempotency, and migration tests. Distinguish earned entitlement, scheduled disbursements, contributed capital, and available cash; all must remain auditable and contributions must never become returns.
+
+This direction does not retroactively claw back or reschedule earned capital, recalculate receipts, or change the existing lesson-based streak contract. Until a scoped implementation deliberately replaces them, preserve policy v4 and the learning contracts below.
 
 Reward policy
 
@@ -632,7 +718,7 @@ When live providers are eventually connected, keep provider-specific behavior be
 
 17. Portfolio Lab UX principles
 
-The Portfolio Lab should resemble the interaction model of a modern investing app while remaining educational.
+The Portfolio Lab is a rehearsal for maintaining an investment plan. Keep familiar investing interactions and connect each decision to learning, costs, diversification, and the learner's IPS. Choosing to wait or keep the plan can be a successful outcome.
 
 Core flow:
 
@@ -643,18 +729,21 @@ SEARCH
 → BUY
 → SEE HOLDING
 → UNDERSTAND PORTFOLIO IMPACT
+→ CHECK AGAINST THE PLAN
 
 Main hierarchy
 
 Prefer:
 
-Portfolio value as the dominant metric;
+Process feedback as the primary educational summary: diversification/concentration (including HHI where supported), total costs, turnover, alignment with IPS, and cash drag in the context of the plan;
 
-Available cash as secondary;
+portfolio value, holdings and available cash clearly visible for orientation;
+
+investment P&L as context, with separately explained MWR and TWR when supported;
 
 Practice Capital as learning context;
 
-one obvious + Invest CTA;
+one easy-to-find + Invest action when appropriate, without pressure to trade;
 
 holdings;
 
@@ -663,6 +752,12 @@ allocation;
 recent activity;
 
 destructive reset actions de-emphasized.
+
+"Skóre procesu" means explainable criteria and feedback first. Do not invent an aggregate 82/100, universal ideal allocation, or unsupported thresholds. Any composite needs a documented model; absence of data means unavailable, not failure. Do not penalize appropriate cash reserves or reward needless rebalancing to increase activity.
+
+Realistic friction is part of the learning target: fictional broker fee profiles, FX spread, recurring simulated contributions, tax-lot maps, and dated educational sale-proceeds checks. Show assumptions and costs before confirmation. Fees, FX and accounting remain authoritative on the server; introducing them is a financial-domain task, not a visual change.
+
+MWR/TWR, process metrics, and tax-lot tools must use sufficient authoritative data and documented conventions. Until implemented, do not display fabricated values or imply current coverage. Historical/crisis exercises use isolated scenario state; they must not mutate the persistent portfolio's trades or valuation clock.
 
 Avoid
 
@@ -680,9 +775,9 @@ permanently promoted Reset Portfolio action.
 
 Empty state
 
-A beginner with capital but no holdings should see a clear first action.
+A beginner with capital but no holdings should see a clear first practice action connected to an IPS or guided mission, without implying urgency to invest.
 
-A user with zero Practice Capital should be directed back to learning.
+A user with zero Practice Capital should be directed back to learning. No cash or holdings is not a reason to encourage extra trades or paid deposits.
 
 18. Scenario challenges
 
@@ -716,6 +811,8 @@ Status: Pass
 
 Outcome performance should not determine whether a concept such as diversification was "correct."
 
+Behavioral scenarios should end with a safeguard or plan revision and assess the learner's stated IPS. A crisis exercise tests process under stress, not whether the learner guessed the market recovery. Present criteria and data limitations explicitly.
+
 19. Backtesting Lab
 
 Backtesting answers:
@@ -727,6 +824,8 @@ Portfolio Lab answers:
 What do I own?
 
 Do not conflate the two.
+
+Teach costs, benchmarks, rebalancing, look-ahead/survivorship bias, overfitting, multiple attempts, and out-of-sample limitations alongside backtest results. The target includes an intentional overfitting exercise and an attempt counter; these are educational tools, not rewards for optimizing historical return. A favorable historical result is not evidence of a sound real-world strategy.
 
 A future Backtest this portfolio flow should normalize current portfolio holdings into a frozen allocation/specification snapshot.
 
@@ -773,6 +872,20 @@ total return;
 money-weighted return;
 
 time-weighted return.
+
+Explain each metric's meaning, input requirements, period, currency, costs, cash flows, and limitations. A difference between MWR and TWR can support reflection on cash-flow timing; it is not by itself proof of a behavioral mistake.
+
+20a. Czech tax, regulatory, and research facts
+
+Treat changing factual values as dated data, not constants embedded in lesson prose. The target fact registry stores value/unit, jurisdiction, effective-from/to dates, source URL, last verification, owner, and next review date. Lessons reference fact keys/tokens; historical scenarios resolve the rule for the scenario's date rather than silently applying today's rule.
+
+Tax lessons visibly state "vzdělávací obsah, ne daňové poradenství; stav k [datum]". Overdue facts need editorial flags and visible freshness warnings when applicable. Plan tax-adviser review before publishing tax lessons; keep unresolved facts explicitly marked as requiring verification.
+
+The supplied direction brief is a product/research input, not an independently verified legal or market-data source. Verify tax limits, holding periods, exemptions, exchange-rate conventions, investor compensation, W-8BEN/treaties, DIP/pension rules, and PRIIPs/UCITS against current primary sources before publication or implementing educational calculations. Do not hard-code the brief's example amounts or present unknown rules as settled.
+
+Keep securities and crypto rules distinct, sale proceeds distinct from gains, trading FX distinct from tax FX, and individual tax lots distinct from aggregate holdings. Educational tax maps are not a personalized tax filing service.
+
+Keep the brief's maintenance cadence: annual January tax/rate checks, filing-season checks, monthly macro inputs, semiannual product/research reviews, and ad hoc legislative updates. These are content-maintenance requirements, not an instruction to create scheduled jobs automatically. Record the sample, period, and limitations behind research claims; do not present findings from other learning domains or paper portfolios as proven effects for investi.
 
 21. Demo users
 
@@ -898,6 +1011,8 @@ marketing
 Do not weaken tests just to get green output.
 
 If an assertion is wrong because the product contract changed deliberately, update the assertion to the approved semantics.
+
+When implementing the new direction, cover stable-ID remapping, old route compatibility, prerequisites and new-content module status, preserved completions/receipts/unlocks, mastery vs completion, review scheduling, dated facts, process rubric rules, and scenario isolation as relevant. Reward/disbursement or fee/FX changes require exact-arithmetic, retry and concurrency coverage. Documentation-only tasks need diff, link and consistency checks; application, database and browser gates apply when their behavior changes.
 
 25. Clean runtime rule
 
@@ -1165,4 +1280,4 @@ Correct, explainable, auditable educational finance behavior over flashy UX or i
 
 And for product design:
 
-Make the investing workflow familiar first, then layer education on top.
+Prepare the learner to make and maintain an investment plan. Keep the workflow familiar, teach at the moment of decision, and judge the process rather than the return.
