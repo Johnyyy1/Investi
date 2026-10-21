@@ -16,6 +16,34 @@ This makes a later lesson reward available as cash without counting it as invest
 
 Portfolio total is cash plus current holdings market value. Investment gain/loss is portfolio total minus current contributed Practice Capital. A missing quote or FX rate makes valuation incomplete; it is never substituted with zero.
 
+## Portfolio performance (LAB-03 / #138)
+
+The Kč gain/loss is labeled **Zisk / ztráta od otevření portfolia**. There is no longer a portfolio percentage obtained by dividing this amount by lifetime earned capital (#106): an extra learning reward must not dilute a displayed investment return. Per-holding percentages remain unrealized gain divided by the all-in cost of the open holding, using central half-away-from-zero rounding.
+
+`features/portfolio/performance.ts` provides shared pure TWR and dated MWR calculations for Lab and future lesson 3.1.6. Both measure the **whole generation, including uninvested cash**, in CZK, net of recorded transaction/FX costs. They exclude unrecorded dividends, cash interest and taxes; they are not total-return series. Existing corporate-action handling limitations still apply. The UI shows the period dates and conventions in a keyboard-accessible disclosure. The lesson link resolves only when #204 publishes `/learn/returns/time-vs-money-weighted`; until then it says the lesson is being prepared.
+
+### External contributions and read consistency
+
+The saved `opening_capital_minor` is one opening contribution. Positive lesson receipts and unlock grants after `opened_at` contribute at their original `awarded_at` / `unlocked_at` timestamps; zero receipts create no boundary. Same-instant receipts are combined. A receipt sharing the opening millisecond joins the initial contribution only to the extent it is not already in the opening baseline. Resets begin a new series with restored entitlement, without replaying earlier receipts or trades. A user starting with no capital begins measurement at the first positive contribution.
+
+Trades and fees affect cash and holdings internally. A sale is **not** a withdrawal and a purchase is **not** a new external contribution. Withdrawals are not supported. Contributions, their exact entitlement sum and ordered generation trades are read in a single read-only repeatable-read PostgreSQL transaction; existing mutation locks, retries, reward versions and receipt amounts are unchanged. An inconsistent opening/receipt total is unavailable, not an invented flow.
+
+### TWR and historical coverage
+
+For each contribution after the first, reconstruct pre-flow cash and holdings from earlier immutable trades. Link `valueBefore / previousValueAfter` geometrically, then link the final portfolio value. Products and money stay `bigint`; the rational product is reduced and rounded at the return boundary. The terminal Kč value uses the ordinary complete portfolio valuation. A missing terminal value makes both returns unavailable.
+
+Providers expose daily history rather than intraday snapshots. When holdings exist at a flow, `performance-loader.ts` requests **raw** daily prices from `MarketDataService`, takes the latest close from a fully completed prior UTC day, and uses dated reference FX for that close. Such TWR is visibly labeled **odhad** (estimate): it cannot claim to remove intraday contribution-timing effects exactly. All-cash boundaries need no market data. No adjusted close, current FX, execution price, deterministic fallback or future observation fills a gap. History must be complete and match the instrument/currency/adjustment; neither price nor FX may be more than seven calendar days old. This is a conservative coverage guard, not a market-calendar guarantee. Missing data, failed providers, a zero-value intermediate boundary or an ambiguous trade sharing a contribution timestamp makes TWR unavailable. MWR remains independent of historical-boundary coverage.
+
+### MWR, period labels and numerical limits
+
+MWR solves `endingValue = Σ contribution × exp(logGrowth × remainingTime / totalTime)`. Only dimensionless ratios derived from exact minor units enter numerical exponentiation. Because all external flows are positive contributions followed by one terminal portfolio value, this function is monotonic and has at most one solution. Bisection uses log-growth bounds `[-36, 36]`, at most 200 iterations, a normalized residual tolerance of `1e-13` or log-interval tolerance of `1e-13`. A root outside that range, invalid/negative flows or lack of convergence is unavailable. A complete terminal loss is −100%; zero duration or no positive contributions has no defined return. The one-contribution case uses the same exact growth ratio as TWR.
+
+Both metrics return cumulative basis points. For periods of at least **365 elapsed days**, both also return annualized basis points using **ACT/365**, and the UI compares those annual rates while disclosing cumulative returns. Shorter periods show both **za období**, with no annualization. It never compares the reference example's +8% cumulative TWR directly to −6.05% annual MWR. Dates use UTC instants for elapsed time, with Europe/Prague display dates.
+
+The #204 reference (10,000 Kč, +20%, 50,000 Kč added after 365 days, then −10% over another 365 days) gives TWR **+8% cumulative / +3.92% annually** and MWR **−11.74% cumulative / −6.05% annually**. Differences can reflect cash-flow timing; they do not diagnose a behavioral mistake or prove real-money readiness.
+
+Method references checked 2026-10-21: [CFA Institute GIPS handbook, input data and calculation methodology](https://www.gipsstandards.org/standards/gips-standards-for-firms/gips-standards-handbook-for-firms/) and [Microsoft XIRR, dated flows and 365-day convention](https://support.microsoft.com/en-us/excel/functions/xirr-function). These inform conventions; the daily-close estimate is not a claim of GIPS compliance or intraday precision.
+
 ## Exact arithmetic
 
 - Money is stored as `bigint` minor units.

@@ -12,6 +12,7 @@ Each concept has one name in the interface. The UI is Czech; an English term app
 | Fall from the previous peak | **propad** | drawdown (alone) | One fall: „propad od vrcholu“. |
 | Maximum drawdown | **Největší propad** | Maximální drawdown | Add „(max. drawdown)“ once in the explanation, not in the label. Backtesting and the instrument detail use the same label. |
 | Return over the whole backtest period | **Celkový výnos** | výnos (alone) | Not annualized. The detail says so, next to „CAGR“, which is. The instrument detail still says „Jednoduchý výnos“ for the same quantity (#33). |
+| Personal portfolio gain/loss | **Zisk / ztráta od otevření portfolia** | od nákupu | Amount in Kč, including realized results and recorded costs, excluding contributed capital. Percentages are separately named TWR/MWR, never gain divided by earned capital. |
 | Sharpe ratio | **Sharpeho poměr** | Sharpe | Add „(Sharpe ratio)“ in the explanation, not in the label. Always name the risk-free rate it used. Unavailable is „Nedostupné“, never 0. |
 | Trading costs in a backtest | **Náklady obchodů** | transakční náklady | „Poplatek z objemu obchodu“ is the rate, „Fixní poplatek za obchod“ the flat fee. The result switch says „S náklady / Bez nákladů“. |
 | Traded value of all trades | **Obrat** | turnover (alone) | Add „(turnover)“ in the explanation, not in the label. |

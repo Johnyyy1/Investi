@@ -30,7 +30,8 @@ function view(overrides: Partial<PortfolioView> = {}): PortfolioView {
   return {
     feeProfileId: "investi-standard-v1",
     portfolioId: "p1", baseCurrency: "CZK", openedAt: "2026-10-13T08:00:00.000Z", openingCapitalMinor: "500000", earnedPracticeCapitalMinor: "500000",
-    availableCashMinor: "500000", holdingsMarketValueMinor: "0", portfolioTotalMinor: "500000", investmentGainLossMinor: "0", investmentGainLossBasisPoints: "0",
+    availableCashMinor: "500000", holdingsMarketValueMinor: "0", portfolioTotalMinor: "500000", investmentGainLossMinor: "0",
+    performance: { startedAt: "2026-09-01T00:00:00.000Z", endedAt: "2026-10-01T00:00:00.000Z", twrMethod: "cash-flow-boundaries", twr: { status: "available", basisPoints: "144", annualizedBasisPoints: null }, mwr: { status: "available", basisPoints: "144", annualizedBasisPoints: null } },
     valuationComplete: true, valuedHoldingsCount: 0, totalHoldingsCount: 0, marketDataMode: "sample", realizedGainLossMinor: "0", cashWeightBasisPoints: "10000",
     attribution: { priceEffectMinor: "0", fxEffectMinor: "0", realizedGainLossMinor: "0", currencies: [] }, allocation: null, holdings: [], recentActivity: [],
     exposure: { sector: cashOnly, country: cashOnly },
@@ -191,7 +192,7 @@ describe("overview states", () => {
   });
 
   it("shows no total, gain or weights while a quote is missing, only what the ledger knows", () => {
-    const html = render(view({ holdings: [vt, { ...msft, marketValueMinor: null, gainLossMinor: null, portfolioWeightBasisPoints: null }], valuationComplete: false, portfolioTotalMinor: null, holdingsMarketValueMinor: null, investmentGainLossMinor: null, investmentGainLossBasisPoints: null, cashWeightBasisPoints: null, attribution: null }));
+    const html = render(view({ holdings: [vt, { ...msft, marketValueMinor: null, gainLossMinor: null, portfolioWeightBasisPoints: null }], valuationComplete: false, portfolioTotalMinor: null, holdingsMarketValueMinor: null, investmentGainLossMinor: null, cashWeightBasisPoints: null, attribution: null }));
     expect(html).toContain("Některé ceny chybí");
     expect(html).toContain("Co víme jistě");
     expect(html).not.toContain('data-testid="portfolio-value"');

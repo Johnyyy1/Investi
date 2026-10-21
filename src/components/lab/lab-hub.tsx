@@ -213,7 +213,7 @@ function SavedPortfolioCard({ view }: { view: PortfolioView }) {
       {line ? <p className={styles.status}><line.icon size={16} aria-hidden="true" />{line.text}</p> : null}
       {view.portfolioTotalMinor !== null && !missing ? <div className={styles.valueRow}>
         <p className={styles.value}>{wholeMoney(view.portfolioTotalMinor)}</p>
-        {change !== null ? <p className={styles.change}><ChangeIcon size={14} aria-hidden="true" />{signedMoney(change)} od nákupu{view.investmentGainLossBasisPoints !== null ? ` · ${percent(view.investmentGainLossBasisPoints, { signed: true })}` : ""}</p> : null}
+        {change !== null ? <p className={styles.change}><ChangeIcon size={14} aria-hidden="true" />{signedMoney(change)} od otevření portfolia</p> : null}
       </div> : null}
       {segments.length > 0 && !missing ? <Donut segments={segments} label={`Současné rozložení: ${segments.map((segment) => `${segment.label} ${percent(segment.basisPoints)}`).join(", ")}`} /> : null}
       <p className={styles.meta}>{meta}</p>

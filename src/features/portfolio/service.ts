@@ -4,7 +4,9 @@ import { db } from "@/db";
 import type { Currency } from "@/features/market-data/contracts";
 import { attributeHolding, foldQuoteCost, impliedPurchaseFxUnits } from "./attribution";
 import { allocationBasisPoints, foldTrades, valuePortfolio, type HoldingValuation } from "./domain";
-import { decimalToPriceUnits, fxToDecimal, quantityToDecimal } from "./decimal";
+import { decimalToPriceUnits, fxToDecimal, quantityToDecimal, roundDivide } from "./decimal";
+import { loadPortfolioPerformance } from "./performance-loader";
+import type { PortfolioPerformance } from "./performance";
 import { portfolioExposure, type ExposureDimension, type PortfolioExposure } from "./exposure";
 import { perfMeasure } from "@/lib/perf";
 import { portfolioMarketData } from "./environment";
@@ -46,7 +48,7 @@ export interface PortfolioView {
   holdingsMarketValueMinor: string | null;
   portfolioTotalMinor: string | null;
   investmentGainLossMinor: string | null;
-  investmentGainLossBasisPoints: string | null;
+  performance: PortfolioPerformance;
   valuationComplete: boolean;
   valuedHoldingsCount: number;
   totalHoldingsCount: number;
@@ -148,6 +150,16 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
   const valued = valuePortfolio(rows.earnedPracticeCapitalMinor, folded, valuations);
   const invested = valued.holdingsMarketValueMinor;
   const total = valued.portfolioTotalMinor;
+  const performance = await loadPortfolioPerformance(portfolioMarketData.service, {
+    openedAt: rows.portfolio.openedAt.toISOString(),
+    openingCapitalMinor: rows.portfolio.openingCapitalMinor,
+    earnedPracticeCapitalMinor: rows.earnedPracticeCapitalMinor,
+    receipts: rows.contributions.map(({ at, amountMinor }) => ({ at: at.toISOString(), amountMinor })),
+    trades: rows.trades,
+    endingMinor: total,
+    endedAt: rows.readAt.toISOString(),
+    baseCurrency,
+  });
   const attributed = new Map(valued.holdings.flatMap((holding) => {
     const observation = observationByInstrument.get(holding.instrumentId);
     if (holding.marketValueMinor === null || !observation?.currentPrice) return [];
@@ -215,9 +227,7 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
     holdingsMarketValueMinor: invested?.toString() ?? null,
     portfolioTotalMinor: valued.portfolioTotalMinor?.toString() ?? null,
     investmentGainLossMinor: valued.investmentGainLossMinor?.toString() ?? null,
-    investmentGainLossBasisPoints: valued.investmentGainLossMinor === null || rows.earnedPracticeCapitalMinor === 0n
-      ? null
-      : ((valued.investmentGainLossMinor * 10_000n) / rows.earnedPracticeCapitalMinor).toString(),
+    performance,
     valuationComplete: valued.complete,
     valuedHoldingsCount: observations.filter(({ marketValueMinor }) => marketValueMinor !== null).length,
     totalHoldingsCount: folded.holdings.length,
@@ -251,7 +261,7 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
         allocationBasisPoints: holding.marketValueMinor === null || invested === null ? null : allocationBasisPoints(holding.marketValueMinor, invested).toString(),
         portfolioWeightBasisPoints: holding.marketValueMinor === null || total === null || total <= 0n ? null : allocationBasisPoints(holding.marketValueMinor, total).toString(),
         gainLossMinor: holding.gainLossMinor?.toString() ?? null,
-        gainLossBasisPoints: holding.gainLossMinor === null || holding.costBasisMinor <= 0n ? null : ((holding.gainLossMinor * 10_000n) / holding.costBasisMinor).toString(),
+        gainLossBasisPoints: holding.gainLossMinor === null || holding.costBasisMinor <= 0n ? null : roundDivide(holding.gainLossMinor * 10_000n, holding.costBasisMinor).toString(),
         priceEffectMinor: effects?.priceEffectMinor.toString() ?? null,
         fxEffectMinor: effects?.fxEffectMinor.toString() ?? null,
         quoteObservedAt: holding.quoteObservedAt,
