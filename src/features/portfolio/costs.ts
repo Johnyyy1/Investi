@@ -13,8 +13,8 @@ export interface BrokerFeeProfile {
 /** Fictional educational tariffs, never a representation of a real broker's prices.
  * V1 charges commission in the portfolio's CZK currency; custody needs simulated time. */
 export const BROKER_FEE_PROFILES = [
-  { id: "investi-standard-v1", name: "investi standard", tradeFee: { rateBps: 10, minMinor: 1_000n, maxMinor: 20_000n, currency: "CZK" }, fxMarkupBps: 50 },
-  { id: "investi-low-fx-v1", name: "investi nižší konverze", tradeFee: { rateBps: 20, minMinor: 2_500n, maxMinor: 30_000n, currency: "CZK" }, fxMarkupBps: 10 },
+  { id: "investi-standard-v1", name: "Investník standard", tradeFee: { rateBps: 10, minMinor: 1_000n, maxMinor: 20_000n, currency: "CZK" }, fxMarkupBps: 50 },
+  { id: "investi-low-fx-v1", name: "Investník nižší konverze", tradeFee: { rateBps: 20, minMinor: 2_500n, maxMinor: 30_000n, currency: "CZK" }, fxMarkupBps: 10 },
 ] as const satisfies readonly BrokerFeeProfile[];
 export const DEFAULT_FEE_PROFILE = BROKER_FEE_PROFILES[0];
 

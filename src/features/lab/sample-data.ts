@@ -1,6 +1,6 @@
 import type { MonthlyObservation } from "./backtest";
 /**
- * investi synthetic fixture v1, authored for this Lab. No external market observations.
+ * Investník synthetic fixture v1, authored for this Lab. No external market observations.
  * 132 invented monthly simple returns, Jan 2015–Dec 2025. Deterministic cycles and shocks
  * illustrate compounding, recovery, and bond/stock co-movement. Calendar labels are illustrative.
  * Never label this fixture historical/live. Replace via MonthlyObservation when a real source exists.

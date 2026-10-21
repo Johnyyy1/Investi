@@ -64,7 +64,7 @@ export class FrankfurterFxProvider implements FxRateProvider {
 
   async getFxRate(baseCurrency: Currency, quoteCurrency: Currency, asOf: UtcTimestamp) {
     if (!validCurrency(baseCurrency) || !validCurrency(quoteCurrency)) {
-      throw new MarketDataError("FxUnavailable", "The requested FX currency is not supported by Investi.", {
+      throw new MarketDataError("FxUnavailable", "The requested FX currency is not supported by Investník.", {
         provider: FRANKFURTER_PROVIDER_ID,
         baseCurrency: String(baseCurrency),
         quoteCurrency: String(quoteCurrency),

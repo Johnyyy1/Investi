@@ -4,7 +4,8 @@ import { LegalPage, legalOperator, type LegalSection } from "@/components/legal/
 
 export const metadata: Metadata = {
   title: "Zásady ochrany osobních údajů",
-  description: "Jaké osobní údaje investi ukládá, proč, jak dlouho a jak si je stáhneš nebo smažeš.",
+  description: "Jaké osobní údaje Investník ukládá, proč, jak dlouho a jak si je stáhneš nebo smažeš.",
+  alternates: { canonical: "/privacy" },
 };
 
 const sections: readonly LegalSection[] = [
@@ -23,7 +24,7 @@ const sections: readonly LegalSection[] = [
     <div><dt>Host a demo</dt><dd>Když se učíš bez účtu, vytvoříme anonymní profil bez e-mailu. Ukládáme k němu stejná data o učení a relacích jako k účtu.</dd></div>
   </dl> },
   { id: "neukladame", title: "Co nezpracováváme", body: <ul>
-    <li>Platební údaje, bankovní účty ani skutečné investice. investi není obchodník s cennými papíry a nepracuje se skutečnými penězi.</li>
+    <li>Platební údaje, bankovní účty ani skutečné investice. Investník není obchodník s cennými papíry a nepracuje se skutečnými penězi.</li>
     <li>Reklamní ani analytické sledování a profilování pro marketing. Údaje neprodáváme.</li>
   </ul> },
   { id: "ucely", title: "Proč údaje zpracováváme", body: <ul>
@@ -70,5 +71,5 @@ const sections: readonly LegalSection[] = [
 
 export default function PrivacyPage() {
   return <LegalPage title="Zásady ochrany osobních údajů" sections={sections} updatedAt="21. října 2026"
-    intro={<p>investi je vzdělávací služba, ve které se učíš investovat s cvičným kapitálem. Ukládáme jen to, co k tomu potřebujeme, a všechno si můžeš kdykoli stáhnout nebo smazat.</p>} />;
+    intro={<p>Investník je vzdělávací služba, ve které se učíš investovat s cvičným kapitálem. Ukládáme jen to, co k tomu potřebujeme, a všechno si můžeš kdykoli stáhnout nebo smazat.</p>} />;
 }

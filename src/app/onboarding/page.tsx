@@ -9,7 +9,7 @@ const GUEST_DRAFT_KEY = "investi-personalization-v1:guest:initial";
 // Only public prompts/options cross the client boundary. No answer key or diagnostic evidence.
 const questions = diagnosticQuestions.map(({ id, prompt, options }) => ({ id, prompt, options }));
 
-export const metadata = { title: "Přizpůsobení učení" };
+export const metadata = { title: "Přizpůsobení učení", robots: { index: false, follow: false } };
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ personalize?: string; retake?: string }> }) {
   const user = await getCurrentUser();
   // New learners answer first; a guest identity is created only when they finish (see PersonalizationFlow).

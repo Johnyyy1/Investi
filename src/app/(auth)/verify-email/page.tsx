@@ -3,7 +3,7 @@ import { AuthLayout } from "@/components/auth/auth-layout";
 import { buttonVariants } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/session";
 
-export const metadata = { title: "Ověření e-mailu" };
+export const metadata = { title: "Ověření e-mailu", robots: { index: false, follow: false } };
 
 /** Better Auth's verification link lands here; on failure it appends ?error=TOKEN_EXPIRED or INVALID_TOKEN. */
 export default async function VerifyEmailPage({ searchParams }: { searchParams: Promise<{ error?: string | string[] }> }) {

@@ -12,7 +12,7 @@ Learners moving from first investing concepts toward more analytical and quantit
 
 ## Product Purpose
 
-investi helps people learn investing by doing: learn a concept, make a decision, predict, test or reveal, see the consequences, understand why, and retry or continue.
+Investník helps people learn investing by doing: learn a concept, make a decision, predict, test or reveal, see the consequences, understand why, and retry or continue.
 
 ## Positioning
 
@@ -36,7 +36,7 @@ Authenticated navigation contains Learn, Lab, and Progress; settings live behind
 
 ## Brand Commitments
 
-Always write the product name as **investi**; only the typeset wordmark shows **investi!**. UI terms follow the glossary in [docs/terminology.md](docs/terminology.md). The primary line is **Learn investing by doing.** The voice is intelligent, approachable, playful, direct, and optimistic. Product interfaces are calm, precise, readable, and beginner-friendly.
+Always write the product name as **Investník** (with the accent). Use `investnik` without diacritics only in the domain (`investnik.cz`), technical identifiers, slugs and filenames; never write „Investnik“ in visible copy. The wordmark is the í symbol plus the typeset name; see [docs/brand.md](docs/brand.md). UI terms follow the glossary in [docs/terminology.md](docs/terminology.md). The primary line is **Learn investing by doing.** The voice is intelligent, approachable, playful, direct, and optimistic. Product interfaces are calm, precise, readable, and beginner-friendly.
 
 The user approved the final Pen.dev design system and Studovna boards. The visual implementation is staged; [DESIGN.md](DESIGN.md) records its current scope without changing product behavior.
 

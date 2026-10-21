@@ -171,7 +171,7 @@ function compareSearchResults(query: string, a: z.infer<typeof searchResultSchem
 function validateCurrency(value: string, instrumentId: InstrumentId): Currency {
   const normalized = supportedCurrency(value);
   if (!normalized) {
-    throw new MarketDataError("UnsupportedInstrument", "The instrument's quote currency is not supported by Investi.", {
+    throw new MarketDataError("UnsupportedInstrument", "The instrument's quote currency is not supported by Investník.", {
       instrumentId,
       currency: value.toLocaleUpperCase("en-US"),
       provider: FMP_PROVIDER_ID,
@@ -186,7 +186,7 @@ function validCurrency(value: unknown): value is Currency {
 
 function validateFxRequest(baseCurrency: Currency, quoteCurrency: Currency) {
   if (!validCurrency(baseCurrency) || !validCurrency(quoteCurrency)) {
-    throw new MarketDataError("FxUnavailable", "The requested FX currency is not supported by Investi.", {
+    throw new MarketDataError("FxUnavailable", "The requested FX currency is not supported by Investník.", {
       baseCurrency,
       quoteCurrency,
       provider: FMP_PROVIDER_ID,
@@ -338,7 +338,7 @@ export class FmpMarketDataProvider implements MarketDataProvider {
     const fmpMic = exchangeMics[profileExchangeCode] ?? null;
     if (reference.exchangeMic && fmpMic && fmpMic !== reference.exchangeMic) throw invalidProviderResponse(endpoint, "exchange-mismatch");
     if (profile.isFund && !profile.isEtf) {
-      throw new MarketDataError("UnsupportedInstrument", "Mutual funds are not supported by the Investi market-data contract.", {
+      throw new MarketDataError("UnsupportedInstrument", "Mutual funds are not supported by the Investník market-data contract.", {
         instrumentId,
         provider: FMP_PROVIDER_ID,
       });
@@ -394,7 +394,7 @@ export class FmpMarketDataProvider implements MarketDataProvider {
   async getHistoricalPrices(request: HistoricalPriceRequest) {
     const reference = referenceFromInstrumentId(request.instrumentId);
     if (request.adjustment.mode === "total-return") {
-      throw new MarketDataError("UnsupportedAdjustment", "FMP dividend-adjusted closes are not equivalent to Investi's reinvested total-return policy.", {
+      throw new MarketDataError("UnsupportedAdjustment", "FMP dividend-adjusted closes are not equivalent to Investník's reinvested total-return policy.", {
         instrumentId: request.instrumentId,
         mode: request.adjustment.mode,
         provider: FMP_PROVIDER_ID,

@@ -115,7 +115,7 @@ try {
   assert.equal((await exportFor()).status, 401, "no session, no export");
   const exported = await exportFor(target.cookie);
   assert.equal(exported.status, 200);
-  assert.match(exported.headers.get("content-disposition") ?? "", /^attachment; filename="investi-moje-data-/);
+  assert.match(exported.headers.get("content-disposition") ?? "", /^attachment; filename="investnik-moje-data-/);
   const text = await exported.text();
   const data = JSON.parse(text);
   assert.equal(data.user.email, target.email);

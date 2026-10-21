@@ -42,10 +42,10 @@ try {
   const response = await visitor.goto(`${baseURL}/cenik-neexistuje`);
   assert.equal(response?.status(), 404, "an unmatched URL answers 404");
   await heading(visitor, "Tuhle stránku jsme nenašli");
-  assert.equal(await visitor.title(), "Stránka nenalezena · investi");
+  assert.equal(await visitor.title(), "Stránka nenalezena · Investník");
   assert.doesNotMatch(await visitor.locator("main").innerText(), /lekc/i, "the generic 404 does not talk about lessons");
   assert.equal(await link(visitor, "Pokračovat v učení").count(), 0, "a visitor is not sent through sign-in");
-  assert.equal(await link(visitor, "investi · úvodní stránka").getAttribute("href"), "/");
+  assert.equal(await link(visitor, "Investník · úvodní stránka").getAttribute("href"), "/");
   await assertReflows(visitor, "marketing-404");
   await link(visitor, "Na úvodní stránku").click();
   await visitor.waitForURL(`${baseURL}/`);

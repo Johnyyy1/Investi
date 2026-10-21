@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { OnboardingGuide } from "@/components/personalization/onboarding-frame";
 import styles from "@/components/personalization/personalization-flow.module.css";
 import { DemoButton } from "./demo-button";
+import { Wordmark } from "@/components/brand/wordmark";
 
 /** Returning-learner entry in the same paper frame as onboarding; new learners start at /onboarding instead. */
 export function AuthLayout({ title, description, guide, children, footer, demo = true }: {
@@ -17,7 +18,7 @@ export function AuthLayout({ title, description, guide, children, footer, demo =
   return (
     <main className={styles.flow}>
       <header className={styles.authHeader}>
-        <Link className={styles.brand} href="/" aria-label="investi · úvodní stránka">investi!</Link>
+        <Link className={styles.brand} href="/" aria-label="Investník · úvodní stránka"><Wordmark /></Link>
       </header>
       <div className={styles.column}>
         <OnboardingGuide pose="01-welcome">{guide}</OnboardingGuide>

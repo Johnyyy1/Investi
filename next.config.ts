@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 import { apiContentSecurityPolicy, staticSecurityHeaders } from "./src/lib/security-headers";
+import { canonicalHostRedirects } from "./src/lib/site";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return canonicalHostRedirects;
+  },
   async headers() {
     return [
       { source: "/:path*", headers: staticSecurityHeaders },

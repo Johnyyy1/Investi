@@ -1,10 +1,10 @@
-# Přestavět investi z kurzu metrik na přípravu k investování
+# Přestavět Investník z kurzu metrik na přípravu k investování
 
 Přijato jako nový produktový směr: **21. 10. 2026**.
 
 ## Jak tento dokument používat
 
-Tento dokument vymezuje použití dodaného podkladu pro přestavbu investi na přípravu k investování. Prioritou je finanční připravenost, česká praxe, náklady, daně, investiční plán (IPS) a chování. Analýza akcií, oceňování a kvantitativní metody navazují jako volitelné pokročilé dráhy. Pokyny pro práci v repozitáři tento směr promítají do [AGENTS.md](../AGENTS.md).
+Tento dokument vymezuje použití dodaného podkladu pro přestavbu Investníku na přípravu k investování. Prioritou je finanční připravenost, česká praxe, náklady, daně, investiční plán (IPS) a chování. Analýza akcií, oceňování a kvantitativní metody navazují jako volitelné pokročilé dráhy. Pokyny pro práci v repozitáři tento směr promítají do [AGENTS.md](../AGENTS.md).
 
 Jde o cílový stav a pořadí rozvoje. Popsané funkce tím nejsou označené za implementované. Aktuální chování určují kód, testy a [smlouvy učení a persistence](product-reset.md). Přesuny kurikula zachovají stabilní ID, pokrok, historické odměny a už zaznamenané odemčení Labu. Změny odměn a měsíčního vyplácení budou platit do budoucna prostřednictvím verzované politiky; samotné přijetí směru nemění současnou politiku v4.
 

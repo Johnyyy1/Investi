@@ -17,7 +17,7 @@ Each concept has one name in the interface. The UI is Czech; an English term app
 | Trading costs in a backtest | **Náklady obchodů** | transakční náklady | „Poplatek z objemu obchodu“ is the rate, „Fixní poplatek za obchod“ the flat fee. The result switch says „S náklady / Bez nákladů“. |
 | Traded value of all trades | **Obrat** | turnover (alone) | Add „(turnover)“ in the explanation, not in the label. |
 | Learning progress points | **XP** | body, body za lekce | XP stays visible and gates the Portfolio Lab unlock (decided in issue #35). Show it as a secondary learning measure, never as spendable value: Practice Capital leads. |
-| Product name | **investi** | investi! in text | `investi!` is the typeset wordmark only. Running text, page titles and aria-labels say „investi“; a wordmark link names its target: „investi · úvodní stránka“, „investi · Učení“. |
+| Product name | **Investník** | investi, investi!, Investnik | Always with the accent and a capital I; decline it as an inanimate noun: „v Investníku“, „pravidla Investníku“, „napříč Investníkem“. `investnik` without diacritics is for the domain and identifiers only. A wordmark link names its target: „Investník · úvodní stránka“, „Investník · Učení“. |
 
 Metric labels in Backtesting and the instrument detail should eventually come from one registry (#33); until then, change both places together.
 
@@ -37,7 +37,7 @@ Při tvorbě lekcí postupuj podle [standardu lekce](education/lesson-standard.m
 | Sale-proceeds tax exemption test | **hodnotový test** | Příslušný limit a rozsah příjmů jsou datované právní údaje. Neoznačuj jej jako limit zisku. |
 | Sale proceeds / gain | **příjem z prodeje / zisk z prodeje** | Jde o různé veličiny. U každého výpočtu pojmenuj, se kterou pracuješ; daňové posouzení vyžaduje konkrétní pravidlo a období. |
 | Tax lot | **daňová tranše** | Při prvním výskytu vysvětli jako konkrétní nabytí s datem, množstvím a pořizovacími údaji. Není totéž co celá pozice. |
-| Investment policy statement | **investiční plán (IPS)** | Poprvé doplň „investment policy statement“. Praktický výstup s cílem, horizontem, alokací, příspěvky a pravidly kontroly; není doporučením investi. |
+| Investment policy statement | **investiční plán (IPS)** | Poprvé doplň „investment policy statement“. Praktický výstup s cílem, horizontem, alokací, příspěvky a pravidly kontroly; není doporučením Investníku. |
 | Key information document | **dokument s klíčovými informacemi (KID)** | Poprvé doplň „key information document“. Právní požadavky ověř v registru faktů; nevydávej modelový dokument za skutečný KID produktu. |
 | UCITS / PRIIPs | **UCITS / PRIIPs** | Zkratky zachovej a při prvním výskytu srozumitelně vysvětli jejich účel. Jejich podmínky, dostupnost produktů a právní důsledky potřebují ověřené datované zdroje. |
 | Asset allocation / rebalancing | **alokace aktiv / rebalancování** | Nejdřív vysvětli rozdělení portfolia a návrat k cílovému rozdělení podle plánu. Vyšší počet obchodů není cílem. |

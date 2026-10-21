@@ -8,12 +8,13 @@ Use `.env.example` as the template and keep all credential-bearing files ignored
 | --- | --- | --- |
 | `DATABASE_URL` | Required in production and DB tooling | PostgreSQL connection; Compose supplies its internal `db:5432` URL |
 | `BETTER_AUTH_SECRET` | Required in production | Server authentication secret, at least 32 characters |
-| `BETTER_AUTH_URL` | Required in production | Actual app origin, OAuth callbacks, normalized auth-error redirect |
+| `BETTER_AUTH_URL` | Required in production | Actual app origin, OAuth callbacks, normalized auth-error redirect. Production is `https://investnik.cz` ([brand.md](brand.md)); previews and local runs keep their own origin |
+| `BETTER_AUTH_TRUSTED_ORIGINS` | Domain transition only | Comma-separated extra origins that Better Auth reads directly for its origin check. Set `https://tryinvesti.vercel.app` only while the old host still serves pages, then remove it |
 | `CRON_SECRET` | Required in production for scheduled cleanup | At least 32 characters; Vercel Cron sends it as a bearer token to `/api/cron/cleanup-anonymous`, which refuses every request without it |
 | `MARKET_DATA_PROVIDER` | Optional in production | `deterministic` default or explicit `fmp`; no silent fallback |
 | `FX_DATA_PROVIDER` | Optional with deterministic; required with FMP | `deterministic`, `cnb` (ČNB daily fixing, recommended) or `frankfurter` reference FX |
 | `FMP_API_KEY` | Required only with FMP | Server-only provider credential |
-| `RESEND_API_KEY`, `EMAIL_FROM` | Required in production for password reset and e-mail verification | Server-only Resend key and a sender on a domain verified in Resend. Without both nothing is sent: `next dev` prints the link to the server log, production logs a configuration error. Reserved test domains (`example.com`, `.test`, …) are never sent to |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Required in production for password reset and e-mail verification | Server-only Resend key and a sender on a domain verified in Resend, shown as „Investník“ (`Investník <address@verified-domain>`). Without both nothing is sent: `next dev` prints the link to the server log, production logs a configuration error. Reserved test domains (`example.com`, `.test`, …) are never sent to |
 | `EMAIL_OUTBOX_DIR` | Local QA only | Writes each e-mail as a JSON file into this directory instead of sending it; ignored when Resend is configured |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional in production | Both must be present to enable Google sign-in |
 | `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` | Optional in production | Both must be present to enable Facebook sign-in |

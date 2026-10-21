@@ -16,6 +16,7 @@ import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./progress-overview.module.css";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Wordmark } from "@/components/brand/wordmark";
 
 type Summary = ProgressSummary & {
   user?: { name?: string | null } | null;
@@ -231,7 +232,7 @@ export function ProgressOverview({ summary, unlock, portfolio, capital }: { summ
 
       <details className={styles.explanation}><summary>Jak funguje pokrok<ChevronDown size={18} aria-hidden="true" /></summary><p>První dokončení lekce přidá {LESSON_XP} XP. XP měří učení a nedají se utratit. Portfolio Lab se odemkne po dokončení všech {definition.prerequisiteLessonIds.length} lekcí Základů investování a získání {formatDecimal(definition.xpRequired)} XP. Odemčení jednorázově přidá {formatPracticeCapitalMinor(definition.rewardPracticeCapitalMinor)} cvičného kapitálu. První dokončení lekce z úrovní 2–6 nebo volitelných témat přidá {formatPracticeCapitalMinor(LESSON_PRACTICE_CAPITAL_MINOR)}; když ji dokončíš dřív, kapitál počká na odemčení. Úrovně 0, 1 a behaviorální lekce přidávají jen XP. Opakování lekce další XP ani kapitál nepřidává.</p><p>Cvičný kapitál se počítá jen z uložených odměn za lekce a z odemčení, nikdy z XP. Je to vzdělávací vklad do Portfolio Labu. Nejsou to skutečné peníze ani investiční výnos.</p></details>
 
-      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi · Učení">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
+      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="Investník · Učení"><Wordmark /></Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
     </div>
   </main>;
 }

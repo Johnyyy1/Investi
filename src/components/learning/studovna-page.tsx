@@ -14,6 +14,7 @@ import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./studovna-page.module.css";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Wordmark } from "@/components/brand/wordmark";
 
 type Chapter = (typeof moduleCatalog)[number];
 
@@ -85,7 +86,7 @@ export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; 
   return <main className={styles.page} data-investi-studovna>
     <div className={styles.container}>
       <div className={styles.hero}>
-        <header className={styles.greeting}><h1>{complete ? "To je všechno. Zatím." : current || summary.completed.length > 0 ? `Vítej zpátky, ${firstName}.` : `Vítej v investi, ${firstName}.`}</h1><p>{complete ? "Všechny dostupné lekce máš hotové. Kdykoli se můžeš vrátit." : current ? `Jedna rozdělaná lekce, asi ${minutes} minut. Žádný spěch.` : "Jeden malý krok za druhým. Žádný spěch."}</p></header>
+        <header className={styles.greeting}><h1>{complete ? "To je všechno. Zatím." : current || summary.completed.length > 0 ? `Vítej zpátky, ${firstName}.` : `Vítej v Investníku, ${firstName}.`}</h1><p>{complete ? "Všechny dostupné lekce máš hotové. Kdykoli se můžeš vrátit." : current ? `Jedna rozdělaná lekce, asi ${minutes} minut. Žádný spěch.` : "Jeden malý krok za druhým. Žádný spěch."}</p></header>
         <div className={styles.guideWrap}><p className={styles.bubble}>{complete ? "Tohle už umíš. Co takhle si to vyzkoušet v Labu?" : current ? `Pokračujeme tam, kde to máš rozdělané: ${step.title.toLocaleLowerCase("cs-CZ")}.` : "Nemusíš znát odpovědi předem. Půjdeme společně."}</p><GuideImage className={styles.guide} pose={complete ? "07-small-joy" : current ? "08-leaning" : "01-welcome"} alt="" sizes="(max-width: 767px) 174px, 266px" preload /></div>
         <section className={styles.continueCard} aria-label="Doporučeno pro tebe">
           <div className={styles.continueContent}>
@@ -102,7 +103,7 @@ export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; 
       </div>
       <section className={styles.planContext} aria-label="Tvůj studijní plán"><p>{recommendationReason}</p>{recommendedLesson && <Link className={styles.recommendedLink} href={`/learn/${recommendedLesson.moduleSlug}/${recommendedLesson.slug}`}>Doporučená lekce: {recommendedLesson.title}<ArrowRight size={16} aria-hidden="true" /></Link>}<details><summary>Jak si rozvrhnout učení</summary><p>{contextLabels[summary.recommendation.exampleContext]}</p><p>{scaffoldLabels[summary.recommendation.scaffoldLevel]}</p>{summary.recommendation.splitLessonAcrossSessions && <p>Lekci si můžeš rozdělit do více sezení. Uložený postup tě dovede zpět.</p>}</details></section>
       {!summary.profile?.personalizedOnboardingCompletedAt && summary.user && <PersonalizationPrompt userId={summary.user.id} />}
-      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi · Učení">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
+      <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="Investník · Učení"><Wordmark /></Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
     </div>
   </main>;
 }

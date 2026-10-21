@@ -28,7 +28,7 @@ export const sampleSourceCopy: BacktestSourceCopy = {
     details: "Kč je zobrazovací jednotka · bez FX, dalších vkladů, poplatků a daní · přímé spojnice měsíčních pozorování",
   },
   notes: [
-    { term: "Zdroj", detail: "Syntetický měsíční vzorek vytvořený pro investi. Žádná tržní pozorování." },
+    { term: "Zdroj", detail: "Syntetický měsíční vzorek vytvořený pro Investník. Žádná tržní pozorování." },
     { term: "Dostupné období", detail: "Leden 2015 – prosinec 2025 · 132 měsíčních výnosů" },
     { term: "Výnosy a rozložení", detail: "Model celkového výnosu s reinvesticí. Mix se každý měsíc vrací k cílovým vahám." },
     { term: "Měna", detail: "Kč je zobrazovací jednotka. Výpočet neobsahuje převod měny ani FX." },
@@ -83,7 +83,7 @@ export function historySourceCopy(view: BacktestHistoryView, { years = { start: 
       details: `${currency} · jen cena, bez dividend · ${perTrade ? `náklady ${perTrade}, bez daní` : "bez poplatků a daní"} · přímé spojnice měsíčních uzávěrek${loaded}`,
     },
     notes: [
-      { term: "Zdroj", detail: sample ? `${view.instrumentName}${own ? "" : ` a ${b.name}`}. Vymyšlené denní ceny investi, ne skutečné tržní ceny.` : `${view.sourceName} · denní závěrečné ceny ${symbol} (${view.instrumentName})${own ? "" : ` a ${b.symbol} (${b.name})`}.` },
+      { term: "Zdroj", detail: sample ? `${view.instrumentName}${own ? "" : ` a ${b.name}`}. Vymyšlené denní ceny Investníku, ne skutečné tržní ceny.` : `${view.sourceName} · denní závěrečné ceny ${symbol} (${view.instrumentName})${own ? "" : ` a ${b.symbol} (${b.name})`}.` },
       { term: "Benchmark", detail: `${benchmarkName(b.symbol)}: celá částka jednou koupí ${b.symbol} na začátku a drží ho. Žádné rebalancování ani obchody. Stejné období, částka, měna i výnos jen z ceny jako u strategie.` },
       { term: "Dostupné období", detail: `Leden ${view.firstYear} – prosinec ${view.lastYear} · měsíční uzávěrky` },
       { term: "Výnos", detail: "Cenový výnos bez dividend. Ceny jsou očištěné jen o splity, takže celkový výnos s dividendami by byl vyšší." },

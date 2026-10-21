@@ -65,7 +65,7 @@ Issue #31. History runs can pay costs on every trade; the synthetic sample canno
 
 ## Return semantics
 
-Split-adjusted closes give a **price return without dividends**. The UI says „jen cena, bez dividend“ next to every history chart and in the data notes. A total-return series is a different mode. If one is added later, it must be explicitly selectable and never silently substituted. FMP's dividend-adjusted closes are not equivalent to investi's reinvested total-return policy, and the FMP adapter refuses `total-return` requests.
+Split-adjusted closes give a **price return without dividends**. The UI says „jen cena, bez dividend“ next to every history chart and in the data notes. A total-return series is a different mode. If one is added later, it must be explicitly selectable and never silently substituted. FMP's dividend-adjusted closes are not equivalent to Investník's reinvested total-return policy, and the FMP adapter refuses `total-return` requests.
 
 Cash earns no interest. Taxes, spreads, inflation and further contributions are not modelled; trading costs only when switched on (see above).
 

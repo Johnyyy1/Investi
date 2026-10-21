@@ -45,7 +45,7 @@ function DataExport() {
         setMessage({ ok: false, text: response.status === 429 ? "Data se teď stahovala už několikrát. Zkus to znovu později." : response.status === 401 ? "Relace skončila. Přihlas se znovu." : "Data se nepodařilo připravit. Zkus to znovu." });
         return;
       }
-      const filename = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ?? "investi-moje-data.json";
+      const filename = /filename="([^"]+)"/.exec(response.headers.get("content-disposition") ?? "")?.[1] ?? "investnik-moje-data.json";
       const url = URL.createObjectURL(await response.blob());
       const link = document.createElement("a");
       link.href = url; link.download = filename; document.body.append(link); link.click(); link.remove();
@@ -55,7 +55,7 @@ function DataExport() {
     finally { setPending(false); }
   }
   return <>
-    <div className={styles.sectionHead}><h2 id="data-export-title">Stáhnout moje data</h2><p>Kopie všeho, co o tobě investi ukládá, ve strojově čitelném formátu JSON.</p></div>
+    <div className={styles.sectionHead}><h2 id="data-export-title">Stáhnout moje data</h2><p>Kopie všeho, co o tobě Investník ukládá, ve strojově čitelném formátu JSON.</p></div>
     <div className={styles.card}>
       <div className={styles.contentRow}><div><h3>Profil, učení a cvičné portfolio</h3><p>Účet a způsoby přihlášení, relace (IP adresa a prohlížeč), plán učení, pokrok, všechny verze výstupů z lekcí, odměny, portfolia a obchody. Hesla ani přihlašovací tokeny soubor neobsahuje.</p></div>
         <Button variant="secondary" size="compact" loading={pending} onClick={() => void download()}>{!pending && <Download size={18} aria-hidden="true" />}{pending ? "Připravuji…" : "Stáhnout data"}</Button></div>

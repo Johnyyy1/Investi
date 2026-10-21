@@ -11,7 +11,7 @@ import { formatPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { authProviderAvailability } from "@/lib/auth";
 import { getSocialAuthErrorMessage } from "@/lib/social-auth-error";
 
-export const metadata = { title: "Ulož si pokrok" };
+export const metadata = { title: "Ulož si pokrok", robots: { index: false, follow: false } };
 
 /** Pen onboarding step 6: the account comes after the first finished lesson and takes the guest's learning over. */
 export default async function SaveProgressPage({ searchParams }: { searchParams: Promise<{ error?: string | string[] }> }) {
