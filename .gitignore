@@ -20,7 +20,7 @@
 /.next/
 /out/
 
-# Separate local Vite project; not part of investi.
+# Separate local Vite project; not part of Investník.
 /fine-details/
 
 # production

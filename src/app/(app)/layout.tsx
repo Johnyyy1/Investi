@@ -9,6 +9,9 @@ import { isDemoIdentity, isGuestIdentity } from "@/features/guest/identity";
 import { loadPortfolioLabUnlockStatus } from "@/features/progression/repository";
 import { perfMeasure, perfSegment } from "@/lib/perf";
 
+/** Signed-in pages are personal; the title template and the rest of the root metadata still apply. */
+export const metadata = { robots: { index: false, follow: false } };
+
 export default function ApplicationLayout({ children }: { children: React.ReactNode }) {
   return perfSegment("layout:(app)", () => renderApplicationLayout(children));
 }

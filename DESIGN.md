@@ -1,6 +1,6 @@
 ---
-name: investi
-description: The one investi design system (paper and teal) for marketing and product.
+name: Investník
+description: The one Investník design system (paper and teal) for marketing and product.
 colors:
   background: "#f7f2e8"
   foreground: "#171717"
@@ -103,7 +103,7 @@ components:
     textColor: "{colors.primary}"
 ---
 
-# Design System: investi
+# Design System: Investník
 
 ## Overview
 
@@ -162,7 +162,7 @@ Manrope gives headings a friendly, compact shape; Inter keeps decisions, explana
 - **Title:** questions use the title style; mobile uses (1.5rem). Lesson titles use (2.375rem / 1.15) on desktop and (1.5625rem / 1.16) on mobile.
 - **Body:** the body style supports explanation and answer choices; supporting text ranges from (0.8125rem) metadata to (0.9375rem) recap copy. Longer preview explanation is bounded to (65ch).
 - **Label:** the label style is uppercase for section eyebrows. Ordinary navigation and status labels remain sentence case.
-- **Wordmark:** the typeset `investi!` in Manrope (800), tight tracking (-0.05em); ordinary headings remain (600). The exclamation mark belongs to the wordmark only: running text, titles and aria-labels say `investi`, and a wordmark link names its target (`investi · úvodní stránka`, `investi · Učení`).
+- **Wordmark:** the shared `Wordmark` component (`src/components/brand/wordmark.tsx`): the í symbol on a teal tile plus „Investník“ in Manrope (800), tracking -0.035em, sized in em by the caller's class; ordinary headings remain (600). Running text, titles and aria-labels say „Investník“, and a wordmark link names its target (`Investník · úvodní stránka`, `Investník · Učení`). [docs/brand.md](docs/brand.md) lists the symbol, icons and social image.
 
 **The One Pairing Rule.** Manrope and Inter are the only families. They load once in the root layout and are used through `--font-display` and `--font-sans`; components never name a font file or variable directly.
 

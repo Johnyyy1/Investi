@@ -1,6 +1,6 @@
 # Authentication and social sign-in
 
-investi uses Better Auth 1.7.3 with the existing Drizzle account, user, session and verification tables. Email/password and anonymous demo authentication, session hooks and rate limits remain unchanged. No schema migration is needed.
+Investník uses Better Auth 1.7.3 with the existing Drizzle account, user, session and verification tables. Email/password and anonymous demo authentication, session hooks and rate limits remain unchanged. No schema migration is needed.
 
 ## Optional server configuration
 
@@ -17,7 +17,7 @@ Use separate development and production applications/credentials. Do not use pro
 | Google | `http://localhost:3000/api/auth/callback/google` |
 | Facebook | `http://localhost:3000/api/auth/callback/facebook` |
 
-Production callbacks must use the **actual HTTPS production origin** with these same paths. Set `BETTER_AUTH_URL` to that origin. Custom local ports require matching callback registrations. No production hostname is assumed here.
+Production callbacks use the canonical origin `https://investnik.cz` with these same paths: `https://investnik.cz/api/auth/callback/google` and `https://investnik.cz/api/auth/callback/facebook`. Set `BETTER_AUTH_URL=https://investnik.cz` in the production environment. `www.investnik.cz` redirects to the apex before auth runs, so it needs no registration. Custom local ports require matching callback registrations. [brand.md](brand.md) has the cutover order from `tryinvesti.vercel.app`.
 
 - **Google Cloud:** configure the OAuth consent screen/audience, create a Web application OAuth client, add the authorized redirect URI and relevant app origin, and add test users while in testing mode. Complete Google's publishing/verification requirements as applicable.
 - **Meta Developers:** create/configure an app with Facebook Login, enable web OAuth login, register the exact Valid OAuth Redirect URI, and configure the app domain/site URL. Add app-role testers in development mode. Configure privacy policy/data deletion details and complete the permissions/access and live-mode requirements shown in the console before public launch. If the console requires HTTPS for your development setup, register a development HTTPS origin and use it consistently in `BETTER_AUTH_URL`.
@@ -51,7 +51,7 @@ Transactional e-mail goes through Resend (`src/features/email`): `RESEND_API_KEY
 
 OAuth uses full-page redirects. Both social buttons lock immediately during an attempt, with a pending label and `aria-busy`; API/network failures unlock them. Browser Back restores usable buttons. Per-attempt errors return to the originating auth page. Errors without usable OAuth state fall back to `/sign-in` via `onAPIError.errorURL`.
 
-Only allowlisted Czech messages are rendered. Raw provider messages, `error_description`, tokens and other details are never rendered by the social error component. Missing email, unsafe linking, cancellation, unavailable providers and generic callback failures offer a recoverable path. Provider cancellation that never returns to investi can be recovered with Browser Back.
+Only allowlisted Czech messages are rendered. Raw provider messages, `error_description`, tokens and other details are never rendered by the social error component. Missing email, unsafe linking, cancellation, unavailable providers and generic callback failures offer a recoverable path. Provider cancellation that never returns to Investník can be recovered with Browser Back.
 
 ## Verification
 

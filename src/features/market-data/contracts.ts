@@ -1,7 +1,7 @@
-/** Stable Investi identity. Symbols are display/search attributes, never identifiers. */
+/** Stable Investník identity. Symbols are display/search attributes, never identifiers. */
 export type InstrumentId = string;
 
-/** ISO 4217 currencies supported by the initial Investi market-data boundary. */
+/** ISO 4217 currencies supported by the initial Investník market-data boundary. */
 export const currencies = ["CZK", "USD", "EUR"] as const;
 export type Currency = (typeof currencies)[number];
 
@@ -89,7 +89,7 @@ export interface QuoteUsability {
 
 export interface Quote {
   instrumentId: InstrumentId;
-  /** Provider's current/last price field; never a bid, ask, or Investi execution price. */
+  /** Provider's current/last price field; never a bid, ask, or Investník execution price. */
   price: number;
   currency: Currency;
   observedAt: UtcTimestamp;

@@ -26,6 +26,7 @@ import {
 import styles from "./portfolio-lab.module.css";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { Wordmark } from "@/components/brand/wordmark";
 
 export const PORTFOLIO_LESSON_HREF = "/learn/investing-foundations/your-first-portfolio";
 const volatilityLesson = metricLessonLink("volatility");
@@ -130,7 +131,7 @@ export function PortfolioOverview({ view, notice: initialNotice = null }: { view
             {status.kind === "unavailable" ? <Missing view={view} status={status} refreshing={refreshing} onRetry={refresh} /> : <Overview view={view} status={status} />}
           </>}
 
-      <footer className={styles.footer}><p>investi!</p><p>Výukový model s cvičným kapitálem. Nejde o investiční doporučení ani odhad budoucího výnosu.</p></footer>
+      <footer className={styles.footer}><p><Wordmark /></p><p>Výukový model s cvičným kapitálem. Nejde o investiční doporučení ani odhad budoucího výnosu.</p></footer>
     </div>
 
     <dialog ref={resetDialog} className={styles.dialog} aria-labelledby="reset-title" aria-describedby="reset-description" onCancel={(event) => { if (resetting) event.preventDefault(); }} onClose={() => {

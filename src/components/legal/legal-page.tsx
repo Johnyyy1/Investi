@@ -2,22 +2,23 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { legalLinks } from "./legal-links";
 import styles from "./legal.module.css";
+import { Wordmark } from "@/components/brand/wordmark";
 
 /**
- * Who runs investi. Both values must be filled in by the operator, and the texts reviewed by a person
+ * Who runs Investník. Both values must be filled in by the operator, and the texts reviewed by a person
  * (ideally a lawyer), before these pages are relied on.
  */
 export const legalOperator = {
   identity: "[DOPLNIT: jméno nebo název provozovatele, IČO a adresa]",
   contactEmail: "[DOPLNIT: kontaktní e-mail pro ochranu osobních údajů]",
 } as const;
-export const LEGAL_UPDATED_AT = "16. října 2026";
+export const LEGAL_UPDATED_AT = "21. října 2026";
 
 export type LegalSection = { id: string; title: string; body: ReactNode };
 
 export function LegalPage({ title, intro, sections, updatedAt = LEGAL_UPDATED_AT }: { title: string; intro: ReactNode; sections: readonly LegalSection[]; updatedAt?: string }) {
   return <div className={styles.page}>
-    <header className={styles.header}><Link className={styles.brand} href="/" aria-label="investi · úvodní stránka">investi!</Link></header>
+    <header className={styles.header}><Link className={styles.brand} href="/" aria-label="Investník · úvodní stránka"><Wordmark /></Link></header>
     <main className={styles.main}>
       <article className={styles.article} aria-labelledby="legal-title">
         <p className={styles.eyebrow}>Právní informace</p>

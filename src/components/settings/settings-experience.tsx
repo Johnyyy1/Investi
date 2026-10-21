@@ -18,6 +18,7 @@ import { AccountData } from "./account-data";
 import { legalLinks } from "@/components/legal/legal-links";
 import { displayNameSchema, settingsSections, type SettingsIdentity, type SettingsSection } from "./settings-model";
 import styles from "./settings.module.css";
+import { Wordmark } from "@/components/brand/wordmark";
 
 type Props = {
   section: SettingsSection | null; identity: SettingsIdentity; initialPreferences: PersonalizedPreferences;
@@ -113,7 +114,7 @@ export function SettingsExperience(props: Props) {
         </div>
       </div>
     </div>
-    <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="investi · Učení">investi!</Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
+    <footer className={styles.footer}><Link href="/learn" className={styles.wordmark} aria-label="Investník · Učení"><Wordmark /></Link><p>Vzdělávání, ne investiční doporučení.</p><div><Link href="/">Jak to funguje</Link><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div></footer>
     <dialog ref={signOutDialog} className={styles.dialog} aria-labelledby="unsaved-title" aria-describedby="unsaved-description" onCancel={(event) => { if (signingOut) event.preventDefault(); }} onClose={() => signOutTrigger.current?.focus()}><h2 id="unsaved-title">Máš neuložené změny</h2><p id="unsaved-description">Odhlášením ztratíš rozepsané změny nastavení. Už uložené předvolby, lekce a portfolio zůstanou.</p>{signOutError && <p role="alert" className={styles.error}>{signOutError}</p>}<div className={styles.actions}><Button variant="secondary" size="compact" disabled={signingOut} autoFocus onClick={() => signOutDialog.current?.close()}>Zůstat v nastavení</Button><Button loading={signingOut} onClick={() => void signOut()}>Odhlásit se</Button></div></dialog>
   </main>;
 }

@@ -16,7 +16,7 @@ const profilePayload = [{
   exchange: "NASDAQ",
   isEtf: false,
   isFund: false,
-  description: "An upstream-only field that must not leak into the Investi type.",
+  description: "An upstream-only field that must not leak into the Investník type.",
 }];
 
 function jsonResponse(payload: unknown, status = 200) {
@@ -157,7 +157,7 @@ describe("Financial Modeling Prep instrument search", () => {
 });
 
 describe("Financial Modeling Prep normalization", () => {
-  it("normalizes a Stable profile into an Investi instrument", async () => {
+  it("normalizes a Stable profile into an Investník instrument", async () => {
     const { provider } = mockedProvider([jsonResponse(profilePayload)]);
 
     await expect(provider.getInstrumentMetadata(AAPL)).resolves.toEqual({
@@ -312,7 +312,7 @@ describe("Financial Modeling Prep response validation", () => {
     });
   });
 
-  it("does not claim dividend-adjusted data satisfies Investi's total-return policy", async () => {
+  it("does not claim dividend-adjusted data satisfies Investník's total-return policy", async () => {
     const { fetchMock, provider } = mockedProvider([]);
 
     await expect(provider.getHistoricalPrices(historyRequest(adjustmentPolicies["total-return"]))).rejects.toMatchObject({

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
-export const metadata = { title: "Zapomenuté heslo" };
+export const metadata = { title: "Zapomenuté heslo", robots: { index: false, follow: false } };
 
 export default function ForgotPasswordPage() {
   return (

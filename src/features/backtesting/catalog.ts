@@ -95,7 +95,7 @@ export const backtestHistoryPlans = {
     ],
     currency: "USD",
     sample: true,
-    sourceName: "investi",
+    sourceName: "Investník",
     firstYear: 2016,
     lastYear: 2025,
     fetchStartDate: "2015-01-01",

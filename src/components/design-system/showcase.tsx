@@ -18,6 +18,7 @@ import { PracticeDemo } from "./practice-demo";
 import { InputDemo } from "./input-demo";
 import { Badge } from "@/components/ui/badge";
 import { Surface } from "@/components/ui/surface";
+import { Wordmark } from "@/components/brand/wordmark";
 
 function Section({ id, index, title, description, children }: { id: string; index: string; title: string; description: string; children: ReactNode }) {
   return <section id={id} className="scroll-mt-8 border-t border-border py-10 sm:py-12">
@@ -43,9 +44,9 @@ export function DesignSystemShowcase() {
   return <>
     <a href="#showcase-main" className="sr-only z-50 rounded-compact bg-surface p-4 focus:not-sr-only focus:fixed focus:top-4 focus:left-4">Skip to components</a>
     <div className="mx-auto max-w-7xl px-5 sm:px-10">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-6"><p className="text-card-title font-semibold">investi<span className="text-primary">.</span></p><p className="text-microcopy text-secondary">DESIGN SYSTEM / DEVELOPMENT ONLY</p></div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-6"><p className="text-card-title"><Wordmark /></p><p className="text-microcopy text-secondary">DESIGN SYSTEM / DEVELOPMENT ONLY</p></div>
       <main id="showcase-main">
-        <div className="py-10 sm:py-16"><p className="mb-4 text-small font-semibold text-primary">A clearer path to understanding.</p><AppHeader title="Small steps. Strong foundations." description="A lighter learning language for investi. Explore the components, try a question, and see how the system works together." />
+        <div className="py-10 sm:py-16"><p className="mb-4 text-small font-semibold text-primary">A clearer path to understanding.</p><AppHeader title="Small steps. Strong foundations." description="A lighter learning language for Investník. Explore the components, try a question, and see how the system works together." />
           <nav aria-label="Showcase sections" className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-small text-primary">{[["foundations", "Foundations"], ["practice", "Learning flow"], ["controls", "Controls"], ["explanations", "Explanations"], ["data", "Data"], ["motivation", "Motivation"], ["shell", "Shell"]].map(([id, label]) => <a key={id} href={`#${id}`} className="underline decoration-border-strong underline-offset-4">{label}</a>)}</nav>
         </div>
         <Section id="foundations" index="01" title="Calm, with a little optimism" description="One token set for marketing and product: warm paper, ink text, a dark teal action, Manrope headings and Inter text.">
@@ -77,7 +78,7 @@ export function DesignSystemShowcase() {
           <div className="mt-6 overflow-hidden rounded-surface border border-border"><MobileNav activeId="learn" preview /></div>
         </Section>
       </main>
-      <footer className="border-t border-border py-8 text-small text-secondary">investi / Foundation 01 · Preview data only</footer>
+      <footer className="border-t border-border py-8 text-small text-secondary">Investník / Foundation 01 · Preview data only</footer>
     </div>
   </>;
 }

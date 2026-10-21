@@ -8,6 +8,7 @@ import { dataStatus, fxRate, groups, groupSummaries, minor, percent, signedMoney
 import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./lab-hub.module.css";
 import { buttonVariants } from "@/components/ui/button";
+import { Wordmark } from "@/components/brand/wordmark";
 
 /** /lab hub from Pen "Investi / Lab hub — 1440px" (iByrw) and "— 390px" (YZnok), states 1–4.
  * The portfolio needs live quotes, so its card and the guide stream in; everything else renders at once. */
@@ -56,7 +57,7 @@ export function LabHub({ unlock, completedLessonIds, view }: { unlock: LabHubUnl
     </section>
 
     <footer className={styles.footer}>
-      <p className={styles.footerLogo}>investi!</p>
+      <p className={styles.footerLogo}><Wordmark /></p>
       <p>Výukový model. Nejde o investiční doporučení ani odhad budoucího výnosu.</p>
       <div className={styles.footerLinks}><Link href="/settings">Nastavení</Link>{legalLinks.map((link) => <Link key={link.href} href={link.href}>{link.label}</Link>)}</div>
     </footer>

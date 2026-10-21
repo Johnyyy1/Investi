@@ -1,6 +1,6 @@
-# investi product design system
+# Investník product design system
 
-investi has one visual system for marketing and product: warm paper, ink text, a dark teal primary action, Manrope headings and Inter text. [DESIGN.md](../DESIGN.md) describes its character and components; this document covers how code uses it.
+Investník has one visual system for marketing and product: warm paper, ink text, a dark teal primary action, Manrope headings and Inter text. [DESIGN.md](../DESIGN.md) describes its character and components; this document covers how code uses it.
 
 Preview the foundation at `/dev/design-system` under `npm run dev`. The route returns 404 in production and is excluded from normal navigation. All rewards, chart values, and learner state in the preview are illustrative.
 

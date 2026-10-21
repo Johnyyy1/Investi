@@ -15,6 +15,7 @@ import { MobileNav } from "./shell/mobile-nav";
 import { NavigationStatusProvider } from "./shell/navigation-status";
 import { learningNavigation } from "./shell/navigation";
 import styles from "./shell/paper-shell.module.css";
+import { Wordmark } from "@/components/brand/wordmark";
 
 function activeNavigationId(pathname: string) {
   if (pathname.startsWith("/learn")) return "learn";
@@ -47,8 +48,8 @@ export function AppShell({ children, userName, isDemo = false, isGuest = false, 
     <a href="#main-content" className="sr-only z-50 rounded-control bg-surface p-4 shadow-elevation-2 focus:not-sr-only focus:fixed focus:top-3 focus:left-3">Přeskočit na obsah</a>
     <header className="sticky top-0 z-40 border-b border-border/80 bg-background/95">
       <div className="mx-auto flex min-h-20 max-w-6xl items-center justify-between gap-3 px-4 min-[375px]:px-5 sm:px-8 lg:px-10">
-        <Link href="/learn" className="flex min-h-12 w-[112px] shrink-0 items-center" aria-label="investi · Učení">
-          <span className={styles.wordmark}>investi!</span>
+        <Link href="/learn" className="flex min-h-12 min-w-0 items-center" aria-label="Investník · Učení">
+          <Wordmark className={styles.wordmark} />
         </Link>
 
         <nav aria-label="Hlavní navigace" className="hidden items-center gap-1 rounded-button border border-border bg-surface p-1 shadow-elevation-1 lg:flex">
@@ -71,7 +72,7 @@ export function AppShell({ children, userName, isDemo = false, isGuest = false, 
           </summary>
           <Surface elevation="floating" radius="panel" className="absolute right-0 z-40 mt-3 w-[min(18rem,calc(100vw-2rem))] overflow-hidden p-2">
             <div className="px-3 pt-3 pb-4">
-              <div className="flex flex-wrap items-center gap-3"><span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-control bg-primary-soft font-bold text-primary-hover">{initial}</span><div className="min-w-24 flex-1"><p className="truncate text-small font-bold text-foreground">{isGuest ? "Host" : userName}</p><p className="mt-0.5 break-words text-microcopy leading-tight text-secondary">{isDemo ? "Soukromý cvičný profil" : isGuest ? "Pokrok je zatím jen v tomhle prohlížeči" : "Student investi"}</p></div></div>
+              <div className="flex flex-wrap items-center gap-3"><span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-control bg-primary-soft font-bold text-primary-hover">{initial}</span><div className="min-w-24 flex-1"><p className="truncate text-small font-bold text-foreground">{isGuest ? "Host" : userName}</p><p className="mt-0.5 break-words text-microcopy leading-tight text-secondary">{isDemo ? "Soukromý cvičný profil" : isGuest ? "Pokrok je zatím jen v tomhle prohlížeči" : "Student Investníku"}</p></div></div>
               {isDemo ? <Badge tone="primary" className="mt-3">Dostupný 24 hodin</Badge> : null}
               {isGuest ? <Link href="/onboarding/save" className={cn(buttonVariants({ size: "compact" }), "mt-3 w-full")}>Uložit pokrok</Link> : null}
             </div>

@@ -18,7 +18,7 @@ try {
     const response = await page.goto(`${baseURL}${path}`);
     assert.equal(response.status(), 200, `${path} is public`);
     await page.getByRole('heading', { level: 1, name: title }).waitFor();
-    assert.match(await page.title(), new RegExp(`^${title} · investi$`));
+    assert.match(await page.title(), new RegExp(`^${title} · Investník$`));
     const toc = page.getByRole('navigation', { name: 'Obsah' }).getByRole('link');
     const sections = await page.locator('article section[id]').evaluateAll((nodes) => nodes.map((node) => node.id));
     assert.deepEqual(await toc.evaluateAll((links) => links.map((link) => link.getAttribute('href').slice(1))), sections, `${path}: the table of contents lists every section`);

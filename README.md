@@ -1,4 +1,6 @@
-# investi
+# Investník
+
+Investník (formerly investi) is a free, Czech-first investing-education platform at [investnik.cz](https://investnik.cz). [docs/brand.md](docs/brand.md) covers the name, the brand assets, the domain setup and the remaining external rollout steps.
 
 Learn investing by doing. The authenticated product is organized around three destinations: **Learn**, **Lab**, and **Progress**. Guided lessons are organized into modules (Investing Foundations, Returns & Compounding, …), with persisted lesson position, transactional first-completion rewards, and focused interactive exercises. The lesson catalog in `src/features/learning/catalog.ts` lists what is published.
 

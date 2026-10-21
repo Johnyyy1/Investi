@@ -1,6 +1,6 @@
 # Standard lekce 2.0: autorský průvodce
 
-Platí pro nové lekce investi a obsahové revize. Cílem je, aby člověk dokázal udělat a zdůvodnit investiční rozhodnutí, rozpoznat omezení a nastavit si pojistku. Samotný výpočet ani výnos v simulaci nejsou důkazem připravenosti investovat skutečné peníze.
+Platí pro nové lekce Investníku a obsahové revize. Cílem je, aby člověk dokázal udělat a zdůvodnit investiční rozhodnutí, rozpoznat omezení a nastavit si pojistku. Samotný výpočet ani výnos v simulaci nejsou důkazem připravenosti investovat skutečné peníze.
 
 Nejdřív si přečti [AGENTS.md](../../AGENTS.md), [slovník UI](../terminology.md) a [smlouvy učení a persistence](../product-reset.md). [Podklad Curriculum 2.0](curriculum-research.md) určuje směr; jeho příklady, výzkumná tvrzení a právní údaje nejsou samy o sobě ověřeným zdrojem. Umístění lekcí a stav implementace ověř v [registru kurikula](../../src/features/learning/curriculum.ts) a v kódu, ne podle počtu lekcí v podkladu.
 
@@ -59,7 +59,7 @@ Otázka musí mít dostatek vstupů, jednotky, období a pravidlo zaokrouhlení.
 
 ## 4. Fakta, tokeny a redakční stav
 
-Daňové, regulatorní, makroekonomické a výzkumné údaje patří do datovaného registru podle [#132](https://github.com/Johnyyy1/Investi/issues/132). Lekce je má vkládat přes tokeny, například `{{dan.casovy_test_cp}}`, nikoli kopírovat sazby a limity do prózy nebo do správných odpovědí. Každý klíč potřebuje hodnotu a jednotku, jurisdikci, právní základ, platnost od–do / zdaňovací období, primární zdroj URL, datum a stav ověření, vlastníka a příští revizi. U výzkumu přidej vzorek, období a omezení přenosu na investi.
+Daňové, regulatorní, makroekonomické a výzkumné údaje patří do datovaného registru podle [#132](https://github.com/Johnyyy1/Investi/issues/132). Lekce je má vkládat přes tokeny, například `{{dan.casovy_test_cp}}`, nikoli kopírovat sazby a limity do prózy nebo do správných odpovědí. Každý klíč potřebuje hodnotu a jednotku, jurisdikci, právní základ, platnost od–do / zdaňovací období, primární zdroj URL, datum a stav ověření, vlastníka a příští revizi. U výzkumu přidej vzorek, období a omezení přenosu na Investník.
 
 **Stav při zavedení standardu:** #132 (registr a renderer) a [#133](https://github.com/Johnyyy1/Investi/issues/133) (redakční workflow a publikační kontroly) jsou samostatné navazující práce. Kontroly kompatibility z #119 popisují [pravidla publikovaných lekcí](published-lesson-compatibility.md). Před použitím ověř stav v aktuálním kódu. Dokud tokeny neumí renderer i testy vyhodnotit, obsah s těmito závislostmi ponech jako nepublikovaný návrh mimo `authoredLessons`; nezobrazuj syrové tokeny a neobcházej závislost číslem napsaným natvrdo. Vymyšlené vstupy jasně označeného modelového příkladu token nepotřebují.
 

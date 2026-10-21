@@ -66,8 +66,8 @@ New executions use immutable, versioned fictional tariffs from `features/portfol
 
 | Profile | Commission on reference notional | Minimum / maximum | FX markup |
 | --- | --- | --- | --- |
-| investi standard (`investi-standard-v1`, default) | 0.10% | 10 / 200 Kč | 0.50% |
-| investi nižší konverze (`investi-low-fx-v1`) | 0.20% | 25 / 300 Kč | 0.10% |
+| Investník standard (`investi-standard-v1`, default) | 0.10% | 10 / 200 Kč | 0.50% |
+| Investník nižší konverze (`investi-low-fx-v1`) | 0.20% | 25 / 300 Kč | 0.10% |
 
 These are illustrative educational settings, not real broker prices or recommendations. V1 commission is denominated in CZK. CZK instruments incur no conversion markup. Custody requires simulated time (#139) and is excluded; bid/ask spread and slippage are not fabricated from single-price observations. Real broker execution is not modeled.
 
