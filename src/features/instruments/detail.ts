@@ -5,14 +5,17 @@ import type { HistoricalPricePoint, Instrument, Quote } from "@/features/market-
 import type { MarketDataService } from "@/features/market-data/service";
 import type { EquityFundamentalsSnapshot } from "@/features/market-data/equity-fundamentals";
 import type { EtfAnalyticsSnapshot } from "@/features/market-data/etf-analytics";
-import { chartPoints, historicalRequest, type ChartRange } from "./history";
-import { priceMetrics, type PriceMetrics } from "./price-metrics";
+import { chartPoints, historicalRequest } from "./history";
 
 export type HomeCurrencyReference = { rate: number; referenceDate: string; provider: string };
 
 export type InstrumentDetail = {
   instrument: Instrument | null;
   quote: Quote | null;
+  /**
+   * The whole available split-adjusted daily history (Max). Timeframes are slices of it
+   * chosen in the browser, so switching them never requests prices again.
+   */
   points: HistoricalPricePoint[];
   quoteMessage: string | null;
   historyMessage: string | null;
@@ -22,8 +25,6 @@ export type InstrumentDetail = {
   startDate: string;
   endDate: string;
   historyPartial: boolean;
-  /** Price-only metrics over the loaded split-adjusted closes; null when history is unavailable. */
-  metrics: PriceMetrics | null;
   /** CZK reference rate for the quote, or null when unavailable or the quote is already in CZK. */
   homeCurrency: HomeCurrencyReference | null;
   homeCurrencyMessage: string | null;
@@ -53,11 +54,12 @@ async function loadHomeCurrencyReference(service: MarketDataService, quoteCurren
   }
 }
 
-export async function loadInstrumentDetail(service: MarketDataService, instrumentId: string, range: ChartRange, now: Date): Promise<InstrumentDetail> {
-  const request = historicalRequest(instrumentId, range, now);
+export async function loadInstrumentDetail(service: MarketDataService, instrumentId: string, now: Date): Promise<InstrumentDetail> {
+  // One request key per instrument and day, whatever timeframe is on screen.
+  const request = historicalRequest(instrumentId, "Max", now);
   let instrument: Instrument;
   try { instrument = await service.getInstrumentMetadata(instrumentId); }
-  catch (error) { return { instrument: null, quote: null, points: [], metadataMessage: safeMessage(error, "instrument"), instrumentMissing: isMarketDataError(error) && (error.code === "InstrumentNotFound" || error.code === "UnsupportedInstrument"), quoteMessage: null, historyMessage: null, startDate: request.startDate, endDate: request.endDate, historyPartial: false, metrics: null, homeCurrency: null, homeCurrencyMessage: null, fundamentals: null, fundamentalsMessage: null, etfAnalytics: null, etfAnalyticsMessage: null }; }
+  catch (error) { return { instrument: null, quote: null, points: [], metadataMessage: safeMessage(error, "instrument"), instrumentMissing: isMarketDataError(error) && (error.code === "InstrumentNotFound" || error.code === "UnsupportedInstrument"), quoteMessage: null, historyMessage: null, startDate: request.startDate, endDate: request.endDate, historyPartial: false, homeCurrency: null, homeCurrencyMessage: null, fundamentals: null, fundamentalsMessage: null, etfAnalytics: null, etfAnalyticsMessage: null }; }
 
   const [quoteResult, historyResult, fundamentalsResult, etfResult] = await Promise.allSettled([
     service.getQuote(instrumentId),
@@ -81,12 +83,17 @@ export async function loadInstrumentDetail(service: MarketDataService, instrumen
     startDate: request.startDate,
     endDate: request.endDate,
     historyPartial: series?.provenance.completeness === "partial",
-    metrics: points.length ? priceMetrics(points) : null,
     homeCurrency: homeCurrency.reference,
     homeCurrencyMessage: homeCurrency.message,
     fundamentals: fundamentalsResult.status === "fulfilled" ? fundamentalsResult.value : null,
     fundamentalsMessage: instrument.assetType === "equity" && fundamentalsResult.status === "rejected" ? "Metriky společnosti teď nejsou dostupné. Cenová historie a investování zůstávají k dispozici." : null,
     etfAnalytics: etfResult.status === "fulfilled" ? etfResult.value : null,
-    etfAnalyticsMessage: instrument.assetType === "etf" && etfResult.status === "rejected" ? "Složení fondu teď není dostupné. Cenová historie a investování zůstávají k dispozici." : null,
+    etfAnalyticsMessage: instrument.assetType === "etf" && etfResult.status === "rejected"
+      ? isMarketDataError(etfResult.reason) && etfResult.reason.code === "UnsupportedInstrument"
+        ? "Složení tohoto fondu zdroj nepokrývá. Cenová historie a investování zůstávají k dispozici."
+        : isMarketDataError(etfResult.reason) && etfResult.reason.code === "RateLimited"
+          ? "Zdroj složení fondu je dočasně omezený. Zkus to za chvíli znovu. Cenová historie a investování zůstávají k dispozici."
+        : "Složení fondu teď není dostupné. Zkus stránku načíst později. Cenová historie a investování zůstávají k dispozici."
+      : null,
   };
 }

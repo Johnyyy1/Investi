@@ -6,18 +6,31 @@ function expectSignals(id: EquityMetricId, cases: [number, MetricSignal][]) {
 }
 
 describe("equity fundamentals educational signals", () => {
-  it("keeps valuation and scale neutral regardless of magnitude", () => {
-    expectSignals("pe", [[9, "neutral"], [45, "neutral"]]);
-    expectSignals("ps", [[0.4, "neutral"], [35, "neutral"]]);
-    expectSignals("ev-ebitda", [[4, "neutral"], [40, "neutral"]]);
-    for (const id of ["market-cap", "pb", "p-fcf", "revenue"] as const) expectSignals(id, [[0, "neutral"], [1_000_000_000, "neutral"]]);
-    expectSignals("gross-margin", [[-0.01, "caution"], [0, "neutral"], [0.8, "neutral"]]);
+  it("keeps scale neutral and reads valuation multiples as cheap, fair or rich at exact boundaries", () => {
+    expectSignals("pe", [[-3, "caution"], [9, "positive"], [15, "positive"], [15.01, "neutral"], [30, "neutral"], [30.01, "caution"], [45, "caution"]]);
+    expectSignals("ps", [[0, "caution"], [0.4, "positive"], [2, "positive"], [2.01, "neutral"], [10, "neutral"], [10.01, "caution"]]);
+    expectSignals("pb", [[-2, "caution"], [0.9, "positive"], [1.5, "positive"], [1.51, "neutral"], [10, "neutral"], [10.01, "caution"]]);
+    expectSignals("ev-ebitda", [[-1, "caution"], [4, "positive"], [10, "positive"], [10.01, "neutral"], [20, "neutral"], [20.01, "caution"], [40, "caution"]]);
+    expectSignals("p-fcf", [[-8, "caution"], [12, "positive"], [15, "positive"], [15.01, "neutral"], [30, "neutral"], [30.01, "caution"]]);
+    for (const id of ["market-cap", "revenue"] as const) expectSignals(id, [[0, "neutral"], [1_000_000_000, "neutral"]]);
+    expectSignals("gross-margin", [[-0.01, "caution"], [0, "neutral"], [0.3999, "neutral"], [0.4, "positive"], [0.8, "positive"]]);
+  });
+
+  it("explains why every interpreted value earned its signal", () => {
+    expect(equityMetricSignal("pe", 39.2).context).toMatch(/víc než 30 jednotek ceny/);
+    expect(equityMetricSignal("pe", 22).context).toMatch(/15× a 30×/);
+    expect(equityMetricSignal("gross-margin", 0.487).context).toMatch(/cenovou sílu/);
+    expect(equityMetricSignal("roe", 1.372).context).toMatch(/malým vlastním kapitálem/);
+    expect(equityMetricSignal("roe", 0.2).context).not.toMatch(/malým vlastním kapitálem/);
+    expect(equityMetricSignal("debt-equity", 0.78).context).toMatch(/střední zadlužení/);
+    expect(equityMetricSignal("current-ratio", 1).context).toMatch(/rezerva je menší/);
+    expect(equityMetricSignal("market-cap", 5e12).context).toMatch(/není dobrá ani špatná/);
   });
 
   it("applies broad profitability thresholds at exact boundaries", () => {
     for (const id of ["operating-margin", "roe"] as const) expectSignals(id, [[-0.01, "caution"], [0, "neutral"], [0.08, "neutral"], [0.1499, "neutral"], [0.15, "positive"], [0.2, "positive"]]);
     for (const id of ["net-margin", "roic"] as const) expectSignals(id, [[-0.01, "caution"], [0, "neutral"], [0.0999, "neutral"], [0.10, "positive"], [0.15, "positive"]]);
-    expect(equityMetricSignal("roic", 0.348).context).toMatch(/vzdělávací referencí investi 10 %/);
+    expect(equityMetricSignal("roic", 0.348).context).toMatch(/orientační hranicí 10 %/);
   });
 
   it("treats financial health as ranges, including negative debt and high liquidity", () => {

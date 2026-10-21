@@ -27,6 +27,8 @@ A comparison requires matching dates, currency, adjustment, distribution/reinves
 
 Instrument Detail uses available split-adjusted closes in the quote currency for selected-period **price return**. Its `returnPercent` presentation boundary is in percentage units, distinct from decimal helper output and personal CZK portfolio performance. One close supports a price, not a return. Missing history remains unavailable; partial history preserves actual endpoints. Line/candle views share the same endpoint basis; OHLC extremes are not maximum drawdown. Zoom changes the view while selected-range metrics keep their range inputs.
 
+The detail page loads the instrument's whole split-adjusted daily history (Max) once, under one cache key per instrument and day. Timeframes (1M–Max) are slices of that history taken in the browser by `filterHistoryByTimeframe` in `features/instruments/history.ts`: calendar months back from the latest close (so weekends and holidays do not move the window), YTD from 1 January, and a history that stopped more than a week ago is not stretched into the latest month. Period statistics, extremes with their dates, the largest drawdown with its peak, trough and recovery, and the metrics under the chart are recomputed from the slice. Switching the timeframe or line/candles only replaces the URL query (`range`, `chart`) for reloads; it does not navigate, render on the server or request prices.
+
 Log returns add through time for one return series; they do not substitute for portfolio-weighted simple returns. Simple returns remain the normal performance wording. Rearranging an identical set of returns changes the path but not its final product in the absence of cash flows.
 
 ## Correlation

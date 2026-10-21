@@ -20,8 +20,11 @@ export type PeriodStatistics = {
   end: PriceObservation;
   change: number | null;
   returnPercent: number | null;
+  /** Lowest and highest close, with the first date each was reached; closes, not intraday extremes. */
   low: number;
+  lowDate: string;
   high: number;
+  highDate: string;
   observationCount: number;
 };
 
@@ -29,18 +32,18 @@ export type PeriodStatistics = {
 export function periodStatistics(points: readonly PriceObservation[] | null | undefined): PeriodStatistics | null {
   if (!points?.length) return null;
   let previousDate = "";
-  let low = Number.POSITIVE_INFINITY;
-  let high = Number.NEGATIVE_INFINITY;
+  let low = points[0];
+  let high = points[0];
   for (const point of points) {
     const parsed = new Date(`${point.date}T00:00:00.000Z`);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(point.date) || Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== point.date || point.date <= previousDate || !Number.isFinite(point.close) || point.close <= 0) return null;
     previousDate = point.date;
-    low = Math.min(low, point.close);
-    high = Math.max(high, point.close);
+    if (point.close < low.close) low = point;
+    if (point.close > high.close) high = point;
   }
   const start = points[0];
   const end = points[points.length - 1];
   const change = points.length > 1 ? end.close - start.close : null;
   const returnPercent = points.length > 1 ? (end.close / start.close - 1) * 100 : null;
-  return { start, end, change, returnPercent, low, high, observationCount: points.length };
+  return { start, end, change, returnPercent, low: low.close, lowDate: low.date, high: high.close, highDate: high.date, observationCount: points.length };
 }

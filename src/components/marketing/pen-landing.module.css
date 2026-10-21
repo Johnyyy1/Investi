@@ -341,7 +341,7 @@
   .heroActions { width: 100%; flex-direction: column; gap: 8px; }
   .heroActions .primaryButton { width: 100%; min-height: 54px; }
   .textAction { justify-content: center; min-height: 48px; }
-  .heroArt { width: 98px; height: 100px; top: -100px; right: 4px; }
+  .heroArt { width: 98px; height: 100px; top: -91px; right: 4px; }
   .lessonBrowserHeader { display: none; }
   .heroLessonMain { padding: 20px; min-height: 0; border-radius: 10px; }
   .heroLessonMain .lessonDisclosure, .heroLessonMain .lessonMeta, .heroLessonMain .lessonTrack { display: flex; }

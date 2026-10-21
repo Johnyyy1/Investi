@@ -31,7 +31,11 @@ describe("equity key metrics fallback", () => {
     expect(html).not.toContain("border-dotted");
     expect(html).toMatch(/Orientační srovnání: příznivé/);
     expect(html).toContain("Nejde o investiční hodnocení");
-    expect(html).toContain("Nad širokou vzdělávací referencí investi 10 %.");
+    expect(html).toContain("Proč příznivé:</span> Nad orientační hranicí 10 %.");
+    expect(html).toContain("Jak to číst:</span> Mezi orientačními hranicemi 15× a 30×");
+    expect(html).toMatch(/data-metric="pb" data-signal="caution"[^>]*>(<svg[^>]*lucide-triangle-alert)/);
+    expect(html).toMatch(/data-metric="gross-margin" data-signal="positive"[^>]*>(<svg[^>]*lucide-circle-check)/);
+    expect(html).toContain("Proč, vysvětlí otazník u ukazatele.");
   });
   it("colors a negative net-debt ratio only when net cash is confirmed", async () => {
     const sample = await createDeterministicMarketDataService().getEquityFundamentals("US-XNAS:MSFT");
@@ -45,5 +49,6 @@ describe("equity key metrics fallback", () => {
     const caution = renderToStaticMarkup(createElement(EquityKeyMetrics, { snapshot: { ...sample, profitability: { ...sample.profitability, operatingMarginTtm: -0.05 } }, message: null, quoteCurrency: "USD" }));
     expect(caution).toMatch(/data-metric="operating-margin" data-signal="caution"[^>]*font-extrabold text-danger-strong/);
     expect(caution).not.toMatch(/<button[^>]*text-danger-strong/);
+    expect(caution).toContain("Proč pozor:</span> Záporná provozní marže");
   });
 });

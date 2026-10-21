@@ -40,7 +40,8 @@ try {
   await page.goto(`${baseURL}/lab/instruments/US-XNAS%3AAAPL?range=1M`);
   await page.getByRole("status").filter({ hasText: "Cenová historie pro toto období není dostupná" }).waitFor();
   assert.equal(await page.getByRole("img", { name: /denní graf závěrečných cen/ }).count(), 0, "an empty range never fabricates chart points");
-  assert.equal(await page.getByText("Přiblížit graf", { exact: true }).count(), 0, "unavailable history has no zoom controls");
+  assert.equal(await page.locator("[data-chart-type] canvas").count(), 0, "unavailable history renders no chart canvas");
+  assert.equal(await page.getByRole("button", { name: "Obnovit rozsah" }).count(), 0, "unavailable history has no zoom controls");
   await page.screenshot({ path: `${screenshotDir}/history-unavailable-1440.png`, fullPage: true });
   await page.setViewportSize({ width: 320, height: 900 });
   await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });

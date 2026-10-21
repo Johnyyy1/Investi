@@ -19,6 +19,10 @@ export interface EtfInfo {
   navCurrency: Currency | null;
   inceptionDate: string | null;
   holdingsCount: number | null;
+  /** Optional field dates: a mixed-date overview has no single observation date. */
+  expenseRatioAsOf?: UtcTimestamp | null;
+  assetsAsOf?: UtcTimestamp | null;
+  assetsScope?: "fund" | "all-share-classes" | "etf-share-class";
 }
 export interface EtfDataset<T> {
   instrumentId: InstrumentId;
@@ -28,8 +32,13 @@ export interface EtfDataset<T> {
   retrievedAt: UtcTimestamp;
   provider: string;
   isDeterministic: boolean;
-  /** Partial means rows were rejected or the source explicitly reported truncation. */
+  /** Partial means rejected rows, truncation or incomplete exposure coverage. */
   completeness: "complete" | "partial";
+  /** Plain text only; provider HTML must never enter the rendering contract. */
+  source?: { name: string; url: string; citation: string | null; license: string };
+  sourceKind?: "issuer" | "regulatory-filing" | "other";
+  /** Fractions of fund assets, never rescaled to make an incomplete distribution sum to 1. */
+  coverage?: { knownWeight: number | null; unclassifiedWeight: number | null; inferred: boolean; classificationCoverage?: number | null };
 }
 export interface EtfHoldings {
   rows: readonly EtfHolding[];

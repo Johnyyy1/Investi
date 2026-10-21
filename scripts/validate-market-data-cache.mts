@@ -13,6 +13,7 @@ import { DeterministicEquityFundamentalsProvider } from "../src/features/market-
 import { DeterministicMarketDataProvider } from "../src/features/market-data/deterministic/provider";
 import { MARKET_DATA_CACHE_FORMAT_VERSION, PostgresMarketDataCacheStore } from "../src/features/market-data/postgres-cache";
 import { MarketDataService } from "../src/features/market-data/service";
+import { TickerInsideEtfAnalyticsProvider } from "../src/features/market-data/tickerinside/etf-analytics";
 
 /** Shared Postgres market-data cache: lossless round trips, expiry, upserts, purge and cross-instance reuse. */
 const databaseUrl = process.env.DATABASE_URL;
@@ -49,6 +50,20 @@ try {
     assert.deepEqual(entry?.value, value, `${family} round-trips losslessly through jsonb`);
     assert.equal(typeof entry?.value, "object", `${family} is stored as a JSON document, not a JSON string`);
     assert.equal(entry?.expiresAt, now + HOUR, `${family} keeps its exact expiry`);
+  }
+  // Optional source, coverage and per-metric dates use the existing JSONB format, without migration.
+  const tickerinside = new TickerInsideEtfAnalyticsProvider({ clock: fixtureClock, fetch: async () => Response.json({
+    ticker: "SPY", page_url: "https://tickerinside.com/etf/spy/", cite_as: "TickerInside, SPY, issuer file 2026-01-15, CC BY 4.0",
+    expense_ratio: 0.09, expense_ratio_as_of: "2025-12-31", aum_b: 500, aum_date: "2026-01-16", holdings_as_of: "2026-01-15",
+    breakdown: { sectors_pct: { technology: 40 }, sector_coverage_pct: 40, no_sector_pct: 60, sectors_stated: false },
+  }) });
+  const spy = { ...vwce, instrumentId: "FMP:AMEX:SPY", symbol: "SPY", exchangeMic: "XASE", quoteCurrency: "USD" as const };
+  for (const [family, value] of [
+    ["etf-info", await tickerinside.getEtfInfo(spy)],
+    ["etf-sectors", await tickerinside.getEtfSectors(spy)],
+  ] as const) {
+    await store.set(family, key("tickerinside"), value, now + HOUR, now);
+    assert.deepEqual((await store.get(family, key("tickerinside"), now))?.value, value, `${family} preserves TickerInside dates, attribution and coverage`);
   }
   const decimals = { rate: 0.1, quarter: 0.25, ratio: 1.3333, fx: 23.456789, tiny: 1e-7, large: 3_420_000_000_000 };
   await store.set("fx", key("decimals"), decimals, now + HOUR, now);

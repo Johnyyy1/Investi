@@ -128,8 +128,9 @@ try {
   await page.getByRole("heading", { name: "Apple Inc.", exact: true }).waitFor();
   assert.equal(await page.getByRole("heading", { name: "Tvoje pozice" }).count(), 0, "unowned instrument has no invented position");
   assert.equal(await page.getByText("Ukázková data", { exact: true }).count(), 1, "deterministic detail is labeled as sample data");
-  assert.match(await page.getByRole("img", { name: /denní graf závěrečných cen očištěných o splity/ }).getAttribute("aria-label"), /\d+ z \d+ pozorování/, "daily chart uses available sample observations");
-  assert.equal(await page.locator('[data-chart-tone="positive"]').count(), 1, "positive equity return gives the line chart a green tone");
+  assert.match(await page.getByRole("img", { name: /denní graf závěrečných cen očištěných o splity/ }).getAttribute("aria-label"), /\d+ pozorování od/, "daily chart uses available sample observations");
+  assert.equal(await page.locator('[data-chart-tone="positive"]').count(), 1, "positive equity return marks the chart tone");
+  assert.ok(await page.locator('[data-chart-type="line"] canvas').count() >= 1, "the line chart renders on canvas");
   assert.equal(await page.getByRole("button", { name: "Křivka", exact: true }).getAttribute("aria-pressed"), "true");
   assert.equal(await page.getByRole("button", { name: "Svíčky", exact: true }).isEnabled(), true, "OHLC supports candlesticks");
   assert.match(await page.locator("main").innerText(), /Cenový výnos za zobrazené období/);
@@ -153,49 +154,111 @@ try {
   const fullStatistics = await selectedStatistics();
   const lineHorizon = (await page.getByRole("img", { name: /denní graf závěrečných cen očištěných o splity/ }).getAttribute("aria-label")).match(/pozorování od (.*?) do (.*?)\./);
   assert.ok(lineHorizon, "line chart announces the full observation horizon");
-  await page.getByText("Přiblížit graf", { exact: true }).click();
-  const startHandle = page.getByRole("slider", { name: "Začátek rozsahu" });
-  await startHandle.focus();
-  await startHandle.press("End");
-  for (let index = 0; index < 30; index++) await startHandle.press("ArrowLeft");
-  await page.getByRole("status").filter({ hasText: /Zobrazený rozsah .* v rámci 1Y/ }).waitFor();
+  const readout = page.getByTestId("chart-readout");
+  const resetViewport = page.getByRole("button", { name: "Obnovit rozsah" });
+  const chartBox = async () => {
+    await page.locator("[data-chart-type]").scrollIntoViewIfNeeded();
+    return page.locator("[data-chart-type]").boundingBox();
+  };
+  const wheelZoom = async () => {
+    const box = await chartBox();
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.5);
+    for (let index = 0; index < 5; index++) await page.mouse.wheel(0, -240);
+    await resetViewport.waitFor();
+    await page.mouse.move(0, 0);
+  };
+  assert.match(await readout.innerText(), /poslední zavření/, "the readout shows the latest close before any hover");
+  const latestReadout = await readout.innerText();
+  {
+    const box = await chartBox();
+    await page.mouse.move(box.x + box.width * 0.4, box.y + box.height * 0.5);
+    await page.waitForFunction((latest) => document.querySelector('[data-testid="chart-readout"]').innerText !== latest, latestReadout);
+    assert.doesNotMatch(await readout.innerText(), /poslední/, "hover shows the hovered observation instead of the latest one");
+    await page.mouse.move(0, 0);
+    await page.waitForFunction((latest) => document.querySelector('[data-testid="chart-readout"]').innerText === latest, latestReadout);
+  }
+  await wheelZoom();
+  assert.match(await priceHistory.innerText(), /Zobrazeno\s+\d+\. \d+\. \d{4} – \d+\. \d+\. \d{4}/, "zoom names the visible dates");
   assert.equal(await selectedStatistics(), fullStatistics, "line zoom leaves selected-period statistics unchanged");
-  assert.match(await page.getByRole("img", { name: /denní graf závěrečných cen očištěných o splity/ }).getAttribute("aria-label"), /Zobrazený rozsah \d+ z \d+ pozorování/);
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-line-zoom-1440.png`, fullPage: true });
   await page.getByRole("button", { name: "Svíčky", exact: true }).focus();
   await page.keyboard.press("Enter");
   assert.equal(await page.getByRole("button", { name: "Svíčky", exact: true }).getAttribute("aria-pressed"), "true", "keyboard activates candle mode");
-  await page.getByRole("img", { name: /týdenní, svíčkový graf cen očištěných o splity/ }).waitFor();
-  assert.equal(await page.getByRole("button", { name: "Obnovit rozsah" }).count(), 1, "switching chart type preserves the viewport");
+  await page.waitForURL(/range=1Y&chart=candles/);
+  await page.getByRole("img", { name: /denní, svíčkový graf cen očištěných o splity/ }).waitFor();
+  assert.equal(await resetViewport.count(), 1, "switching chart type preserves the viewport");
+  assert.match(await readout.innerText(), /Otevření[\s\S]*Maximum[\s\S]*Minimum/, "candle readout shows OHLC");
   const candleStatistics = await selectedStatistics();
   assert.equal(candleStatistics.match(/Cenový výnos za zobrazené období\n([^\n]+)/)?.[1], fullStatistics.match(/Cenový výnos za zobrazené období\n([^\n]+)/)?.[1], "candle mode keeps the selected-period return");
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-candles-zoom-1440.png`, fullPage: true });
-  await page.getByRole("button", { name: "Obnovit rozsah" }).click();
-  assert.equal(await page.getByRole("button", { name: "Obnovit rozsah" }).count(), 0, "reset returns to the full viewport");
+  await resetViewport.click();
+  await resetViewport.waitFor({ state: "hidden" });
   assert.equal(await selectedStatistics(), candleStatistics, "reset does not change candle selected-period statistics");
-  assert.ok((await page.getByRole("img", { name: /týdenní, svíčkový graf cen očištěných o splity/ }).getAttribute("aria-label")).includes(`pokrývá pozorování od ${lineHorizon[1]} do ${lineHorizon[2]}`), "reset candle chart covers the original full horizon");
-  assert.ok(await page.locator('[data-testid="candlestick-chart"] [data-direction]').count() >= 2, "candles have wicks and bodies");
+  assert.ok((await page.getByRole("img", { name: /denní, svíčkový graf cen očištěných o splity/ }).getAttribute("aria-label")).includes(`pokrývá pozorování od ${lineHorizon[1]} do ${lineHorizon[2]}`), "reset candle chart covers the original full horizon");
+  assert.ok(await page.locator('[data-chart-type="candles"] canvas').count() >= 1, "candles render on canvas");
+  const chartKeys = page.getByRole("group", { name: "Interaktivní cenový graf" });
+  await chartKeys.focus();
+  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("ArrowLeft");
+  assert.doesNotMatch(await readout.innerText(), /poslední/, "arrow keys step the crosshair to earlier bars");
+  assert.match(await page.locator('[aria-live="polite"]').filter({ hasText: /zavření/ }).innerText(), /otevření .*maximum .*minimum .*zavření/, "keyboard steps are announced with OHLC");
+  await page.keyboard.press("Escape");
+  assert.match(await readout.innerText(), /poslední svíčka/, "Escape returns the readout to the latest bar");
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-candles-1440.png`, fullPage: true });
+  const timeframe = (label) => page.getByRole("group", { name: "Období vývoje ceny" }).getByRole("button", { name: label, exact: true });
+  // Timeframes and chart types are slices and views of the history already on the page:
+  // switching them must not navigate, render on the server or fetch anything.
+  const switchRequests = [];
+  const recordRequest = (request) => { if (["document", "fetch", "xhr"].includes(request.resourceType())) switchRequests.push(`${request.method()} ${request.url()}`); };
+  page.on("request", recordRequest);
   for (const longRange of ["5Y", "Max"]) {
-    await page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: longRange === "5Y" ? "5L" : longRange }).click();
-    await page.waitForURL(new RegExp(`range=${longRange}`));
-    await page.getByRole("button", { name: "Svíčky", exact: true }).click();
-    assert.match(await page.getByRole("img", { name: /měsíční, svíčkový graf cen očištěných o splity/ }).getAttribute("aria-label"), /pokrývá pozorování od 2\. 1\. 2025 do 16\. 1\. 2026/, `${longRange} candles retain all available observations`);
+    await timeframe(longRange === "5Y" ? "5L" : longRange).click();
+    await page.waitForURL(new RegExp(`range=${longRange}&chart=candles`));
+    assert.equal(await timeframe(longRange === "5Y" ? "5L" : longRange).getAttribute("aria-pressed"), "true", `${longRange} is the pressed timeframe`);
+    // The sample history spans about a year, so even 5L and Max keep daily candles.
+    assert.match(await page.getByRole("img", { name: /denní, svíčkový graf cen očištěných o splity/ }).getAttribute("aria-label"), /pokrývá pozorování od 2\. 1\. 2025 do 16\. 1\. 2026/, `${longRange} candles retain all available observations`);
     await page.screenshot({ path: `${screenshotDir}/instrument-aapl-${longRange.toLowerCase()}-candles-1440.png`, fullPage: true });
   }
-  await page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: "1R" }).click();
+  await timeframe("1R").click();
   await page.waitForURL(/range=1Y/);
   await equityScreenshotStyle.evaluate((style) => style.remove());
   await page.getByRole("button", { name: "Křivka", exact: true }).click();
-  await page.getByText("Přiblížit graf", { exact: true }).click();
-  await startHandle.press("End");
-  await page.getByRole("status").filter({ hasText: /Zobrazený rozsah .* v rámci 1Y/ }).waitFor();
-  await page.getByRole("navigation", { name: "Období vývoje ceny" }).getByRole("link", { name: "1M" }).click();
+  await page.waitForURL((url) => !url.search.includes("chart="));
+  await wheelZoom();
+  await timeframe("1M").click();
   await page.waitForURL(/range=1M/);
-  assert.equal(await page.getByRole("button", { name: "Obnovit rozsah" }).count(), 0, "changing timeframe resets the viewport");
+  await resetViewport.waitFor({ state: "hidden" });
+  assert.equal(await resetViewport.isVisible(), false, "changing timeframe resets the viewport");
   assert.match(await page.locator("main").innerText(), /Cenový výnos za zobrazené období/);
   assert.match(await page.locator("main").innerText(), /Začátek · .*Konec · .*Minimum období.*Maximum období/s);
   await page.screenshot({ path: `${screenshotDir}/instrument-aapl-1m-1440.png`, fullPage: true });
+  {
+    const horizon = async () => (await page.locator("[data-chart-type]").getAttribute("aria-label")).match(/od (\d+\. \d+\. \d{4}) do (\d+\. \d+\. \d{4})/).slice(1).join(" – ");
+    const seen = new Map();
+    for (const [label, range] of [["5L", "5Y"], ["1M", "1M"], ["3M", "3M"], ["6M", "6M"], ["Letos", "YTD"], ["1R", "1Y"], ["Max", "Max"], ["5L", "5Y"]]) {
+      await timeframe(label).click();
+      await page.waitForURL(new RegExp(`range=${range}(&|$)`));
+      assert.equal(await page.getByRole("status").filter({ hasText: /Načítá|není dostupná/ }).count(), 0, `${label} renders without a loading or unavailable state`);
+      const statistics = await selectedStatistics();
+      if (seen.has(range)) assert.equal(statistics, seen.get(range), `${label} recomputes the same statistics on a revisit`);
+      seen.set(range, statistics);
+      assert.match(await horizon(), /\d{4} – \d+\. \d+\. 2026/, `${label} chart names its observation horizon`);
+    }
+    // The sample history starts in January 2025 and ends 16 January 2026, so 1M, 3M and 1R are distinct slices.
+    assert.notEqual(seen.get("1M"), seen.get("3M"), "1M and 3M statistics differ");
+    assert.notEqual(seen.get("3M"), seen.get("1Y"), "3M and 1R statistics differ");
+    assert.equal(seen.get("5Y"), seen.get("Max"), "5L and Max cover the same year of sample data");
+    for (let index = 0; index < 3; index++) {
+      await page.getByRole("button", { name: "Svíčky", exact: true }).click();
+      await page.locator('[data-chart-type="candles"]').waitFor();
+      await page.getByRole("button", { name: "Křivka", exact: true }).click();
+      await page.locator('[data-chart-type="line"]').waitFor();
+    }
+    await timeframe("1M").click();
+    await page.waitForURL(/range=1M/);
+  }
+  page.off("request", recordRequest);
+  assert.deepEqual(switchRequests, [], "switching timeframes and chart types makes no request");
   await page.getByRole("button", { name: "Svíčky", exact: true }).click();
   for (const width of [320, 375, 390, 768, 1024]) {
     await page.setViewportSize({ width, height: 900 });
@@ -240,17 +303,15 @@ try {
   await page.screenshot({ path: `${screenshotDir}/instrument-etf-1440.png`, fullPage: true });
   await page.locator('[data-testid="etf-analytics"]').screenshot({ path: `${screenshotDir}/instrument-etf-analytics-clean.png` });
   const etfStatistics = await page.locator('section[aria-labelledby="price-history-heading"] dl').last().innerText();
-  await page.getByText("Přiblížit graf", { exact: true }).click();
-  await page.getByRole("slider", { name: "Začátek rozsahu" }).press("End");
-  await page.getByRole("status").filter({ hasText: /Zobrazený rozsah .* v rámci 1Y/ }).waitFor();
+  await wheelZoom();
   assert.equal(await page.locator('section[aria-labelledby="price-history-heading"] dl').last().innerText(), etfStatistics, "ETF line zoom keeps range statistics");
   await page.screenshot({ path: `${screenshotDir}/instrument-etf-line-zoom-1440.png`, fullPage: true });
   await page.getByRole("button", { name: "Svíčky", exact: true }).click();
-  await page.getByRole("img", { name: /týdenní, svíčkový graf cen očištěných o splity/ }).waitFor();
-  assert.equal(await page.getByRole("button", { name: "Obnovit rozsah" }).count(), 1, "ETF candle mode preserves zoom");
+  await page.getByRole("img", { name: /denní, svíčkový graf cen očištěných o splity/ }).waitFor();
+  assert.equal(await resetViewport.isVisible(), true, "ETF candle mode preserves zoom");
   await page.screenshot({ path: `${screenshotDir}/instrument-etf-candles-zoom-1440.png`, fullPage: true });
-  await page.getByRole("button", { name: "Obnovit rozsah" }).click();
-  assert.match(await page.locator('section[aria-labelledby="price-history-heading"]').innerText(), /Minimum období\s*117,789 EUR/, "candle summary uses OHLC low instead of closing low");
+  await resetViewport.click();
+  assert.match(await page.locator('section[aria-labelledby="price-history-heading"]').innerText(), /Minimum období · \d+\. \d+\. \d{4}\s*117,789 EUR/, "candle summary uses OHLC low instead of closing low, with its date");
   await page.screenshot({ path: `${screenshotDir}/instrument-etf-candles-1440.png`, fullPage: true });
   await page.locator('[data-testid="etf-analytics"] > div').screenshot({ path: `${screenshotDir}/instrument-etf-holdings-sectors.png` });
   await page.locator('section[aria-labelledby="etf-countries-heading"]').screenshot({ path: `${screenshotDir}/instrument-etf-countries.png` });

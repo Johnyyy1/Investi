@@ -56,6 +56,10 @@ const historicalPointSchema = z.object({
   close: z.number().finite().nonnegative(),
   volume: z.number().finite().nonnegative(),
 });
+/** One EOD response holds at most this many rows (the newest ones); older rows need another request. */
+const FMP_HISTORY_ROW_LIMIT = 5_000;
+/** 8 × 5,000 trading days is far beyond any listed history; hitting it marks the series partial. */
+const FMP_HISTORY_MAX_PAGES = 8;
 
 const exchangeMics: Readonly<Record<string, string>> = {
   AMEX: "XASE",
@@ -238,6 +242,7 @@ function provenance(input: {
   observedAt: UtcTimestamp;
   retrievedAt: UtcTimestamp;
   adjustmentMode: MarketDataProvenance["adjustmentMode"];
+  completeness?: MarketDataProvenance["completeness"];
 }): MarketDataProvenance {
   return {
     provider: FMP_PROVIDER_ID,
@@ -248,7 +253,7 @@ function provenance(input: {
     observedAt: input.observedAt,
     retrievedAt: input.retrievedAt,
     adjustmentMode: input.adjustmentMode,
-    completeness: "complete",
+    completeness: input.completeness ?? "complete",
   };
 }
 
@@ -400,14 +405,22 @@ export class FmpMarketDataProvider implements MarketDataProvider {
     // regular full route is therefore normalized as split-adjusted OHLC; no
     // separate adjustedClose is invented because that route does not return one.
     const endpoint = splitAdjusted ? "historical-price-eod/full" : "historical-price-eod/non-split-adjusted";
-    const payload = await this.client.get(endpoint, {
-      symbol: reference.symbol,
-      from: request.startDate,
-      to: request.endDate,
-    });
-    const upstreamPoints = parseArray(endpoint, historicalPointSchema, payload);
+    // A capped response keeps the newest rows, so long ranges (Max) page backwards
+    // until a response is shorter than the cap or reaches the requested start.
+    const upstreamPoints: HistoricalPricePoint[] = [];
+    let to = request.endDate;
+    let truncated = false;
+    for (let page = 0; ; page++) {
+      if (page === FMP_HISTORY_MAX_PAGES) { truncated = true; break; }
+      const payload = await this.client.get(endpoint, { symbol: reference.symbol, from: request.startDate, to });
+      const rows = parseArray(endpoint, historicalPointSchema, payload).map((point) => normalizePoint(endpoint, reference, point));
+      upstreamPoints.push(...rows);
+      if (rows.length < FMP_HISTORY_ROW_LIMIT) break;
+      const oldest = rows.reduce((min, { date }) => date < min ? date : min, rows[0].date);
+      if (oldest <= request.startDate) break;
+      to = new Date(Date.parse(`${oldest}T00:00:00.000Z`) - 86_400_000).toISOString().slice(0, 10);
+    }
     const points = upstreamPoints
-      .map((point) => normalizePoint(endpoint, reference, point))
       .filter(({ date }) => date >= request.startDate && date <= request.endDate)
       .sort((a, b) => a.date.localeCompare(b.date));
     if (points.length === 0) {
@@ -437,6 +450,7 @@ export class FmpMarketDataProvider implements MarketDataProvider {
         observedAt,
         retrievedAt: retrieved,
         adjustmentMode: request.adjustment.mode,
+        completeness: truncated ? "partial" : "complete",
       }),
     };
   }
