@@ -19,6 +19,7 @@ function holding(input: Partial<Holding> & Pick<Holding, "instrumentId" | "symbo
 
 function view(overrides: Partial<PortfolioView> = {}): PortfolioView {
   return {
+    feeProfileId: "investi-standard-v1",
     portfolioId: "p1", baseCurrency: "CZK", openedAt: "2026-09-01T08:00:00.000Z", openingCapitalMinor: "1000000", earnedPracticeCapitalMinor: "1000000",
     availableCashMinor: "1000000", holdingsMarketValueMinor: "0", portfolioTotalMinor: "1000000", investmentGainLossMinor: "0", investmentGainLossBasisPoints: "0",
     valuationComplete: true, valuedHoldingsCount: 0, totalHoldingsCount: 0, marketDataMode: "market", realizedGainLossMinor: "0", cashWeightBasisPoints: "10000",

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_FEE_PROFILE } from "./costs";
 import { planAllocation, quantityUnitsForAmount, validateAllocation } from "./allocation";
 import { fxUnitsFromNumber, grossBaseMinor, parseQuantity, PortfolioInputError, priceUnitsFromNumber } from "./decimal";
 
@@ -44,6 +45,22 @@ describe("amount to quantity", () => {
 });
 
 describe("mix planning", () => {
+  it("budgets commission and FX into every buy while preserving the cash target", () => {
+    const plan = planAllocation({ cashMinor: 200_000n, holdings: [],
+      observations: new Map([["A", { ...observation(1.3333, 23.054321), quoteCurrency: "USD" }], ["B", { ...observation(0.25), quoteCurrency: "CZK" }]]),
+      allocation: { lines: [line("A", 50), line("B", 40)], cashWeightBasisPoints: 1_000 }, feeProfile: DEFAULT_FEE_PROFILE });
+    expect(plan.trades).toHaveLength(2);
+    expect(plan.trades.every((trade) => trade.feeBaseMinor > 0n)).toBe(true);
+    expect(plan.resultingCashMinor).toBeGreaterThanOrEqual(20_000n);
+    expect(plan.resultingCashMinor).toBe(200_000n + plan.trades.reduce((sum, trade) => sum + trade.cashDeltaBaseMinor, 0n));
+  });
+
+  it("refuses a sale whose minimum commission would overdraw cash", () => {
+    expect(() => planAllocation({ cashMinor: 0n, holdings: [{ instrumentId: "A", quantityUnits: parseQuantity("0.1") }],
+      observations: new Map([["A", { ...observation(0.25), quoteCurrency: "CZK" }], ["B", { ...observation(1), quoteCurrency: "CZK" }]]),
+      allocation: { lines: [line("B", 100)], cashWeightBasisPoints: 0 }, feeProfile: DEFAULT_FEE_PROFILE })).toThrow(/včetně nákladů/);
+  });
+
   it("splits fresh cash by weight and keeps the cash weight and every rounding remainder as cash", () => {
     const plan = planAllocation({
       cashMinor: 700_000n,

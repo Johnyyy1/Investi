@@ -12,7 +12,7 @@ import { EquityKeyMetrics } from "@/components/lab/equity-key-metrics";
 import { EtfAnalytics } from "@/components/lab/etf-analytics";
 import { Button, ButtonLink, IconButton } from "@/components/ui/button";
 import { Feedback } from "@/components/ui/feedback";
-import { Input } from "@/components/ui/form-controls";
+import { Input, Select } from "@/components/ui/form-controls";
 import { filterHistoryByTimeframe, timeframeWindow, type ChartRange } from "@/features/instruments/history";
 import { instrumentCompareHref } from "@/features/instruments/routes";
 import { priceMetrics } from "@/features/instruments/price-metrics";
@@ -20,7 +20,8 @@ import type { ChartType } from "@/features/instruments/price-chart-presentation"
 import type { HistoricalPricePoint, Instrument, MarketSessionState, QuoteUsabilityStatus } from "@/features/market-data/contracts";
 import type { EquityFundamentalsSnapshot } from "@/features/market-data/equity-fundamentals";
 import type { EtfAnalyticsSnapshot } from "@/features/market-data/etf-analytics";
-import { buyPortfolioAction, loadInstrumentPreviewAction, sellPortfolioAction } from "@/features/portfolio/actions";
+import { buyPortfolioAction, loadInstrumentPreviewAction, sellPortfolioAction, reviewPortfolioTradeAction, setBrokerFeeProfileAction } from "@/features/portfolio/actions";
+import { BROKER_FEE_PROFILES, brokerFeeProfile, type TradeReviewView } from "@/features/portfolio/costs";
 import { parseQuantity, roundDivide } from "@/features/portfolio/decimal";
 import { FX_UNAVAILABLE_MESSAGE, fxRateLabel, gainLossState, showSampleDataIndicator } from "@/features/portfolio/presentation";
 import { estimatedMinor, parseQuantitySafe } from "@/features/portfolio/order-presentation";
@@ -94,6 +95,8 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points: 
   const [preview, setPreview] = useState<InstrumentPreview | null>(null);
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
   const [amount, setAmount] = useState("0.25");
+  const [cost, setCost] = useState<TradeReviewView | null>(null);
+  const [profileId, setProfileId] = useState(initialPortfolio.feeProfileId);
   const [reviewing, setReviewing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -114,6 +117,7 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points: 
   function closeDialog() { if (!pending) dialog.current?.close(); }
   function openBuy(event: MouseEvent<HTMLButtonElement>) {
     trigger.current = event.currentTarget;
+    setCost(null);
     setSide("BUY"); setPreview(null); setAmount("0.25"); setError(null); setReviewing(false); tradeKey.current = null;
     dialog.current?.showModal();
     startPreview(async () => {
@@ -125,8 +129,31 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points: 
   function openSell(event: MouseEvent<HTMLButtonElement>) {
     if (!holding) return;
     trigger.current = event.currentTarget;
+    setCost(null); setPreview(null);
     setSide("SELL"); setAmount(holding.quantity); setError(null); setReviewing(false); tradeKey.current = null;
     dialog.current?.showModal();
+    startPreview(async () => {
+      const response = await loadInstrumentPreviewAction(instrument.instrumentId);
+      if (response.ok) setPreview(response.preview);
+      else setError(response.message);
+    });
+  }
+  function review() {
+    setError(null);
+    startPreview(async () => {
+      const response = await reviewPortfolioTradeAction({ instrumentId: instrument.instrumentId, quantity: amount, side });
+      if (!response.ok) { setError(response.message); return; }
+      setCost(response.cost); setProfileId(response.cost.feeProfileId); setReviewing(true);
+      requestAnimationFrame(() => document.getElementById("buy-review-title")?.focus());
+    });
+  }
+  function chooseProfile(id: string) {
+    setError(null); tradeKey.current = null;
+    startPreview(async () => {
+      const response = await setBrokerFeeProfileAction({ profileId: id });
+      if (response.ok) { setProfileId(response.feeProfileId); setCost(null); }
+      else setError(response.message);
+    });
   }
   function execute() {
     if (pending) return;
@@ -134,7 +161,7 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points: 
     const completedAmount = amount;
     startTrade(async () => {
       const action = side === "BUY" ? buyPortfolioAction : sellPortfolioAction;
-      const response = await action({ instrumentId: instrument.instrumentId, quantity: completedAmount, clientIdempotencyKey: tradeKey.current });
+      const response = await action({ instrumentId: instrument.instrumentId, quantity: completedAmount, clientIdempotencyKey: tradeKey.current, expectedFeeProfileId: cost?.feeProfileId });
       if (!response.ok) { setError(response.message); return; }
       setPortfolio(response.portfolio);
       setNotice(`${side === "BUY" ? "Nákup dokončen" : "Prodej dokončen"} · ${quantity(completedAmount)} ${instrument.symbol}`);
@@ -210,9 +237,9 @@ export function InstrumentDetailView({ instrument, quote, quoteMessage, points: 
     <dialog ref={dialog} aria-labelledby="instrument-order-title" aria-describedby="instrument-order-description" onClose={() => { setError(null); setReviewing(false); trigger.current?.focus(); requestAnimationFrame(() => trigger.current?.focus()); }} onCancel={(event) => { if (pending) event.preventDefault(); }} className="fixed inset-y-0 right-0 left-auto m-0 h-[100dvh] max-h-none w-full max-w-none overflow-y-auto border-0 border-l border-border bg-surface p-0 text-foreground shadow-elevation-2 backdrop:bg-foreground/35 sm:max-w-[34rem] sm:rounded-l-panel">
       <div className="flex min-h-full flex-col"><div className="sticky top-0 z-20 flex items-start justify-between gap-4 border-b border-border bg-surface/95 px-[min(1.25rem,5vw)] py-5 backdrop-blur sm:px-7"><div className="min-w-0"><p className="text-microcopy font-bold uppercase tracking-[0.12em] text-primary-hover">{side === "BUY" ? reviewing ? "Krok 2 ze 2" : "Krok 1 ze 2" : "Prodat investici"}</p><h2 id="instrument-order-title" className="mt-1 break-words text-card-title font-bold">{side === "BUY" ? `Investovat do ${instrument.symbol}` : `Prodat `}</h2><p id="instrument-order-description" className="sr-only">{side === "BUY" ? "Zvol množství, zkontroluj a potvrď investici." : "Zvol množství k prodeji."}</p></div><IconButton aria-label="Zavřít pokyn" variant="ghost" disabled={pending} onClick={closeDialog}><X aria-hidden="true" /></IconButton></div>
       <div className="flex-1 px-[min(1.25rem,5vw)] py-6 sm:px-7 sm:py-8">{error ? <Feedback state="warning" role="alert" className="mb-5">{error}</Feedback> : null}
-        {side === "BUY" && loadingPreview ? <p role="status" className="text-small text-secondary">Načítám aktuální tržní pozorování…</p> : side === "BUY" && !preview ? null : side === "BUY" && reviewing && preview ? <BuyReview preview={preview} quantity={amount} estimate={buyEstimate} availableCash={portfolio.availableCashMinor} onBack={() => { setReviewing(false); setError(null); requestAnimationFrame(() => orderHeading.current?.focus()); }} /> : <><h3 ref={orderHeading} tabIndex={-1} className="text-section-title font-bold focus-visible:outline-none">Zvol množství</h3><p className="mt-2 text-small text-secondary">{instrument.name} · {instrument.symbol}</p><div className="mt-6 rounded-surface bg-surface-muted p-5 text-small"><p className="text-secondary">Poslední tržní cena</p><p className="mt-1 font-bold tabular-nums">{preview ? nativePrice(Number(preview.price), instrument.quoteCurrency) : quote && quote.status !== "unavailable" ? nativePrice(quote.price, instrument.quoteCurrency) : "Nedostupné"}</p>{preview?.estimatedUnitCostBaseMinor && preview.fxRate && preview.fxReferenceDate && instrument.quoteCurrency !== "CZK" ? <><p className="mt-3 text-secondary">{fxRateLabel(preview.fxProvider, preview.fxRate, instrument.quoteCurrency, preview.fxReferenceDate)}</p><p className="mt-1 font-bold tabular-nums">≈ {formatPracticeCapitalMinor(preview.estimatedUnitCostBaseMinor)} za {instrument.assetType === "equity" ? "akcii" : "jednotku"}</p></> : null}{previewFxMissing ? <p role="status" className="mt-3 text-warning-ink">{FX_UNAVAILABLE_MESSAGE}</p> : preview && !preview.usableForExecution ? <p role="status" className="mt-3 text-warning-ink">Pro investování je potřeba čerstvé tržní pozorování.</p> : null}</div><label htmlFor="instrument-order-quantity" className="mt-7 block text-small font-bold" >Množství {side === "SELL" ? " k prodeji" : ""}</label><Input id="instrument-order-quantity" inputMode="decimal" className="mt-2 tabular-nums" value={amount} onChange={(event) => { setAmount(event.target.value); setError(null); tradeKey.current = null; }} /><p className="mt-2 text-small text-secondary">Zlomková množství lze zadat až na 8 desetinných míst.</p><dl className="mt-7 border-y border-border py-5 text-small"><div className="flex flex-wrap items-baseline justify-between gap-3"><dt className="text-secondary">{side === "BUY" ? "Odhadovaná hodnota nákupu" : "Odhadovaný výnos"}</dt><dd className="font-bold tabular-nums">{side === "BUY" ? buyEstimate === null ? "—" : formatPracticeCapitalMinor(buyEstimate) : estimatedProceeds === null ? "—" : formatPracticeCapitalMinor(estimatedProceeds)}</dd></div>{side === "BUY" ? <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3"><dt className="text-secondary">Dostupná hotovost</dt><dd className="font-bold tabular-nums">{formatPracticeCapitalMinor(portfolio.availableCashMinor)}</dd></div> : null}</dl>{side === "SELL" ? <p className="mt-5 text-small text-secondary">Zobrazená hodnota je odhad. Server pro simulovaný prodej získá čerstvou referenční cenu instrumentu a referenční kurz FX k danému datu.</p> : null}</>}
+        {loadingPreview ? <p role="status" className="text-small text-secondary">Načítám aktuální tržní pozorování…</p> : !preview ? null : reviewing && cost ? <BuyReview preview={preview} quantity={amount} cost={cost} side={side} availableCash={portfolio.availableCashMinor} onBack={() => { setReviewing(false); setError(null); requestAnimationFrame(() => orderHeading.current?.focus()); }} /> : <><h3 ref={orderHeading} tabIndex={-1} className="text-section-title font-bold focus-visible:outline-none">Zvol množství</h3><p className="mt-2 text-small text-secondary">{instrument.name} · {instrument.symbol}</p><div className="mt-6 rounded-surface bg-surface-muted p-5 text-small"><p className="text-secondary">Poslední tržní cena</p><p className="mt-1 font-bold tabular-nums">{preview ? nativePrice(Number(preview.price), instrument.quoteCurrency) : quote && quote.status !== "unavailable" ? nativePrice(quote.price, instrument.quoteCurrency) : "Nedostupné"}</p>{preview?.estimatedUnitCostBaseMinor && preview.fxRate && preview.fxReferenceDate && instrument.quoteCurrency !== "CZK" ? <><p className="mt-3 text-secondary">{fxRateLabel(preview.fxProvider, preview.fxRate, instrument.quoteCurrency, preview.fxReferenceDate)}</p><p className="mt-1 font-bold tabular-nums">≈ {formatPracticeCapitalMinor(preview.estimatedUnitCostBaseMinor)} za {instrument.assetType === "equity" ? "akcii" : "jednotku"}</p></> : null}{previewFxMissing ? <p role="status" className="mt-3 text-warning-ink">{FX_UNAVAILABLE_MESSAGE}</p> : preview && !preview.usableForExecution ? <p role="status" className="mt-3 text-warning-ink">Pro investování je potřeba čerstvé tržní pozorování.</p> : null}</div><label htmlFor="broker-fee-profile" className="mt-6 block text-small font-bold">Fiktivní profil brokera</label><Select id="broker-fee-profile" className="mt-2" value={profileId} onChange={(event) => chooseProfile(event.target.value)} disabled={loadingPreview || pending}>{BROKER_FEE_PROFILES.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</Select><p className="mt-2 text-small text-secondary">Poplatek {formatPercentage(brokerFeeProfile(profileId).tradeFee.rateBps / 10_000)}, min. {formatPracticeCapitalMinor(brokerFeeProfile(profileId).tradeFee.minMinor)}, max. {formatPracticeCapitalMinor(brokerFeeProfile(profileId).tradeFee.maxMinor)}. Konverze {formatPercentage(brokerFeeProfile(profileId).fxMarkupBps / 10_000)}. Volba platí pro další obchody a zůstane uložená.</p><label htmlFor="instrument-order-quantity" className="mt-7 block text-small font-bold" >Množství {side === "SELL" ? " k prodeji" : ""}</label><Input id="instrument-order-quantity" inputMode="decimal" className="mt-2 tabular-nums" value={amount} onChange={(event) => { setAmount(event.target.value); setError(null); tradeKey.current = null; }} /><p className="mt-2 text-small text-secondary">Zlomková množství lze zadat až na 8 desetinných míst.</p><dl className="mt-7 border-y border-border py-5 text-small"><div className="flex flex-wrap items-baseline justify-between gap-3"><dt className="text-secondary">{side === "BUY" ? "Hodnota nákupu bez nákladů" : "Hodnota prodeje bez nákladů"}</dt><dd className="font-bold tabular-nums">{side === "BUY" ? buyEstimate === null ? "—" : formatPracticeCapitalMinor(buyEstimate) : estimatedProceeds === null ? "—" : formatPracticeCapitalMinor(estimatedProceeds)}</dd></div>{side === "BUY" ? <div className="mt-3 flex flex-wrap items-baseline justify-between gap-3"><dt className="text-secondary">Dostupná hotovost</dt><dd className="font-bold tabular-nums">{formatPracticeCapitalMinor(portfolio.availableCashMinor)}</dd></div> : null}</dl>{side === "SELL" ? <p className="mt-5 text-small text-secondary">Zobrazená hodnota je odhad. Před potvrzením zobrazíme poplatek, přirážku konverze a čistý příjem z prodeje.</p> : null}</>}
       </div>
-      {(side === "SELL" && holding || side === "BUY" && preview) ? <div className="sticky bottom-0 z-20 border-t border-border bg-surface/95 px-[min(1.25rem,5vw)] py-4 backdrop-blur sm:px-7">{side === "SELL" ? <Button className="w-full" loading={pending} disabled={!holding?.usableForExecution || estimatedProceeds === null || parseQuantitySafe(amount) <= 0n} onClick={execute}>Prodat {instrument.symbol}</Button> : reviewing ? <Button className="w-full" loading={pending} disabled={!preview?.usableForExecution || buyEstimate === null} onClick={execute}>Potvrdit nákup {instrument.symbol}</Button> : <Button className="w-full" disabled={!preview?.usableForExecution || buyEstimate === null || parseQuantitySafe(amount) <= 0n} onClick={() => setReviewing(true)}>Zkontrolovat pokyn <ChevronRight aria-hidden="true" className="size-4" /></Button>}</div> : null}
+      {preview ? <div className="sticky bottom-0 z-20 border-t border-border bg-surface/95 px-[min(1.25rem,5vw)] py-4 backdrop-blur sm:px-7">{reviewing ? <Button className="w-full" loading={pending} disabled={loadingPreview || !preview.usableForExecution || !cost} onClick={execute}>{side === "BUY" ? `Potvrdit nákup ${instrument.symbol}` : `Potvrdit prodej ${instrument.symbol}`}</Button> : <Button className="w-full" loading={loadingPreview} disabled={pending || !preview.usableForExecution || previewFxMissing || parseQuantitySafe(amount) <= 0n} onClick={review}>{side === "BUY" ? "Zkontrolovat pokyn" : `Prodat ${instrument.symbol}`}<ChevronRight aria-hidden="true" className="size-4" /></Button>}</div> : null}
       </div>
     </dialog>
   </>;

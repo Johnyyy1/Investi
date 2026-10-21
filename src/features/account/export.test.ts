@@ -7,7 +7,7 @@ function rows(): AccountExportRows {
     owner: { id: "u1", name: "Klára", email: "klara@example.com", emailVerified: true, image: null, isAnonymous: false, anonymousKind: null, createdAt: at, updatedAt: at },
     accounts: [{ providerId: "credential", accountId: "u1", scope: null, createdAt: at, updatedAt: at }],
     sessions: [{ createdAt: at, updatedAt: at, expiresAt: at, ipAddress: "198.51.100.7", userAgent: "Firefox" }],
-    profile: { userId: "u1", experienceLevel: "BEGINNER", goals: [], interests: [], dailyGoalMinutes: 10, timeZone: "Europe/Prague", recommendedStart: null, onboardingStep: 6, diagnosticResult: null, personalizedOnboardingCompletedAt: null, onboardingCompletedAt: at, updatedAt: at } as AccountExportRows["profile"],
+    profile: { brokerFeeProfileId: null, userId: "u1", experienceLevel: "BEGINNER", goals: [], interests: [], dailyGoalMinutes: 10, timeZone: "Europe/Prague", recommendedStart: null, onboardingStep: 6, diagnosticResult: null, personalizedOnboardingCompletedAt: null, onboardingCompletedAt: at, updatedAt: at } as AccountExportRows["profile"],
     progress: [{ moduleSlug: "zaklady", lessonSlug: "co-je-akcie", lessonTitle: "Co je akcie", status: "completed", lastPosition: 3, completedAt: at, updatedAt: at }],
     awards: [{ moduleSlug: "returns", lessonSlug: "vynos", xp: 60, practiceCapitalMinor: 200000n, rewardPolicyVersion: 3, learningDate: "2026-10-16", timeZone: "Europe/Prague", awardedAt: at }],
     unlocks: [{ userId: "u1", unlockId: "PORTFOLIO_LAB", practiceCapitalMinor: 500000n, reason: "foundations_complete", unlockedAt: at }],

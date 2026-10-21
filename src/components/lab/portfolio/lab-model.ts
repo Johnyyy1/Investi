@@ -147,6 +147,8 @@ export function contributionRows(view: PortfolioView, rows: readonly GroupSummar
   if (view.attribution.currencies.length > 0 || fx !== 0n) {
     result.push({ id: "fx", label: view.attribution.currencies.length === 1 ? `Kurz ${view.attribution.currencies[0].currency}` : "Kurzy měn", detail: null, effectMinor: fx, color: "var(--color-viz-other)" });
   }
+  const costs = minor(view.attribution.costEffectMinor ?? "0");
+  if (costs !== 0n) result.push({ id: "costs", label: "Náklady otevřených pozic", detail: "Poplatky a přirážka konverze; náklady prodaných částí jsou v uzavřených prodejích.", effectMinor: costs, color: "var(--color-viz-other)" });
   const realized = minor(view.attribution.realizedGainLossMinor);
   if (realized !== 0n) result.push({ id: "realized", label: "Uzavřené prodeje", detail: null, effectMinor: realized, color: "var(--color-viz-other)" });
   if (rows.some((row) => row.group === "cash")) result.push({ id: "cash", label: "Hotovost", detail: null, effectMinor: 0n, color: groups.cash.color });
@@ -165,7 +167,9 @@ export function contributionStory(view: PortfolioView, contributions: readonly C
   const absolute = (amount: bigint) => money(amount < 0n ? -amount : amount);
   const lead = gain > 0n ? `Přibylo ${wholeMoney(gain)}.` : gain < 0n ? `Ubylo ${wholeMoney(-gain)}.` : "Celkem beze změny.";
   const headline = `${lead} Nejvíc ${largest.id === "fx" ? "pohnul kurz" : largest.id === "realized" ? "pohnuly prodeje" : `pohnuly ${largest.label === "ETF" ? "ETF" : largest.label.toLocaleLowerCase("cs-CZ")}`}.`;
-  const sentences = moving.filter((row) => row.id !== "fx").map((row) => row.id === "realized"
+  const sentences = moving.filter((row) => row.id !== "fx").map((row) => row.id === "costs"
+    ? `Poplatky a přirážka konverze otevřených pozic ubraly ${absolute(row.effectMinor)}. Náklady prodaných částí jsou zahrnuté v uzavřených prodejích.`
+    : row.id === "realized"
     ? `Uzavřené prodeje ${row.effectMinor > 0n ? "přinesly" : "ubraly"} ${absolute(row.effectMinor)} oproti nákupní ceně.`
     : `${row.label}${row.detail ? ` (${row.detail})` : ""} ${verb(row.effectMinor)} ${absolute(row.effectMinor)} pohybem cen.`);
   const fx = contributions.find(({ id }) => id === "fx");

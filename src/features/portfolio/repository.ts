@@ -4,11 +4,12 @@ import { randomUUID } from "node:crypto";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { perfMeasure } from "@/lib/perf";
-import { portfolio, portfolioAllocation, portfolioAllocationLine, portfolioTrade, user } from "@/db/schema";
+import { portfolio, portfolioAllocation, portfolioAllocationLine, portfolioTrade, learningProfile, user } from "@/db/schema";
 import { readPracticeCapitalEntitlementMinor as entitlement } from "@/features/rewards/repository";
 import { isDemoIdentity, isGuestIdentity } from "@/features/guest/identity";
 import type { Currency } from "@/features/market-data/contracts";
 import { planAllocation, validateAllocation, type AllocationInput, type AllocationPlan } from "./allocation";
+import { brokerFeeProfile, computeTradeCost, presentTradeCost, type BrokerFeeProfile } from "./costs";
 import { foldTrades, type LedgerTrade } from "./domain";
 import {
   fxToDecimal,
@@ -20,6 +21,32 @@ import { portfolioMarketData } from "./environment";
 import { observePortfolioExecution, type PortfolioExecutionObservation } from "./market-data";
 
 const BASE_CURRENCY: Currency = "CZK";
+
+export async function readBrokerFeeProfile(query: Pick<typeof db, "select">, userId: string) {
+  const [saved] = await query.select({ id: learningProfile.brokerFeeProfileId }).from(learningProfile).where(eq(learningProfile.userId, userId));
+  return brokerFeeProfile(saved?.id);
+}
+
+export async function setBrokerFeeProfile(userId: string, profileId: string) {
+  const profile = brokerFeeProfile(profileId);
+  await db.transaction(async (tx) => {
+    const [owner] = await tx.select({ id: user.id }).from(user).where(eq(user.id, userId)).for("update");
+    if (!owner) throw new PortfolioInputError("PortfolioUnavailable", "Portfolio se nepodařilo najít.");
+    await tx.insert(learningProfile).values({ userId, brokerFeeProfileId: profile.id })
+      .onConflictDoUpdate({ target: learningProfile.userId, set: { brokerFeeProfileId: profile.id, updatedAt: new Date() } });
+  });
+  return profile.id;
+}
+
+/** Authoritative read-only estimate; execution re-observes and recomputes under lock. */
+export async function reviewTrade(userId: string, input: { instrumentId: string; quantity: string; side: "BUY" | "SELL" }) {
+  const observation = await observePortfolioExecution(portfolioMarketData, input.instrumentId, input.quantity, BASE_CURRENCY);
+  const profile = await readBrokerFeeProfile(db, userId);
+  return {
+    ...presentTradeCost(computeTradeCost({ ...observation, quoteCurrency: observation.quote.currency, side: input.side, profile }), profile),
+    fxReferenceDate: observation.fx.referenceDate, fxProvider: observation.fx.provenance.provider, quoteObservedAt: observation.quote.observedAt,
+  };
+}
 
 type PortfolioRow = typeof portfolio.$inferSelect;
 type TradeRow = typeof portfolioTrade.$inferSelect;
@@ -34,6 +61,7 @@ function asLedgerTrade(trade: TradeRow): LedgerTrade {
     quantity: trade.quantity,
     grossAmountBaseMinor: trade.grossAmountBaseMinor,
     feeBaseMinor: trade.feeBaseMinor,
+    referenceGrossAmountBaseMinor: trade.referenceGrossAmountBaseMinor,
     cashDeltaBaseMinor: trade.cashDeltaBaseMinor,
   };
 }
@@ -45,8 +73,8 @@ async function activePortfolio(query: Pick<typeof db, "select">, userId: string)
   return row;
 }
 
-function tradeValues(portfolioId: string, observation: PortfolioExecutionObservation, side: "BUY" | "SELL", clientIdempotencyKey: string, now: Date) {
-  const feeBaseMinor = 0n;
+function tradeValues(portfolioId: string, observation: PortfolioExecutionObservation, side: "BUY" | "SELL", clientIdempotencyKey: string, now: Date, profile: BrokerFeeProfile) {
+  const cost = computeTradeCost({ ...observation, quoteCurrency: observation.quote.currency, side, profile });
   return {
     id: randomUUID(),
     portfolioId,
@@ -58,10 +86,19 @@ function tradeValues(portfolioId: string, observation: PortfolioExecutionObserva
     quantity: quantityToDecimal(observation.quantityUnits),
     unitPrice: priceToDecimal(observation.priceUnits),
     quoteCurrency: observation.quote.currency,
-    fxRateToBase: fxToDecimal(observation.fxUnits),
-    grossAmountBaseMinor: observation.grossMinor,
-    feeBaseMinor,
-    cashDeltaBaseMinor: side === "BUY" ? -(observation.grossMinor + feeBaseMinor) : observation.grossMinor - feeBaseMinor,
+    fxRateToBase: fxToDecimal(cost.fxRateUnits),
+    grossAmountBaseMinor: cost.grossAmountBaseMinor,
+    feeBaseMinor: cost.feeBaseMinor,
+    cashDeltaBaseMinor: cost.cashDeltaBaseMinor,
+    feeProfileId: profile.id,
+    tradeFeeRateBps: profile.tradeFee.rateBps,
+    tradeFeeMinMinor: profile.tradeFee.minMinor,
+    tradeFeeMaxMinor: profile.tradeFee.maxMinor,
+    tradeFeeCurrency: profile.tradeFee.currency,
+    fxMarkupBps: cost.fxMarkupBps,
+    fxMarkupBaseMinor: cost.fxMarkupBaseMinor,
+    referenceFxRateToBase: fxToDecimal(observation.fxUnits),
+    referenceGrossAmountBaseMinor: cost.referenceGrossAmountBaseMinor,
     quoteObservedAt: new Date(observation.quote.observedAt),
     executedAt: now,
     marketDataProvider: observation.quote.provenance.provider,
@@ -116,7 +153,8 @@ export async function getOrCreateActivePortfolio(userId: string) {
     };
     await tx.insert(portfolio).values(created);
     if (isDemoIdentity(lockedOwner) && seedObservations.length > 0) {
-      const seeds = seedObservations.map((observation, index) => tradeValues(created.id, observation, "BUY", `demo-seed-v1-${index + 1}`, now));
+      const profile = await readBrokerFeeProfile(tx, userId);
+      const seeds = seedObservations.map((observation, index) => tradeValues(created.id, observation, "BUY", `demo-seed-v1-${index + 1}`, now, profile));
       const total = seeds.reduce((sum, trade) => sum - trade.cashDeltaBaseMinor, 0n);
       if (total <= openingCapitalMinor) await tx.insert(portfolioTrade).values(seeds);
     }
@@ -129,6 +167,7 @@ export async function executeTrade(userId: string, input: {
   quantity: string;
   side: "BUY" | "SELL";
   clientIdempotencyKey: string;
+  expectedFeeProfileId?: string;
 }) {
   const existing = await activePortfolio(db, userId);
   if (existing) {
@@ -166,8 +205,12 @@ export async function executeTrade(userId: string, input: {
       tx.select().from(portfolioTrade).where(eq(portfolioTrade.portfolioId, current.id)).orderBy(asc(portfolioTrade.executedAt), asc(portfolioTrade.id)),
     ]);
     const folded = foldTrades(earned, trades.map(asLedgerTrade));
-    if (input.side === "BUY" && observation.grossMinor > folded.cashMinor) {
-      throw new PortfolioInputError("InsufficientCash", "Na tento obchod nemáš dost hotovosti.");
+    const profile = await readBrokerFeeProfile(tx, userId);
+    if (input.expectedFeeProfileId && input.expectedFeeProfileId !== profile.id) throw new PortfolioInputError("PortfolioChanged", "Profil poplatků se změnil. Zkontroluj pokyn znovu.");
+    const values = tradeValues(current.id, observation, input.side, input.clientIdempotencyKey, new Date(), profile);
+    if (values.grossAmountBaseMinor <= 0n) throw new PortfolioInputError("InvalidQuantity", "Toto množství je po konverzi příliš malé. Zadej větší množství.");
+    if (folded.cashMinor + values.cashDeltaBaseMinor < 0n) {
+      throw new PortfolioInputError("InsufficientCash", "Na tento obchod včetně nákladů nemáš dost hotovosti.");
     }
     if (input.side === "SELL") {
       const holding = folded.holdings.find(({ instrumentId }) => instrumentId === input.instrumentId);
@@ -175,7 +218,6 @@ export async function executeTrade(userId: string, input: {
         throw new PortfolioInputError("Oversell", "Nelze prodat více, než kolik pozic držíš.");
       }
     }
-    const values = tradeValues(current.id, observation, input.side, input.clientIdempotencyKey, new Date());
     const [trade] = await tx.insert(portfolioTrade).values(values).returning();
     return { trade, duplicate: false };
   });
@@ -267,7 +309,7 @@ async function observeForAllocation(instrumentIds: readonly string[]): Promise<E
 }
 
 function planningInputs(observations: ExecutionObservations) {
-  return new Map([...observations].map(([instrumentId, observation]) => [instrumentId, { priceUnits: observation.priceUnits, fxUnits: observation.fxUnits }]));
+  return new Map([...observations].map(([instrumentId, observation]) => [instrumentId, { priceUnits: observation.priceUnits, fxUnits: observation.fxUnits, quoteCurrency: observation.quote.currency }]));
 }
 
 function assertAllocatable(allocation: AllocationInput, observations: ExecutionObservations) {
@@ -293,7 +335,7 @@ export async function reviewAllocation(userId: string, input: AllocationInput): 
   const instrumentIds = [...new Set([...allocation.lines.map(({ instrumentId }) => instrumentId), ...folded.holdings.map(({ instrumentId }) => instrumentId)])];
   const observations = await observeForAllocation(instrumentIds);
   assertAllocatable(allocation, observations);
-  const plan = planAllocation({ cashMinor: folded.cashMinor, holdings: folded.holdings, observations: planningInputs(observations), allocation });
+  const plan = planAllocation({ cashMinor: folded.cashMinor, holdings: folded.holdings, observations: planningInputs(observations), allocation, feeProfile: await readBrokerFeeProfile(db, userId) });
   return { plan, observations };
 }
 
@@ -340,7 +382,8 @@ export async function executeAllocation(userId: string, input: AllocationInput &
     if (folded.holdings.some(({ instrumentId }) => !observations.has(instrumentId))) {
       throw new PortfolioInputError("PortfolioChanged", "Portfolio se mezitím změnilo. Zkontroluj mix znovu.");
     }
-    const plan = planAllocation({ cashMinor: folded.cashMinor, holdings: folded.holdings, observations: planningInputs(observations), allocation });
+    const profile = await readBrokerFeeProfile(tx, userId);
+    const plan = planAllocation({ cashMinor: folded.cashMinor, holdings: folded.holdings, observations: planningInputs(observations), allocation, feeProfile: profile });
     const now = new Date();
     const allocationId = randomUUID();
     await tx.insert(portfolioAllocation).values({
@@ -371,6 +414,7 @@ export async function executeAllocation(userId: string, input: AllocationInput &
         planned.side,
         `allocation:${input.clientIdempotencyKey}:${index}`,
         now,
+        profile,
       )));
     }
     return { allocationId, tradeCount: plan.trades.length, duplicate: false };

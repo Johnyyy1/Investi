@@ -272,6 +272,7 @@ function ValueCard({ view, status }: { view: PortfolioView; status: DataStatus }
       {attribution ? <>
         <div className={styles.metric}><ChartLine size={18} aria-hidden="true" /><dt className={styles.metricLabel}>Z toho pohyb cen{foreign.length ? <span>v {foreign.join(", ")}</span> : null}</dt><dd className={`${styles.metricAmount} ${styles.num}`} data-testid="portfolio-price-effect">{signedMoney(attribution.priceEffectMinor)}</dd></div>
         {foreign.length ? <div className={styles.metric}><ArrowLeftRight size={18} aria-hidden="true" /><dt className={styles.metricLabel}>{currencies.length === 1 ? `Z toho kurz ${currencies[0].currency === "USD" ? "dolaru" : currencies[0].currency === "EUR" ? "eura" : currencies[0].currency}` : "Z toho kurzy měn"}{currencies.length === 1 ? <span className={styles.num}>{fxRate(currencies[0].purchaseFxRate)} → {fxRate(currencies[0].currentFxRate)}</span> : null}</dt><dd className={`${styles.metricAmount} ${styles.num}`} data-testid="portfolio-fx-effect">{signedMoney(attribution.fxEffectMinor)}</dd></div> : null}
+        {minor(attribution.costEffectMinor ?? "0") !== 0n ? <div className={styles.metric}><ReceiptText size={18} aria-hidden="true" /><dt className={styles.metricLabel}>Náklady otevřených pozic<span>Poplatky a konverze; prodané části jsou v uzavřených prodejích.</span></dt><dd className={`${styles.metricAmount} ${styles.num}`} data-testid="portfolio-cost-effect">{signedMoney(attribution.costEffectMinor ?? "0")}</dd></div> : null}
         {minor(attribution.realizedGainLossMinor) !== 0n ? <div className={styles.metric}><ReceiptText size={18} aria-hidden="true" /><dt className={styles.metricLabel}>Z toho uzavřené prodeje</dt><dd className={`${styles.metricAmount} ${styles.num}`}>{signedMoney(attribution.realizedGainLossMinor)}</dd></div> : null}
       </> : null}
     </dl>
@@ -423,7 +424,7 @@ function Activity({ view }: { view: PortfolioView }) {
     <summary>Poslední obchody · {view.recentActivity.length}<ChevronDown size={18} aria-hidden="true" /></summary>
     <ul aria-label="Poslední obchody nanečisto">{view.recentActivity.map((trade) => <li key={trade.id}>
       <span><strong>{trade.side === "BUY" ? "Nákup" : "Prodej"} {trade.symbol}</strong> · <span className={styles.num}>{quantity(trade.quantity)} ks</span></span>
-      <span className={styles.num}><strong>{money(trade.grossAmountBaseMinor)}</strong></span>
+      <span className={styles.num}><strong>{money(trade.cashDeltaBaseMinor ? (trade.side === "BUY" ? -BigInt(trade.cashDeltaBaseMinor) : BigInt(trade.cashDeltaBaseMinor)).toString() : trade.grossAmountBaseMinor)}</strong>{trade.feeProfileId ? <small className="block text-secondary">Poplatek {money(trade.feeBaseMinor ?? "0")} · konverze {money(trade.fxMarkupBaseMinor ?? "0")}</small> : null}</span>
       <span className={styles.meta}>{trade.name}</span>
       <span className={styles.meta}>{dateLabel(trade.executedAt)}</span>
     </li>)}</ul>

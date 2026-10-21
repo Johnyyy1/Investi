@@ -65,7 +65,7 @@ try {
   assert.deepEqual(await db.select().from(lessonAward).where(eq(lessonAward.userId, demo)), demoAwards);
   const demoView = await loadPortfolioView(demo);
   assert.equal(demoView.earnedPracticeCapitalMinor, "700000", "5,000 Kč demo access plus the seeded Returns lesson's 2,000 Kč");
-  assert.equal(demoView.investmentGainLossMinor, "0", "demo capital is a contribution, not investment performance");
+  assert.equal(demoView.investmentGainLossMinor, "-4841", "demo capital is a contribution; the two sample trades incur commission and FX costs");
   await requirePortfolioLabUnlock(otherDemo);
   const otherDemoView = await loadPortfolioView(otherDemo);
   const demoBuy = { instrumentId: "US-XNAS:AAPL", quantity: "0.1", side: "BUY" as const, clientIdempotencyKey: randomUUID() };
@@ -162,7 +162,7 @@ try {
   const concurrentView = await loadPortfolioView(learner);
   assert.equal(BigInt(concurrentView.earnedPracticeCapitalMinor) - BigInt(afterReward.earnedPracticeCapitalMinor), 200_000n);
   assert.equal(BigInt(concurrentView.availableCashMinor), BigInt(afterReward.availableCashMinor) + 200_000n + concurrent[4].trade.cashDeltaBaseMinor);
-  assert.equal(concurrentView.investmentGainLossMinor, afterReward.investmentGainLossMinor, "concurrent contribution never becomes return");
+  assert.equal(BigInt(concurrentView.investmentGainLossMinor!), BigInt(afterReward.investmentGainLossMinor!) - concurrent[4].trade.feeBaseMinor - concurrent[4].trade.fxMarkupBaseMinor!, "concurrent contribution never becomes return; the retried trade charges its costs once");
   const learningBeforeTrades = await loadGamification(learner);
   await executeTrade(learner, { ...concurrentBuy, side: "SELL", quantity: "0.25", clientIdempotencyKey: randomUUID() });
   assert.deepEqual(await db.select().from(lessonAward).where(eq(lessonAward.userId, learner)), concurrentAwards, "trading earns no receipt");
