@@ -56,7 +56,7 @@ async function complete(lessonId) {
   await heading("Lekce dokončena");
   assert.equal(await page.getByLabel("Získáno 60 XP", { exact: true }).count(), 1);
   const receipt = (await awards()).find((award) => award.lesson_id === lessonId);
-  assert.deepEqual({ ...receipt, practice_capital_minor: BigInt(receipt.practice_capital_minor) }, { lesson_id: lessonId, xp: 60, practice_capital_minor: 200_000n, reward_policy_version: 3 });
+  assert.deepEqual({ ...receipt, practice_capital_minor: BigInt(receipt.practice_capital_minor) }, { lesson_id: lessonId, xp: 60, practice_capital_minor: 200_000n, reward_policy_version: 4 });
 }
 
 try {

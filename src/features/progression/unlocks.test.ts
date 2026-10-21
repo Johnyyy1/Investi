@@ -5,11 +5,19 @@ const required = progressionUnlocks.PORTFOLIO_LAB.prerequisiteLessonIds;
 const status = (xp: number, lessons: string[], persisted = false) => evaluateUnlock(PORTFOLIO_LAB_UNLOCK_ID, { totalXp: xp, completedLessonIds: new Set(lessons) }, persisted);
 
 describe("Portfolio Lab unlock", () => {
-  it("requires XP and every published Foundations lesson", () => {
+  it("requires XP and the original seven Foundations lessons", () => {
     expect(status(0, []).unlocked).toBe(false);
     expect(status(420, required.slice(0, -1)).unlocked).toBe(false);
     expect(status(360, [...required]).unlocked).toBe(false);
     expect(status(420, [...required]).unlocked).toBe(true);
+  });
+  it("keeps Checkpoint 1 and future L1 lessons outside the Lab prerequisite", () => {
+    expect(required).toEqual([
+      "foundations-why-invest", "foundations-stocks", "foundations-etfs-indexes", "foundations-bonds-cash",
+      "foundations-markets", "foundations-risk-reward", "foundations-portfolio",
+    ]);
+    expect(status(420, [...required]).unlocked).toBe(true);
+    expect(status(420, [...required.slice(0, -1), "foundations-checkpoint"]).unlocked).toBe(false);
   });
   it("recognizes a recorded entitlement for existing users without fabricating XP", () => {
     const result = status(0, [], true);

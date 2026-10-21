@@ -152,7 +152,7 @@ try {
   const completed = await snapshot();
   const receipt = completed.awards.find((award) => award.lesson_id === "returns-log-returns");
   assert.equal(receipt.xp, 60);
-  assert.equal(receipt.reward_policy_version, 3);
+  assert.equal(receipt.reward_policy_version, 4);
   assert.equal(BigInt(receipt.practice_capital_minor), 200_000n);
   assert.deepEqual(completed.awards.filter((award) => award.lesson_id !== "returns-log-returns"), before.awards);
   assert.deepEqual(completed.progress.filter((row) => row.lesson_id !== "returns-log-returns"), before.progress);
