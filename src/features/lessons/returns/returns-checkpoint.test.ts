@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { consecutiveSimpleReturns, cumulativeReturn, logReturn, recoveryReturn, simpleReturn, simpleReturnFromLog } from "@/features/finance/returns";
 import { getModuleBySlug } from "@/features/learning/catalog";
 import { validateCompletion, validateMove } from "@/features/progress/transition";
-import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, MODULE_REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
+import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
 import { block, correctAnswers, numericAnswer, wrongAnswers } from "../lesson-test-support";
 import { evaluateQuestion, isQuestion } from "../question-evaluation";
 import { getGuidedSteps } from "../steps";
@@ -18,7 +18,7 @@ describe("Returns checkpoint", () => {
     expect(getModuleBySlug("returns")).toMatchObject({ lessonCount: 6, estimatedMinutes: 75 });
     expect(logReturnsLesson.navigation?.next?.href).toBe("/learn/returns/returns-checkpoint");
     expect(lesson.navigation).toEqual({ previous: { href: "/learn/returns/log-returns", label: returnsLessons[4].title } });
-    expect(lessonReward(lesson.id)).toEqual({ practiceCapitalMinor: LESSON_PRACTICE_CAPITAL_MINOR, rewardPolicyVersion: MODULE_REWARD_POLICY_VERSION });
+    expect(lessonReward(lesson.id)).toEqual({ practiceCapitalMinor: LESSON_PRACTICE_CAPITAL_MINOR, rewardPolicyVersion: REWARD_POLICY_VERSION });
   });
 
   it("opens with a question, gates every question step and completes only from the last step", () => {

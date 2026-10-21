@@ -6,7 +6,7 @@ import { calculateMaxDrawdown } from "@/features/lab/backtest";
 import { priceMetrics } from "@/features/instruments/price-metrics";
 import { metricsFor } from "@/features/instruments/price-metrics-presentation";
 import { validateCompletion, validateMove } from "@/features/progress/transition";
-import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, MODULE_REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
+import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
 import { evaluateQuestion, isQuestion, type QuestionBlock } from "../question-evaluation";
 import { getAuthoredLesson } from "../registry";
 import { getGuidedSteps } from "../steps";
@@ -58,9 +58,9 @@ describe("Volatility module", () => {
     }
   });
 
-  it("rewards each first completion with 2,000 Kč of Practice Capital under policy v3", () => {
+  it("rewards each first completion with 2,000 Kč of Practice Capital under policy v4", () => {
     for (const lesson of volatilityLessons) {
-      expect(lessonReward(lesson.id)).toEqual({ practiceCapitalMinor: LESSON_PRACTICE_CAPITAL_MINOR, rewardPolicyVersion: MODULE_REWARD_POLICY_VERSION });
+      expect(lessonReward(lesson.id)).toEqual({ practiceCapitalMinor: LESSON_PRACTICE_CAPITAL_MINOR, rewardPolicyVersion: REWARD_POLICY_VERSION });
     }
     expect(LESSON_PRACTICE_CAPITAL_MINOR).toBe(BigInt(200_000));
   });

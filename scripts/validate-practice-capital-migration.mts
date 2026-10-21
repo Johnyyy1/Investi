@@ -173,7 +173,36 @@ try {
     }));
   });
 
-  console.log("PASS: Practice Capital migrations preserve v1 receipts, accept v2 zero-capital receipts, reject negatives, and handle reconciliation, partial backfill, and v1 reruns.");
+  await runInSchema("v4", async (tx) => {
+    await createLegacySchema(tx);
+    await tx.unsafe(`
+      INSERT INTO lesson VALUES ('v1', true), ('v2', true), ('v3-behavior', true), ('v4-behavior', true), ('v4-analytical', true);
+      INSERT INTO lesson_award VALUES ('learner', 'v1', 60, '2026-09-08', 'Europe/Prague', '2026-09-08T10:00:00Z');
+    `);
+    await applyMigration(tx);
+    await applyMigration(tx, xpOnlyRewardMigration);
+    const before = await receiptSnapshot(tx);
+    await tx.unsafe(`
+      INSERT INTO lesson_award (user_id, lesson_id, xp, practice_capital_minor, reward_policy_version, learning_date, time_zone, awarded_at)
+      VALUES
+        ('learner', 'v2', 60, 0, 2, '2026-09-24', 'Europe/Prague', '2026-09-24T10:00:00Z'),
+        ('learner', 'v3-behavior', 60, 200000, 3, '2026-10-14', 'Europe/Prague', '2026-10-14T10:00:00Z'),
+        ('learner', 'v4-behavior', 60, 0, 4, '2026-10-21', 'Europe/Prague', '2026-10-21T10:00:00Z'),
+        ('learner', 'v4-analytical', 60, 200000, 4, '2026-10-21', 'Europe/Prague', '2026-10-21T10:00:00Z')
+      ON CONFLICT (user_id, lesson_id) DO NOTHING;
+    `);
+    const after = await receiptSnapshot(tx);
+    assert.deepEqual(after.filter((row) => row.reward_policy_version === 1), [...before]);
+    assert.deepEqual(after.map((row) => [row.lesson_id, row.practice_capital_minor, row.reward_policy_version]), [
+      ['v1', '200000', 1], ['v2', '0', 2], ['v3-behavior', '200000', 3], ['v4-analytical', '200000', 4], ['v4-behavior', '0', 4],
+    ]);
+    const [total] = await tx`select sum(practice_capital_minor)::text as minor from lesson_award`;
+    assert.equal(total.minor, '600000', 'all versions coexist under the existing schema; no migration or repricing is needed');
+    await tx.unsafe(`INSERT INTO lesson_award SELECT * FROM lesson_award ON CONFLICT (user_id, lesson_id) DO NOTHING`);
+    assert.deepEqual(await receiptSnapshot(tx), after, 'retries preserve every field of every receipt');
+  });
+
+  console.log("PASS: Practice Capital migrations preserve v1/v2/v3/v4 receipts, accept XP-only receipts, reject negatives, and handle reconciliation, partial backfill, and retries.");
 } finally {
   await sql.end();
 }

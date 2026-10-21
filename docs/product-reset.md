@@ -6,7 +6,7 @@ This document records current behavior and the historical migration rationale ne
 
 The learner summary selects the latest active published lesson, then incomplete learning in the last completed module, then the recommended module, then curriculum order. Ties use curriculum order; unknown/unpublished progress is ignored. The current Learn recommendation also uses the personalization engine, with a link back to a different active lesson. Completion uses the shared continuity result and sends a fully completed learner to Lab.
 
-Twelve lessons are published: seven Foundations and five Returns. Checkpoints remain planned. [Foundations](investing-foundations.md), [Returns](returns.md), and [onboarding](onboarding.md) describe their current contracts.
+Twenty-seven lessons are published: seven Foundations, six Returns, five Volatility, four Correlation and five Diversification. The Returns and Volatility checkpoints are published; the Foundations checkpoint remains planned. [Foundations](investing-foundations.md), [Returns](returns.md), and [onboarding](onboarding.md) describe their current contracts.
 
 Clients send only lesson identity, cursor, and answer IDs. The server derives the owner from the session, bounds cursor moves to one forward authored step, and requires a correct evaluated answer when crossing a question. Completion requires the final persisted step. Attempts and explorer inputs remain ephemeral; cursor and completion persist. Reviewed completed lessons do not mutate their receipt, cursor, or original completion timestamp.
 
@@ -14,15 +14,29 @@ The completion transaction locks the user row, preserves an existing completion 
 
 ## Current reward policy and historical rationale
 
-The application uses policy v3, decided by the lesson's module (`lessonReward` in `features/rewards/practice-capital.ts`):
+Policy **v4** applies prospectively to new first-completion receipts from deployment of #120 (decision dated **2026-10-21**). `lessonReward` in `src/features/rewards/practice-capital.ts` resolves the lesson's placement and curriculum level from the #118 registry:
 
-- A first completion of a **Foundations** lesson earns 60 XP and **zero Practice Capital**.
-- Completing all seven Foundations and reaching 420 XP creates one Portfolio Lab entitlement with **500000 CZK minor units (5,000 Kč)**.
-- A first completion of **any lesson outside Foundations** earns 60 XP and **200000 CZK minor units (2,000 Kč)**, regardless of order. Capital earned before the unlock waits in the entitlement until Portfolio Lab opens.
+- A first completion in **L0, L1 (including Foundations) or B** earns 60 XP and **zero Practice Capital**.
+- Completing the **original seven Foundations lessons** and reaching **420 XP** creates one Portfolio Lab entitlement with **500000 CZK minor units (5,000 Kč)**. The stable prerequisite IDs are frozen: publishing Checkpoint 1 (1.1.10) or another L1 lesson does not expand them.
+- A first completion in **L2–L6 or V** earns 60 XP and **200000 CZK minor units (2,000 Kč)**, regardless of order. Capital earned before the unlock waits in the entitlement until Portfolio Lab opens.
+
+This deliberately changes new receipts for `correlation-not-causation`, now in B8, to XP only. Its historical v3 receipts retain 2,000 Kč. A lesson without a registry placement cannot be priced: publishing content must include its placement rather than silently falling back to a storage module. `MODULE_REWARD_POLICY_VERSION = 3` remains a historical identity; `LEVEL_REWARD_POLICY_VERSION = 4` is the current `REWARD_POLICY_VERSION`.
+
+### Decision and alternatives for #120
+
+The immediate **2,000 Kč on first completion** variant is implemented. A split such as 1,000 Kč now plus 1,000 Kč after delayed mastery is deferred until #122 defines persisted mastery evidence, eligibility and lifetime idempotency. V4 does not fabricate mastery or future entitlements. This removes capital rewards from financial-readiness and behavioral lessons while keeping the existing amount and timing for funded learning; it does not claim to solve the eventual total curriculum payout.
+
+Process bonuses for a saved IPS, a crisis exercise or Capstone A/B are deferred: those verified outputs, amounts, rubrics and award events do not yet exist. No bonus table, grant endpoint or placeholder payment is introduced. Their implementation must specify immutable versioned receipts, a unique user/type identity, ownership and output verification, and the same user-row lock as lesson completion and trades, with completion/trade/bonus concurrency tests.
+
+Monthly simulated income is deferred to #139 and an isolated training portfolio. Personal portfolio capital continues to equal stored lesson receipts plus recorded unlock grants. XP remains visible. Checkpoint 1 is recommended learning and does not gate Lab access; no account cohort or retroactive access change is introduced.
+
+The existing lesson-based streak stays intact until #123 supplies persisted daily-review events. Reviews currently issue no XP/capital and create no learning day. Daily review may later count for a streak without duplicating lifetime completion or receipts, through that explicit contract.
+
+No mechanic may award XP, Practice Capital or streak credit for trades, trading frequency, risk-taking or return. Trade celebrations, return leaderboards and price notifications are excluded. The [PR review checklist](../.github/PULL_REQUEST_TEMPLATE.md) makes these constraints explicit; persistence validation verifies that trading leaves receipts, XP and streaks unchanged.
 
 Stored entitlements grandfather existing access. Anonymous demos receive one `demo_access` grant with the same 5,000 Kč, independently of lesson prerequisites. Neither repeated completion nor reset repeats a grant or a lesson reward.
 
-Practice Capital is the sum of authoritative stored lesson receipts **and unlock grants**. Every receipt keeps the amount and policy version it was created with: v1 receipts retain 200000 minor units (2,000 Kč each), v2 receipts (XP only, including lessons outside Foundations completed under v2) hold zero, and nothing is backfilled. Amounts are never derived from XP. There is no mutable balance counter. These are virtual educational funds, not withdrawable money. Learning rewards are contributions: they raise Practice Capital and cash, never investment gain or loss.
+Practice Capital is the sum of authoritative stored lesson receipts **and unlock grants**. Every receipt keeps the amount and policy version it was created with: v1 receipts retain 200000 minor units (2,000 Kč each); v2 receipts (XP only, including lessons outside Foundations completed under v2) hold zero; v3 receipts use the original storage-module rule (zero in Foundations, 2,000 Kč elsewhere). All coexist with v4. No v4 backfill, recalculation, rescheduling or clawback occurs; original completion/award dates and recorded access remain intact. Amounts are never derived from XP. There is no mutable balance counter. These are virtual educational funds, not withdrawable money. Learning rewards are contributions: they raise Practice Capital and cash, never investment gain or loss.
 
 Historical migrations remain necessary:
 
@@ -31,7 +45,7 @@ Historical migrations remain necessary:
 - `0006` adds the persistent unlock ledger; migration code preserves legacy access and original capital.
 - `0008` permits nonnegative receipt capital for v2 without rewriting historical receipts.
 
-All migrations and metadata are retained. Apply the entire committed chain before running the app, then run the idempotent curriculum seed; do not rewrite old migrations or reset user progress.
+All migrations and metadata are retained. V4 needs no schema migration: the existing nonnegative capital and positive version fields already support its receipts. Apply the entire committed chain before running the app, then run the idempotent curriculum seed; do not rewrite old migrations or reset user progress. `test:migration` exercises v1–v4 coexistence and retry preservation; `test:progression-persistence` covers real mixed-version completion/review/reset and concurrent v4 completion/trade retries.
 
 ## Streak and daily lesson goal
 

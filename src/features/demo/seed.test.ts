@@ -8,8 +8,8 @@ it("creates a consistent populated lesson history and real reward ledger", () =>
   const now = new Date("2026-09-09T00:01:00Z");
   const seed = demoSeed(now);
   expect(getGamification(seed.awards, now, "UTC", 20)).toMatchObject({ totalXp: 360, streak: 4, todayCompleted: 1, dailyTarget: 2 });
-  // Policy v3 like any learner: Foundations receipts are XP only; the one Returns lesson adds 2,000 Kč.
-  expect(seed.awards.every((award) => award.practiceCapitalMinor === lessonReward(award.lessonId).practiceCapitalMinor && award.rewardPolicyVersion === 3)).toBe(true);
+  // Policy v4 like any learner: Foundations receipts are XP only; the one Returns lesson adds 2,000 Kč.
+  expect(seed.awards.every((award) => award.practiceCapitalMinor === lessonReward(award.lessonId).practiceCapitalMinor && award.rewardPolicyVersion === 4)).toBe(true);
   expect(getPracticeCapitalSummary(seed.awards)).toEqual({ earnedPracticeCapitalMinor: 200_000n });
   expect(seed.progress.filter((row) => row.status === "completed").map((row) => row.lessonId)).toEqual(seed.awards.map((row) => row.lessonId));
   expect(seed.awards.every((award) => award.awardedAt <= now)).toBe(true);

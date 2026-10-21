@@ -29,9 +29,9 @@ try {
   await Promise.all([ensureDemoSeed(a, now), ensureDemoSeed(a, now), ensureDemoSeed(b, now)]);
   const getAwards = (id: string) => db.select().from(lessonAward).where(eq(lessonAward.userId, id));
   assert.equal((await getAwards(a)).length, 6);
-  // Policy v3: the five Foundations receipts are XP only; the seeded Returns lesson carries 2,000 Kč.
+  // Policy v4: the five Foundations receipts are XP only; the seeded Returns lesson carries 2,000 Kč.
   assert.equal((await loadPracticeCapitalSummary(a)).earnedPracticeCapitalMinor, 200_000n);
-  assert.ok((await getAwards(a)).every((award) => award.rewardPolicyVersion === 3 && award.practiceCapitalMinor === (award.lessonId.startsWith("returns-") ? 200_000n : 0n)));
+  assert.ok((await getAwards(a)).every((award) => award.rewardPolicyVersion === 4 && award.practiceCapitalMinor === (award.lessonId.startsWith("returns-") ? 200_000n : 0n)));
   await assert.rejects(() => ensureDemoSeed(normal, now));
   assert.equal((await getAwards(normal)).length, 0);
   constraint = `${prefix}_failure`;
@@ -90,7 +90,7 @@ try {
   const [profile] = await db.select().from(learningProfile).where(eq(learningProfile.userId, normal));
   assert.deepEqual(profile.goals, []); assert.deepEqual(profile.interests, []);
   assert.equal(profile.timeZone, "Europe/Prague");
-  console.log("PASS: real DB atomic policy-v3 receipts, review and concurrent idempotence, completedAt preservation, graded-step walk without correct answers earns nothing, demo ownership/isolation, concurrent seed idempotence, seed rollback/retry, server progression validation, stale onboarding protection, pinned timezone.");
+  console.log("PASS: real DB atomic policy-v4 receipts, review and concurrent idempotence, completedAt preservation, graded-step walk without correct answers earns nothing, demo ownership/isolation, concurrent seed idempotence, seed rollback/retry, server progression validation, stale onboarding protection, pinned timezone.");
 } finally {
   if (constraint) await sql.unsafe(`ALTER TABLE lesson_award DROP CONSTRAINT IF EXISTS "${constraint}"`);
   for (const id of ids) await db.delete(user).where(eq(user.id, id));

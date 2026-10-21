@@ -9,9 +9,10 @@ import { DIVERSIFICATION_MODULE_ID, diversificationLessons } from "../lessons/di
  *
  * Two module concepts live side by side:
  * - a storage module is a `learning_module` row. It owns lesson IDs, URLs (`/learn/{moduleSlug}/{slug}`)
- *   and the reward policy, which follows `lesson.module_id`. Lessons never move between storage modules;
+ *   and historical v3 reward eligibility. Lessons never move between storage modules;
  * - a display module (code "3.3") is how the curriculum presents lessons. It may combine lessons from several
- *   storage modules. A display code ("3.3.6") is metadata only; the lesson ID stays stable.
+ *   storage modules. Its level determines new v4 lesson rewards. A display code ("3.3.6") is metadata only;
+ *   the lesson ID stays stable and existing reward receipts are never recalculated.
  */
 
 /** Storage modules in today's learning sequence. `seedCurriculum` upserts these rows. */

@@ -43,7 +43,7 @@ try {
   const receipts = await awards();
   assert.equal(receipts.length, 2);
   assert.deepEqual(receipts.find((award) => award.lessonId === "returns-comparing"), previousAwards[0]);
-  assert.equal(receipts.find((award) => award.lessonId === lessonId)?.rewardPolicyVersion, 3);
+  assert.equal(receipts.find((award) => award.lessonId === lessonId)?.rewardPolicyVersion, 4);
   assert.equal(receipts.find((award) => award.lessonId === lessonId)?.practiceCapitalMinor, 200_000n);
   const completed = await progress();
   assert.equal(completed[0].status, "completed");

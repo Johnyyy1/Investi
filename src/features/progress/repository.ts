@@ -48,7 +48,7 @@ export async function completeLesson(userId: string, lessonId: string) {
         userId,
         lessonId,
         xp: LESSON_XP,
-        // Server-determined by the lesson's module; the client never supplies an amount.
+        // Server-determined by the lesson's curriculum level; the client never supplies an amount.
         ...lessonReward(lessonId),
         learningDate: learningDate(now, timeZone),
         timeZone,
