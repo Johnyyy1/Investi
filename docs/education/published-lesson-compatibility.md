@@ -5,7 +5,7 @@ Curriculum 2.0 must preserve a learner's saved work and earned entitlements. Thi
 ## Identity and persistence
 
 - After publication, keep `lesson.id`, `module_id`, lesson slug and module slug stable. A display-module move changes registry metadata only. Existing `/learn/{moduleSlug}/{lessonSlug}` and module overview routes remain valid.
-- `seedCurriculum` updates editorial fields and publication/order metadata. Its conflict path deliberately never updates lesson ownership or slugs. Never use a display move to change the DB module: rewards follow that module.
+- `seedCurriculum` updates editorial fields and publication/order metadata. Its conflict path deliberately never updates lesson ownership or slugs. Never use a display move to change the DB module. Policy v4 prices new receipts by registered curriculum level; any placement change affecting future reward eligibility is a deliberate reward-policy decision, never an incidental content edit.
 - Never delete lessons, progress, awards or recorded unlocks to reorganize content. Never downgrade `completed` or change its `completedAt`. Review does not move its saved cursor or award anything again.
 - Stored XP, Practice Capital amounts and reward policy versions remain authoritative. Do not recalculate or backfill receipts when changing content.
 - Portfolio Lab retains the original seven Foundations prerequisite IDs and 420 XP. Publishing more Foundations lessons does not add prerequisites. An existing `progression_unlock` is permanent; an eligible account without a record still receives its one-time grant.
@@ -41,4 +41,4 @@ npm run test:product
 npm run test:progress-browser
 ```
 
-Run persistence, migration and browser checks against a migrated and seeded **disposable local PostgreSQL database**, never the normal development database. The compatibility script temporarily publishes three extra Foundations rows and inserts an ungraded step in memory, then restores its fixtures. It checks unfinished learners before and at the old final step, completed lessons/checkpoints, historical v1/v2/v3 receipts and concurrent one-time unlocking. Also run the repository's lint, typecheck, unit-test and build gates.
+Run persistence, migration and browser checks against a migrated and seeded **disposable local PostgreSQL database**, never the normal development database. The compatibility script temporarily publishes three extra Foundations rows and inserts an ungraded step in memory, then restores its fixtures. It checks unfinished learners before and at the old final step, completed lessons/checkpoints, mixed v1–v4 receipts and concurrent one-time unlocking. Also run the repository's lint, typecheck, unit-test and build gates.

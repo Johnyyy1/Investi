@@ -6,7 +6,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import postgres from "postgres";
 import { db } from "../src/db";
 import { lesson, lessonAward, portfolio, portfolioTrade, user } from "../src/db/schema";
-import { executeTrade, getOrCreateActivePortfolio, resetActivePortfolio } from "../src/features/portfolio/repository";
+import { executeTrade, executeAllocation, getOrCreateActivePortfolio, resetActivePortfolio, reviewTrade, setBrokerFeeProfile } from "../src/features/portfolio/repository";
 import { loadPortfolioView } from "../src/features/portfolio/service";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -46,6 +46,21 @@ try {
   assert.equal((await executeTrade(primary, { instrumentId: "US-XNAS:AAPL", quantity: "0.25", side: "BUY", clientIdempotencyKey: buyKey })).duplicate, true);
   assert.equal(await tradeCount(first.id), 1, "duplicate buy inserts once");
   const [persistedBuy] = await db.select().from(portfolioTrade).where(eq(portfolioTrade.clientIdempotencyKey, buyKey));
+  assert.equal(persistedBuy.feeProfileId, "investi-standard-v1");
+  assert.equal(persistedBuy.tradeFeeRateBps, 10);
+  assert.equal(persistedBuy.tradeFeeMinMinor, 1_000n);
+  assert.equal(persistedBuy.tradeFeeMaxMinor, 20_000n);
+  assert.equal(persistedBuy.fxMarkupBps, 50);
+  assert.equal(persistedBuy.feeBaseMinor, 1_000n);
+  assert.equal(persistedBuy.fxMarkupBaseMinor, 324n);
+  const estimate = await reviewTrade(primary, { instrumentId: "US-XNAS:AAPL", quantity: "0.25", side: "BUY" });
+  assert.equal(estimate.cashDeltaBaseMinor, persistedBuy.cashDeltaBaseMinor.toString(), "review and execution share exact arithmetic");
+  await setBrokerFeeProfile(primary, "investi-low-fx-v1");
+  const duplicateAfterChange = await executeTrade(primary, { instrumentId: "US-XNAS:AAPL", quantity: "0.25", side: "BUY", clientIdempotencyKey: buyKey });
+  assert.deepEqual(duplicateAfterChange.trade, persistedBuy, "changing profiles never reprices a retry or alters history");
+  await assert.rejects(() => executeTrade(primary, { instrumentId: "US-XNAS:AAPL", quantity: "0.25", side: "BUY", clientIdempotencyKey: randomUUID(), expectedFeeProfileId: "investi-standard-v1" }), /Profil poplatků se změnil/);
+  assert.equal((await loadPortfolioView(primary)).feeProfileId, "investi-low-fx-v1");
+  await setBrokerFeeProfile(primary, "investi-standard-v1");
   assert.equal(persistedBuy.marketDataProvider, "investi-deterministic", "security provenance remains independent");
   assert.equal(persistedBuy.fxRateProvider, "investi-deterministic", "FX provider provenance is persisted separately");
   assert.equal(persistedBuy.fxReferenceDate, "2026-01-16", "FX calendar reference date is preserved exactly");
@@ -61,6 +76,24 @@ try {
     executeTrade(buyer, { instrumentId: "US-XNAS:AAPL", quantity: "0.5", side: "BUY", clientIdempotencyKey: randomUUID() }),
   ]);
   assert.deepEqual(simultaneousBuys.map(({ status }) => status).sort(), ["fulfilled", "rejected"], "concurrent buys cannot overspend");
+
+  // Two gross notionals fit, but two minimum commissions do not. The learner lock must include fees.
+  const feeBuyer = await createOwner(1);
+  const feeRace = await Promise.allSettled([1, 2].map(() => executeTrade(feeBuyer, { instrumentId: "CZ-XPRA:CZGB35", quantity: "9.9", side: "BUY", clientIdempotencyKey: randomUUID() })));
+  assert.deepEqual(feeRace.map(({ status }) => status).sort(), ["fulfilled", "rejected"], "fees alone prevent the second concurrent buy");
+  const feeView = await loadPortfolioView(feeBuyer);
+  assert.equal(feeView.availableCashMinor, "99406");
+  assert.equal(feeView.investmentGainLossMinor, "-1000", "domestic trades incur commission, no FX cost");
+  const feeTrade = await db.select().from(portfolioTrade).where(eq(portfolioTrade.portfolioId, feeView.portfolioId));
+  assert.equal(feeTrade[0].fxMarkupBps, 0);
+
+  const tinySale = await executeTrade(feeBuyer, { instrumentId: "CZ-XPRA:CZGB35", quantity: "0.0001", side: "SELL", clientIdempotencyKey: randomUUID() });
+  assert.equal(tinySale.trade.cashDeltaBaseMinor, -999n, "a tiny sale pays the minimum commission from existing cash");
+  assert.equal((await loadPortfolioView(feeBuyer)).availableCashMinor, "98407");
+  const exhausted = await createOwner(1);
+  await executeAllocation(exhausted, { lines: [{ instrumentId: "CZ-XPRA:CZGB35", weightBasisPoints: 10_000 }], cashWeightBasisPoints: 0, clientIdempotencyKey: randomUUID() });
+  assert.equal((await loadPortfolioView(exhausted)).availableCashMinor, "0");
+  await assert.rejects(() => executeTrade(exhausted, { instrumentId: "CZ-XPRA:CZGB35", quantity: "0.0001", side: "SELL", clientIdempotencyKey: randomUUID() }), /včetně nákladů/, "sale cannot overdraw cash when commission exceeds proceeds");
 
   const seller = await createOwner(2);
   await executeTrade(seller, { instrumentId: "US-XNAS:AAPL", quantity: "1", side: "BUY", clientIdempotencyKey: randomUUID() });
@@ -80,8 +113,8 @@ try {
   ]);
   const rewardRaceView = await loadPortfolioView(rewardRace);
   assert.equal(rewardRaceView.earnedPracticeCapitalMinor, "400000");
-  assert.equal(rewardRaceView.availableCashMinor, "270325", "concurrent reward is neither lost nor double credited");
-  assert.equal(rewardRaceView.investmentGainLossMinor, "0", "reward contribution is not performance");
+  assert.equal(rewardRaceView.availableCashMinor, "268677", "concurrent reward is neither lost nor double credited");
+  assert.equal(rewardRaceView.investmentGainLossMinor, "-1648", "reward contribution is not performance; commission and FX are costs");
 
   const beforeResetTrades = await tradeCount(first.id);
   const resetKey = randomUUID();
@@ -96,6 +129,7 @@ try {
   const resetView = await loadPortfolioView(primary);
   assert.equal(resetView.availableCashMinor, resetView.earnedPracticeCapitalMinor, "reset restores all receipt entitlement");
   assert.equal(resetView.holdings.length, 0);
+  assert.equal(resetView.feeProfileId, "investi-standard-v1", "reset preserves the saved user-level tariff");
 
   const isolated = await createOwner(0);
   const isolatedView = await loadPortfolioView(isolated);

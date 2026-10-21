@@ -11,6 +11,8 @@ import { GET as exportData } from "../src/app/api/account/export/route";
 import { db } from "../src/db";
 import { rateLimiter } from "../src/features/rate-limit";
 import { deleteExpiredSessions, EXPIRED_SESSION_RETENTION_MS } from "../src/features/account/session-retention";
+import { saveLearnerArtifact } from "../src/features/artifacts/repository";
+import { artifactExamples } from "../src/features/artifacts/test-fixtures";
 import { GUEST_KIND_HEADER } from "../src/features/guest/identity";
 
 const url = process.env.DATABASE_URL;
@@ -46,6 +48,7 @@ async function signUp(label: string) {
 
 /** Learning, rewards and two portfolio generations with trades and a target mix. */
 async function withEverything(userId: string, lessonIds: string[]) {
+  for (let version = 0; version < 2; version++) await saveLearnerArtifact(userId, { content: { kind: "goal_map", payload: artifactExamples.goal_map }, sourceLessonId: lessonIds[0], consent: true, requestId: randomUUID() });
   for (const lessonId of lessonIds) {
     await sql`insert into lesson_progress (user_id, lesson_id, status, last_position, completed_at, updated_at) values (${userId}, ${lessonId}, 'completed', 3, now(), now())`;
     await sql`insert into lesson_award (user_id, lesson_id, xp, practice_capital_minor, reward_policy_version, learning_date, time_zone, awarded_at)
@@ -73,6 +76,7 @@ async function owned(userId: string) {
     (select count(*) from "user" where id = ${userId})::int as "user",
     (select count(*) from session where user_id = ${userId})::int as sessions,
     (select count(*) from account where user_id = ${userId})::int as accounts,
+    (select count(*) from learner_artifact where user_id = ${userId})::int as artifacts,
     (select count(*) from learning_profile where user_id = ${userId})::int as profile,
     (select count(*) from lesson_progress where user_id = ${userId})::int as progress,
     (select count(*) from lesson_award where user_id = ${userId})::int as awards,
@@ -102,7 +106,7 @@ try {
   const other = await signUp("other");
   await withEverything(target.id, lessons);
   await withEverything(other.id, lessons);
-  const full = { user: 1, sessions: 1, accounts: 1, profile: 1, progress: 2, awards: 2, unlocks: 1, portfolios: 2, trades: 2, allocations: 1, lines: 1 };
+  const full = { user: 1, sessions: 1, accounts: 1, artifacts: 2, profile: 1, progress: 2, awards: 2, unlocks: 1, portfolios: 2, trades: 2, allocations: 1, lines: 1 };
   assert.deepEqual(await owned(target.id), full);
   const otherBefore = await owned(other.id);
   const sharedBefore = await shared();
@@ -115,6 +119,7 @@ try {
   const text = await exported.text();
   const data = JSON.parse(text);
   assert.equal(data.user.email, target.email);
+  assert.equal(data.learnerArtifacts.length, 2, "all artifact revisions are exported");
   assert.equal(data.portfolios.length, 2);
   assert.equal(data.portfolios.flatMap((generation: { trades: unknown[] }) => generation.trades).length, 2);
   assert.equal(data.portfolios[1].targetMixes[0].lines[0].weightBasisPoints, 9000);

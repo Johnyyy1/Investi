@@ -75,7 +75,7 @@ try {
   assert.deepEqual(await assertCurriculumComplete(db), { modules: availableModules.length, lessons: canonicalLessons.length });
 
   // Upsert conflicts update editorial fields only. In particular, a display-module move must
-  // never silently move the persisted lesson (changing its reward policy) or rewrite its URL.
+  // never silently move the persisted lesson or rewrite its URL. V4 rewards use registry levels.
   await assert.rejects(db.transaction(async (tx) => {
     const original = availableLessons[0];
     const otherModuleId = availableLessons.find((definition) => definition.moduleId !== original.moduleId)!.moduleId;

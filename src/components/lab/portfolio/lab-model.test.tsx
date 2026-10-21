@@ -28,6 +28,7 @@ const cashOnly: PortfolioView["exposure"]["sector"] = { status: "valued", catego
 
 function view(overrides: Partial<PortfolioView> = {}): PortfolioView {
   return {
+    feeProfileId: "investi-standard-v1",
     portfolioId: "p1", baseCurrency: "CZK", openedAt: "2026-10-13T08:00:00.000Z", openingCapitalMinor: "500000", earnedPracticeCapitalMinor: "500000",
     availableCashMinor: "500000", holdingsMarketValueMinor: "0", portfolioTotalMinor: "500000", investmentGainLossMinor: "0", investmentGainLossBasisPoints: "0",
     valuationComplete: true, valuedHoldingsCount: 0, totalHoldingsCount: 0, marketDataMode: "sample", realizedGainLossMinor: "0", cashWeightBasisPoints: "10000",
@@ -156,6 +157,13 @@ describe("overview states", () => {
     expect(html).toContain("Začni prvním nákupem.");
     expect(html).toMatch(/id="first-buy-search"[^>]*role="combobox"/);
     expect(html).not.toMatch(/lab\/portfolio\/mix|type="range"|Sestavit/);
+  });
+
+  it("shows a cash debit when a tiny sale costs more than its proceeds", () => {
+    const html = render(view({ holdings: [vt], recentActivity: [{ id: "sale", side: "SELL", symbol: "VT", name: "Fixture", quantity: "0.0001", unitPrice: "100", quoteCurrency: "CZK", grossAmountBaseMinor: "1", cashDeltaBaseMinor: "-999", feeBaseMinor: "1000", fxMarkupBaseMinor: "0", feeProfileId: "investi-standard-v1", executedAt: "2026-10-21T12:00:00Z" }] }));
+    expect(html).toContain("Prodej");
+    expect(html).toContain("−9,99 Kč");
+    expect(html).toContain("Poplatek");
   });
 
   it("shows the split in koruny next to each share and never a saved target", () => {

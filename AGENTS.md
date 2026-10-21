@@ -298,7 +298,9 @@ Do not place the mascot everywhere.
 
 8. Learn and lesson UX
 
-Before editing a published lesson, follow [published lesson compatibility](docs/education/published-lesson-compatibility.md): preserve identity, saved-step and grading contracts, completed status, and reward receipts. This policy also feeds the Curriculum 2.0 authoring standard (#135).
+Before authoring or revising lessons, read [the Lesson 2.0 authoring standard](docs/education/lesson-standard.md). It defines the learning structure, Czech terminology, dated facts, stable IDs and published-lesson compatibility rules, with copyable lesson/test templates and a review checklist.
+
+Before editing a published lesson, also follow [published lesson compatibility](docs/education/published-lesson-compatibility.md): preserve identity, saved-step and grading contracts, completed status, and reward receipts.
 
 The Learn page must answer quickly:
 
@@ -348,28 +350,34 @@ Practice Capital is the spendable learning reward for Portfolio Lab. XP measures
 
 Reward policy
 
-Current approved policy (reward policy v3). The code is the source of truth for the amounts and the XP goal: lessonReward in src/features/rewards/practice-capital.ts and the unlock definition in src/features/progression/unlocks.ts. docs/product-reset.md records the history.
+Current policy (reward policy v4, issue #120, 2026-10-21). The code is the source of truth for the amounts and the XP goal: lessonReward in src/features/rewards/practice-capital.ts resolves the curriculum level from the registry; src/features/progression/unlocks.ts defines access. docs/product-reset.md records the decision, alternatives and history.
 
-first completion of a Foundations lesson
+first completion of a lesson in L0, L1 (including Foundations), or the behavioral strand B
 = XP only
 = 0 Practice Capital
 
-completing all Foundations lessons and reaching the XP goal
+completing the original seven Foundations lessons and reaching 420 XP
 = one-time Portfolio Lab unlock grant
 = 500000 CZK minor units
 = 5,000 Kč Practice Capital
 
-first completion of any lesson outside Foundations
+first completion of a lesson in L2–L6 or V
 = 200000 CZK minor units
 = 2,000 Kč Practice Capital
 
-The lesson reward follows the lesson's module, not completion order: a lesson outside Foundations completed before the unlock still earns 2,000 Kč, which becomes usable once Portfolio Lab opens.
+The lesson reward follows its registered curriculum level, not its storage module or completion order. Eligible capital earned before the unlock becomes usable once Portfolio Lab opens. A lesson needs a registry placement before it can earn a new receipt; never fall back to storage-module eligibility. The behavioral lesson correlation-not-causation is XP only for new v4 receipts, while its old v3 receipts keep their capital.
+
+Checkpoint 1 and newly published L1 lessons do not expand the frozen seven-lesson Lab prerequisite. Recorded access and grants are preserved.
 
 Review / repeated completion:
 
 0 additional XP or Practice Capital
 
-Stored receipts keep the amount and policy version they were created with (v1: 2,000 Kč per lesson; v2: XP only) and are never recalculated or backfilled.
+Stored receipts keep the amount and policy version they were created with (v1: 2,000 Kč per lesson; v2: XP only; v3: XP only in Foundations and 2,000 Kč elsewhere) and are never recalculated or backfilled for v4.
+
+V4 pays the full eligible amount on first completion. Split mastery awards await #122; review-based streak credit awaits the persisted daily-review contract in #123. Until then, the existing first-completion lesson streak remains intact. Process bonuses (IPS, crisis, capstones) require verified outputs, explicit amounts, eligibility and an idempotent receipt policy before activation; v4 introduces none. Monthly disbursements await an isolated training portfolio in #139; the personal portfolio keeps receipt-derived entitlement.
+
+Never award XP, Practice Capital, learning-day credit or streaks for a trade, trading frequency, risk or return. Do not add trade confetti, return leaderboards or price notifications. Apply the reward/process checks in .github/PULL_REQUEST_TEMPLATE.md when reviewing changes.
 
 Practice Capital must never be derived from XP.
 

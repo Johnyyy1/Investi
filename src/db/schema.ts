@@ -1,4 +1,5 @@
 import type { DiagnosticResult } from "../features/personalization/diagnostic";
+import { artifactKinds, type ArtifactContent } from "../features/artifacts/schemas";
 import { sql } from "drizzle-orm";
 import { experienceValues, goalValues, interestValues } from "../features/onboarding/domain";
 import {
@@ -143,6 +144,25 @@ export const lessonProgress = pgTable(
   ],
 );
 
+export const learnerArtifactKind = pgEnum("learner_artifact_kind", artifactKinds);
+
+/** Append-only revisions; only an explicit document/account deletion removes history. */
+export const learnerArtifact = pgTable("learner_artifact", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  kind: learnerArtifactKind("kind").notNull(),
+  version: integer("version").notNull(),
+  payload: jsonb("payload").$type<ArtifactContent["payload"]>().notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  sourceLessonId: text("source_lesson_id").references(() => lesson.id, { onDelete: "set null" }),
+  requestId: text("request_id").notNull(),
+}, (table) => [
+  uniqueIndex("learner_artifact_user_kind_version_idx").on(table.userId, table.kind, table.version),
+  uniqueIndex("learner_artifact_user_request_idx").on(table.userId, table.requestId),
+  check("learner_artifact_version_positive", sql`${table.version} > 0`),
+  check("learner_artifact_payload_object", sql`jsonb_typeof(${table.payload}) = 'object'`),
+]);
+
 export const experienceLevelEnum = pgEnum("experience_level", experienceValues);
 export const learningGoalEnum = pgEnum("learning_goal", goalValues);
 export const learningInterestEnum = pgEnum("learning_interest", interestValues);
@@ -158,6 +178,7 @@ export const learningProfile = pgTable("learning_profile", {
   timeZone: text("time_zone"),
   recommendedStart: recommendedStartEnum("recommended_start"),
   onboardingStep: integer("onboarding_step").notNull().default(0),
+  brokerFeeProfileId: text("broker_fee_profile_id"),
   diagnosticResult: jsonb("diagnostic_result").$type<DiagnosticResult>(),
   personalizedOnboardingCompletedAt: timestamp("personalized_onboarding_completed_at", { withTimezone: true }),
   onboardingCompletedAt: timestamp("onboarding_completed_at", { withTimezone: true }),
@@ -232,6 +253,16 @@ export const portfolioTrade = pgTable("portfolio_trade", {
   grossAmountBaseMinor: bigint("gross_amount_base_minor", { mode: "bigint" }).notNull(),
   feeBaseMinor: bigint("fee_base_minor", { mode: "bigint" }).notNull().default(sql`0`),
   cashDeltaBaseMinor: bigint("cash_delta_base_minor", { mode: "bigint" }).notNull(),
+  /** NULL audit fields identify legacy, fee-free trades. Never backfill their history. */
+  feeProfileId: text("fee_profile_id"),
+  tradeFeeRateBps: integer("trade_fee_rate_bps"),
+  tradeFeeMinMinor: bigint("trade_fee_min_minor", { mode: "bigint" }),
+  tradeFeeMaxMinor: bigint("trade_fee_max_minor", { mode: "bigint" }),
+  tradeFeeCurrency: text("trade_fee_currency"),
+  fxMarkupBps: integer("fx_markup_bps"),
+  fxMarkupBaseMinor: bigint("fx_markup_base_minor", { mode: "bigint" }),
+  referenceFxRateToBase: numeric("reference_fx_rate_to_base", { precision: 24, scale: 12 }),
+  referenceGrossAmountBaseMinor: bigint("reference_gross_amount_base_minor", { mode: "bigint" }),
   quoteObservedAt: timestamp("quote_observed_at", { withTimezone: true }).notNull(),
   executedAt: timestamp("executed_at", { withTimezone: true }).notNull(),
   marketDataProvider: text("market_data_provider").notNull(),
@@ -262,6 +293,19 @@ export const portfolioTrade = pgTable("portfolio_trade", {
     or (${table.fxRateProvider} is not null and ${table.fxRateDataset} is not null and ${table.fxRateKind} is not null and ${table.fxRateIsDeterministic} is not null and ${table.fxReferenceDate} is not null and ${table.fxRateRetrievedAt} is not null)
   )`),
   check("portfolio_trade_fx_kind_check", sql`${table.fxRateKind} is null or ${table.fxRateKind} in ('synthetic', 'reference')`),
+  check("portfolio_trade_cost_audit_check", sql`(
+    (${table.feeProfileId} is null and ${table.tradeFeeRateBps} is null and ${table.tradeFeeMinMinor} is null and ${table.tradeFeeMaxMinor} is null and ${table.tradeFeeCurrency} is null and ${table.fxMarkupBps} is null and ${table.fxMarkupBaseMinor} is null and ${table.referenceFxRateToBase} is null and ${table.referenceGrossAmountBaseMinor} is null)
+    or (${table.feeProfileId} is not null and ${table.tradeFeeRateBps} is not null and ${table.tradeFeeRateBps} >= 0
+      and ${table.tradeFeeMinMinor} is not null and ${table.tradeFeeMinMinor} >= 0
+      and ${table.tradeFeeMaxMinor} is not null and ${table.tradeFeeMaxMinor} >= ${table.tradeFeeMinMinor}
+      and ${table.tradeFeeCurrency} is not null and ${table.tradeFeeCurrency} = 'CZK'
+      and ${table.fxMarkupBps} is not null and ${table.fxMarkupBps} >= 0 and ${table.fxMarkupBps} < 10000
+      and ${table.fxMarkupBaseMinor} is not null and ${table.fxMarkupBaseMinor} >= 0
+      and ${table.referenceFxRateToBase} is not null and ${table.referenceFxRateToBase} > 0
+      and ${table.referenceGrossAmountBaseMinor} is not null and ${table.referenceGrossAmountBaseMinor} > 0
+      and ((${table.side} = 'BUY' and ${table.grossAmountBaseMinor} = ${table.referenceGrossAmountBaseMinor} + ${table.fxMarkupBaseMinor})
+        or (${table.side} = 'SELL' and ${table.grossAmountBaseMinor} = ${table.referenceGrossAmountBaseMinor} - ${table.fxMarkupBaseMinor})))
+  )`),
   check("portfolio_trade_cash_delta_check", sql`(
     (${table.side} = 'BUY' and ${table.cashDeltaBaseMinor} = -(${table.grossAmountBaseMinor} + ${table.feeBaseMinor}))
     or (${table.side} = 'SELL' and ${table.cashDeltaBaseMinor} = ${table.grossAmountBaseMinor} - ${table.feeBaseMinor})

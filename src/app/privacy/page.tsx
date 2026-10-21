@@ -17,6 +17,7 @@ const sections: readonly LegalSection[] = [
     <div><dt>Přihlášení přes Google nebo Facebook</dt><dd>Identifikátor tvého účtu u poskytovatele, přístupové tokeny, které nám poskytovatel předá, a případně profilový obrázek.</dd></div>
     <div><dt>Relace</dt><dd>Pro každé přihlášení IP adresu, identifikaci prohlížeče (user agent), čas vytvoření a vypršení.</dd></div>
     <div><dt>Učení</dt><dd>Odpovědi z úvodního nastavení a diagnostiky (zkušenost, cíle, zájmy, délka lekcí), časové pásmo, pokrok v lekcích, XP a záznamy o odměnách cvičného kapitálu.</dd></div>
+    <div><dt>Výstupy z lekcí</dt><dd>Jen s tvým potvrzením ukládáme mapu cílů, shrnutí finančního check-upu, profil poplatků, checklisty, investiční plán, pojistky, mapu byznysu, tezi a deník včetně předchozích verzí. Check-up ukládá kategorie a další krok, bez částek příjmů a dluhů. Host bez účtu tyto výstupy neukládá.</dd></div>
     <div><dt>Portfolio Lab</dt><dd>Cvičná portfolia, provedené cvičné obchody a uložené mixy. Jde o cvičný kapitál, ne o skutečné investice.</dd></div>
     <div><dt>Ochrana proti zneužití</dt><dd>Počítadla požadavků, která brání hádání hesel a přetěžování služby. Místo IP adresy nebo e-mailu v nich ukládáme jen jednosměrný otisk.</dd></div>
     <div><dt>Host a demo</dt><dd>Když se učíš bez účtu, vytvoříme anonymní profil bez e-mailu. Ukládáme k němu stejná data o učení a relacích jako k účtu.</dd></div>
@@ -40,6 +41,7 @@ const sections: readonly LegalSection[] = [
   </> },
   { id: "doba", title: "Jak dlouho údaje uchováváme", body: <ul>
     <li><strong>Účet a všechna data k němu</strong>: dokud účet nesmažeš. Smazání je okamžité a trvalé.</li>
+    <li><strong>Výstupy z lekcí</strong>: do smazání výstupu nebo účtu. V Nastavení → Moje data smažeš jednotlivý výstup i se všemi předchozími verzemi.</li>
     <li><strong>Relace</strong> s IP adresou a identifikací prohlížeče: 30 dní po vypršení, pak je automaticky smaže denní úloha.</li>
     <li><strong>Profil hosta a demo</strong>: automaticky ho smažeme den poté, co vyprší jeho poslední relace.</li>
     <li><strong>Počítadla požadavků</strong>: jen po dobu svého časového okna, nejdéle 24 hodin.</li>
@@ -67,6 +69,6 @@ const sections: readonly LegalSection[] = [
 ];
 
 export default function PrivacyPage() {
-  return <LegalPage title="Zásady ochrany osobních údajů" sections={sections}
+  return <LegalPage title="Zásady ochrany osobních údajů" sections={sections} updatedAt="21. října 2026"
     intro={<p>investi je vzdělávací služba, ve které se učíš investovat s cvičným kapitálem. Ukládáme jen to, co k tomu potřebujeme, a všechno si můžeš kdykoli stáhnout nebo smazat.</p>} />;
 }

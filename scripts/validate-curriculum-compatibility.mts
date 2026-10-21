@@ -38,9 +38,9 @@ async function owner() {
 try {
   const learner = await owner(), partial = await owner(), atSummary = await owner(), recorded = await owner();
   const historical = new Date("2026-09-09T12:00:00Z");
-  for (const [index, id] of [...required, "returns-checkpoint"].entries()) {
+  for (const [index, id] of [...required, "returns-checkpoint", "correlation-not-causation", "returns-what-is-a-return"].entries()) {
     await db.insert(lessonProgress).values({ userId: learner, lessonId: id, status: "completed", lastPosition: lessonSteps(id).length - 1, completedAt: historical, updatedAt: historical });
-    await db.insert(lessonAward).values({ userId: learner, lessonId: id, xp: 60, practiceCapitalMinor: index === 0 ? 200_000n : 0n, rewardPolicyVersion: index === 0 ? 1 : index === 1 || id === "returns-checkpoint" ? 2 : 3, learningDate: "2026-09-09", timeZone: "UTC", awardedAt: historical });
+    await db.insert(lessonAward).values({ userId: learner, lessonId: id, xp: 60, practiceCapitalMinor: index === 0 || id === "correlation-not-causation" || id === "returns-what-is-a-return" ? 200_000n : 0n, rewardPolicyVersion: id === "returns-what-is-a-return" ? 4 : index === 0 ? 1 : index === 1 || id === "returns-checkpoint" ? 2 : 3, learningDate: "2026-09-09", timeZone: "UTC", awardedAt: historical });
   }
   await db.insert(progressionUnlock).values({ userId: recorded, unlockId: PORTFOLIO_LAB_UNLOCK_ID, practiceCapitalMinor: 500_000n, reason: "learning_requirements", unlockedAt: historical });
   await db.insert(lessonProgress).values([
@@ -55,7 +55,7 @@ try {
   steps.splice(-1, 0, { title: "Additional explanation", blocks: ["saving"] });
   await seedCurriculum(db);
   await seedCurriculum(db);
-  assert.deepEqual(await awardsOf(learner), before.awards, "seeding never rewrites v1/v2/v3 receipts or XP");
+  assert.deepEqual(await awardsOf(learner), before.awards, "seeding never rewrites v1/v2/v3/v4 receipts or XP");
   assert.deepEqual(await progressOf(learner), before.progress, "completed lessons and checkpoint retain status, cursor and dates");
   assert.deepEqual(await progressOf(partial), before.partial, "the earlier saved cursor is unchanged");
   assert.deepEqual(await progressOf(atSummary), before.summary, "the old final cursor is unchanged");
@@ -72,7 +72,7 @@ try {
 
   await markLessonInProgress(learner, lessonId);
   await saveLessonProgress(learner, { lessonId, status: "in_progress", lastPosition: 0 });
-  for (const id of [lessonId, "returns-checkpoint"]) {
+  for (const id of [lessonId, "returns-checkpoint", "correlation-not-causation", "returns-what-is-a-return"]) {
     const review = await completeLesson(learner, id);
     assert.equal(review.xpAwarded, 0);
     assert.equal(review.practiceCapitalAwardedMinor, 0n);
@@ -93,7 +93,7 @@ try {
     assert.equal(reward.practiceCapitalAwardedMinor, 0n);
   }
   assert.equal((await db.select().from(lessonProgress).where(where(partial)))[0].status, "completed");
-  console.log("PASS: curriculum growth preserves identity, cursors, completion/checkpoints and v1/v2/v3 receipts; safe step insertion preserves grading; original and recorded unlocks survive, with one concurrent grant.");
+  console.log("PASS: curriculum growth preserves identity, cursors, completion/checkpoints and v1/v2/v3/v4 receipts; safe step insertion preserves grading; original and recorded unlocks survive, with one concurrent grant.");
 } finally {
   steps.splice(0, steps.length, ...originalSteps);
   for (const id of ids) await db.delete(user).where(eq(user.id, id));

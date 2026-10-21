@@ -36,7 +36,7 @@ async function learner(name) {
   await sql`update learning_profile set time_zone='Europe/Prague',daily_goal_minutes=10 where user_id=${user.id}`;
   return { page, id: user.id };
 }
-/** Receipts mirror reward policy v3: 60 XP each, no capital in Foundations and 2,000 Kč beyond it. */
+/** Historical v3 fixtures deliberately retain module-based amounts; v4 never reprices these receipts. */
 async function complete(userId, items) {
   for (const item of items) {
     const capital = item.module_slug === "investing-foundations" ? 0 : 200000;

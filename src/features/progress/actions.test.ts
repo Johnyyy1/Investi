@@ -4,6 +4,7 @@ vi.mock("@/lib/session", () => ({ getCurrentUser: mocks.user }));
 vi.mock("./repository", () => ({ completeLesson: mocks.complete, markLessonInProgress: mocks.start, saveLessonProgress: mocks.save, getModuleProgress: mocks.count }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 import { completeLessonAction, markLessonStartedAction, saveLessonPositionAction } from "./actions";
+import { ArtifactRequiredError } from "@/features/artifacts/requirements";
 describe("shared persisted lesson actions", () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -78,5 +79,12 @@ describe("shared persisted lesson actions", () => {
     mocks.complete.mockRejectedValueOnce(new Error("offline"));
     expect(await completeLessonAction("foundations-stocks")).toMatchObject({ ok: false });
     expect(mocks.count).not.toHaveBeenCalled(); expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
+  it("explains missing required outputs for both continuing and completing", async () => {
+    mocks.save.mockRejectedValueOnce(new ArtifactRequiredError());
+    mocks.complete.mockRejectedValueOnce(new ArtifactRequiredError());
+    for (const result of [await saveLessonPositionAction("foundations-why-invest", 1), await completeLessonAction("foundations-why-invest")]) {
+      expect(result).toMatchObject({ ok: false, message: "Nejdřív ulož výstup požadovaný v tomto kroku lekce." });
+    }
   });
 });

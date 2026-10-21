@@ -1,4 +1,5 @@
 import type { MetricId } from "@/features/learning/metric-glossary";
+import type { ArtifactRequirement } from "@/features/artifacts/schemas";
 
 export type LessonSection = { id: string; label: string };
 
@@ -22,7 +23,7 @@ export type LessonBlock =
   | (BaseBlock & { type: "checkpoint"; label: string; content: string });
 
 /** One guided step: a title and the IDs of the authored blocks it shows, in order. */
-export type StepDefinition = { title: string; kind?: "lesson" | "mastery"; blocks: readonly string[] };
+export type StepDefinition = { title: string; kind?: "lesson" | "mastery"; blocks: readonly string[]; requiredArtifact?: ArtifactRequirement };
 
 export type AuthoredLesson = {
   id: string;

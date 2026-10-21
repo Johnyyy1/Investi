@@ -19,3 +19,32 @@ Each concept has one name in the interface. The UI is Czech; an English term app
 | Product name | **investi** | investi! in text | `investi!` is the typeset wordmark only. Running text, page titles and aria-labels say „investi“; a wordmark link names its target: „investi · úvodní stránka“, „investi · Učení“. |
 
 Metric labels in Backtesting and the instrument detail should eventually come from one registry (#33); until then, change both places together.
+
+## Curriculum 2.0: autorské názvosloví
+
+Při tvorbě lekcí postupuj podle [standardu lekce](education/lesson-standard.md). Český pojem nejdřív vysvětli; anglický ekvivalent nebo rozepsání zkratky uveď při prvním výskytu v závorce. Pak používej stejný český název. Tabulka sjednocuje jazyk nového obsahu; netvrdí, že plánované funkce už existují. Právní podmínky, sazby a lhůty patří do datovaného registru faktů, nikoli do tohoto slovníku.
+
+| Pojem | Název v UI / lekci | Pravidlo použití |
+| --- | --- | --- |
+| Total expense ratio | **celková nákladovost fondu (TER)** | Při prvním výskytu doplň „total expense ratio“. Není totéž co všechny náklady investora: odliš náklady fondu, obchodu a konverze. Nezaměňuj automaticky s jiným ukazatelem nákladů v KID. |
+| Tracking difference | **rozdíl ve výkonnosti vůči indexu** | Poprvé „rozdíl ve výkonnosti vůči indexu (tracking difference)“. Uveď období, srovnatelnou výnosovou řadu a znaménkovou konvenci; nejde o kolísání tohoto rozdílu. Viz definice v [ESMA/2014/937, oddíl II](https://www.esma.europa.eu/sites/default/files/library/2015/11/esma-2014-0011-01-00_en_0.pdf). |
+| Tracking error | **kolísání rozdílu výnosů vůči indexu** | Poprvé doplň „tracking error“. Odliš od tracking difference; u výpočtu uveď frekvenci a anualizaci. Viz definice v [ESMA/2014/937, oddíl II](https://www.esma.europa.eu/sites/default/files/library/2015/11/esma-2014-0011-01-00_en_0.pdf). |
+| Benchmark | **srovnávací index** | U neindexového srovnání „srovnávací portfolio (benchmark)“. Uveď měnu, období a zahrnutí distribucí a nákladů. |
+| Bid–ask spread | **rozpětí nákupní a prodejní ceny (spread)** | Při prvním vysvětlení odliš bid a ask; spread není poplatek brokera. „Měnový spread“ používej pro konverzi a vysvětli jeho základ. |
+| FX conversion | **měnová konverze** | Nezaměňuj kurz obchodu s kurzem pro daňový přepočet; náklad konverze uveď samostatně. |
+| Time-based tax exemption test | **časový test** | Vysvětli jako podmínku doby držení pro možné osvobození. Délku, výjimky a datum platnosti čerpej z ověřeného faktu; cenné papíry a krypto neztotožňuj. |
+| Sale-proceeds tax exemption test | **hodnotový test** | Příslušný limit a rozsah příjmů jsou datované právní údaje. Neoznačuj jej jako limit zisku. |
+| Sale proceeds / gain | **příjem z prodeje / zisk z prodeje** | Jde o různé veličiny. U každého výpočtu pojmenuj, se kterou pracuješ; daňové posouzení vyžaduje konkrétní pravidlo a období. |
+| Tax lot | **daňová tranše** | Při prvním výskytu vysvětli jako konkrétní nabytí s datem, množstvím a pořizovacími údaji. Není totéž co celá pozice. |
+| Investment policy statement | **investiční plán (IPS)** | Poprvé doplň „investment policy statement“. Praktický výstup s cílem, horizontem, alokací, příspěvky a pravidly kontroly; není doporučením investi. |
+| Key information document | **dokument s klíčovými informacemi (KID)** | Poprvé doplň „key information document“. Právní požadavky ověř v registru faktů; nevydávej modelový dokument za skutečný KID produktu. |
+| UCITS / PRIIPs | **UCITS / PRIIPs** | Zkratky zachovej a při prvním výskytu srozumitelně vysvětli jejich účel. Jejich podmínky, dostupnost produktů a právní důsledky potřebují ověřené datované zdroje. |
+| Asset allocation / rebalancing | **alokace aktiv / rebalancování** | Nejdřív vysvětli rozdělení portfolia a návrat k cílovému rozdělení podle plánu. Vyšší počet obchodů není cílem. |
+| Money-weighted return | **peněžně vážený výnos (MWR)** | Poprvé doplň „money-weighted return“. Zachycuje i velikost a načasování vnějších peněžních toků; uveď jejich konvence a neslibuj výpočet bez potřebných dat. Viz [CFA Institute, úvod do GIPS, s. 23](https://rpc.cfainstitute.org/sites/default/files/docs/codes-and-standards/introduction-to-the-gips-standards-for-asset-owners_requirements_online.pdf). |
+| Time-weighted return | **časově vážený výnos (TWR)** | Poprvé doplň „time-weighted return“. Odděluje vliv vnějších peněžních toků; rozdíl proti MWR sám neprokazuje chybu v chování. Viz [CFA Institute, úvod do GIPS, s. 23](https://rpc.cfainstitute.org/sites/default/files/docs/codes-and-standards/introduction-to-the-gips-standards-for-asset-owners_requirements_online.pdf). |
+| Financial readiness / emergency reserve | **finanční připravenost / finanční rezerva** | Check-up je podklad pro rozhodnutí, nikoli pass/fail ani potvrzení připravenosti na skutečné investování. Velikost rezervy není univerzální konstanta. |
+| Investment horizon / risk capacity / risk tolerance | **investiční horizont / schopnost nést riziko / ochota nést riziko** | Odliš dobu do použití peněz, finanční možnost unést ztrátu a psychickou ochotu snášet kolísání. |
+| Home bias / familiarity bias | **domácí zaujatost / zaujatost známým** | Poprvé doplň anglický termín a konkrétní příklad; jedna pozice ani rozhodnutí nedokazují zkreslení. |
+| Pre-mortem / safeguard | **rozbor možného selhání / osobní pojistka** | Poprvé „rozbor možného selhání (pre-mortem)“. Pojistka je konkrétní pravidlo nebo kontrolní seznam zvolený člověkem, ne slib ochrany před ztrátou. |
+| Overfitting / out-of-sample | **přeučení / ověření mimo původní vzorek** | Anglické termíny poprvé v závorce. Příznivý backtest neprokazuje budoucí výnos ani kvalitu strategie. |
+| Learning mastery | **Zkoušeno → Známé → Zvládnuté → Ovládnuté** | Cílové stavy zvládnutí, oddělené od celoživotního dokončení. Jejich prahy a plánování potřebují vlastní implementační specifikaci. |

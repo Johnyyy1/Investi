@@ -9,6 +9,7 @@ export const tradeInputSchema = z.object({
   instrumentId: instrumentIdSchema,
   quantity: quantitySchema,
   clientIdempotencyKey: idempotencySchema,
+  expectedFeeProfileId: z.string().min(1).max(100).optional(),
 }).strict();
 
 const weightSchema = z.number().int().min(0).max(10_000);

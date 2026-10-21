@@ -1,0 +1,123 @@
+import type { AuthoredLesson, StepDefinition } from "@/features/lessons/types";
+
+// Kopíruj jako lesson.ts spolu s testem; postup je v docs/education/lesson-standard.md.
+// Jde o nepublikovaný autorský vzor, nikoli o nový modul nebo ceník Labu.
+export const exampleDefinition = {
+  id: "authoring-example-comparing-fees",
+  slug: "comparing-fees",
+  title: "Porovnej dvě modelové nabídky",
+  summary: "Přepočítej pevný a procentní poplatek a pojmenuj, co ještě chybí k rozhodnutí.",
+  estimatedMinutes: 12,
+  status: "planned",
+} as const;
+
+export const exampleStepDefinitions = [
+  { title: "Dvě nabídky, jedna částka", blocks: ["scenario", "prediction"] },
+  { title: "Z procent na koruny", blocks: ["concept", "fee-formula", "worked-example"] },
+  { title: "Doplň poslední krok", blocks: ["faded-example", "guided-fee"] },
+  { title: "Vyřeš nový případ", blocks: ["independent-totals"] },
+  { title: "Rozhodni v kontextu", kind: "mastery", blocks: ["decision-check"] },
+  { title: "Co si odneseš", blocks: ["lab-bridge", "summary", "safeguard"] },
+] as const satisfies readonly StepDefinition[];
+
+export const exampleLesson: AuthoredLesson = {
+  id: exampleDefinition.id,
+  moduleSlug: "authoring-example",
+  slug: exampleDefinition.slug,
+  title: exampleDefinition.title,
+  eyebrow: "Modelové náklady",
+  position: 1,
+  estimatedMinutes: exampleDefinition.estimatedMinutes,
+  sections: exampleStepDefinitions.map((step, index) => ({ id: `section-${index + 1}`, label: step.title })),
+  // navigation přidej až podle skutečných sousedních lekcí; nevymýšlej cílové URL.
+  blocks: [
+    {
+      id: "scenario", type: "paragraph",
+      content: "Modelový příklad · Porovnáváš dvě fiktivní nabídky pro jednorázový nákup za 10 000 Kč. Nabídka A účtuje pevně 40 Kč, nabídka B 0,25 % z částky nákupu. Model nemá minimální poplatek, měnovou konverzi, spread ani jiné náklady. Žádný obchod neprovádíš.",
+    },
+    {
+      id: "prediction", type: "multipleChoiceQuestion",
+      prompt: "Která nabídka má pro tento nákup nižší uvedený poplatek? Nejdřív odhadni.",
+      options: [
+        { id: "fixed", label: "Nabídka A s pevným poplatkem." },
+        { id: "percentage", label: "Nabídka B s procentním poplatkem." },
+        { id: "equal", label: "Poplatky jsou stejné." },
+      ],
+      correctOptionId: "percentage",
+      correctExplanation: "Z 10 000 Kč je 0,25 % právě 25 Kč. V tomto modelu je to méně než pevných 40 Kč. Porovnáváme jen uvedený poplatek, nikoli celou nabídku.",
+      incorrectExplanation: "Převeď procenta na koruny: 10 000 × 0,0025 = 25 Kč. To je méně než 40 Kč. Pevný poplatek nemusí být vždy levnější.",
+    },
+    {
+      id: "concept", type: "explanation", title: "Stejná sazba, jiná částka",
+      content: "Procentní poplatek roste s částkou nákupu, pevný se v tomto modelu nemění. Nabídky proto porovnávej pro stejnou částku a stejný rozsah služeb. Samotná sazba bez základu ještě neříká, kolik zaplatíš.",
+    },
+    {
+      id: "fee-formula", type: "formula", expression: "poplatek = částka nákupu × sazba / 100",
+      latex: String.raw`F = A \times \frac{p}{100}`,
+      variables: [
+        { symbol: "F", description: "poplatek v Kč" },
+        { symbol: "A", description: "částka nákupu v Kč bez poplatku" },
+        { symbol: "p", description: "sazba v procentech, zde 0,25" },
+      ],
+    },
+    {
+      id: "worked-example", type: "workedExample", title: "Modelový příklad · nákup za 10 000 Kč",
+      steps: [
+        { label: "Sazba jako desetinné číslo", value: "0,25 ÷ 100 = 0,0025" },
+        { label: "Poplatek nabídky B", value: "10 000 × 0,0025 = 25 Kč" },
+        { label: "Rozdíl proti nabídce A", value: "40 − 25 = 15 Kč", emphasis: true },
+      ],
+      conclusion: "Uvedený poplatek B je o 15 Kč nižší. Tento výpočet neporovnává další náklady ani kvalitu služeb.",
+    },
+    {
+      id: "faded-example", type: "paragraph",
+      content: "Modelový příklad · Částka nákupu se změní na 20 000 Kč a sazba B zůstane 0,25 %. Převod už znáš: 0,25 ÷ 100 = 0,0025. Doplň součin 20 000 × 0,0025.",
+    },
+    {
+      id: "guided-fee", type: "numericQuestion",
+      prompt: "Kolik Kč činí poplatek nabídky B při nákupu za 20 000 Kč se sazbou 0,25 %? Uveď na dvě desetinná místa.",
+      answer: 50, tolerance: 0.01, unit: "Kč",
+      correctExplanation: "20 000 × 0,0025 = 50 Kč. Nabídka A má stále poplatek 40 Kč; při jiné částce se pořadí může změnit.",
+      incorrectExplanation: "Vynásob 20 000 sazbou převedenou na desetinné číslo, tedy 0,0025. Číslo 0,25 samo není poplatek v Kč.",
+    },
+    {
+      id: "independent-totals", type: "multiNumericQuestion",
+      prompt: "Modelový příklad · Nakupuješ za 6 000 Kč bez poplatku. A účtuje pevně 40 Kč, B 0,25 % z 6 000 Kč. Kolik celkem odejde z hotovosti u každé nabídky? Zahrň nákup i poplatek, žádné jiné náklady. Zaokrouhli na dvě desetinná místa.",
+      answers: [
+        { id: "fixed", label: "Celkem u nabídky A", answer: 6040, tolerance: 0.01, unit: "Kč" },
+        { id: "percentage", label: "Celkem u nabídky B", answer: 6015, tolerance: 0.01, unit: "Kč" },
+      ],
+      correctExplanation: "A: 6 000 + 40 = 6 040 Kč. B: 6 000 + 6 000 × 0,0025 = 6 015 Kč. V obou případech je třeba mít hotovost i na poplatek.",
+      incorrectExplanation: "U A přičti k nákupu 40 Kč. U B nejdřív přepočítej 0,25 % z 6 000 Kč, potom poplatek přičti k nákupu. Hledáš celkový odtok, ne samotný poplatek.",
+    },
+    {
+      id: "decision-check", type: "multipleChoiceQuestion",
+      prompt: "Vidíš jen pevný a procentní poplatek. Stačí to k rozhodnutí, která skutečná nabídka je pro tvůj plán celkově vhodnější?",
+      options: [
+        { id: "always-percentage", label: "Ano, procentní nabídka je vždy lepší." },
+        { id: "incomplete", label: "Ne. Potřebuji další náklady, podmínky a soulad s plánem." },
+        { id: "return", label: "Ano, nižší poplatek zaručuje vyšší výnos." },
+      ],
+      correctOptionId: "incomplete",
+      correctExplanation: "Model porovnává jen jeden poplatek pro danou částku. Před skutečným rozhodnutím potřebuješ ověřit další náklady a podmínky. Vlastními slovy si vysvětli, proč samotná nižší sazba nestačí.",
+      incorrectExplanation: "Nižší uvedený poplatek není úplné porovnání ani záruka výnosu. Chybí například konverze, spread a další podmínky. Sepiš si, co potřebuješ ověřit před rozhodnutím.",
+    },
+    {
+      id: "lab-bridge", type: "labBridge", title: "Připrav si kontrolní seznam",
+      content: "V Portfolio Labu rozliš hotovost a hodnotu pozic. Před případným nákupem si poznamenej, které náklady potřebuješ ověřit. Ceníky z této lekce jsou samostatný model a nepředstavují ceník Labu. K procvičení nepotřebuješ provést obchod.",
+    },
+    {
+      id: "summary", type: "lessonSummary", title: "Přepočítej sazbu pro svou částku",
+      content: "Procentní poplatek převeď na koruny a porovnej se stejnou částkou nákupu. Připočti jej k potřebné hotovosti. Výsledek platí jen pro uvedené předpoklady; o celkové vhodnosti nabídky samotný poplatek nerozhoduje.",
+    },
+    {
+      id: "safeguard", type: "checkpoint", label: "Vlastními slovy a do plánu",
+      content: "Vysvětli si, proč se při změně částky může změnit levnější nabídka. Do svého kontrolního seznamu přidej: před rozhodnutím přepočítám všechny známé náklady na Kč a chybějící podmínky ověřím. Tato poznámka se v lekci neukládá.",
+    },
+  ],
+};
+
+// Do mapy skutečného modulu a moduleSteps přidej až při schválené publikaci.
+export const exampleSteps: Readonly<Record<string, readonly StepDefinition[]>> = {
+  [exampleDefinition.id]: exampleStepDefinitions,
+};

@@ -3,7 +3,7 @@ import katex from "katex";
 import { portfolioWeightedReturn } from "@/features/finance/foundations";
 import { getModuleBySlug, getModuleLessons } from "@/features/learning/catalog";
 import { validateCompletion, validateMove } from "@/features/progress/transition";
-import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, MODULE_REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
+import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
 import { evaluateQuestion, isQuestion } from "../question-evaluation";
 import { getAuthoredLesson } from "../registry";
 import { getGuidedSteps } from "../steps";
@@ -37,8 +37,8 @@ describe("Diversification module", () => {
     }
   });
 
-  it("rewards each first completion with 2,000 Kč of Practice Capital under policy v3", () => {
-    for (const lesson of diversificationLessons) expect(lessonReward(lesson.id)).toEqual({ practiceCapitalMinor: LESSON_PRACTICE_CAPITAL_MINOR, rewardPolicyVersion: MODULE_REWARD_POLICY_VERSION });
+  it("rewards each first completion with 2,000 Kč of Practice Capital under policy v4", () => {
+    for (const lesson of diversificationLessons) expect(lessonReward(lesson.id)).toEqual({ practiceCapitalMinor: LESSON_PRACTICE_CAPITAL_MINOR, rewardPolicyVersion: REWARD_POLICY_VERSION });
   });
 
   it.each(lessons)("$title opens with a question, has an interactive task and at least four questions", (lesson) => {

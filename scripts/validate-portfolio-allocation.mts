@@ -54,17 +54,18 @@ try {
   const trades = await tradesOf(generation.id);
   assert.equal(trades.length, 3);
   assert.ok(trades.every((trade) => trade.side === "BUY" && trade.clientIdempotencyKey.startsWith(`allocation:${key}:`)), "trades carry derived idempotency keys");
-  const spent = trades.reduce((sum, trade) => sum + trade.grossAmountBaseMinor, 0n);
+  const spent = trades.reduce((sum, trade) => sum - trade.cashDeltaBaseMinor, 0n);
+  const totalCosts = (rows: typeof trades) => rows.reduce((sum, trade) => sum + trade.feeBaseMinor + (trade.fxMarkupBaseMinor ?? 0n), 0n);
   for (const trade of trades) {
     const target = (400_000n * BigInt(firstMix.lines.find(({ instrumentId }) => instrumentId === trade.instrumentId)!.weightBasisPoints)) / 10_000n;
-    assert.ok(trade.grossAmountBaseMinor <= target && target - trade.grossAmountBaseMinor < 100n, `${trade.instrumentSymbol} spends at most its target`);
+    assert.ok(-trade.cashDeltaBaseMinor <= target && target + trade.cashDeltaBaseMinor < 100n, `${trade.instrumentSymbol} spends at most its target`);
     assert.equal(trade.marketDataIsDeterministic, true, "sample provenance is persisted");
   }
   const view = await loadPortfolioView(owner);
   assert.equal(view.availableCashMinor, (400_000n - spent).toString(), "cash is contributions minus buy costs");
   assert.ok(BigInt(view.availableCashMinor) >= 40_000n, "the cash weight stays uninvested");
   assert.equal(BigInt(view.availableCashMinor) + BigInt(view.holdingsMarketValueMinor!), BigInt(view.portfolioTotalMinor!), "total = cash + holdings");
-  assert.equal(view.investmentGainLossMinor, "0", "an unchanged sample price creates no performance");
+  assert.equal(BigInt(view.investmentGainLossMinor!), -totalCosts(trades), "unchanged prices leave only the execution costs");
   assert.deepEqual(view.allocation?.lines.map(({ symbol, weightBasisPoints }) => [symbol, weightBasisPoints]), [["VWCE", 4_000], ["MSFT", 2_000], ["CZGB35", 3_000]]);
   assert.equal(view.allocation?.cashWeightBasisPoints, 1_000);
   assert.equal(view.allocation?.appliedValueMinor, "400000");
@@ -91,13 +92,13 @@ try {
   ]);
   const contenderView = await loadPortfolioView(contender);
   assert.ok(BigInt(contenderView.availableCashMinor) >= 0n, "concurrent mix and buy cannot overspend");
-  assert.equal(BigInt(contenderView.availableCashMinor) + BigInt(contenderView.holdingsMarketValueMinor!), 200_000n, "nothing is lost or created by the race");
+  assert.equal(BigInt(contenderView.portfolioTotalMinor!), 200_000n - totalCosts(await tradesOf(contenderView.portfolioId)), "only legitimate execution costs reduce value in the race");
 
   // Rewards are contributions: cash grows, gain does not; the new cash shows as cash drift.
   await db.insert(lessonAward).values({ userId: owner, lessonId: lessonIds[2], xp: 60, practiceCapitalMinor: 200_000n, rewardPolicyVersion: 1, learningDate: "2026-09-03", timeZone: "UTC", awardedAt: new Date() });
   const rewarded = await loadPortfolioView(owner);
   assert.equal(BigInt(rewarded.availableCashMinor) - BigInt(view.availableCashMinor), 200_000n, "the reward arrives as cash");
-  assert.equal(rewarded.investmentGainLossMinor, "0", "the reward is not investment performance");
+  assert.equal(rewarded.investmentGainLossMinor, view.investmentGainLossMinor, "the reward is not investment performance");
   assert.ok(Number(rewarded.cashWeightBasisPoints) > 3_000, "new cash raises the cash weight above its target");
 
   // Editing the mix rebalances against the new total: MSFT leaves (sold in full), the rest is topped up.
@@ -109,8 +110,10 @@ try {
   assert.equal(edited.duplicate, false);
   const afterEdit = await loadPortfolioView(owner);
   assert.equal(afterEdit.holdings.find(({ symbol }) => symbol === "MSFT"), undefined, "a holding outside the mix is sold in full");
-  assert.ok(BigInt(afterEdit.availableCashMinor) >= 60_000n, "cash keeps at least its target share");
-  assert.equal(afterEdit.investmentGainLossMinor, "0", "rebalancing at unchanged prices creates no gain");
+  assert.ok(BigInt(afterEdit.availableCashMinor) >= editReview.plan.targetCashMinor, "cash keeps at least its target share");
+  assert.equal(totalCosts(await tradesOf(generation.id)), 8_267n, "all rebalance fees and conversion costs are retained");
+  assert.equal(BigInt(afterEdit.investmentGainLossMinor!), -8_265n, "costs plus the 2-minor-unit residual from separately rounded trades/remaining holdings");
+  assert.equal(BigInt(afterEdit.attribution!.priceEffectMinor) + BigInt(afterEdit.attribution!.fxEffectMinor) + BigInt(afterEdit.attribution!.costEffectMinor!) + BigInt(afterEdit.attribution!.realizedGainLossMinor), BigInt(afterEdit.investmentGainLossMinor!), "attribution includes costs exactly after partial sells");
   assert.equal(afterEdit.allocation?.lines.length, 2, "the latest mix is the current target");
   assert.equal((await allocationsOf(generation.id)).length, 2, "older mix versions are retained for audit");
   const allTrades = await tradesOf(generation.id);

@@ -1,3 +1,5 @@
+import type { Currency } from "@/features/market-data/contracts";
+import { computeTradeCost, type BrokerFeeProfile } from "./costs";
 import { FX_SCALE, grossBaseMinor, PortfolioInputError, PRICE_SCALE, QUANTITY_SCALE } from "./decimal";
 
 /**
@@ -50,6 +52,7 @@ export function quantityUnitsForAmount(amountMinor: bigint, priceUnits: bigint, 
 }
 
 export interface PlanningObservation {
+  quoteCurrency?: Currency;
   priceUnits: bigint;
   fxUnits: bigint;
 }
@@ -59,6 +62,9 @@ export interface PlannedTrade {
   side: "BUY" | "SELL";
   quantityUnits: bigint;
   grossMinor: bigint;
+  feeBaseMinor: bigint;
+  fxMarkupBaseMinor: bigint;
+  cashDeltaBaseMinor: bigint;
 }
 
 export interface PlannedPosition {
@@ -92,6 +98,7 @@ export function planAllocation(input: {
   observations: ReadonlyMap<string, PlanningObservation>;
   allocation: AllocationInput;
   minimumTradeMinor?: bigint;
+  feeProfile?: BrokerFeeProfile;
 }): AllocationPlan {
   const allocation = validateAllocation(input.allocation);
   const minimum = input.minimumTradeMinor ?? MINIMUM_REBALANCE_TRADE_MINOR;
@@ -108,6 +115,17 @@ export function planAllocation(input: {
     return grossBaseMinor(quantityUnits, priceUnits, fxUnits);
   };
 
+  const costsFor = (instrumentId: string, units: bigint, side: "BUY" | "SELL") => {
+    const obs = observation(instrumentId);
+    if (input.feeProfile) {
+      if (!obs.quoteCurrency) throw new RangeError("Cost planning requires quote currency.");
+      const cost = computeTradeCost({ ...obs, quoteCurrency: obs.quoteCurrency, quantityUnits: units, side, profile: input.feeProfile });
+      return { grossMinor: cost.grossAmountBaseMinor, feeBaseMinor: cost.feeBaseMinor, fxMarkupBaseMinor: cost.fxMarkupBaseMinor, cashDeltaBaseMinor: cost.cashDeltaBaseMinor };
+    }
+    const grossMinor = valueOf(instrumentId, units);
+    return { grossMinor, feeBaseMinor: 0n, fxMarkupBaseMinor: 0n, cashDeltaBaseMinor: side === "BUY" ? -grossMinor : grossMinor };
+  };
+
   const ordered = [
     ...allocation.lines.map((line) => line.instrumentId),
     ...[...held.keys()].filter((instrumentId) => !allocation.lines.some((line) => line.instrumentId === instrumentId)),
@@ -119,6 +137,7 @@ export function planAllocation(input: {
   const weightOf = (instrumentId: string) => allocation.lines.find((line) => line.instrumentId === instrumentId)?.weightBasisPoints ?? null;
   const target = new Map(ordered.map((instrumentId) => [instrumentId, (totalValueMinor * BigInt(weightOf(instrumentId) ?? 0)) / BigInt(FULL_WEIGHT_BASIS_POINTS)]));
   const quantity = new Map(ordered.map((instrumentId) => [instrumentId, held.get(instrumentId) ?? 0n]));
+  const targetCashMinor = totalValueMinor - [...target.values()].reduce((sum, value) => sum + value, 0n);
   const trades: PlannedTrade[] = [];
   let cash = input.cashMinor;
 
@@ -133,29 +152,43 @@ export function planAllocation(input: {
     const units = floored > heldUnits ? heldUnits : floored;
     const grossMinor = units === 0n ? 0n : grossBaseMinor(units, priceUnits, fxUnits);
     if (grossMinor <= 0n) continue;
-    trades.push({ instrumentId, side: "SELL", quantityUnits: units, grossMinor });
+    const costs = costsFor(instrumentId, units, "SELL");
+    if (costs.grossMinor <= 0n || cash + costs.cashDeltaBaseMinor < 0n) throw new PortfolioInputError("InsufficientCash", "Na prodej včetně nákladů nemáš dost hotovosti.");
+    trades.push({ instrumentId, side: "SELL", quantityUnits: units, ...costs });
     quantity.set(instrumentId, heldUnits - units);
-    cash += grossMinor;
+    cash += costs.cashDeltaBaseMinor;
   }
 
   for (const line of allocation.lines) {
     const shortfall = target.get(line.instrumentId)! - currentValue.get(line.instrumentId)!;
     if (shortfall < minimum) continue;
-    const amount = shortfall < cash ? shortfall : cash;
+    const spendable = cash > targetCashMinor ? cash - targetCashMinor : 0n;
+    const amount = shortfall < spendable ? shortfall : spendable;
     const { priceUnits, fxUnits } = observation(line.instrumentId);
-    const units = quantityUnitsForAmount(amount, priceUnits, fxUnits);
+    let units = quantityUnitsForAmount(amount, priceUnits, fxUnits);
+    if (input.feeProfile) {
+      // Monotonic exact search includes minimum/maximum commission and FX markup.
+      let low = 0n, high = units;
+      while (low < high) {
+        const mid = (low + high + 1n) / 2n;
+        if (-costsFor(line.instrumentId, mid, "BUY").cashDeltaBaseMinor <= amount) low = mid;
+        else high = mid - 1n;
+      }
+      units = low;
+    }
     const grossMinor = units === 0n ? 0n : grossBaseMinor(units, priceUnits, fxUnits);
     if (grossMinor <= 0n || grossMinor > cash) continue;
-    trades.push({ instrumentId: line.instrumentId, side: "BUY", quantityUnits: units, grossMinor });
+    const costs = costsFor(line.instrumentId, units, "BUY");
+    if (costs.grossMinor <= 0n) continue;
+    trades.push({ instrumentId: line.instrumentId, side: "BUY", quantityUnits: units, ...costs });
     quantity.set(line.instrumentId, quantity.get(line.instrumentId)! + units);
-    cash -= grossMinor;
+    cash += costs.cashDeltaBaseMinor;
   }
   if (cash < 0n) throw new Error("Allocation planning produced negative cash.");
 
-  const allocatedMinor = [...target.values()].reduce((sum, value) => sum + value, 0n);
   return {
     totalValueMinor,
-    targetCashMinor: totalValueMinor - allocatedMinor,
+    targetCashMinor,
     resultingCashMinor: cash,
     trades,
     positions: ordered.map((instrumentId) => ({

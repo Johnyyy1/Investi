@@ -8,6 +8,7 @@ import { availableLessons } from "@/features/learning/catalog";
 import { getStepDefinitions } from "@/features/lessons/steps";
 import { serializePracticeCapitalMinor } from "@/features/rewards/presentation";
 import { toLearningMomentum, type CompletionRewardPresentation } from "./contracts";
+import { ArtifactRequiredError } from "@/features/artifacts/requirements";
 
 const lessonIdSchema = z.string().refine((id) => availableLessons.some((lesson) => lesson.id === id && lesson.status === "available"));
 
@@ -48,8 +49,8 @@ export async function completeLessonAction(lessonId: string) {
       allComplete: reward.allComplete,
     };
     return { ok: true, completedLessons, reward: presentationReward };
-  } catch {
-    return { ok: false, message: "Dokončení se nepodařilo uložit. Zkus to znovu." };
+  } catch (error) {
+    return { ok: false, message: error instanceof ArtifactRequiredError ? error.message : "Dokončení se nepodařilo uložit. Zkus to znovu." };
   }
 }
 
@@ -68,7 +69,7 @@ export async function saveLessonPositionAction(lessonId: string, position: numbe
     const attempt = answers === undefined ? undefined : z.record(z.string().max(100), z.string().max(100)).refine((value) => Object.keys(value).length <= 10).parse(answers);
     await saveLessonProgress(user.id, { lessonId: id, status: "in_progress", lastPosition }, attempt);
     return { ok: true };
-  } catch {
-    return { ok: false, message: "Tvé místo se nepodařilo uložit. Zkus to znovu." };
+  } catch (error) {
+    return { ok: false, message: error instanceof ArtifactRequiredError ? error.message : "Tvé místo se nepodařilo uložit. Zkus to znovu." };
   }
 }

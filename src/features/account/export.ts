@@ -2,7 +2,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   account, learningProfile, lesson, lessonAward, lessonProgress, learningModule, portfolio, portfolioAllocation,
-  portfolioAllocationLine, portfolioTrade, progressionUnlock, session, user,
+  portfolioAllocationLine, portfolioTrade, progressionUnlock, session, user, learnerArtifact,
 } from "@/db/schema";
 
 /**
@@ -20,7 +20,7 @@ export async function readAccountExportRows(database: Database, userId: string) 
     isAnonymous: user.isAnonymous, anonymousKind: user.anonymousKind, createdAt: user.createdAt, updatedAt: user.updatedAt,
   }).from(user).where(eq(user.id, userId));
   if (!owner) return null;
-  const [accounts, sessions, profiles, progress, awards, unlocks, portfolios] = await Promise.all([
+  const [accounts, sessions, profiles, progress, awards, unlocks, portfolios, artifacts] = await Promise.all([
     database.select({ providerId: account.providerId, accountId: account.accountId, scope: account.scope, createdAt: account.createdAt, updatedAt: account.updatedAt })
       .from(account).where(eq(account.userId, userId)).orderBy(asc(account.createdAt)),
     database.select({ createdAt: session.createdAt, updatedAt: session.updatedAt, expiresAt: session.expiresAt, ipAddress: session.ipAddress, userAgent: session.userAgent })
@@ -34,6 +34,7 @@ export async function readAccountExportRows(database: Database, userId: string) 
       .where(eq(lessonAward.userId, userId)).orderBy(asc(lessonAward.awardedAt), asc(lesson.slug)),
     database.select().from(progressionUnlock).where(eq(progressionUnlock.userId, userId)).orderBy(asc(progressionUnlock.unlockedAt)),
     database.select().from(portfolio).where(eq(portfolio.userId, userId)).orderBy(asc(portfolio.openedAt)),
+    database.select().from(learnerArtifact).where(eq(learnerArtifact.userId, userId)).orderBy(asc(learnerArtifact.kind), asc(learnerArtifact.version)),
   ]);
   const portfolioIds = portfolios.map((row) => row.id);
   const [trades, allocations] = portfolioIds.length === 0 ? [[], []] : await Promise.all([
@@ -43,7 +44,7 @@ export async function readAccountExportRows(database: Database, userId: string) 
   const allocationIds = allocations.map((row) => row.id);
   const lines = allocationIds.length === 0 ? [] : await database.select().from(portfolioAllocationLine)
     .where(inArray(portfolioAllocationLine.allocationId, allocationIds)).orderBy(asc(portfolioAllocationLine.position));
-  return { owner, accounts, sessions, profile: profiles.at(0) ?? null, progress, awards, unlocks, portfolios, trades, allocations, lines };
+  return { owner, accounts, sessions, profile: profiles.at(0) ?? null, progress, awards, unlocks, portfolios, trades, allocations, lines, artifacts };
 }
 
 export type AccountExportRows = NonNullable<Awaited<ReturnType<typeof readAccountExportRows>>>;
@@ -69,6 +70,7 @@ export function buildAccountExport(rows: AccountExportRows, exportedAt = new Dat
     sessions: rows.sessions,
     learningProfile: rows.profile ? withoutKey(rows.profile, "userId") : null,
     lessonProgress: rows.progress,
+    learnerArtifacts: rows.artifacts.map((artifact) => withoutKey(withoutKey(artifact, "userId"), "requestId")),
     lessonRewardReceipts: rows.awards,
     progressionUnlocks: rows.unlocks.map((unlock) => withoutKey(unlock, "userId")),
     portfolios: rows.portfolios.map((generation) => ({

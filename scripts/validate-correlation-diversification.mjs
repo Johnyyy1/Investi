@@ -1,5 +1,5 @@
 // Local production acceptance for #23: the Returns checkpoint and the Correlation and Diversification modules.
-// Disposable learner, real lesson actions, v3 reward receipts, the separate scenario and Lab links.
+// Disposable learner, real lesson actions, v4 reward receipts, the separate scenario and Lab links.
 // Run against a deterministic-data server: MARKET_DATA_PROVIDER=deterministic FX_DATA_PROVIDER=deterministic.
 import "dotenv/config";
 import assert from "node:assert/strict";
@@ -58,7 +58,7 @@ async function complete(lessonId) {
   await heading("Lekce dokončena");
   assert.equal(await page.getByLabel("Získáno 60 XP", { exact: true }).count(), 1);
   const receipt = (await awards(lessonId)).find((award) => award.lesson_id === lessonId);
-  assert.deepEqual({ ...receipt, practice_capital_minor: BigInt(receipt.practice_capital_minor) }, { lesson_id: lessonId, xp: 60, practice_capital_minor: 200_000n, reward_policy_version: 3 });
+  assert.deepEqual({ ...receipt, practice_capital_minor: BigInt(receipt.practice_capital_minor) }, { lesson_id: lessonId, xp: 60, practice_capital_minor: lessonId === "correlation-not-causation" ? 0n : 200_000n, reward_policy_version: 4 });
 }
 async function markCompleted(where) {
   for (const { id } of await where) {
@@ -365,7 +365,7 @@ try {
 
   const actionable = errors.filter((message) => !message.startsWith("You have Reduced Motion enabled on your device.") && !message.includes("404 (Not Found)"));
   assert.deepEqual(actionable, []);
-  console.log(`PASS: Returns checkpoint, four Correlation and five Diversification lessons walked with retries, explorers, the real-data prediction and the locked scenario at six widths and 200% text; recommendations in curriculum order; one 2,000 Kč v3 receipt per lesson; no portfolio writes from the scenario; Lab compare and backtest lesson links. Screenshots: ${screenshotDir}`);
+  console.log(`PASS: Returns checkpoint, four Correlation and five Diversification lessons walked with retries, explorers, the real-data prediction and the locked scenario at six widths and 200% text; recommendations in curriculum order; one v4 receipt per lesson (B8 XP only; analytical lessons 2,000 Kč); no portfolio writes from the scenario; Lab compare and backtest lesson links. Screenshots: ${screenshotDir}`);
 } finally {
   await browser.close();
   if (userId) await sql`delete from "user" where id = ${userId} and email = ${email}`;

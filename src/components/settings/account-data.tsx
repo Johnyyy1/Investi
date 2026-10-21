@@ -9,6 +9,7 @@ import { authClient } from "@/lib/auth-client";
 import type { AuthProviderAvailability } from "@/lib/auth-providers";
 import type { LinkedAccountState } from "@/lib/auth-accounts";
 import styles from "./settings.module.css";
+import { ArtifactData } from "./artifact-data";
 
 type SocialProvider = "google" | "facebook";
 const providerLabels: Record<SocialProvider, string> = { google: "Google", facebook: "Facebook" };
@@ -16,13 +17,14 @@ const providerLabels: Record<SocialProvider, string> = { google: "Google", faceb
 const ACCOUNT_DELETION_RETURN_URL = "/settings?section=data&delete=confirm";
 
 type Props = {
-  saved: boolean; guest: boolean; hasPassword: boolean | null; fresh: boolean; reopenDeletion: boolean;
+  saved: boolean; guest: boolean; active: boolean; hasPassword: boolean | null; fresh: boolean; reopenDeletion: boolean;
   accounts: LinkedAccountState | null; providers: AuthProviderAvailability;
 };
 
 export function AccountData(props: Props) {
   return <section className={styles.section} aria-labelledby="data-export-title">
     <DataExport />
+    {props.active && !props.guest && <ArtifactData />}
     {props.saved ? props.hasPassword === null ? <DeletionUnavailable /> : <AccountDeletion {...props} hasPassword={props.hasPassword} /> : <>
       <div className={styles.sectionHead}><h2>Smazání profilu</h2><p>{props.guest ? "Profil hosta nemá uložený účet." : "Demo je samostatný dočasný profil."}</p></div>
       <div className={styles.card}><div className={styles.contentRow}><div><h3>Tento profil se smaže sám</h3><p>{props.guest ? "Pokrok hosta smažeme automaticky den poté, co vyprší jeho poslední relace. Když si vytvoříš účet, pokrok se do něj přesune." : "Demo profil i jeho cvičná data smažeme automaticky den poté, co demo skončí."}</p></div></div></div>
@@ -55,7 +57,7 @@ function DataExport() {
   return <>
     <div className={styles.sectionHead}><h2 id="data-export-title">Stáhnout moje data</h2><p>Kopie všeho, co o tobě investi ukládá, ve strojově čitelném formátu JSON.</p></div>
     <div className={styles.card}>
-      <div className={styles.contentRow}><div><h3>Profil, učení a cvičné portfolio</h3><p>Účet a způsoby přihlášení, relace (IP adresa a prohlížeč), plán učení, pokrok, odměny, portfolia a obchody. Hesla ani přihlašovací tokeny soubor neobsahuje.</p></div>
+      <div className={styles.contentRow}><div><h3>Profil, učení a cvičné portfolio</h3><p>Účet a způsoby přihlášení, relace (IP adresa a prohlížeč), plán učení, pokrok, všechny verze výstupů z lekcí, odměny, portfolia a obchody. Hesla ani přihlašovací tokeny soubor neobsahuje.</p></div>
         <Button variant="secondary" size="compact" loading={pending} onClick={() => void download()}>{!pending && <Download size={18} aria-hidden="true" />}{pending ? "Připravuji…" : "Stáhnout data"}</Button></div>
       {message && <p className={message.ok ? styles.status : styles.error} role={message.ok ? "status" : "alert"}>{message.text}</p>}
     </div>
@@ -124,12 +126,12 @@ function AccountDeletion({ hasPassword, fresh: initiallyFresh, reopenDeletion, a
 
   return <>
     <div className={styles.sectionHead}><h2 id="delete-account-title">Smazat účet</h2><p>Smazání je trvalé a nejde vrátit.</p></div>
-    <div className={styles.card}><div className={styles.contentRow}><div><h3>Smazat účet a všechna data</h3><p>Smaže účet, pokrok v lekcích, odměny, cvičná portfolia i historii obchodů. Obsah lekcí a tržní data jsou společné pro všechny a zůstanou.</p></div>
+    <div className={styles.card}><div className={styles.contentRow}><div><h3>Smazat účet a všechna data</h3><p>Smaže účet, pokrok i výstupy z lekcí, odměny, cvičná portfolia i historii obchodů. Obsah lekcí a tržní data jsou společné pro všechny a zůstanou.</p></div>
       <Button buttonRef={trigger} variant="dangerQuiet" size="compact" onClick={open}>Smazat účet…</Button></div></div>
     <dialog ref={dialog} className={styles.dialog} aria-labelledby="delete-title" aria-describedby="delete-description" onCancel={(event) => { if (pending) event.preventDefault(); }} onClose={() => trigger.current?.focus()}>
       <h2 id="delete-title">Smazat účet natrvalo?</h2>
       <p id="delete-description">Smažeme tvůj účet a všechno, co k němu patří. Tuhle akci nejde vrátit.</p>
-      <ul><li>Pokrok v lekcích, XP, diagnostika a plán učení.</li><li>Cvičný kapitál, všechna portfolia, obchody a uložené mixy.</li><li>Všechny způsoby přihlášení. Odhlásíme tě na všech zařízeních.</li></ul>
+      <ul><li>Pokrok v lekcích, XP, diagnostika, plán učení a všechny verze výstupů.</li><li>Cvičný kapitál, všechna portfolia, obchody a uložené mixy.</li><li>Všechny způsoby přihlášení. Odhlásíme tě na všech zařízeních.</li></ul>
       <p>Chceš-li si data nechat, nejdřív si je stáhni.</p>
       {needsReauth ? <>
         <p>Z bezpečnostních důvodů se nejdřív znovu přihlas. Pak se sem vrátíš a smazání potvrdíš.</p>

@@ -11,7 +11,8 @@ import { requirePortfolioLabUnlock } from "@/features/progression/repository";
 import { PortfolioInputError, priceToDecimal, quantityToDecimal, fxToDecimal } from "./decimal";
 import { portfolioMarketData } from "./environment";
 import { allocationExecutionSchema, allocationInputSchema, idempotencySchema, instrumentIdSchema, tradeInputSchema } from "./input";
-import { executeAllocation, executeTrade, resetActivePortfolio, reviewAllocation } from "./repository";
+import { BROKER_FEE_PROFILES } from "./costs";
+import { executeAllocation, executeTrade, resetActivePortfolio, reviewAllocation, reviewTrade, setBrokerFeeProfile } from "./repository";
 import { loadAllocationQuotes, loadInstrumentPreview, loadPortfolioView } from "./service";
 
 function messageFor(error: unknown, context: "trade" | "preview" = "trade") {
@@ -83,6 +84,29 @@ async function tradeAction(input: unknown, side: "BUY" | "SELL") {
   }
 }
 
+export async function reviewPortfolioTradeAction(input: unknown) {
+  try {
+    const current = await authenticatedUser();
+    const parsed = z.object({ instrumentId: instrumentIdSchema, quantity: z.string().min(1).max(40), side: z.enum(["BUY", "SELL"]) }).strict().parse(input);
+    await enforceMarketDataBudget(current.id, "instrument-preview");
+    return { ok: true as const, cost: await reviewTrade(current.id, parsed) };
+  } catch (error) {
+    return { ok: false as const, message: messageFor(error, "preview") };
+  }
+}
+
+export async function setBrokerFeeProfileAction(input: unknown) {
+  try {
+    const current = await authenticatedUser();
+    const parsed = z.object({ profileId: z.string().refine((id) => BROKER_FEE_PROFILES.some((profile) => profile.id === id)) }).strict().parse(input);
+    const feeProfileId = await setBrokerFeeProfile(current.id, parsed.profileId);
+    revalidatePath("/lab/portfolio");
+    return { ok: true as const, feeProfileId };
+  } catch (error) {
+    return { ok: false as const, message: messageFor(error) };
+  }
+}
+
 export async function buyPortfolioAction(input: unknown) {
   return tradeAction(input, "BUY");
 }
@@ -142,7 +166,7 @@ export async function reviewPortfolioAllocationAction(input: unknown) {
         totalValueMinor: plan.totalValueMinor.toString(),
         targetCashMinor: plan.targetCashMinor.toString(),
         resultingCashMinor: plan.resultingCashMinor.toString(),
-        trades: plan.trades.map((trade) => ({ ...describe(trade.instrumentId), side: trade.side, quantity: quantityToDecimal(trade.quantityUnits), grossMinor: trade.grossMinor.toString() })),
+        trades: plan.trades.map((trade) => ({ ...describe(trade.instrumentId), side: trade.side, quantity: quantityToDecimal(trade.quantityUnits), grossMinor: trade.grossMinor.toString(), feeBaseMinor: trade.feeBaseMinor.toString(), fxMarkupBaseMinor: trade.fxMarkupBaseMinor.toString(), cashDeltaBaseMinor: trade.cashDeltaBaseMinor.toString() })),
         positions: plan.positions.map((position) => ({
           ...describe(position.instrumentId),
           weightBasisPoints: position.weightBasisPoints,

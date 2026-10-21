@@ -31,6 +31,17 @@ describe("immutable trade folding", () => {
 });
 
 describe("portfolio accounting", () => {
+  it("keeps buy costs in basis, sell costs in realized P&L and later contributions out of returns", () => {
+    const bought = { ...buy("0.25", 25_125n), referenceGrossAmountBaseMinor: 25_000n, feeBaseMinor: 1_000n, cashDeltaBaseMinor: -26_125n };
+    const sold = { ...sell("0.1", 9_950n), referenceGrossAmountBaseMinor: 10_000n, feeBaseMinor: 1_000n, cashDeltaBaseMinor: 8_950n };
+    const folded = foldTrades(200_000n, [bought, sold]);
+    expect(folded).toMatchObject({ cashMinor: 182_825n, realizedGainLossMinor: -1_500n });
+    expect(folded.holdings[0]).toMatchObject({ costBasisMinor: 15_675n, referenceCostBasisMinor: 15_000n });
+    const valuation = [{ instrumentId: bought.instrumentId, marketValueMinor: 15_000n, quoteObservedAt: null }];
+    expect(valuePortfolio(200_000n, folded, valuation).investmentGainLossMinor).toBe(-2_175n);
+    expect(valuePortfolio(400_000n, foldTrades(400_000n, [bought, sold]), valuation).investmentGainLossMinor).toBe(-2_175n);
+  });
+
   it("treats later rewards as contributions, not performance", () => {
     const trades = [buy("1", 100_000n)];
     const before = foldTrades(1_200_000n, trades);

@@ -5,7 +5,7 @@ import { getModuleBySlug, getModuleLessons } from "@/features/learning/catalog";
 import { metricLessonLink } from "@/features/learning/metric-glossary";
 import { pearsonCorrelation, returnCorrelation } from "@/features/instruments/correlation";
 import { validateCompletion, validateMove } from "@/features/progress/transition";
-import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, MODULE_REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
+import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
 import { lessonUsesRiskHistory } from "../real-history/load";
 import { evaluateQuestion, isQuestion } from "../question-evaluation";
 import { getAuthoredLesson } from "../registry";
@@ -38,8 +38,8 @@ describe("Correlation module", () => {
     }
   });
 
-  it("rewards each first completion with 2,000 Kč of Practice Capital under policy v3", () => {
-    for (const lesson of correlationLessons) expect(lessonReward(lesson.id)).toEqual({ practiceCapitalMinor: LESSON_PRACTICE_CAPITAL_MINOR, rewardPolicyVersion: MODULE_REWARD_POLICY_VERSION });
+  it("funds analytical lessons while the behavioral lesson earns XP only under policy v4", () => {
+    for (const lesson of correlationLessons) expect(lessonReward(lesson.id)).toEqual({ practiceCapitalMinor: lesson.id === "correlation-not-causation" ? 0n : LESSON_PRACTICE_CAPITAL_MINOR, rewardPolicyVersion: REWARD_POLICY_VERSION });
   });
 
   it.each(lessons)("$title opens with a question, has an interactive task and at least four questions", (lesson) => {
