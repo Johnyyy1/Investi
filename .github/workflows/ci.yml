@@ -102,6 +102,10 @@ jobs:
           DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/investi_artifacts_qa npm run test:artifacts-persistence
         env:
           ARTIFACTS_QA_DISPOSABLE: "1"
+      - name: IPS history, target-only handoff and lifecycle
+        run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/investi_artifacts_qa npm run test:ips-persistence
+        env:
+          IPS_QA_DISPOSABLE: "1"
       # Deletes every session in the database that expired more than 30 days ago.
       - name: npm run test:account-deletion
         run: npm run test:account-deletion

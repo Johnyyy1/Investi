@@ -105,6 +105,7 @@ export function PortfolioOverview({ view, notice: initialNotice = null }: { view
 
   return <main className={styles.page} data-state={!hasCapital && !hasHoldings ? "zero" : firstVisit ? "first-visit" : status.kind}>
     <div className={styles.container}>
+      <Link href="/lab/plan" className="inline-flex min-h-12 items-center text-primary underline underline-offset-4">Můj investiční plán (IPS)</Link>
       {firstVisit ? null : <header className={styles.header}>
         <div className={styles.eyebrowRow}><p className={styles.eyebrow}>Portfolio Lab · Cvičné portfolio</p>{view.marketDataMode === "sample" ? <span className={styles.sampleTag}>Ukázková data</span> : null}</div>
         <h1>Moje portfolio</h1>

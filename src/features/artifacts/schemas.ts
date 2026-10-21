@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ipsSchema } from "@/features/ips/schema";
 import { availableLessons } from "@/features/learning/catalog";
 
 const shortText = z.string().trim().min(1).max(160);
@@ -44,7 +45,7 @@ export const artifactPayloadSchemas = {
     rationale: explanation,
   }),
   safeguards: z.strictObject({ rules: z.array(z.strictObject({ trigger: shortText, action: explanation })).min(1).max(20) }),
-  investment_plan: z.strictObject({
+  investment_plan: z.union([ipsSchema, z.strictObject({
     goals: z.array(goal).min(1).max(10),
     horizonMonths: horizon,
     allocation: z.array(z.strictObject({ assetClass: z.enum(["equity", "bonds", "cash", "other"]), weightBasisPoints: basisPoints })).min(1).max(4)
@@ -53,7 +54,7 @@ export const artifactPayloadSchemas = {
     reviewFrequency: z.enum(["monthly", "quarterly", "annually"]),
     rebalanceRule: explanation,
     crisisPlan: explanation,
-  }),
+  })]),
   trade_checklist: z.strictObject({ items: z.array(checklistItem).min(1).max(20) }),
   business_map: z.strictObject({ company: shortText, customers: texts, revenueDrivers: texts, advantages: texts, risks: texts }),
   investment_thesis: z.strictObject({ company: shortText, thesis: explanation, assumptions: texts, evidence: texts, risks: texts, exitCriteria: texts, reviewOn: z.iso.date() }),

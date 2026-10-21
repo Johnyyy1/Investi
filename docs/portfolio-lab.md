@@ -111,3 +111,7 @@ gain/loss       = Σ price effect + Σ FX effect + Σ cost effect + realized gai
 Cost in quote currency is folded with the same weighted-average allocation as the CZK cost basis, so the implied purchase rate represents reference FX without confusing commission or the conversion markup with market movement. Both reference and all-in bases allocate proportionally on sells; realized gain/loss already includes the sold portion's buy costs and sale costs, which are not counted again as open-position costs. The parts sum exactly to the investment gain/loss. CZK-quoted holdings have no FX effect. Attribution is absent while the valuation is incomplete; nothing is estimated.
 
 Holding weights in the Lab are shares of the whole portfolio value including cash, so they compare directly with the mix targets. The earlier `allocationBasisPoints` (share of invested value only) is unchanged.
+
+## IPS target intent
+
+[Investiční plán (IPS)](ips.md) can append a target-only mix after explicit confirmation, without executing any trades. Its `ips:<artifact UUID>:<request UUID>` key records the source version; `appliedValueMinor` is zero because no capital was applied. It shares target validation and the learner lock, verifies owned current plan/generation and server instrument metadata, and preserves cash, ledger, capital and returns. The ordinary allocation execution flow remains unchanged.
