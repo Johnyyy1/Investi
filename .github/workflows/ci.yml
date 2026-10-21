@@ -80,6 +80,9 @@ jobs:
       - run: npm run db:migrate
       - run: npm run db:seed
       - run: npm run test:curriculum-seed
+      - run: npm run test:curriculum-compatibility
+        env:
+          CURRICULUM_QA_DISPOSABLE: "1"
       - run: npm run db:check-curriculum
       - run: npm run test:migration
       - run: npm run test:portfolio-migration

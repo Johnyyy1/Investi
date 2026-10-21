@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { evaluateUnlock, PORTFOLIO_LAB_UNLOCK_ID, progressionUnlocks, resolvePortfolioLabUnlock } from "./unlocks";
 
 const required = progressionUnlocks.PORTFOLIO_LAB.prerequisiteLessonIds;
@@ -10,6 +10,32 @@ describe("Portfolio Lab unlock", () => {
     expect(status(420, required.slice(0, -1)).unlocked).toBe(false);
     expect(status(360, [...required]).unlocked).toBe(false);
     expect(status(420, [...required]).unlocked).toBe(true);
+  });
+  it("keeps the original requirements when three more Foundations lessons are published", async () => {
+    vi.resetModules();
+    vi.doMock("@/features/lessons/foundations/manifest", async (importActual) => {
+      const manifest = await importActual<typeof import("@/features/lessons/foundations/manifest")>();
+      return { ...manifest, foundationsLessons: [
+        ...manifest.foundationsLessons.map((lesson) => ({ ...lesson, status: "available" })),
+        { id: "foundations-expansion-8", status: "available" },
+        { id: "foundations-expansion-9", status: "available" },
+      ] };
+    });
+    try {
+      const { evaluateUnlock: expanded, progressionUnlocks: definitions } = await import("./unlocks");
+      expect(definitions.PORTFOLIO_LAB.prerequisiteLessonIds).toEqual([
+        "foundations-why-invest", "foundations-stocks", "foundations-etfs-indexes", "foundations-bonds-cash",
+        "foundations-markets", "foundations-risk-reward", "foundations-portfolio",
+      ]);
+      expect(expanded(PORTFOLIO_LAB_UNLOCK_ID, { totalXp: 420, completedLessonIds: new Set(required) })).toMatchObject({
+        unlocked: true, prerequisitesComplete: true, requiredPrerequisiteLessons: 7,
+      });
+      expect(expanded(PORTFOLIO_LAB_UNLOCK_ID, { totalXp: 0, completedLessonIds: new Set() }, true).unlocked).toBe(true);
+      expect(expanded(PORTFOLIO_LAB_UNLOCK_ID, { totalXp: 600, completedLessonIds: new Set([...required.slice(0, -1), "foundations-checkpoint", "foundations-expansion-8", "foundations-expansion-9"]) }).unlocked).toBe(false);
+    } finally {
+      vi.doUnmock("@/features/lessons/foundations/manifest");
+      vi.resetModules();
+    }
   });
   it("keeps Checkpoint 1 and future L1 lessons outside the Lab prerequisite", () => {
     expect(required).toEqual([

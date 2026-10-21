@@ -61,7 +61,7 @@ Otázka musí mít dostatek vstupů, jednotky, období a pravidlo zaokrouhlení.
 
 Daňové, regulatorní, makroekonomické a výzkumné údaje patří do datovaného registru podle [#132](https://github.com/Johnyyy1/Investi/issues/132). Lekce je má vkládat přes tokeny, například `{{dan.casovy_test_cp}}`, nikoli kopírovat sazby a limity do prózy nebo do správných odpovědí. Každý klíč potřebuje hodnotu a jednotku, jurisdikci, právní základ, platnost od–do / zdaňovací období, primární zdroj URL, datum a stav ověření, vlastníka a příští revizi. U výzkumu přidej vzorek, období a omezení přenosu na investi.
 
-**Stav při zavedení standardu:** #132 (registr a renderer), [#133](https://github.com/Johnyyy1/Investi/issues/133) (redakční workflow a publikační kontroly) a [#119](https://github.com/Johnyyy1/Investi/issues/119) (kompatibilita publikovaných lekcí) jsou samostatné navazující práce. Tento dokument jejich automatické kontroly neimplementuje. Před použitím ověř stav v aktuálním kódu. Dokud tokeny neumí renderer i testy vyhodnotit, obsah s těmito závislostmi ponech jako nepublikovaný návrh mimo `authoredLessons`; nezobrazuj syrové tokeny a neobcházej závislost číslem napsaným natvrdo. Vymyšlené vstupy jasně označeného modelového příkladu token nepotřebují.
+**Stav při zavedení standardu:** #132 (registr a renderer) a [#133](https://github.com/Johnyyy1/Investi/issues/133) (redakční workflow a publikační kontroly) jsou samostatné navazující práce. Kontroly kompatibility z #119 popisují [pravidla publikovaných lekcí](published-lesson-compatibility.md). Před použitím ověř stav v aktuálním kódu. Dokud tokeny neumí renderer i testy vyhodnotit, obsah s těmito závislostmi ponech jako nepublikovaný návrh mimo `authoredLessons`; nezobrazuj syrové tokeny a neobcházej závislost číslem napsaným natvrdo. Vymyšlené vstupy jasně označeného modelového příkladu token nepotřebují.
 
 Publikovaná daňová lekce musí viditelně uvést **„Vzdělávací obsah, ne daňové poradenství; stav k [datum]“** a nesmí obsahovat neověřené či nevyřešené pravidlo. Datum se odvozuje od ověření použitých faktů, ne od data commitu. Před publikací vyžaduj odbornou revizi daňovým poradcem se záznamem role, data a kontrolované verze faktů; konkrétní evidenci a CI řeší #133. Obecný obsah potřebuje redakční revizi. Nehotovou revizi výslovně zaznamenej a obsah nepublikuj.
 
@@ -72,7 +72,7 @@ Historický scénář používá pravidlo platné k datu scénáře. Odlišuj ce
 Kanonické typy jsou [AuthoredLesson, LessonBlock a StepDefinition](../../src/features/lessons/types.ts). Obsah je v `blocks`; pořadí obrazovek určuje mapa kroků v [steps.ts](../../src/features/lessons/steps.ts). `sections` jsou metadata, nikoli definice průchodu. Jako referenci čti [Foundations](../../src/features/lessons/foundations/content.ts), [Volatilitu](../../src/features/lessons/volatility/annualising-volatility.ts) a její [flow.ts](../../src/features/lessons/volatility/flow.ts).
 
 - Nové stabilní ID má tvar **`<modul>-<tema>`**, ASCII kebab-case, např. `costs-comparing-fees`; modul znamená stabilní identitní prefix, nikoli zobrazovací kód `2.2`. Existující ID nikdy nepřejmenovávej podle této konvence. ID musí být unikátní v celém kurikulu; ID bloků, možností a polí musí být unikátní v příslušném rozsahu.
-- Po publikaci neměň `lesson.id`, úložné `module_id`, `moduleSlug`, `slug` ani URL. Zobrazovací umístění měň v `lessonPlacements`; úložný modul ovlivňuje současné odměny. Nová témata dostávají vlastní identitu, nekopírují identitu jiné lekce.
+- Po publikaci neměň `lesson.id`, úložné `module_id`, `moduleSlug`, `slug` ani URL. Zobrazovací umístění měň v `lessonPlacements`; politika v4 určuje nové odměny podle registrované úrovně, proto změnu jejího dopadu na budoucí odměny posuzuj výslovně. Historické účtenky se nepřepočítávají. Nová témata dostávají vlastní identitu, nekopírují identitu jiné lekce.
 - **Nejvýše jedna hodnocená otázka na krok. Poslední krok žádnou hodnocenou otázku nemá.** Platí pro `multipleChoiceQuestion`, `numericQuestion` i `multiNumericQuestion`. Více souvisejících polí v jednom `multiNumericQuestion` je jedna otázka; dvě nezávislé úlohy rozděl do kroků. Textové vlastní vysvětlení není dnes automaticky hodnocený blok a není perzistentní odpověď.
 - Každý odkaz z kroku musí směřovat na existující blok. Nenechávej otázky mimo průchod, nevkládej tutéž otázku do více kroků. Výběrová otázka má právě jednu správnou existující možnost. Číselná odpověď má konečnou hodnotu, nezápornou toleranci a jednotku.
 - Použij existující typ bloku a podporované `interactiveFigure.figure`. Nový renderer, ukládání výstupů, hodnocení nebo pole manifestu jsou implementační změna se samostatnou validací. Nevymýšlej vlastnosti, které runtime nečte.
@@ -84,18 +84,18 @@ Server v [transition.ts](../../src/features/progress/transition.ts) kontroluje s
 
 `last_position` je index kroku. Zachování ID samo nestačí: vložení před něj může změnit význam uloženého pokroku.
 
-Tabulka `lesson` už má `content_version`, ale `lesson_progress` dnes verzi obsahu nesleduje a přechody ji neporovnávají. Samotné zvýšení této hodnoty tedy nepřemapuje uložený kurzor; bezpečný postup musí dodat #119.
+Tabulka `lesson` už má `content_version`, ale `lesson_progress` dnes verzi obsahu nesleduje a přechody ji neporovnávají. Samotné zvýšení této hodnoty tedy nepřemapuje uložený kurzor. [Pravidla kompatibility publikovaných lekcí](published-lesson-compatibility.md) a jejich regresní testy chrání existující průchody; nekompatibilní revize stále potřebuje samostatně navrženou migraci nebo nové ID.
 
 | Změna | Pravidlo |
 | --- | --- |
 | Překlep nebo zpřesnění vysvětlení | Zachovej strukturu, identitu, význam již zodpovězených otázek a platnost odpovědí. Změnu výpočtu či správné odpovědi posuzuj jako obsahovou změnu. |
 | Přidání kroku | Bez verzování připadá v úvahu pouze nehodnocený krok těsně před posledním. I ten posune index dosavadního závěru: před vydáním dolož test rozpracované lekce včetně uživatele na původním posledním kroku. Výjimka není automatický důkaz bezpečnosti. |
-| Přidání hodnocené otázky, změna pořadí, významu kroku nebo odpovědi | Vyžaduje výslovný plán kompatibility a podle potřeby verzi obsahu / aditivní migraci v #119. Dokud není mechanismus implementovaný a otestovaný, strukturální revizi nepublikuj. Nové téma může být samostatná nová lekce s vlastním ID. |
+| Přidání hodnocené otázky, změna pořadí, významu kroku nebo odpovědi | Vyžaduje výslovný plán kompatibility a podle potřeby verzi obsahu / samostatnou aditivní migraci. Dokud není mechanismus implementovaný a otestovaný, strukturální revizi nepublikuj. Nové téma může být samostatná nová lekce s vlastním ID. |
 | ID bloků používaných při přechodu | Neměň je ani nepřesouvej otázky přes uložený kurzor. Neměň je kvůli kosmetické úpravě názvu. |
 | Dokončená lekce a rozšířený modul | `completed` i původní čas zůstávají. Nový obsah může změnit stav modulu, ne přepsat historii. Opakování a zvládnutí jsou oddělené; nepřepočítávají účtenky ani znovu neudělují odměnu. |
 | Rozšířený checkpoint | Stávající publikovaný průchod ponech; nové ověření přidej jako samostatnou položku systému zvládnutí, až bude implementovaný. |
 
-Zachovej záznamy odemčení Labu, XP, cvičný kapitál i verze historických účtenek. Přidání lekce do Foundations dnes může změnit živě odvozené prerekvizity pro uživatele bez záznamu odemčení. Před takovou publikací musí být vyřešena ochrana v #119; standard odměny ani odemčení nemění.
+Zachovej záznamy odemčení Labu, XP, cvičný kapitál i verze historických účtenek. Prerekvizity Labu zůstávají původních sedm lekcí Foundations a 420 XP, i pro uživatele bez záznamu odemčení. Nové lekce L1 ani Checkpoint 1 je nerozšiřují. Nově publikovaná lekce potřebuje vlastní kontrakt v `published-lessons-v1.json`; původní záznamy zachovej. Spusť i `test:curriculum-compatibility` na izolované QA databázi.
 
 ## 6. Šablony a zapojení do produktu
 
@@ -121,7 +121,7 @@ Při implementaci skutečné lekce:
 3. Připrav umístění, existující předpoklady a dovednosti podle skutečného obsahu; tyto údaje nepatří do `AuthoredLesson`. U stávajícího modulu nezměň jeho identitu. Aktivní `lessonPlacements` zatím obsahují právě dostupné lekce, proto umístění návrhu zatím ponech v briefu.
 4. V publikačním PR společně nastav `status: "available"`, přidej obsah do [registry.ts](../../src/features/lessons/registry.ts), kroky do mapy modulu a novou mapu do `moduleSteps`, pokud modul ještě žádnou nemá. U nového úložného modulu doplň `storageModules` v registru kurikula. Zapiš umístění do `lessonPlacements` a případné nové dovednosti do `skills`. Doplň skutečné předchozí/následující odkazy. Každá dostupná lekce má právě jeden obsah, průchod i umístění. Dokonči požadované revize a závislosti před změnou stavu.
 5. Publikované řádky v DB vytváří idempotentní [seedCurriculum](../../src/db/curriculum.ts). Ověř `db:check-curriculum` a `test:curriculum-seed` na izolované QA databázi; nemaž běžnou vývojovou DB. Změna katalogu se sama nerovná připravené DB.
-6. Spusť relevantní kontroly níže a vyplň checklist. Vyhodnoť i odměnu a odemčení podle úložného modulu, zejména při přidání lekce do Foundations.
+6. Spusť relevantní kontroly níže a vyplň checklist. Vyhodnoť i odměnu podle registrované úrovně a zachování původních prerekvizit Labu, zejména při přidání lekce L1.
 
 ## 7. Testy, které autor dodává
 

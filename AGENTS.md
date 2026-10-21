@@ -364,6 +364,8 @@ Do not place the mascot everywhere.
 
 Before authoring or revising lessons, read [the Lesson 2.0 authoring standard](docs/education/lesson-standard.md). It defines the learning structure, Czech terminology, dated facts, stable IDs and published-lesson compatibility rules, with copyable lesson/test templates and a review checklist.
 
+Before editing a published lesson, also follow [published lesson compatibility](docs/education/published-lesson-compatibility.md): preserve identity, saved-step and grading contracts, completed status, and reward receipts.
+
 The Learn page must answer quickly:
 
 What should I do next?
