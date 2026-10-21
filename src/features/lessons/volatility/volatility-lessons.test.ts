@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { correctAnswers as authoredCorrect, wrongAnswers as authoredWrong } from "../answer-keys";
 import katex from "katex";
 import { recoveryReturn, simpleReturn } from "@/features/finance/returns";
 import { getModuleBySlug, getModuleLessons } from "@/features/learning/catalog";
@@ -29,16 +30,8 @@ function block<T extends LessonBlock["type"]>(lesson: AuthoredLesson, id: string
 const numeric = (lesson: AuthoredLesson, id: string) => block(lesson, id, "numericQuestion").answer;
 const multi = (lesson: AuthoredLesson, id: string) => Object.fromEntries(block(lesson, id, "multiNumericQuestion").answers.map((answer) => [answer.id, answer.answer]));
 
-function correctAnswers(question: QuestionBlock): Record<string, string> {
-  if (question.type === "multipleChoiceQuestion") return { answer: question.correctOptionId };
-  if (question.type === "numericQuestion") return { answer: String(question.answer).replace(".", ",") };
-  return Object.fromEntries(question.answers.map((answer) => [answer.id, String(answer.answer)]));
-}
-function wrongAnswers(question: QuestionBlock): Record<string, string> {
-  if (question.type === "multipleChoiceQuestion") return { answer: question.options.find((option) => option.id !== question.correctOptionId)!.id };
-  if (question.type === "numericQuestion") return { answer: String(question.answer + question.tolerance * 10 + 1) };
-  return Object.fromEntries(question.answers.map((answer) => [answer.id, String(answer.answer + answer.tolerance * 10 + 1)]));
-}
+const correctAnswers = (question: QuestionBlock) => authoredCorrect(question, { decimalComma: true });
+const wrongAnswers = (question: QuestionBlock) => authoredWrong(question);
 
 describe("Volatility module", () => {
   it("publishes five lessons as one available module of 55 minutes", () => {

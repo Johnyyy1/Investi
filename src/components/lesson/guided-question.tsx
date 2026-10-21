@@ -1,14 +1,23 @@
 "use client";
 
-import { parseNumericAnswer, type QuestionBlock } from "@/features/lessons/question-evaluation";
+import { feedbackFor, parseNumericAnswer, parseSelection, type QuestionBlock } from "@/features/lessons/question-evaluation";
 import { cn } from "@/lib/utils";
 import { AnswerChoice, NumberField, QuestionFeedback, type ChoiceState } from "./lesson-answer";
+import { DocumentTap, documentSummary } from "./step-kinds/document-tap";
+import { FadedExample } from "./step-kinds/faded-example";
+import { FindError } from "./step-kinds/find-error";
 
 /** Controlled question card; the lesson action bar owns Check → Continue / Try again. */
 export function GuidedQuestion({ block, answers, verdict, mastery, onAnswer }: {
   block: QuestionBlock; answers: Record<string, string>; verdict?: boolean; mastery: boolean; onAnswer: (id: string, value: string) => void;
 }) {
   const checked = verdict !== undefined;
+  const result = checked ? feedbackFor(block, answers, verdict) : undefined;
+  const feedback = <QuestionFeedback id={`${block.id}-feedback`} verdict={verdict} misconception={result?.misconception}
+    detail={checked && !verdict && block.type === "documentTap" ? documentSummary(block, parseSelection(answers.selected)) : undefined}>{result?.explanation}</QuestionFeedback>;
+  if (block.type === "fadedExample") return <FadedExample block={block} answers={answers} verdict={verdict} mastery={mastery} onAnswer={onAnswer} feedback={feedback} />;
+  if (block.type === "documentTap") return <DocumentTap block={block} answers={answers} verdict={verdict} mastery={mastery} onAnswer={onAnswer} feedback={feedback} />;
+  if (block.type === "findError") return <FindError block={block} answers={answers} verdict={verdict} mastery={mastery} onAnswer={onAnswer} feedback={feedback} />;
   const fields = block.type === "multiNumericQuestion" ? block.answers : block.type === "numericQuestion" ? [{ id: "answer", label: "Tvoje odpověď", unit: block.unit, answer: block.answer, tolerance: block.tolerance }] : [];
   function choiceState(id: string): ChoiceState {
     if (!checked) return answers.answer === id ? "selected" : "idle";
@@ -28,6 +37,6 @@ export function GuidedQuestion({ block, answers, verdict, mastery, onAnswer }: {
         return <NumberField key={field.id} label={field.label} unit={field.unit || undefined} value={raw} onValueChange={(value) => onAnswer(field.id, value)} disabled={checked} state={checked ? fieldCorrect ? "correct" : "incorrect" : "idle"} hint={field.unit === "%" ? "Zadej procento jako číslo." : field.unit ? `Zadej číselnou hodnotu v ${field.unit}.` : "Zadej číselnou hodnotu."} error={raw && !Number.isFinite(parsed) ? "Zadej konečné číslo." : undefined} />;
       })}</div>}
     </div>
-    <QuestionFeedback id={`${block.id}-feedback`} verdict={verdict}>{verdict ? block.correctExplanation : block.incorrectExplanation}</QuestionFeedback>
+    {feedback}
   </section>;
 }

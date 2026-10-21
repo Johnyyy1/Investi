@@ -368,6 +368,16 @@ Before authoring or revising lessons, read [the Lesson 2.0 authoring standard](d
 
 Before editing a published lesson, also follow [published lesson compatibility](docs/education/published-lesson-compatibility.md): preserve identity, saved-step and grading contracts, completed status, and reward receipts.
 
+Lesson UI comes from the approved design, not from the agent. Compose lessons only from the step kinds in [the step-kind catalog](docs/education/lesson-steps.md) (`fadedExample`, `documentTap`, `findError`, `personaDecision`, `labMission`, `factNotice`, `writtenReflection` and the earlier blocks). Each kind already has a renderer matching the Pen boards exported to docs/design/lesson-steps; preview them at /dev/lesson-steps. When authoring a lesson:
+
+- do not create new lesson components, styles, colors or layouts, and do not restyle the existing renderers;
+- copy the data shape from src/features/lessons/specimens/time-test.ts and write new, fictional content;
+- take tax/regulatory numbers from the fact registry via `factNotice`, never as literals;
+- if the lesson needs a step kind that does not exist, stop and report it in the PR instead of inventing one;
+- attach 390 px and 1440 px screenshots of every step to the PR and compare them with the matching PNGs.
+
+Adding or changing a step kind is a separate implementation task: update the design export, types, `evaluateQuestion`/`feedbackFor`/`answer-keys` for graded kinds, the renderer, specimens, tests and the catalog together.
+
 The Learn page must answer quickly:
 
 What should I do next?

@@ -1,4 +1,5 @@
 import type { QuestionBlock } from "./question-evaluation";
+import { correctAnswers as authoredCorrect, wrongAnswers as authoredWrong } from "./answer-keys";
 import type { AuthoredLesson, LessonBlock } from "./types";
 
 /** Test-only helpers for authored lesson suites. */
@@ -11,13 +12,9 @@ export function block<T extends LessonBlock["type"]>(lesson: AuthoredLesson, id:
 export const numericAnswer = (lesson: AuthoredLesson, id: string) => block(lesson, id, "numericQuestion").answer;
 
 export function correctAnswers(question: QuestionBlock): Record<string, string> {
-  if (question.type === "multipleChoiceQuestion") return { answer: question.correctOptionId };
-  if (question.type === "numericQuestion") return { answer: String(question.answer).replace(".", ",") };
-  return Object.fromEntries(question.answers.map((answer) => [answer.id, String(answer.answer)]));
+  return authoredCorrect(question, { decimalComma: true });
 }
 
 export function wrongAnswers(question: QuestionBlock): Record<string, string> {
-  if (question.type === "multipleChoiceQuestion") return { answer: question.options.find((option) => option.id !== question.correctOptionId)!.id };
-  if (question.type === "numericQuestion") return { answer: String(question.answer + question.tolerance * 10 + 1) };
-  return Object.fromEntries(question.answers.map((answer) => [answer.id, String(answer.answer + answer.tolerance * 10 + 1)]));
+  return authoredWrong(question);
 }

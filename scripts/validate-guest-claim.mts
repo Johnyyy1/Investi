@@ -9,6 +9,7 @@ import { learningProfile, lessonAward, lessonProgress, portfolio, progressionUnl
 import { claimGuestLearning, deleteDemoIdentity } from "../src/features/guest/repository";
 import { completeLesson, saveLessonProgress } from "../src/features/progress/repository";
 import { lessonSteps } from "../src/features/progress/transition";
+import { correctAnswers } from "../src/features/lessons/answer-keys";
 import { loadPracticeCapitalSummary } from "../src/features/rewards/repository";
 import { loadPortfolioLabUnlock } from "../src/features/progression/repository";
 import { getOrCreateActivePortfolio } from "../src/features/portfolio/repository";
@@ -30,8 +31,7 @@ async function finish(userId: string, lessonId: string) {
   const steps = lessonSteps(lessonId);
   for (let position = 1; position < steps.length; position++) {
     const question = steps[position - 1].blocks.find(isQuestion);
-    const answers = !question ? undefined : question.type === "multipleChoiceQuestion" ? { answer: question.correctOptionId }
-      : question.type === "numericQuestion" ? { answer: String(question.answer) } : Object.fromEntries(question.answers.map((field) => [field.id, String(field.answer)]));
+    const answers = question ? correctAnswers(question) : undefined;
     await saveLessonProgress(userId, { lessonId, status: "in_progress", lastPosition: position }, answers);
   }
   return completeLesson(userId, lessonId);

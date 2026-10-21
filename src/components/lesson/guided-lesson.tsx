@@ -20,6 +20,8 @@ import { GuidedBlock } from "./guided-block";
 import { GuidedQuestion } from "./guided-question";
 import { LessonActionBar, LessonTopBar } from "./lesson-chrome";
 import { createLessonSaveQueue } from "./lesson-save-queue";
+import { FactStatusChip } from "./step-kinds/fact-notice";
+import { lessonFactKeys, stepWidth } from "@/features/lessons/step-kinds";
 import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, Leaf, RotateCcw } from "lucide-react";
 
 const primaryClassName = "min-w-0 flex-1 whitespace-nowrap px-3 min-[420px]:px-6 md:flex-none";
@@ -124,7 +126,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
   const question = step.blocks.find(isQuestion);
   const evaluation = question ? evaluateQuestion(question, answers) : undefined;
   const isLast = position === steps.length - 1;
-  const wide = step.blocks.some((block) => block.type === "interactiveFigure");
+  const factKeys = lessonFactKeys(lesson);
   const primary = question && verdict === undefined
     ? { label: "Zkontrolovat odpověď", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: evaluation === undefined, onClick: () => setVerdict(evaluation) }
     : question && verdict === false
@@ -134,7 +136,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
   return <main className="flex min-h-dvh flex-col" data-save-state={saving ? "saving" : "idle"}>
     <LessonTopBar eyebrow={`${learningModule.title} · Lekce ${lesson.position}${review ? " · Opakování" : ""}`} title={lesson.title} minutes={lesson.estimatedMinutes} segments={steps.map((item) => ({ mastery: item.kind === "mastery" }))} current={position} finished={finished} />
     <div className="flex-1 px-5 pt-5 pb-7 md:px-8 md:pt-10 md:pb-14 lg:px-16 lg:pt-12 lg:pb-[72px]">
-      <div className={cn("mx-auto flex w-full min-w-0 flex-col gap-5 md:gap-7", wide && !finished ? "max-w-[1040px]" : "max-w-[760px]")}>
+      <div className={cn("mx-auto flex w-full min-w-0 flex-col gap-5 md:gap-7", finished ? "max-w-[760px]" : stepWidth(step.blocks))}>
         {error ? <p role="alert" className="flex items-start gap-2 rounded-control bg-danger-soft px-4 py-3 text-[15px]/[23px] text-danger"><CircleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" />{error}</p> : null}
         {finished ? <div className="overflow-hidden rounded-surface border border-border-card bg-surface shadow-elevation-1">
           <CompletionScreen autoFocusAction title={review ? "Opakování dokončeno" : "Lekce dokončena"} description={lesson.title} xpAwarded={reward?.xpAwarded} practiceCapitalAwardedMinor={reward && reward.practiceCapitalAwardedMinor !== "0" ? reward.practiceCapitalAwardedMinor : undefined} actionLabel={guest ? "Ulož si, co už víš" : reward?.portfolioLabUnlocked ? "Otevřít Portfolio Lab" : reward?.allComplete ? "Prozkoumat Lab" : "Další lekce"} onContinue={() => { router.push(guest ? "/onboarding/save" : reward?.portfolioLabUnlocked ? "/lab/portfolio" : reward?.nextHref ?? nextHref); router.refresh(); }}>
@@ -151,6 +153,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
             {mastery ? <p className="flex w-fit items-center gap-1.5 rounded-full border border-border bg-surface-practice py-[5px] pr-2.5 pl-2 text-[13px] font-semibold text-primary"><Leaf aria-hidden="true" className="size-3.5" />Ověření znalostí · {masteryPosition} z {masterySteps.length}</p> : <p className="text-[11px] font-semibold tracking-[0.9px] text-primary uppercase md:text-xs md:tracking-[1px]">Krok {position + 1}</p>}
             <h2 ref={headingRef} id="step-title" tabIndex={-1} lang="cs" className="scroll-mt-8 text-[28px]/8 font-semibold tracking-[-0.9px] [overflow-wrap:normal] md:text-[38px]/[44px] md:tracking-[-1.3px]">{step.title}</h2>
             {mastery ? <p className="text-sm/5 text-muted">Bez časového limitu. Když odpověď nevyjde, ukážeme proč a zkusíš to znovu.</p> : null}
+            {position === 0 && factKeys.length ? <FactStatusChip factKeys={factKeys} /> : null}
           </div>
           {step.blocks.filter((block) => !isQuestion(block)).map((block) => <GuidedBlock key={block.id} block={block} history={history} riskHistory={riskHistory} />)}
           {question ? <div ref={questionRef} className="flex flex-col">
