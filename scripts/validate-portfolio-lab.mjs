@@ -389,7 +389,18 @@ try {
   assert.equal(clean(await page.getByTestId("contribution-costs").locator('td[role="cell"]').textContent()), "−13,24 Kč", "the contribution chart explains costs without inventing market movement");
   assert.equal(await page.getByRole("status").filter({ hasText: "Ukázková data" }).count(), 1, "the data banner names sample data");
   await page.getByText("Cvičný kapitál je vklad, ne výnos.", { exact: false }).waitFor();
-  await responsive(page, "overview-single", { ready: () => page.getByTestId("portfolio-value").waitFor() });
+  assert.match(await page.getByTestId("time-weighted-return").innerText(), /−0,66\s*%\s*za období/, "TWR includes costs and avoids annualizing a short period");
+  assert.equal(await page.getByTestId("money-weighted-return").innerText(), await page.getByTestId("time-weighted-return").innerText(), "without intermediate contributions MWR equals TWR");
+  const performanceHelp = page.getByText("Jak výnosy počítáme", { exact: true });
+  await performanceHelp.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await performanceHelp.locator("..").getAttribute("open"), "", "performance disclosure works from the keyboard");
+  await page.getByText(/sám ale nedokazuje chybu v chování/).waitFor();
+  await responsive(page, "overview-single", { ready: async () => {
+    await page.getByTestId("portfolio-value").waitFor();
+    await page.getByText("Jak výnosy počítáme", { exact: true }).click();
+  } });
+  await performanceHelp.click();
 
   // A second purchase from the overview search: an ETF bought on its detail page, one order.
   const buySearch = page.getByRole("combobox", { name: "Koupit akcii, ETF nebo dluhopis" });
@@ -496,6 +507,23 @@ try {
   assert.match(clean(await page.locator("main").innerText()), /Akcie \(AAPL, MSFT\) přidaly 27,72 Kč pohybem cen\./);
   await coherent("attribution");
   await responsive(page, "overview-attribution", { ready: () => page.getByTestId("portfolio-value").waitFor() });
+
+  // A new reward is a contribution; sample history does not cover this real-time flow.
+  const cashBeforeReward = minorFromCzk(await page.getByTestId("portfolio-cash").textContent());
+  const [{ id: laterLessonId }] = await sql`select id from lesson where is_published = true and id <> ${lessonId} order by id limit 1`;
+  await sql`insert into lesson_award (user_id, lesson_id, xp, practice_capital_minor, reward_policy_version, learning_date, time_zone, awarded_at)
+    values (${userId}, ${laterLessonId}, 60, 200000, 1, '2026-10-21', 'Europe/Prague', now())`;
+  await page.reload();
+  assert.equal(minorFromCzk(await page.getByTestId("portfolio-gain-loss").textContent()), gain, "a new reward does not become investment gain");
+  assert.equal(minorFromCzk(await page.getByTestId("portfolio-cash").textContent()), cashBeforeReward + 200_000n);
+  assert.equal(await page.getByTestId("time-weighted-return").innerText(), "Nedostupné", "missing historical flow valuation never becomes zero");
+  assert.match(await page.getByTestId("money-weighted-return").innerText(), /%\s*za období/, "MWR remains available independently of missing historical prices");
+  await responsive(page, "overview-return-unavailable", { ready: async () => {
+    await page.getByTestId("time-weighted-return").waitFor();
+    await page.getByText("Jak výnosy počítáme", { exact: true }).click();
+    await page.getByText("Chybí úplné ocenění nebo historické ceny či kurzy.", { exact: false }).waitFor();
+  } });
+  await sql`delete from lesson_award where user_id = ${userId} and lesson_id = ${laterLessonId}`;
 
   // Unavailable prices (state 4d): no total, no estimate, only what the ledger knows.
   await sql`insert into portfolio_trade (id, portfolio_id, instrument_id, instrument_symbol, instrument_name, instrument_asset_type, side, quantity, unit_price, quote_currency, fx_rate_to_base, gross_amount_base_minor, fee_base_minor, cash_delta_base_minor, quote_observed_at, executed_at, market_data_provider, market_data_dataset, market_data_kind, market_data_is_deterministic, fx_rate_provider, fx_rate_dataset, fx_rate_kind, fx_rate_is_deterministic, fx_reference_date, fx_rate_retrieved_at, client_idempotency_key)

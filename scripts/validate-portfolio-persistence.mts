@@ -6,7 +6,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import postgres from "postgres";
 import { db } from "../src/db";
 import { lesson, lessonAward, portfolio, portfolioTrade, user } from "../src/db/schema";
-import { executeTrade, executeAllocation, getOrCreateActivePortfolio, resetActivePortfolio, reviewTrade, setBrokerFeeProfile } from "../src/features/portfolio/repository";
+import { executeTrade, executeAllocation, getOrCreateActivePortfolio, loadPortfolioRows, resetActivePortfolio, reviewTrade, setBrokerFeeProfile } from "../src/features/portfolio/repository";
 import { loadPortfolioView } from "../src/features/portfolio/service";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -115,6 +115,11 @@ try {
   assert.equal(rewardRaceView.earnedPracticeCapitalMinor, "400000");
   assert.equal(rewardRaceView.availableCashMinor, "268677", "concurrent reward is neither lost nor double credited");
   assert.equal(rewardRaceView.investmentGainLossMinor, "-1648", "reward contribution is not performance; commission and FX are costs");
+  const rewardSnapshot = await loadPortfolioRows(rewardRace);
+  assert.equal(rewardSnapshot.contributions.reduce((sum, row) => sum + row.amountMinor, 0n), rewardSnapshot.earnedPracticeCapitalMinor, "performance flows and entitlement share one read snapshot");
+  assert.equal(rewardSnapshot.contributions.length, 2, "the concurrent receipt is represented once with its original date");
+  assert.equal(rewardSnapshot.trades.length, 1, "the concurrent trade is an internal movement, not another contribution");
+  assert.equal(rewardRaceView.performance.mwr.status, "available", "dated MWR remains available after a reward/trade race");
 
   const beforeResetTrades = await tradeCount(first.id);
   const resetKey = randomUUID();
@@ -130,6 +135,8 @@ try {
   assert.equal(resetView.availableCashMinor, resetView.earnedPracticeCapitalMinor, "reset restores all receipt entitlement");
   assert.equal(resetView.holdings.length, 0);
   assert.equal(resetView.feeProfileId, "investi-standard-v1", "reset preserves the saved user-level tariff");
+  assert.equal(resetView.performance.startedAt, resetView.openedAt, "reset starts a new performance period");
+  if (resetView.performance.twr.status === "available") assert.equal(resetView.performance.twr.basisPoints, "0", "restored entitlement is not a return");
 
   const isolated = await createOwner(0);
   const isolatedView = await loadPortfolioView(isolated);

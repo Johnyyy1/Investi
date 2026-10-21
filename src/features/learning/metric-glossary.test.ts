@@ -57,7 +57,16 @@ describe("metric glossary", () => {
   });
 
   it("only sends lessons to Lab routes that exist", () => {
-    for (const entry of entries) expect(["/lab/compare", "/lab/backtesting"]).toContain(entry.labHref);
+    for (const entry of entries) expect(["/lab/compare", "/lab/backtesting", "/lab/portfolio"]).toContain(entry.labHref);
+  });
+
+  it("reserves the 3.1.6 link without creating a broken route before publication", () => {
+    for (const id of ["time-weighted-return", "money-weighted-return"] as const) {
+      expect(metricGlossary[id].plannedLesson).toEqual({ moduleSlug: "returns", lessonSlug: "time-vs-money-weighted" });
+      expect(metricLessonLink(id)).toBeNull();
+      expect(metricExplanation(id, "portfolio")).toBeTruthy();
+      expect(metricLabLink(id).href).toBe("/lab/portfolio");
+    }
   });
 
   it("links the lessons that teach a metric back to it in the Lab", () => {

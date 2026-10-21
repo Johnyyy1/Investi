@@ -5,10 +5,10 @@ import { curriculumLessons } from "./catalog";
  * formula, per-Lab conventions and the lesson that teaches the metric. The instrument detail,
  * the comparison, the Backtesting Lab and Portfolio Lab render from here, and lessons link back.
  */
-export type MetricId = "simple-return" | "cumulative-return" | "annualised-return" | "max-drawdown" | "volatility" | "sharpe-ratio" | "correlation";
+export type MetricId = "simple-return" | "cumulative-return" | "annualised-return" | "max-drawdown" | "volatility" | "sharpe-ratio" | "correlation" | "time-weighted-return" | "money-weighted-return";
 
 /** Where a metric is computed. Each place uses its own data frequency, so conventions differ. */
-export type MetricContext = "instrument" | "backtest";
+export type MetricContext = "instrument" | "backtest" | "portfolio";
 
 export type MetricGlossaryEntry = {
   id: MetricId;
@@ -21,6 +21,8 @@ export type MetricGlossaryEntry = {
   conventions: Partial<Record<MetricContext, string>>;
   /** Authored, available lesson that teaches the metric; null until one exists. */
   lesson: { moduleSlug: string; lessonSlug: string } | null;
+  /** Resolve automatically when the separately tracked lesson is published; never link to a 404. */
+  plannedLesson?: { moduleSlug: string; lessonSlug: string };
   /** Lab page where a learner can try the metric when a lesson has no concrete instrument to open. */
   labHref: string;
   /** A metric of two instruments: it lives on the comparison, never on one instrument's detail. */
@@ -28,6 +30,26 @@ export type MetricGlossaryEntry = {
 };
 
 export const metricGlossary = {
+  "time-weighted-return": {
+    id: "time-weighted-return",
+    name: "Časově vážený výnos (TWR)",
+    summary: "Výnos celého portfolia včetně hotovosti bez vlivu velikosti a načasování vkladů.",
+    formula: "R_{TWR} = \\prod_i (1 + r_i) - 1",
+    conventions: { portfolio: "Dílčí výnosy mezi vklady skládáme násobením. Ocenění při vkladu používá poslední dostupnou zavírací cenu z předchozích dnů a tehdejší referenční kurz: jde o odhad, ne přesný výnos v okamžiku vkladu. Chybějící data znamenají nedostupný výnos." },
+    lesson: null,
+    plannedLesson: { moduleSlug: "returns", lessonSlug: "time-vs-money-weighted" },
+    labHref: "/lab/portfolio",
+  },
+  "money-weighted-return": {
+    id: "money-weighted-return",
+    name: "Peněžně vážený výnos (MWR)",
+    summary: "Výnos peněz investora včetně velikosti a načasování vkladů (IRR).",
+    formula: "V_T = \\sum_i C_i (1 + R)^{(T-t_i)/(T-t_0)}",
+    conventions: { portfolio: "Počítáme z původních dat účtenek a grantů a konečné hodnoty v Kč. Nákupy a prodeje jsou uvnitř portfolia, nikoli vklady či výběry. Rozdíl proti TWR může ukázat vliv načasování, sám ale nedokazuje chybu v chování." },
+    lesson: null,
+    plannedLesson: { moduleSlug: "returns", lessonSlug: "time-vs-money-weighted" },
+    labHref: "/lab/portfolio",
+  },
   "simple-return": {
     id: "simple-return",
     name: "Jednoduchý výnos",
@@ -118,7 +140,8 @@ export type MetricLessonLink = { href: string; label: string };
 
 /** `Lekce: <title>` from the curriculum, so a renamed lesson renames every Lab link. */
 export function metricLessonLink(id: MetricId): MetricLessonLink | null {
-  const target = metricEntry(id).lesson;
+  const entry = metricEntry(id);
+  const target = entry.lesson ?? entry.plannedLesson;
   if (!target) return null;
   const lesson = curriculumLessons.find((candidate) => candidate.moduleSlug === target.moduleSlug && candidate.slug === target.lessonSlug);
   if (!lesson || lesson.status !== "available") return null;

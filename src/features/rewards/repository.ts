@@ -19,6 +19,15 @@ export async function loadPracticeCapitalSummary(userId: string) {
   return { earnedPracticeCapitalMinor: await readPracticeCapitalEntitlementMinor(db, userId) };
 }
 
+/** Unjoined authoritative amounts and original dates, including legacy and zero receipts. */
+export async function readPracticeCapitalContributions(query: Pick<typeof db, "select">, userId: string) {
+  const awards = query.select({ amountMinor: lessonAward.practiceCapitalMinor, at: lessonAward.awardedAt })
+    .from(lessonAward).where(eq(lessonAward.userId, userId));
+  const grants = query.select({ amountMinor: progressionUnlock.practiceCapitalMinor, at: progressionUnlock.unlockedAt })
+    .from(progressionUnlock).where(eq(progressionUnlock.userId, userId));
+  return awards.unionAll(grants);
+}
+
 /** Every lesson receipt and unlock grant behind the entitlement, read in one statement so the
  * ledger total always equals readPracticeCapitalEntitlementMinor for the same snapshot. */
 export async function loadPracticeCapitalLedger(userId: string) {

@@ -5,7 +5,7 @@ import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { perfMeasure } from "@/lib/perf";
 import { portfolio, portfolioAllocation, portfolioAllocationLine, portfolioTrade, learningProfile, user } from "@/db/schema";
-import { readPracticeCapitalEntitlementMinor as entitlement } from "@/features/rewards/repository";
+import { readPracticeCapitalContributions, readPracticeCapitalEntitlementMinor as entitlement } from "@/features/rewards/repository";
 import { isDemoIdentity, isGuestIdentity } from "@/features/guest/identity";
 import type { Currency } from "@/features/market-data/contracts";
 import { planAllocation, validateAllocation, type AllocationInput, type AllocationPlan } from "./allocation";
@@ -249,11 +249,14 @@ export async function loadPortfolioRows(userId: string) {
 
 /** Entitlement and ordered trades of an already resolved active generation. */
 export async function loadLedgerRows(userId: string, current: PortfolioRow) {
-  const [earnedPracticeCapitalMinor, trades] = await Promise.all([
-    perfMeasure("portfolio.entitlement", "db", () => entitlement(db, userId)),
-    perfMeasure("portfolio.trades", "db", () => db.select().from(portfolioTrade).where(eq(portfolioTrade.portfolioId, current.id)).orderBy(asc(portfolioTrade.executedAt), asc(portfolioTrade.id))),
-  ]);
-  return { portfolio: current, earnedPracticeCapitalMinor, trades };
+  // One MVCC snapshot prevents a concurrent reward/trade from mixing a new cash
+  // balance with old dated flows. Mutations retain their existing user-row locks.
+  return db.transaction(async (tx) => {
+    const contributions = await perfMeasure("portfolio.entitlement", "db", () => readPracticeCapitalContributions(tx, userId));
+    const trades = await perfMeasure("portfolio.trades", "db", () => tx.select().from(portfolioTrade).where(eq(portfolioTrade.portfolioId, current.id)).orderBy(asc(portfolioTrade.executedAt), asc(portfolioTrade.id)));
+    const earnedPracticeCapitalMinor = contributions.reduce((sum, contribution) => sum + contribution.amountMinor, 0n);
+    return { portfolio: current, earnedPracticeCapitalMinor, trades, contributions, readAt: new Date() };
+  }, { isolationLevel: "repeatable read", accessMode: "read only" });
 }
 
 export interface AllocationLineRow {

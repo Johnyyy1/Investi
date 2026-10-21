@@ -9,6 +9,17 @@
 .sampleTag { display: inline-flex; align-items: center; min-height: 22px; padding: 2px 8px; border-radius: 4px; background: var(--color-surface-muted); color: var(--color-secondary); font-size: .75rem; font-weight: 600; line-height: 1.3; }
 .meta { font-size: .8125rem; line-height: 1.45; color: var(--color-muted); }
 .num { font-variant-numeric: tabular-nums; }
+.performance { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--color-divider); }
+.performanceMetrics { display: grid; gap: 12px; }
+.performanceMetrics > div { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.performanceMetrics dt { flex: 1 1 12rem; font-size: .875rem; color: var(--color-secondary); }
+.performanceMetrics dd { font-weight: 600; }
+.performanceMetrics small { display: block; font-size: .75rem; font-weight: 400; color: var(--color-muted); }
+.performanceDetails { margin-top: 8px; font-size: .8125rem; line-height: 1.5; color: var(--color-secondary); }
+.performanceDetails summary { min-height: 44px; align-content: center; cursor: pointer; }
+.performanceDetails summary:focus-visible { outline: 3px solid var(--color-foreground); outline-offset: 4px; }
+.performanceDetails p + p { margin-top: 10px; }
+.performanceDetails a { color: var(--color-primary); text-decoration: underline; text-underline-offset: 3px; }
 .textLink { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--color-primary); font-size: .875rem; font-weight: 600; line-height: 1.3; }
 .textLink:hover { text-decoration: underline; text-underline-offset: 4px; }
 .textLink svg { flex: none; }

@@ -21,7 +21,8 @@ function view(overrides: Partial<PortfolioView> = {}): PortfolioView {
   return {
     feeProfileId: "investi-standard-v1",
     portfolioId: "p1", baseCurrency: "CZK", openedAt: "2026-09-01T08:00:00.000Z", openingCapitalMinor: "1000000", earnedPracticeCapitalMinor: "1000000",
-    availableCashMinor: "1000000", holdingsMarketValueMinor: "0", portfolioTotalMinor: "1000000", investmentGainLossMinor: "0", investmentGainLossBasisPoints: "0",
+    availableCashMinor: "1000000", holdingsMarketValueMinor: "0", portfolioTotalMinor: "1000000", investmentGainLossMinor: "0",
+    performance: { startedAt: "2026-09-01T00:00:00.000Z", endedAt: "2026-10-01T00:00:00.000Z", twrMethod: "cash-flow-boundaries", twr: { status: "available", basisPoints: "144", annualizedBasisPoints: null }, mwr: { status: "available", basisPoints: "144", annualizedBasisPoints: null } },
     valuationComplete: true, valuedHoldingsCount: 0, totalHoldingsCount: 0, marketDataMode: "market", realizedGainLossMinor: "0", cashWeightBasisPoints: "10000",
     attribution: null, allocation: null, holdings: [], recentActivity: [],
     exposure: { sector: { status: "valued", categories: [], unclassified: [] }, country: { status: "valued", categories: [], unclassified: [] } },
@@ -30,7 +31,7 @@ function view(overrides: Partial<PortfolioView> = {}): PortfolioView {
 }
 
 const saved = view({
-  availableCashMinor: "100000", cashWeightBasisPoints: "990", portfolioTotalMinor: "1014400", investmentGainLossMinor: "14400", investmentGainLossBasisPoints: "144",
+  availableCashMinor: "100000", cashWeightBasisPoints: "990", portfolioTotalMinor: "1014400", investmentGainLossMinor: "14400",
   holdings: [
     holding({ instrumentId: "VT", symbol: "VT", assetType: "etf", marketValueMinor: "613000", portfolioWeightBasisPoints: "6040" }),
     holding({ instrumentId: "BND", symbol: "BND", assetType: "bond", marketValueMinor: "301400", portfolioWeightBasisPoints: "2970" }),
@@ -69,7 +70,7 @@ describe("Lab hub", () => {
     expect(html).toContain('data-portfolio-state="closed"');
     expect(html).toContain("Trh zavřený · zavírací ceny");
     expect(html).toContain("10 144 Kč");
-    expect(html).toContain("+144 Kč od nákupu · +1,4 %");
+    expect(html).toContain("+144 Kč od otevření portfolia");
     expect(html).toContain("60,4 %");
     expect(html).toContain("2 pozice · kurz ČNB 23,10 Kč/USD");
     expect(html).toContain(">Pokračovat<");

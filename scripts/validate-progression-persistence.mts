@@ -71,7 +71,9 @@ try {
   const demoBuy = { instrumentId: "US-XNAS:AAPL", quantity: "0.1", side: "BUY" as const, clientIdempotencyKey: randomUUID() };
   await executeTrade(demo, demoBuy);
   assert.equal((await executeTrade(demo, demoBuy)).duplicate, true);
-  assert.deepEqual(await loadPortfolioView(otherDemo), otherDemoView, "demo trading remains isolated");
+  const otherDemoAfter = await loadPortfolioView(otherDemo);
+  assert.ok(otherDemoAfter.performance.endedAt >= otherDemoView.performance.endedAt, "performance period ends at read time");
+  assert.deepEqual({ ...otherDemoAfter, performance: { ...otherDemoAfter.performance, endedAt: otherDemoView.performance.endedAt } }, otherDemoView, "demo trading remains isolated, including return values");
   await executeTrade(demo, { ...demoBuy, side: "SELL", clientIdempotencyKey: randomUUID() });
   await resetActivePortfolio(demo, randomUUID());
   await ensureDemoSeed(demo);

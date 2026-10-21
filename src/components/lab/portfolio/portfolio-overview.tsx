@@ -17,6 +17,7 @@ import { resetPortfolioAction } from "@/features/portfolio/actions";
 import type { PortfolioView } from "@/features/portfolio/service";
 import { formatDecimal } from "@/lib/formatters";
 import { AllocationDonut } from "./allocation-donut";
+import { PerformanceSummary } from "./performance-summary";
 import { InstrumentSearch } from "./instrument-search";
 import {
   contributionRows, contributionStory, currencyName, dataStatus, exposureFacts, exposureLabel, fxRate, groupOf, groupOrder, groups, groupSummaries, minor, money,
@@ -266,7 +267,7 @@ function ValueCard({ view, status }: { view: PortfolioView; status: DataStatus }
     <dl className={styles.metrics}>
       <div className={`${styles.metric} ${styles.metricPrimary}`}>
         <GainIcon size={18} aria-hidden="true" />
-        <dt className={styles.metricLabel}>Zisk / ztráta od {dateLabel(view.openedAt, false)}<span className={styles.num}>{percent(view.investmentGainLossBasisPoints, { signed: true })}</span></dt>
+        <dt className={styles.metricLabel}>Zisk / ztráta od otevření portfolia</dt>
         <dd className={`${styles.metricAmount} ${styles.num}`} data-testid="portfolio-gain-loss">{gain === null ? "—" : signedMoney(gain)}</dd>
       </div>
       {attribution ? <>
@@ -276,6 +277,7 @@ function ValueCard({ view, status }: { view: PortfolioView; status: DataStatus }
         {minor(attribution.realizedGainLossMinor) !== 0n ? <div className={styles.metric}><ReceiptText size={18} aria-hidden="true" /><dt className={styles.metricLabel}>Z toho uzavřené prodeje</dt><dd className={`${styles.metricAmount} ${styles.num}`}>{signedMoney(attribution.realizedGainLossMinor)}</dd></div> : null}
       </> : null}
     </dl>
+    <PerformanceSummary performance={view.performance} />
     <p className={styles.context}>
       <span>Hotovost <strong className={styles.num} data-testid="portfolio-cash">{money(view.availableCashMinor)}</strong></span>
       <span>Investováno <strong className={styles.num} data-testid="portfolio-invested">{view.holdingsMarketValueMinor === null ? "neúplné" : money(view.holdingsMarketValueMinor)}</strong></span>
@@ -356,7 +358,7 @@ function HoldingsCard({ view }: { view: PortfolioView }) {
         <div className={styles.rowValue}><strong className={styles.num}>{money(view.availableCashMinor)}</strong><span className={styles.change}>bez kurzu a výnosu</span></div>
       </li>
     </ul>
-    <div className={styles.total}><span>Celkem</span><div className={styles.rowValue}><strong className={styles.num}>{view.portfolioTotalMinor === null ? "—" : money(view.portfolioTotalMinor)}</strong><Change value={view.investmentGainLossMinor} basisPoints={view.investmentGainLossBasisPoints} /></div></div>
+    <div className={styles.total}><span>Celkem</span><div className={styles.rowValue}><strong className={styles.num}>{view.portfolioTotalMinor === null ? "—" : money(view.portfolioTotalMinor)}</strong><Change value={view.investmentGainLossMinor} /></div></div>
     {currencies.length > 0 ? <p className={styles.note}><ArrowLeftRight size={15} aria-hidden="true" /><span>
       Hodnota = kusy × cena v {currencies.map(({ currency }) => currency).join(" nebo ")} × {fxSourceLabel(view)}.{" "}
       {currencies.map((item) => `${currencyName(item.currency)}: při nákupu průměrně ${fxRate(item.purchaseFxRate)}, teď ${fxRate(item.currentFxRate)} Kč.`).join(" ")}{" "}
