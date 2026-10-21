@@ -335,6 +335,9 @@ try {
   await page.screenshot({ path: `${screenshotDir}/buy-1440.png`, fullPage: true });
   await orderDialog.getByRole("button", { name: "Zkontrolovat pokyn", exact: true }).click();
   await orderDialog.getByRole("heading", { name: "Zkontroluj investici", exact: true }).waitFor();
+  assert.equal(await orderDialog.getByTestId("review-trade-fee").textContent(), "10 Kč");
+  assert.equal(await orderDialog.getByTestId("review-fx-cost").textContent(), "12,97 Kč");
+  assert.equal(await orderDialog.getByTestId("review-total-cost").textContent(), "22,97 Kč");
   await page.screenshot({ path: `${screenshotDir}/buy-review-1440.png`, fullPage: true });
   await page.setViewportSize({ width: 320, height: 900 });
   await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
@@ -347,6 +350,11 @@ try {
   await orderDialog.getByRole("alert").filter({ hasText: "dost hotovosti" }).waitFor();
   await page.screenshot({ path: `${screenshotDir}/insufficient-cash-1440.png`, fullPage: true });
   await orderDialog.getByRole("button", { name: "Upravit pokyn", exact: true }).click();
+  // A different fictional profile persists, but switching back never reprices past trades.
+  await orderDialog.getByLabel("Fiktivní profil brokera").selectOption("investi-low-fx-v1");
+  await page.waitForFunction(() => document.querySelector("#broker-fee-profile")?.value === "investi-low-fx-v1");
+  assert.equal((await sql`select broker_fee_profile_id from learning_profile where user_id = ${userId}`)[0].broker_fee_profile_id, "investi-low-fx-v1");
+  await orderDialog.getByLabel("Fiktivní profil brokera").selectOption("investi-standard-v1");
   await orderDialog.getByLabel("Množství", { exact: true }).fill("0.25");
   await orderDialog.getByRole("button", { name: "Zkontrolovat pokyn", exact: true }).click();
   await page.screenshot({ path: `${screenshotDir}/buy-review-confirm-1440.png`, fullPage: true });
@@ -362,7 +370,7 @@ try {
   // Overview after one buy: real ledger numbers, no fabricated performance.
   await page.goto(`${baseURL}/lab/portfolio`);
   await page.getByRole("heading", { name: "Moje portfolio", level: 1 }).waitFor();
-  assert.equal(await page.getByTestId("portfolio-cash").textContent(), "1 351,62 Kč");
+  assert.equal(await page.getByTestId("portfolio-cash").textContent(), "1 338,38 Kč");
   const coherent = async (label) => {
     const cash = minorFromCzk(await page.getByTestId("portfolio-cash").textContent());
     const invested = minorFromCzk(await page.getByTestId("portfolio-invested").textContent());
@@ -370,13 +378,15 @@ try {
     assert.equal(cash + invested, total, `${label}: value = cash + holdings`);
     return { cash, invested, total };
   };
-  assert.equal((await coherent("single holding")).total, 200_000n, "a buy at the observed price moves value from cash to holdings only");
-  assert.equal(await page.getByTestId("portfolio-gain-loss").textContent(), "0 Kč", "the first holding does not fabricate performance");
-  assert.match(clean(await page.getByTestId("holding-AAPL").innerText()), /AAPL 32,4 %/, "weight is measured against the whole portfolio, cash included");
+  assert.equal((await coherent("single holding")).total, 198_676n, "commission and conversion reduce portfolio value by 13.24 Kč");
+  assert.equal(await page.getByTestId("portfolio-gain-loss").textContent(), "−13,24 Kč", "fees are included in performance");
+  assert.equal(await page.getByTestId("portfolio-cost-effect").textContent(), "−13,24 Kč");
+  assert.equal(await page.getByTestId("portfolio-fx-effect").textContent(), "0 Kč", "commission is not attributed to currency movement");
+  assert.match(clean(await page.getByTestId("holding-AAPL").innerText()), /AAPL 32,6 %/, "weight is measured against the whole portfolio, cash included");
   assert.equal(await page.getByText(/cíl \d|Můj mix|mimo mix/).count(), 0, "no targets or mixes");
-  assert.match(clean(await page.getByRole("img", { name: /Rozložení portfolia/ }).getAttribute("aria-label")), /^Rozložení portfolia: Akcie 32,4 %, 648,38 Kč; Hotovost 67,6 %, 1 351,62 Kč\.$/, "the split names each share in koruny");
-  assert.equal(await page.getByText("Zatím se nic nepohnulo.").count(), 1, "unchanged sample prices are explained, not dressed up");
-  assert.equal(await page.getByTestId("contribution-equity").count(), 0, "no all-zero contribution chart");
+  assert.match(clean(await page.getByRole("img", { name: /Rozložení portfolia/ }).getAttribute("aria-label")), /^Rozložení portfolia: Akcie 32,6 %, 648,38 Kč; Hotovost 67,4 %, 1 338,38 Kč\.$/, "the split names each share in koruny");
+  assert.equal(await page.getByText(/Poplatky a přirážka konverze otevřených pozic ubraly/).count(), 1, "costs are explained independently of price and FX");
+  assert.equal(clean(await page.getByTestId("contribution-costs").locator('td[role="cell"]').textContent()), "−13,24 Kč", "the contribution chart explains costs without inventing market movement");
   assert.equal(await page.getByRole("status").filter({ hasText: "Ukázková data" }).count(), 1, "the data banner names sample data");
   await page.getByText("Cvičný kapitál je vklad, ne výnos.", { exact: false }).waitFor();
   await responsive(page, "overview-single", { ready: () => page.getByTestId("portfolio-value").waitFor() });
@@ -396,10 +406,10 @@ try {
   await page.waitForURL(/\/lab\/portfolio$/);
   await page.getByTestId("holding-VWCE").waitFor();
   const afterEtf = await coherent("two holdings");
-  assert.equal(afterEtf.total, 200_000n, "buying at observed prices moves value from cash to holdings only");
-  assert.equal(clean(await page.getByTestId("portfolio-gain-loss").textContent()), "0 Kč", "two buys at observed prices fabricate no performance");
+  assert.equal(afterEtf.total, 197_367n, "two purchases include commission and FX costs");
+  assert.equal(clean(await page.getByTestId("portfolio-gain-loss").textContent()), "−26,33 Kč", "two purchases include only their real simulated costs");
   const split = clean(await page.getByRole("img", { name: /Rozložení portfolia/ }).getAttribute("aria-label"));
-  assert.match(split, /^Rozložení portfolia: Akcie 32,4 %, 648,38 Kč; ETF [\d,]+ %, [\d ,]+ Kč; Hotovost [\d,]+ %, [\d ,]+ Kč\.$/);
+  assert.match(split, /^Rozložení portfolia: Akcie 32,9 %, 648,38 Kč; ETF [\d,]+ %, [\d ,]+ Kč; Hotovost [\d,]+ %, [\d ,]+ Kč\.$/);
   const legend = page.locator('section[aria-labelledby="allocation-title"]');
   for (const label of ["Akcie", "ETF", "Hotovost"]) await legend.getByText(label, { exact: true }).waitFor();
   const ledger = await sql`select pt.side, pt.client_idempotency_key from portfolio_trade pt join portfolio p on p.id = pt.portfolio_id where p.user_id = ${userId} and p.closed_at is null order by pt.executed_at, pt.id`;
@@ -456,9 +466,13 @@ try {
   const sellDialog = page.getByRole("dialog", { name: "Prodat" });
   await sellDialog.getByLabel("Množství k prodeji").fill("1");
   await sellDialog.getByRole("button", { name: "Prodat AAPL", exact: true }).click();
+  await sellDialog.getByRole("button", { name: "Potvrdit prodej AAPL", exact: true }).click();
   await sellDialog.getByRole("alert").filter({ hasText: "prodat více" }).waitFor();
+  await sellDialog.getByRole("button", { name: "Upravit pokyn", exact: true }).click();
   await sellDialog.getByLabel("Množství k prodeji").fill("0.05");
   await sellDialog.getByRole("button", { name: "Prodat AAPL", exact: true }).click();
+  assert.equal(await sellDialog.getByTestId("review-trade-fee").textContent(), "10 Kč");
+  await sellDialog.getByRole("button", { name: "Potvrdit prodej AAPL", exact: true }).click();
   await page.getByRole("status").filter({ hasText: "Prodej dokončen" }).waitFor();
 
   // Attribution (state 5): a ledger buy at another price and FX splits the result into price and FX.
@@ -475,9 +489,10 @@ try {
   const gain = minorFromCzk(await page.getByTestId("portfolio-gain-loss").textContent());
   const realizedRow = page.getByTestId("contribution-realized");
   const realized = await realizedRow.count() ? minorFromCzk((await realizedRow.locator('td[role="cell"]').textContent())) : 0n;
-  assert.equal(2772n - 742n + realized, gain, "price + FX + closed sells add up exactly to the investment gain");
+  const costs = minorFromCzk(await page.getByTestId("portfolio-cost-effect").textContent());
+  assert.equal(2772n - 742n + realized + costs, gain, "price + FX + costs + closed sells add up exactly to investment gain");
   assert.equal(clean(await page.getByTestId("contribution-equity").locator('td[role="cell"]').textContent()), "+27,72 Kč");
-  assert.match(clean(await page.locator("#story-title").textContent()), /^Přibylo 20 Kč\. Nejvíc pohnuly akcie\.$/);
+  assert.match(clean(await page.locator("#story-title").textContent()), /^Ubylo 17 Kč\. Nejvíc pohnuly akcie\.$/);
   assert.match(clean(await page.locator("main").innerText()), /Akcie \(AAPL, MSFT\) přidaly 27,72 Kč pohybem cen\./);
   await coherent("attribution");
   await responsive(page, "overview-attribution", { ready: () => page.getByTestId("portfolio-value").waitFor() });

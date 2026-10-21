@@ -3,19 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   user: vi.fn(), requireUnlock: vi.fn(), search: vi.fn(), execute: vi.fn(), reset: vi.fn(),
   preview: vi.fn(), view: vi.fn(), revalidate: vi.fn(), executeAllocation: vi.fn(), reviewAllocation: vi.fn(), quotes: vi.fn(),
-  budget: vi.fn(),
+  budget: vi.fn(), reviewTrade: vi.fn(), setProfile: vi.fn(),
 }));
 vi.mock("@/features/rate-limit", () => ({ enforceMarketDataBudget: mocks.budget }));
 vi.mock("@/lib/session", () => ({ getCurrentUser: mocks.user }));
 vi.mock("@/features/progression/repository", () => ({ requirePortfolioLabUnlock: mocks.requireUnlock }));
 vi.mock("./environment", () => ({ portfolioMarketData: { service: { searchInstruments: mocks.search } } }));
-vi.mock("./repository", () => ({ executeTrade: mocks.execute, resetActivePortfolio: mocks.reset, executeAllocation: mocks.executeAllocation, reviewAllocation: mocks.reviewAllocation }));
+vi.mock("./repository", () => ({ executeTrade: mocks.execute, resetActivePortfolio: mocks.reset, executeAllocation: mocks.executeAllocation, reviewAllocation: mocks.reviewAllocation, reviewTrade: mocks.reviewTrade, setBrokerFeeProfile: mocks.setProfile }));
 vi.mock("./service", () => ({ loadInstrumentPreview: mocks.preview, loadPortfolioView: mocks.view, loadAllocationQuotes: mocks.quotes }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 
 import { RequestRateLimitedError } from "@/features/rate-limit/limiter";
 import {
   buyPortfolioAction, loadAllocationQuotesAction, loadInstrumentPreviewAction, resetPortfolioAction, reviewPortfolioAllocationAction,
+  reviewPortfolioTradeAction, setBrokerFeeProfileAction,
   savePortfolioAllocationAction, searchPortfolioInstrumentsAction, sellPortfolioAction,
 } from "./actions";
 
@@ -33,6 +34,8 @@ describe("Portfolio Lab server authorization", () => {
     const results = await Promise.all([
       searchPortfolioInstrumentsAction("Apple"),
       loadInstrumentPreviewAction("US-XNAS:AAPL"),
+      reviewPortfolioTradeAction({ instrumentId: input.instrumentId, quantity: input.quantity, side: "BUY" }),
+      setBrokerFeeProfileAction({ profileId: "investi-standard-v1" }),
       buyPortfolioAction(input),
       sellPortfolioAction(input),
       resetPortfolioAction({ clientIdempotencyKey: crypto.randomUUID() }),
@@ -41,13 +44,15 @@ describe("Portfolio Lab server authorization", () => {
       savePortfolioAllocationAction({ ...mix, clientIdempotencyKey: crypto.randomUUID() }),
     ]);
     for (const result of results) expect(result).toMatchObject({ ok: false, message: "Portfolio Lab je zamčený. Dokonči Základy investování a odemkni ho." });
-    expect(mocks.requireUnlock).toHaveBeenCalledTimes(8);
+    expect(mocks.requireUnlock).toHaveBeenCalledTimes(10);
     expect(mocks.quotes).not.toHaveBeenCalled();
     expect(mocks.reviewAllocation).not.toHaveBeenCalled();
     expect(mocks.executeAllocation).not.toHaveBeenCalled();
     expect(mocks.search).not.toHaveBeenCalled();
     expect(mocks.preview).not.toHaveBeenCalled();
     expect(mocks.execute).not.toHaveBeenCalled();
+    expect(mocks.reviewTrade).not.toHaveBeenCalled();
+    expect(mocks.setProfile).not.toHaveBeenCalled();
     expect(mocks.reset).not.toHaveBeenCalled();
     expect(mocks.view).not.toHaveBeenCalled();
     expect(mocks.budget).not.toHaveBeenCalled();
@@ -118,5 +123,31 @@ describe("target mix input boundary", () => {
     expect(await savePortfolioAllocationAction({ ...mix, clientIdempotencyKey: key })).toEqual({ ok: true, duplicate: false, tradeCount: 1 });
     expect(mocks.executeAllocation).toHaveBeenCalledWith("unlocked-user", { ...mix, clientIdempotencyKey: key });
     expect(mocks.revalidate).toHaveBeenCalledWith("/lab/portfolio");
+  });
+});
+
+describe("cost authority boundary", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mocks.user.mockResolvedValue({ id: "owner" });
+    mocks.requireUnlock.mockResolvedValue(undefined);
+  });
+  it("rejects costs, tariffs and ownership supplied by the client", async () => {
+    const trade = { instrumentId: "US-XNAS:AAPL", quantity: "0.25", clientIdempotencyKey: crypto.randomUUID() };
+    for (const extra of [{ feeBaseMinor: "0" }, { fxMarkupBps: 0 }, { price: 1 }, { userId: "victim" }]) {
+      expect(await buyPortfolioAction({ ...trade, ...extra })).toMatchObject({ ok: false });
+      expect(await reviewPortfolioTradeAction({ instrumentId: trade.instrumentId, quantity: trade.quantity, side: "BUY", ...extra })).toMatchObject({ ok: false });
+    }
+    expect(await setBrokerFeeProfileAction({ profileId: "unknown" })).toMatchObject({ ok: false });
+    expect(await setBrokerFeeProfileAction({ profileId: "investi-standard-v1", rateBps: 0 })).toMatchObject({ ok: false });
+    expect(mocks.execute).not.toHaveBeenCalled(); expect(mocks.reviewTrade).not.toHaveBeenCalled(); expect(mocks.setProfile).not.toHaveBeenCalled();
+  });
+  it("resolves review and saved profile only for the authenticated learner", async () => {
+    mocks.reviewTrade.mockResolvedValue({ feeBaseMinor: "1000" });
+    expect(await reviewPortfolioTradeAction({ instrumentId: "US-XNAS:AAPL", quantity: "0.25", side: "SELL" })).toEqual({ ok: true, cost: { feeBaseMinor: "1000" } });
+    expect(mocks.reviewTrade).toHaveBeenCalledWith("owner", { instrumentId: "US-XNAS:AAPL", quantity: "0.25", side: "SELL" });
+    mocks.setProfile.mockResolvedValue("investi-low-fx-v1");
+    expect(await setBrokerFeeProfileAction({ profileId: "investi-low-fx-v1" })).toEqual({ ok: true, feeProfileId: "investi-low-fx-v1" });
+    expect(mocks.setProfile).toHaveBeenCalledWith("owner", "investi-low-fx-v1");
   });
 });

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { db } from "@/db";
 import type { Currency } from "@/features/market-data/contracts";
 import { attributeHolding, foldQuoteCost, impliedPurchaseFxUnits } from "./attribution";
 import { allocationBasisPoints, foldTrades, valuePortfolio, type HoldingValuation } from "./domain";
@@ -17,7 +18,7 @@ import {
   type PortfolioInstrumentPreview,
   type ValuationUnavailableReason,
 } from "./market-data";
-import { getOrCreateActivePortfolio, loadLatestAllocation, loadLedgerRows, type AllocationLineRow } from "./repository";
+import { getOrCreateActivePortfolio, loadLatestAllocation, loadLedgerRows, readBrokerFeeProfile, type AllocationLineRow } from "./repository";
 
 /** Sector or country split of the whole portfolio; "unvalued" while any quote or FX is missing. */
 export type PortfolioExposureView =
@@ -35,6 +36,7 @@ export type PortfolioExposureView =
   };
 
 export interface PortfolioView {
+  feeProfileId: string;
   portfolioId: string;
   baseCurrency: Currency;
   openedAt: string;
@@ -56,6 +58,8 @@ export interface PortfolioView {
   /** Price/FX split of the investment gain/loss; null while the valuation is incomplete. */
   attribution: {
     priceEffectMinor: string;
+    /** Remaining buy costs; sold portions are already included in realized gain/loss. */
+    costEffectMinor?: string;
     fxEffectMinor: string;
     realizedGainLossMinor: string;
     currencies: Array<{ currency: Currency; purchaseFxRate: string; currentFxRate: string; effectMinor: string }>;
@@ -109,6 +113,10 @@ export interface PortfolioView {
     unitPrice: string;
     quoteCurrency: string;
     grossAmountBaseMinor: string;
+    feeBaseMinor?: string;
+    fxMarkupBaseMinor?: string | null;
+    feeProfileId?: string | null;
+    cashDeltaBaseMinor?: string;
     executedAt: string;
   }>;
 }
@@ -147,7 +155,7 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
     return [[holding.instrumentId, attributeHolding({
       quoteCurrency: quoteCurrency.get(holding.instrumentId)!,
       quantityUnits: holding.quantityUnits,
-      costBasisMinor: holding.costBasisMinor,
+      costBasisMinor: holding.referenceCostBasisMinor,
       costQuoteUnits: cost.costQuoteUnits,
       marketValueMinor: holding.marketValueMinor,
       priceUnits: decimalToPriceUnits(observation.currentPrice),
@@ -179,10 +187,11 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
     priceEffectMinor: [...attributed.values()].reduce((sum, value) => sum + value.priceEffectMinor, 0n).toString(),
     fxEffectMinor: [...attributed.values()].reduce((sum, value) => sum + value.fxEffectMinor, 0n).toString(),
     realizedGainLossMinor: folded.realizedGainLossMinor.toString(),
+    costEffectMinor: valued.holdings.reduce((sum, holding) => sum + holding.referenceCostBasisMinor - holding.costBasisMinor, 0n).toString(),
     currencies: foreign.flatMap((currency) => {
       const members = valued.holdings.filter(({ instrumentId }) => quoteCurrency.get(instrumentId) === currency);
       const purchase = impliedPurchaseFxUnits(
-        members.reduce((sum, holding) => sum + holding.costBasisMinor, 0n),
+        members.reduce((sum, holding) => sum + holding.referenceCostBasisMinor, 0n),
         members.reduce((sum, holding) => sum + quoteCost.get(holding.instrumentId)!.costQuoteUnits, 0n),
       );
       const currentFxRate = observationByInstrument.get(members[0].instrumentId)?.fxRate;
@@ -196,6 +205,7 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
     }),
   };
   return {
+    feeProfileId: (await readBrokerFeeProfile(db, userId)).id,
     portfolioId: rows.portfolio.id,
     baseCurrency: rows.portfolio.baseCurrency as Currency,
     openedAt: rows.portfolio.openedAt.toISOString(),
@@ -265,6 +275,10 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
       unitPrice: trade.unitPrice,
       quoteCurrency: trade.quoteCurrency,
       grossAmountBaseMinor: trade.grossAmountBaseMinor.toString(),
+      feeBaseMinor: trade.feeBaseMinor.toString(),
+      fxMarkupBaseMinor: trade.fxMarkupBaseMinor?.toString() ?? null,
+      feeProfileId: trade.feeProfileId,
+      cashDeltaBaseMinor: trade.cashDeltaBaseMinor.toString(),
       executedAt: trade.executedAt.toISOString(),
     })),
   };

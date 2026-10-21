@@ -30,7 +30,28 @@ Holdings are folded from the immutable trade ledger using weighted-average cost.
 
 ## Transaction boundary
 
-Buy, sell, reset, and lesson completion lock the learner’s `user` row. Under that lock a trade re-reads receipt entitlement, active-generation trades, cash, and quantities. This serializes competing buys, competing sells, and reward/trade races. Client input is limited to instrument identity, quantity, and an idempotency key; execution price, FX, cash effects, and performance are server-derived.
+Buy, sell, reset, and lesson completion lock the learner’s `user` row. Under that lock a trade re-reads receipt entitlement, active-generation trades, cash, and quantities. This serializes competing buys, competing sells, and reward/trade races. Client input is limited to instrument identity, quantity, an idempotency key, and optionally the reviewed profile identity (only a stale-profile guard); execution price, FX, cash effects, and performance are server-derived.
+
+## Fictional broker costs (LAB-01 / #136)
+
+New executions use immutable, versioned fictional tariffs from `features/portfolio/costs.ts`:
+
+| Profile | Commission on reference notional | Minimum / maximum | FX markup |
+| --- | --- | --- | --- |
+| investi standard (`investi-standard-v1`, default) | 0.10% | 10 / 200 Kč | 0.50% |
+| investi nižší konverze (`investi-low-fx-v1`) | 0.20% | 25 / 300 Kč | 0.10% |
+
+These are illustrative educational settings, not real broker prices or recommendations. V1 commission is denominated in CZK. CZK instruments incur no conversion markup. Custody requires simulated time (#139) and is excluded; bid/ask spread and slippage are not fabricated from single-price observations. Real broker execution is not modeled.
+
+The learner can choose a profile in the order panel. The server validates the registry identity and saves it in `learning_profile.broker_fee_profile_id` under the learner lock; a missing selection resolves to the default. Reset preserves this user-level preference. The future IPS (#127) can reference the same identity. Changing a tariff requires a new versioned id; changing a selection never reprices existing trades.
+
+`computeTradeCost` is the pure shared boundary for Lab review, execution, allocation planning and lesson cost calculations. It accepts scaled integer quantity, price and reference FX, side, quote currency and a tariff; it returns exact minor-unit reference notional, commission, conversion cost, execution notional, cash delta and total cost. **Lesson 2.2.2 is not authored/published in the current registry**; its future calculator must import this function rather than duplicate it. This infrastructure change does not add or publish curriculum or change lesson identities/rewards.
+
+Commission is the reference notional times the basis-point rate, bounded by the CZK minimum/maximum. Execution FX is reference FX × `(1 + markup)` on buys and `(1 − markup)` on sells, rounded to the ledger's 12 dp FX precision. Each notional and commission money product rounds once to minor units, half away from zero; calculations never multiply a rounded unit price. The conversion cost is the adverse difference between rounded reference and execution notionals. Buy cash delta is `−(execution notional + commission)`; sell delta is `execution notional − commission`. A sale whose commission exceeds proceeds requires enough existing cash to cover the difference. Valuation continues to use reference FX. Separately rounded executions and remaining holdings can leave minor-unit residuals.
+
+Both buy and sell require a server-calculated review before UI confirmation. Review is an estimate, not a price lock; confirmation re-observes market data and calculates costs under the same learner lock as cash/holdings. A changed reviewed tariff is refused and requires a new review. No client amount, fee, price or rate is accepted as authority.
+
+Migration `0016_portfolio_costs` adds nullable audit fields without updating old trades. Every new trade (including newly seeded demos and allocation executions) snapshots profile id, commission rate/minimum/maximum/currency, applied FX markup, markup amount, reference FX and reference notional alongside existing execution FX and fee. A completeness/consistency check rejects partial snapshots. Legacy trades retain NULL cost metadata and their original fee/cash values. Idempotent retries return the original trade, even after a profile change. No receipt, grant or contributed capital is recalculated.
 
 ## Target mixes
 
@@ -42,22 +63,23 @@ Executing a mix produces ordinary ledger trades. Under the same learner-row lock
 total          = cash + Σ holding value at the execution observations
 target_i       = floor(total × weight_i / 10 000)
 sells first    : surplus value → quantity floored to 8 dp (a 0 % target sells everything)
-buys after     : min(shortfall, cash still available) → quantity floored to 8 dp
+buys after     : min(shortfall, cash above target reserve) → quantity affordable INCLUDING fees/FX
 ```
 
-Each executed value is therefore at most its target, cash never goes negative, and every rounding remainder stays as cash. Differences under 1 Kč are not traded. The client sends only instrument identities, integer weights and an idempotency key; trades use derived keys `allocation:<key>:<n>`. If any involved quote is not usable for execution (market closed, stale, unavailable, other provider), nothing is written. `reviewAllocation` runs the same plan without writing, as an estimate for the review step.
+An exact monotonic quantity search includes commission and conversion in each buy budget. Each total buy debit is therefore at most its target budget, cash never goes negative, and every rounding remainder stays as cash. Differences under 1 Kč are not traded. The client sends only instrument identities, integer weights and an idempotency key; trades use derived keys `allocation:<key>:<n>`. If any involved quote is not usable for execution (market closed, stale, unavailable, other provider), nothing is written. `reviewAllocation` runs the same plan without writing, as an estimate for the review step.
 
 ## Price and FX attribution
 
 The investment gain/loss is split read-only, from the ledger and the same observations as the valuation:
 
 ```text
-unrealized    = market value − cost basis
-price effect  = round(cost basis × current quote-currency value / cost in quote currency) − cost basis
-FX effect     = unrealized − price effect
-gain/loss     = Σ price effect + Σ FX effect + realized gain/loss of sells
+reference basis = remaining purchase notional at reference FX (excluding costs)
+price effect    = round(reference basis × current quote-currency value / cost in quote currency) − reference basis
+FX effect       = market value − reference basis − price effect
+cost effect     = reference basis − cost basis (open positions only, negative)
+gain/loss       = Σ price effect + Σ FX effect + Σ cost effect + realized gain/loss of sells
 ```
 
-Cost in quote currency is folded with the same weighted-average allocation as the CZK cost basis, so the implied purchase rate is the weighted average actually paid. The parts sum exactly to the investment gain/loss. CZK-quoted holdings have no FX effect. Attribution is absent while the valuation is incomplete; nothing is estimated.
+Cost in quote currency is folded with the same weighted-average allocation as the CZK cost basis, so the implied purchase rate represents reference FX without confusing commission or the conversion markup with market movement. Both reference and all-in bases allocate proportionally on sells; realized gain/loss already includes the sold portion's buy costs and sale costs, which are not counted again as open-position costs. The parts sum exactly to the investment gain/loss. CZK-quoted holdings have no FX effect. Attribution is absent while the valuation is incomplete; nothing is estimated.
 
 Holding weights in the Lab are shares of the whole portfolio value including cash, so they compare directly with the mix targets. The earlier `allocationBasisPoints` (share of invested value only) is unchanged.

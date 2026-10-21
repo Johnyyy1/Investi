@@ -11,6 +11,7 @@ export interface LedgerTrade {
   quantity: string;
   grossAmountBaseMinor: bigint;
   feeBaseMinor: bigint;
+  referenceGrossAmountBaseMinor?: bigint | null;
   cashDeltaBaseMinor: bigint;
 }
 
@@ -21,6 +22,7 @@ export interface FoldedHolding {
   assetType: string;
   quantityUnits: bigint;
   costBasisMinor: bigint;
+  referenceCostBasisMinor: bigint;
   averageCostBaseMinor: bigint;
   realizedGainLossMinor: bigint;
 }
@@ -47,18 +49,22 @@ export function foldTrades(contributedPracticeCapitalMinor: bigint, trades: read
       assetType: trade.instrumentAssetType,
       quantityUnits: 0n,
       costBasisMinor: 0n,
+      referenceCostBasisMinor: 0n,
       realizedGainLossMinor: 0n,
     };
 
     if (trade.side === "BUY") {
       current.quantityUnits += quantityUnits;
       current.costBasisMinor += trade.grossAmountBaseMinor + trade.feeBaseMinor;
+      current.referenceCostBasisMinor += trade.referenceGrossAmountBaseMinor ?? trade.grossAmountBaseMinor;
     } else {
       if (quantityUnits > current.quantityUnits) throw new Error(`Trade ledger oversells ${trade.instrumentId}.`);
       const allocatedCost = quantityUnits === current.quantityUnits
         ? current.costBasisMinor
         : roundDivide(current.costBasisMinor * quantityUnits, current.quantityUnits);
       const realized = trade.cashDeltaBaseMinor - allocatedCost;
+      const allocatedReference = quantityUnits === current.quantityUnits ? current.referenceCostBasisMinor : roundDivide(current.referenceCostBasisMinor * quantityUnits, current.quantityUnits);
+      current.referenceCostBasisMinor -= allocatedReference;
       current.quantityUnits -= quantityUnits;
       current.costBasisMinor -= allocatedCost;
       current.realizedGainLossMinor += realized;
