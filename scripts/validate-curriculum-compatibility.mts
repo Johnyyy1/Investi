@@ -6,7 +6,8 @@ import { db } from "../src/db";
 import { seedCurriculum } from "../src/db/curriculum";
 import { lesson, lessonAward, lessonProgress, progressionUnlock, user } from "../src/db/schema";
 import { FOUNDATIONS_MODULE_ID } from "../src/features/lessons/foundations/manifest";
-import { getStepDefinitions } from "../src/features/lessons/returns/guided-flow";
+import { getStepDefinitions } from "../src/features/lessons/steps";
+import type { StepDefinition } from "../src/features/lessons/types";
 import { completeLesson, markLessonInProgress, saveLessonProgress } from "../src/features/progress/repository";
 import { correctAnswers } from "../src/features/progress/test-fixtures";
 import { lessonSteps } from "../src/features/progress/transition";
@@ -20,7 +21,7 @@ assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(new URL(process.env.DATAB
 const ids: string[] = [];
 const extraIds = Array.from({ length: 3 }, () => `qa-foundations-${randomUUID()}`);
 const lessonId = "foundations-why-invest";
-const steps = getStepDefinitions(lessonId) as { title: string; blocks: readonly string[] }[];
+const steps = getStepDefinitions(lessonId) as StepDefinition[];
 const originalSteps = [...steps];
 const oldFinal = steps.length - 1;
 const required = progressionUnlocks.PORTFOLIO_LAB.prerequisiteLessonIds;
