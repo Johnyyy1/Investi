@@ -15,14 +15,14 @@ export const LEGAL_UPDATED_AT = "16. října 2026";
 
 export type LegalSection = { id: string; title: string; body: ReactNode };
 
-export function LegalPage({ title, intro, sections }: { title: string; intro: ReactNode; sections: readonly LegalSection[] }) {
+export function LegalPage({ title, intro, sections, updatedAt = LEGAL_UPDATED_AT }: { title: string; intro: ReactNode; sections: readonly LegalSection[]; updatedAt?: string }) {
   return <div className={styles.page}>
     <header className={styles.header}><Link className={styles.brand} href="/" aria-label="investi · úvodní stránka">investi!</Link></header>
     <main className={styles.main}>
       <article className={styles.article} aria-labelledby="legal-title">
         <p className={styles.eyebrow}>Právní informace</p>
         <h1 id="legal-title">{title}</h1>
-        <p className={styles.updated}>Poslední aktualizace: {LEGAL_UPDATED_AT}</p>
+        <p className={styles.updated}>Poslední aktualizace: {updatedAt}</p>
         <div className={styles.intro}>{intro}</div>
         <nav className={styles.toc} aria-label="Obsah"><h2>Obsah</h2><ol>{sections.map((section) => <li key={section.id}><a href={`#${section.id}`}>{section.title}</a></li>)}</ol></nav>
         {sections.map((section, index) => <section key={section.id} id={section.id} aria-labelledby={`${section.id}-title`} className={styles.section}>

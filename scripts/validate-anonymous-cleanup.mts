@@ -34,6 +34,7 @@ async function identity(kind: Kind, age: number, sessionExpiries: number[] = [])
 }
 /** Learning rows that must disappear with their owner. */
 async function withLearning(userId: string, lessonId: string) {
+  await sql`insert into learner_artifact (id,user_id,kind,version,payload,request_id) values (${randomUUID()},${userId},'goal_map',1,'{"goals":[]}'::jsonb,${randomUUID()})`;
   await sql`insert into lesson_progress (user_id, lesson_id, status, last_position, completed_at, updated_at) values (${userId}, ${lessonId}, 'completed', 2, now(), now())`;
   await sql`insert into lesson_award (user_id, lesson_id, xp, practice_capital_minor, reward_policy_version, learning_date, time_zone, awarded_at)
     values (${userId}, ${lessonId}, 60, 0, 2, current_date, 'Europe/Prague', now())`;
@@ -44,7 +45,8 @@ const exists = async (id: string) => (await sql`select 1 from "user" where id = 
 const owned = async (id: string) => (await sql`select
   (select count(*) from session where user_id = ${id}) + (select count(*) from lesson_progress where user_id = ${id})
   + (select count(*) from lesson_award where user_id = ${id}) + (select count(*) from learning_profile where user_id = ${id})
-  + (select count(*) from progression_unlock where user_id = ${id}) as n`)[0].n;
+  + (select count(*) from progression_unlock where user_id = ${id})
+  + (select count(*) from learner_artifact where user_id = ${id}) as n`)[0].n;
 const shared = async () => (await sql`select (select count(*) from lesson)::int as lessons, (select count(*) from learning_module)::int as modules`)[0];
 
 try {
@@ -88,10 +90,10 @@ try {
 
   for (const id of [expiredGuest, expiredDemo, legacyDemo, sessionlessOld]) {
     assert.equal(await exists(id), false);
-    assert.equal(Number(await owned(id)), 0, "sessions, progress, receipts, profile and unlocks cascade");
+    assert.equal(Number(await owned(id)), 0, "sessions, progress, receipts, profile, unlocks and artifacts cascade");
   }
   for (const id of [activeOldGuest, graceGuest, sessionlessYoung, oldAccount]) assert.equal(await exists(id), true);
-  assert.equal(Number(await owned(oldAccount)), 5, "saved accounts keep everything");
+  assert.equal(Number(await owned(oldAccount)), 6, "saved accounts keep everything");
   assert.deepEqual(await shared(), sharedBefore, "curriculum and other shared rows are untouched");
   console.log("PASS: only anonymous identities without a session valid in the last day are removed, with their data; active old guests, the grace period, fresh identities and saved accounts stay.");
 
