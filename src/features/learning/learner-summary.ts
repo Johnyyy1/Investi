@@ -1,5 +1,5 @@
 import { availableLessons } from "./catalog";
-import { getStepDefinitions } from "../lessons/returns/guided-flow";
+import { getStepDefinitions } from "../lessons/steps";
 
 export type LearnerState = { lessonId: string; status: "not_started" | "in_progress" | "completed"; lastPosition: number; updatedAt: Date; completedAt: Date | null };
 /** Continuity first: latest active lesson, unfinished learning in the last completed module,

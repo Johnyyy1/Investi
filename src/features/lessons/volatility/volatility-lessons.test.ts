@@ -9,7 +9,7 @@ import { validateCompletion, validateMove } from "@/features/progress/transition
 import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, MODULE_REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
 import { evaluateQuestion, isQuestion, type QuestionBlock } from "../question-evaluation";
 import { getAuthoredLesson } from "../registry";
-import { getGuidedSteps } from "../returns/guided-flow";
+import { getGuidedSteps } from "../steps";
 import type { AuthoredLesson, LessonBlock } from "../types";
 import { annualisingVolatilityLesson } from "./annualising-volatility";
 import { volatilityLessons, VOLATILITY_MODULE_ID } from "./manifest";

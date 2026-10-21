@@ -2,7 +2,7 @@ import { moduleCatalog } from "@/features/learning/catalog";
 import type { LearnerState } from "@/features/learning/learner-summary";
 import type { loadLearner } from "@/features/learning/load-learner";
 import { getAuthoredLesson } from "@/features/lessons/registry";
-import { getGuidedSteps, getStepDefinitions } from "@/features/lessons/returns/guided-flow";
+import { getGuidedSteps, getStepDefinitions } from "@/features/lessons/steps";
 import type { AuthoredLesson } from "@/features/lessons/types";
 import { chapterTitle, PLANNED_CHAPTER_TITLE } from "@/components/learning/studovna-model";
 

@@ -1,9 +1,8 @@
+import type { StepDefinition } from "../types";
 import { volatilityLessons } from "./manifest";
 
-type Step = { title: string; kind?: "lesson" | "mastery"; blocks: readonly string[] };
-
 /** Presentation order only. Explanations, examples and answers stay in the authored lessons. */
-export const volatilitySteps: Record<string, readonly Step[]> = {
+export const volatilitySteps: Record<string, readonly StepDefinition[]> = {
   [volatilityLessons[0].id]: [
     { title: "Stejný cíl, jiná cesta", blocks: ["prediction"] },
     { title: "Riziko a volatilita", blocks: ["risk-meaning", "risk-vs-volatility"] },

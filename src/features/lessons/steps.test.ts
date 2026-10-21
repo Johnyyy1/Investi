@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { authoredLessons } from "../registry";
-import { isQuestion } from "../question-evaluation";
-import { getGuidedSteps, getStepDefinitions, isFocusedLesson } from "./guided-flow";
+import { authoredLessons } from "./registry";
+import { isQuestion } from "./question-evaluation";
+import { availableLessons } from "../learning/catalog";
+import { getGuidedSteps, getStepDefinitions, isFocusedLesson, moduleSteps } from "./steps";
 
 describe("shared guided lessons", () => {
   it.each(authoredLessons)("preserves every authored block in $title", (lesson) => {
@@ -22,5 +23,11 @@ describe("shared guided lessons", () => {
     for (const lesson of authoredLessons) expect(isFocusedLesson(`/learn/${lesson.moduleSlug}/${lesson.slug}`)).toBe(true);
     for (const route of ["/dashboard", "/learn", "/learn/returns", "/progress", "/learn/investing-foundations/foundations-checkpoint"]) expect(isFocusedLesson(route)).toBe(false);
     expect(() => getStepDefinitions("returns-log")).toThrow();
+    expect(() => getStepDefinitions("constructor")).toThrow();
+  });
+  it("defines steps for exactly the published lessons, each in one module", () => {
+    const ids = moduleSteps.flatMap((steps) => Object.keys(steps));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.sort()).toEqual(availableLessons.map((lesson) => lesson.id).sort());
   });
 });

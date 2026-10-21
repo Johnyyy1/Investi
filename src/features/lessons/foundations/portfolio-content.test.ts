@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { foundationsContent, foundationsSteps } from "./content";
 import { foundationsLessons } from "./manifest";
-import { getGuidedSteps } from "../returns/guided-flow";
+import { getGuidedSteps } from "../steps";
 
 describe("Foundations learning experience integrity", () => {
   it("keeps the seven stable published lesson IDs and the target sequence", () => {

@@ -1,9 +1,8 @@
+import type { StepDefinition } from "../types";
 import { diversificationLessons } from "./manifest";
 
-type Step = { title: string; kind?: "lesson" | "mastery"; blocks: readonly string[] };
-
 /** Presentation order only. Explanations, examples and answers stay in the authored lessons. */
-export const diversificationSteps: Record<string, readonly Step[]> = {
+export const diversificationSteps: Record<string, readonly StepDefinition[]> = {
   [diversificationLessons[0].id]: [
     { title: "Deset firem, nebo čtyři", blocks: ["prediction"] },
     { title: "Váha pozice", blocks: ["weights", "weight-formula", "weight-practice"] },

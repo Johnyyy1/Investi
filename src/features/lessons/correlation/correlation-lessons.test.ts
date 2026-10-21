@@ -9,7 +9,7 @@ import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, MODULE_REWARD_POLICY_VERSI
 import { lessonUsesRiskHistory } from "../real-history/load";
 import { evaluateQuestion, isQuestion } from "../question-evaluation";
 import { getAuthoredLesson } from "../registry";
-import { getGuidedSteps } from "../returns/guided-flow";
+import { getGuidedSteps } from "../steps";
 import { block, correctAnswers, numericAnswer, wrongAnswers } from "../lesson-test-support";
 import { correlationInCrisesLesson } from "./correlation-in-crises";
 import { correlationRealDataLesson } from "./correlation-real-data";

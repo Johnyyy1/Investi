@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { availableLessons } from "@/features/learning/catalog";
-import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
+import { getGuidedSteps } from "@/features/lessons/steps";
 import { getAuthoredLesson } from "@/features/lessons/registry";
 import { portfolioComposition, studovnaLesson } from "./studovna-model";
 import type { PortfolioView } from "@/features/portfolio/service";
