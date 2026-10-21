@@ -298,6 +298,8 @@ Do not place the mascot everywhere.
 
 8. Learn and lesson UX
 
+Before authoring or revising lessons, read [the Lesson 2.0 authoring standard](docs/education/lesson-standard.md). It defines the learning structure, Czech terminology, dated facts, stable IDs and published-lesson compatibility rules, with copyable lesson/test templates and a review checklist.
+
 The Learn page must answer quickly:
 
 What should I do next?
