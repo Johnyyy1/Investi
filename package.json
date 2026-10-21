@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "npm run check:facts",
     "build": "next build",
+    "check:facts": "tsx scripts/check-facts.mts",
+    "test:facts-browser": "node scripts/validate-facts.mjs",
     "vercel-build": "node scripts/vercel-build.mjs",
     "start": "next start",
     "lint": "eslint",
