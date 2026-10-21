@@ -5,7 +5,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { learningModule, lesson } from "../src/db/schema";
-import { assertCurriculumComplete } from "../src/db/curriculum";
+import { assertCurriculumComplete, seedCurriculum } from "../src/db/curriculum";
 import { availableLessons, getModuleLessons, moduleCatalog } from "../src/features/learning/catalog";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -74,7 +74,21 @@ try {
   }), (error) => error === rolledBack);
   assert.deepEqual(await assertCurriculumComplete(db), { modules: availableModules.length, lessons: canonicalLessons.length });
 
-  console.log(`PASS: curriculum seed matches ${canonicalLessons.length} published lessons across ${availableModules.length} modules.`);
+  // Upsert conflicts update editorial fields only. In particular, a display-module move must
+  // never silently move the persisted lesson (changing its reward policy) or rewrite its URL.
+  await assert.rejects(db.transaction(async (tx) => {
+    const original = availableLessons[0];
+    const otherModuleId = availableLessons.find((definition) => definition.moduleId !== original.moduleId)!.moduleId;
+    await tx.update(lesson).set({ moduleId: otherModuleId, slug: "legacy-published-slug", title: "Outdated title" }).where(eq(lesson.id, original.id));
+    await seedCurriculum(tx);
+    await seedCurriculum(tx);
+    const [row] = await tx.select({ id: lesson.id, moduleId: lesson.moduleId, slug: lesson.slug, title: lesson.title }).from(lesson).where(eq(lesson.id, original.id));
+    assert.deepEqual(row, { id: original.id, moduleId: otherModuleId, slug: "legacy-published-slug", title: original.title }, "re-seeding must preserve existing lesson ownership and slug while updating editorial fields");
+    throw rolledBack;
+  }), (error) => error === rolledBack);
+  assert.deepEqual(await assertCurriculumComplete(db), { modules: availableModules.length, lessons: canonicalLessons.length });
+
+  console.log(`PASS: curriculum seed matches ${canonicalLessons.length} published lessons across ${availableModules.length} modules; repeated upserts preserve existing module ownership and URL.`);
 } finally {
   await client.end();
 }

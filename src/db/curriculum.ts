@@ -8,7 +8,7 @@ type Database = PostgresJsDatabase<Record<string, unknown>>;
 const availableModules = () => moduleCatalog.filter((module) => module.status === "available");
 
 /** Upserts every available module and its lessons from the code catalog. Safe to run on every deploy. */
-export async function seedCurriculum(db: Database) {
+export async function seedCurriculum(db: Pick<Database, "transaction">) {
   const now = new Date();
   await db.transaction(async (tx) => {
     for (const [index, module] of availableModules().entries()) {

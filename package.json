@@ -23,6 +23,7 @@
     "test:volatility-browser": "node scripts/validate-volatility.mjs",
     "test:correlation-browser": "node scripts/validate-correlation-diversification.mjs",
     "test:curriculum-seed": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-curriculum-seed.mts",
+    "test:curriculum-compatibility": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-curriculum-compatibility.mts",
     "test:product": "node scripts/validate-product-shell.mjs",
     "test:progress-browser": "node scripts/validate-progress.mjs",
     "test:marketing-browser": "node scripts/validate-marketing.mjs",

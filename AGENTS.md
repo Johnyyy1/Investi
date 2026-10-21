@@ -298,6 +298,8 @@ Do not place the mascot everywhere.
 
 8. Learn and lesson UX
 
+Before editing a published lesson, follow [published lesson compatibility](docs/education/published-lesson-compatibility.md): preserve identity, saved-step and grading contracts, completed status, and reward receipts. This policy also feeds the Curriculum 2.0 authoring standard (#135).
+
 The Learn page must answer quickly:
 
 What should I do next?

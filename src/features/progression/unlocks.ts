@@ -1,9 +1,19 @@
-import { FOUNDATIONS_MODULE_ID, foundationsLessons } from "@/features/lessons/foundations/manifest";
+import { FOUNDATIONS_MODULE_ID } from "@/features/lessons/foundations/manifest";
 
 export const PORTFOLIO_LAB_UNLOCK_ID = "PORTFOLIO_LAB";
 export const PORTFOLIO_LAB_UNLOCK_CAPITAL_MINOR = 500_000n;
 
-const foundationsLessonIds = foundationsLessons.filter((lesson) => lesson.status === "available").map((lesson) => lesson.id);
+// This entitlement must not grow when Foundations publishes more lessons. Curriculum display
+// placement is independent of these historical IDs; changing requirements belongs in #120.
+const foundationsLessonIds = [
+  "foundations-why-invest",
+  "foundations-stocks",
+  "foundations-etfs-indexes",
+  "foundations-bonds-cash",
+  "foundations-markets",
+  "foundations-risk-reward",
+  "foundations-portfolio",
+] as const;
 
 /** Seven published Foundations lessons earn 7 × 60 = 420 XP. The threshold is named
  * separately so later learning content can contribute without changing the prerequisite. */
