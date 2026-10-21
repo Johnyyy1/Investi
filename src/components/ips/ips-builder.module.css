@@ -1,0 +1,36 @@
+.page { max-width: 68rem; margin: 0 auto; padding: 2.5rem 1.25rem 5rem; color: var(--color-foreground); }
+.header { max-width: 46rem; margin-bottom: 2.5rem; }
+.header h1 { font-family: var(--font-display); font-size: 1.75rem; font-weight: 600; line-height: 1.2; letter-spacing: -.03em; margin: 1rem 0; }
+.header p, .hint { color: var(--color-muted); line-height: 1.6; }
+.link { color: var(--color-primary); text-decoration: underline; text-underline-offset: .2em; display: inline-flex; align-items: center; min-height: 3rem; }
+.form { max-width: 48rem; }
+.section { min-width: 0; border: 0; padding: 0; margin: 0 0 2.5rem; }
+.section > legend, .title { font: 600 1.25rem/1.4 var(--font-display); margin-bottom: 1rem; }
+.fields { display: grid; gap: 1rem; }
+.row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.field { display: grid; min-width: 0; gap: .5rem; font-size: 1rem; line-height: 1.5; }
+.field input, .field select, .field textarea { width: 100%; min-width: 0; min-height: 3rem; padding: .75rem; border: 1px solid var(--color-border-strong); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-foreground); font: inherit; caret-color: var(--color-primary); }
+.field textarea { min-height: 6rem; resize: vertical; }
+.field select { text-overflow: ellipsis; }
+.entry { display: grid; gap: 1rem; padding: 1.25rem 0; border-top: 1px solid var(--color-divider); }
+.entry h3 { font-weight: 600; overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin-top: 1rem; }
+.total { padding: 1rem 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.save { padding-top: 1.5rem; border-top: 1px solid var(--color-border); }
+.consent { display: flex; align-items: flex-start; gap: .75rem; min-height: 3rem; line-height: 1.6; font-size: 1rem; }
+.consent input { width: 1.25rem; height: 1.25rem; flex-shrink: 0; margin-top: .25rem; accent-color: var(--color-primary); }
+.error { color: var(--color-danger); margin: 1rem 0; line-height: 1.6; }
+.status { color: var(--color-primary); margin: 1rem 0; line-height: 1.6; }
+.saved { margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--color-border); }
+.saved p { line-height: 1.6; }
+.history { margin-top: 2rem; }
+.history details { padding: 1rem 0; border-top: 1px solid var(--color-divider); }
+.history summary { cursor: pointer; min-height: 3rem; line-height: 1.6; overflow-wrap: anywhere; }
+.snapshot { display: grid; gap: .75rem; margin-top: 1rem; line-height: 1.6; overflow-wrap: anywhere; }
+.snapshot dt { font-weight: 600; }
+.snapshot ul { padding-left: 1.25rem; list-style: disc; }
+.snapshot dd { white-space: pre-wrap; }
+.confirm { margin-top: 1rem; padding: 1rem; background: var(--color-danger-soft); border-radius: var(--radius-control); }
+.page :is(input, select, textarea, summary, a, button):focus-visible { outline: 3px solid var(--color-foreground); outline-offset: 4px; }
+@media (min-width: 768px) { .header h1 { font-size: 2.5rem; } .page { padding: 3rem 2.5rem 5rem; } }
+@media (max-width: 599px) { .row { grid-template-columns: minmax(0, 1fr); } .actions > button, .actions > a { width: 100%; } }

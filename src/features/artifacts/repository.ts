@@ -69,3 +69,12 @@ export async function hasValidArtifact(reader: Reader, userId: string, kind: Art
   return Boolean(latest && (sourceLessonId === undefined || latest.sourceLessonId === sourceLessonId)
     && artifactContentSchema.safeParse({ kind: latest.kind, payload: latest.payload }).success);
 }
+
+/** Owned revision history, including legacy payloads; never accepts a client-supplied owner. */
+export async function listLearnerArtifactHistory(userId: string, kind: ArtifactKind) {
+  artifactKindSchema.parse(kind);
+  const rows = await db.select().from(learnerArtifact)
+    .where(and(eq(learnerArtifact.userId, userId), eq(learnerArtifact.kind, kind)))
+    .orderBy(desc(learnerArtifact.version));
+  return rows.map(present);
+}

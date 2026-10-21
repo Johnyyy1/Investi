@@ -34,6 +34,8 @@ export function LabHub({ unlock, completedLessonIds, view }: { unlock: LabHubUnl
         : <Guide pose="hourglass">Backtesting můžeš zkusit hned. Portfolio Lab navazuje na Základy.</Guide>}
     </section>
 
+    <div className="mb-6"><Link href="/lab/plan" className="inline-flex min-h-12 items-center text-primary underline underline-offset-4">Můj investiční plán (IPS)</Link><p className="text-sm text-muted">Sepiš si cíle a pravidla ještě před prvním cvičným nákupem.</p></div>
+
     <div className={styles.cards}>
       {view ? <Suspense fallback={<PortfolioSkeleton />}><LoadedPortfolioCard view={view} /></Suspense> : <LockedPortfolioCard unlock={unlock} completedLessonIds={completedLessonIds} />}
       <BacktestingCard />

@@ -23,7 +23,7 @@ const detailTarget: InstrumentSearchTarget = {
 };
 
 /** Search → instrument detail by default. Buying happens on the detail page, one order at a time. */
-export function InstrumentSearch({ id = "instrument-search", label = "Koupit akcii, ETF nebo dluhopis", sample, target = detailTarget }: { id?: string; label?: string; sample: boolean; target?: InstrumentSearchTarget }) {
+export function InstrumentSearch({ id = "instrument-search", label = "Koupit akcii, ETF nebo dluhopis", sample, target = detailTarget, onSelect, searchAction = searchPortfolioInstrumentsAction }: { id?: string; label?: string; sample: boolean; target?: InstrumentSearchTarget; onSelect?: (result: InstrumentSearchResult) => void; searchAction?: typeof searchPortfolioInstrumentsAction }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<readonly InstrumentSearchResult[]>([]);
@@ -40,15 +40,21 @@ export function InstrumentSearch({ id = "instrument-search", label = "Koupit akc
     const current = ++request.current;
     if (normalized.length < 2) return;
     const timeout = window.setTimeout(() => startSearch(async () => {
-      const response = await searchPortfolioInstrumentsAction(normalized);
-      if (current !== request.current) return;
-      setResults(response.results);
-      setActiveIndex(response.results.length ? 0 : -1);
-      if (!response.ok) { setState("error"); setError(response.message); }
-      else setState(response.results.length ? "results" : "empty");
+      try {
+        const response = await searchAction(normalized);
+        if (current !== request.current) return;
+        setResults(response.results);
+        setActiveIndex(response.results.length ? 0 : -1);
+        if (!response.ok) { setState("error"); setError(response.message); }
+        else setState(response.results.length ? "results" : "empty");
+      } catch {
+        if (current !== request.current) return;
+        setResults([]); setActiveIndex(-1); setState("error");
+        setError("Hledání se nepodařilo. Zkus upravit dotaz.");
+      }
     }), 250);
     return () => window.clearTimeout(timeout);
-  }, [query]);
+  }, [query, searchAction]);
 
   function clear() {
     request.current += 1;
@@ -56,7 +62,8 @@ export function InstrumentSearch({ id = "instrument-search", label = "Koupit akc
   }
 
   function open(result: InstrumentSearchResult) {
-    startOpen(() => router.push(target.href(result.instrumentId)));
+    if (onSelect) { onSelect(result); clear(); }
+    else startOpen(() => router.push(target.href(result.instrumentId)));
   }
 
   return <section className={styles.search} aria-labelledby={`${id}-label`}>
