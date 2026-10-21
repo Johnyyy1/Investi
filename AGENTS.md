@@ -378,6 +378,8 @@ Lesson UI comes from the approved design, not from the agent. Compose lessons on
 
 Adding or changing a step kind is a separate implementation task: update the design export, types, `evaluateQuestion`/`feedbackFor`/`answer-keys` for graded kinds, the renderer, specimens, tests and the catalog together.
 
+Product screens outside lessons have approved designs too: the Learn level map, entry assessment, module/checkpoint, IPS, crisis exercise, milestone-A project, tax-lot map, decision-time cards, process feedback, backtest attempt counter and skill-based Progress. [docs/design/product-screens.md](docs/design/product-screens.md) lists them with their PNGs, data sources and open questions (NQ-20 to NQ-47). When implementing one, follow its PNGs and components instead of designing your own, take numbers from the authoritative data rather than the illustrative values in the designs, and state in the PR which open-question recommendations you applied. These designs do not authorize domain changes on their own: reward, persistence and financial work keeps its own rules above.
+
 The Learn page must answer quickly:
 
 What should I do next?

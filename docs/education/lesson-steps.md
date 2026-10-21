@@ -90,7 +90,7 @@ Nehodnotí se. `persona.facts` ukazují data i dopočítané lhůty vedle sebe, 
 - **Ukládání psaných odpovědí** (NQ-11) a **promítnutí rubriky do zvládnutí** (NQ-12).
 - **Tokeny faktů v textu** (`{{klíč}}`) a redakční workflow ověření (#132, #133). Registr je zatím minimální a jeho fakta čekají na ověření.
 
-Otevřené otázky NQ-01 až NQ-14 jsou popsané na nástěnkách v Pen souboru.
+Otevřené otázky NQ-01 až NQ-19 jsou popsané na nástěnkách v Pen souboru. Obrazovky mimo lekce (mapa Učení, vstupní test, IPS, krizový nácvik, daňová mapa, Pokrok…) jsou v [obrazovkách produktu P–Z](../design/product-screens.md).
 
 ## Komponenty (00 · Nové komponenty)
 
