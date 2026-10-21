@@ -1,10 +1,11 @@
 import "dotenv/config";
 
 import assert from "node:assert/strict";
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray } from "drizzle-orm";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { learningModule, lesson } from "../src/db/schema";
+import { assertCurriculumComplete } from "../src/db/curriculum";
 import { availableLessons, getModuleLessons, moduleCatalog } from "../src/features/learning/catalog";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -60,6 +61,18 @@ try {
     })).sort((left, right) => left.slug.localeCompare(right.slug)),
     "Seeded published modules must match the available canonical modules.",
   );
+
+  // The deploy guard: a database migrated but not re-seeded after a module shipped must fail loudly.
+  // Runs inside a rolled-back transaction so existing progress rows are never cascaded away.
+  assert.deepEqual(await assertCurriculumComplete(db), { modules: availableModules.length, lessons: canonicalLessons.length });
+  const removed = getModuleLessons(availableModules.at(-1)!.slug).filter(({ status }) => status === "available").map(({ id }) => id);
+  const rolledBack = Symbol("rollback");
+  await assert.rejects(db.transaction(async (tx) => {
+    await tx.delete(lesson).where(inArray(lesson.id, removed));
+    await assert.rejects(assertCurriculumComplete(tx), (error: Error) => removed.every((id) => error.message.includes(id)));
+    throw rolledBack;
+  }), (error) => error === rolledBack);
+  assert.deepEqual(await assertCurriculumComplete(db), { modules: availableModules.length, lessons: canonicalLessons.length });
 
   console.log(`PASS: curriculum seed matches ${canonicalLessons.length} published lessons across ${availableModules.length} modules.`);
 } finally {

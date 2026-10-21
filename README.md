@@ -27,7 +27,7 @@ Learn investing by doing. The authenticated product is organized around three de
    npm run db:seed
    ```
 
-   On Vercel, production deploys run `vercel-build` (`scripts/vercel-build.mjs`), which applies pending migrations before `next build`. Preview deploys skip migrations so unmerged branches never change the shared database.
+   On Vercel, production deploys run `vercel-build` (`scripts/vercel-build.mjs`), which applies pending migrations and then the curriculum seed before `next build`, so a lesson added to the catalog is completable without a manual step. The seed fails the deploy if any catalog lesson is still missing from the `lesson` table afterwards. Preview deploys skip both so unmerged branches never change the shared database.
 
 4. Start the app:
 
@@ -35,7 +35,7 @@ Learn investing by doing. The authenticated product is organized around three de
    npm run dev
    ```
 
-`db:seed` is idempotent. Apply every committed migration in `drizzle/` (`npm run db:migrate` applies the pending ones in order); the application code assumes the full chain. Historical migrations and their metadata must remain intact.
+`db:seed` is idempotent and safe to run on every deploy. `npm run db:check-curriculum` is a read-only check that exits non-zero when a published catalog module or lesson has no row in the database. Apply every committed migration in `drizzle/` (`npm run db:migrate` applies the pending ones in order); the application code assumes the full chain. Historical migrations and their metadata must remain intact.
 
 ## Optional social sign-in
 
@@ -87,8 +87,9 @@ Every suite below is an npm script in `package.json` unless it is written as `no
 | Script | Purpose |
 | --- | --- |
 | `dev`, `build`, `start` | Next.js development server, production build, production server |
-| `vercel-build` | Production deploys on Vercel: applies pending migrations, then `next build` |
-| `db:migrate`, `db:seed` | Apply committed migrations; seed the curriculum (idempotent) |
+| `vercel-build` | Production deploys on Vercel: applies pending migrations, seeds the curriculum, then `next build` |
+| `db:migrate`, `db:seed` | Apply committed migrations; seed the curriculum (idempotent, fails if a catalog lesson is still missing) |
+| `db:check-curriculum` | Read-only: fail when a published catalog module or lesson is missing from the database |
 | `db:generate`, `db:studio` | Generate a new migration from the Drizzle schema; open Drizzle Studio |
 
 **Static gates** (no database, all in CI)
