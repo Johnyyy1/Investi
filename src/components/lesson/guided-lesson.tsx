@@ -5,7 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CompletionScreen } from "@/components/learning/completion-screen";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { getGuidedSteps } from "@/features/lessons/returns/guided-flow";
+import { getGuidedSteps } from "@/features/lessons/steps";
 import { getModuleBySlug } from "@/features/learning/catalog";
 import { evaluateQuestion, isQuestion } from "@/features/lessons/question-evaluation";
 import type { AuthoredLesson } from "@/features/lessons/types";

@@ -21,6 +21,9 @@ export type LessonBlock =
   | (BaseBlock & { type: "lessonSummary"; title: string; content: string })
   | (BaseBlock & { type: "checkpoint"; label: string; content: string });
 
+/** One guided step: a title and the IDs of the authored blocks it shows, in order. */
+export type StepDefinition = { title: string; kind?: "lesson" | "mastery"; blocks: readonly string[] };
+
 export type AuthoredLesson = {
   id: string;
   moduleSlug: string;

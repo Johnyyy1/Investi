@@ -4,7 +4,7 @@ import { validateMove } from "@/features/progress/transition";
 import { evaluateQuestion, isQuestion } from "../question-evaluation";
 import { comparingInvestmentsLesson as lesson } from "./comparing-investments";
 import { compoundingAndCumulativeReturnsLesson } from "./compounding-and-cumulative-returns";
-import { getGuidedSteps } from "./guided-flow";
+import { getGuidedSteps } from "../steps";
 
 const questions = lesson.blocks.filter(isQuestion);
 

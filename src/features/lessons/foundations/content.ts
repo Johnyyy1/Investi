@@ -1,4 +1,4 @@
-import type { AuthoredLesson, LessonBlock } from "../types";
+import type { AuthoredLesson, LessonBlock, StepDefinition } from "../types";
 import { foundationsLessons } from "./manifest";
 
 type StepKind = "lesson" | "mastery";
@@ -98,4 +98,4 @@ export const foundationsContent: AuthoredLesson[] = flows.map((steps, index) => 
 });
 
 /** Author each block once; the shared guided runner consumes these step definitions. */
-export const foundationsSteps: Record<string, { title: string; kind?: StepKind; blocks: string[] }[]> = Object.fromEntries(flows.map((steps, index) => [foundationsLessons[index].id, steps.map((step) => ({ title: step.title, kind: step.kind, blocks: step.blocks.map((block) => block.id) }))]));
+export const foundationsSteps: Record<string, StepDefinition[]> = Object.fromEntries(flows.map((steps, index) => [foundationsLessons[index].id, steps.map((step) => ({ title: step.title, kind: step.kind, blocks: step.blocks.map((block) => block.id) }))]));

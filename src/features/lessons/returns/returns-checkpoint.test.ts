@@ -5,7 +5,7 @@ import { validateCompletion, validateMove } from "@/features/progress/transition
 import { lessonReward, LESSON_PRACTICE_CAPITAL_MINOR, MODULE_REWARD_POLICY_VERSION } from "@/features/rewards/practice-capital";
 import { block, correctAnswers, numericAnswer, wrongAnswers } from "../lesson-test-support";
 import { evaluateQuestion, isQuestion } from "../question-evaluation";
-import { getGuidedSteps } from "./guided-flow";
+import { getGuidedSteps } from "../steps";
 import { logReturnsLesson } from "./log-returns";
 import { returnsLessons } from "./manifest";
 import { returnsCheckpointLesson as lesson } from "./returns-checkpoint";
