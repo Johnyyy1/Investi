@@ -38,7 +38,8 @@ async function fill(value, correct = true) {
   await button("Zkontrolovat odpověď").click();
   await heading(correct ? "Správně" : "Zkus to ještě jednou");
 }
-async function retry() { await button("Zkusit znovu").click(); }
+// Retry clears the answers; wait for that render, or refilling an unchanged value fires no change event and is lost.
+async function retry() { await button("Zkusit znovu").click(); await button("Zkontrolovat odpověď").waitFor(); }
 async function layout(label, screenshots = false) {
   for (const width of [320, 375, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });

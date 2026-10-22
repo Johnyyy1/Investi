@@ -181,7 +181,8 @@
   .plannedChapter > span:last-child { grid-column: 2; }
 }
 @container onboarding (width < 14em) {
-  .planTitle, .lessonTitle { hyphens: auto; }
+  /* break-word where the browser has no Czech hyphenation dictionary, e.g. Chrome on Linux. */
+  .planTitle, .lessonTitle { hyphens: auto; overflow-wrap: break-word; }
   .planColumn .guide { width: 80px; margin-right: 0; }
   .sessionList li { flex-direction: column; gap: 4px; }
   .chapter > summary { flex-wrap: wrap; }

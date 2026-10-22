@@ -74,7 +74,7 @@ export default function Editor() {
     assert.equal(await save.isEnabled(), true);
     // A failed request keeps the draft and can retry using the same request key.
     await page.route(`**/${basename(fixture)}`, route => route.request().method() === 'POST' ? route.abort() : route.continue());
-    await save.click(); await page.getByRole('alert').waitFor();
+    await save.click(); await page.getByRole('alert').filter({ hasText: 'Připojení se nepodařilo.' }).waitFor();
     assert.equal(await page.getByLabel('Cíl', { exact: true }).inputValue(), 'Dlouhodobý plán');
     await page.unroute(`**/${basename(fixture)}`);
     await save.click(); await page.getByRole('status').filter({ hasText: 'Verze 1' }).waitFor();
