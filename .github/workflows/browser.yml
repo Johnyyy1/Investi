@@ -310,6 +310,9 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
+      # Default for setup and the build; each server and suite names its own database below.
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_progress_qa
+      BETTER_AUTH_URL: http://localhost:3130
       PROGRESS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_progress_qa
       ARTIFACTS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_artifacts_qa
       PROGRESS_URL: http://localhost:3130

@@ -62,7 +62,8 @@ async function layouts(page, name, capture = true) {
     if (capture) await page.screenshot({ path: `${output}/${name}-${width}.png`, fullPage: true, animations: 'disabled' });
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; }); await settle(page);
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${name}: overflow at 320/200%`);
+  // Names the innermost elements that stick out, so a failure shows what overflows.
+  assert.deepEqual(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth ? [...document.body.querySelectorAll('*')].filter((element) => element.getBoundingClientRect().right > innerWidth + 1 && ![...element.children].some((child) => child.getBoundingClientRect().right > innerWidth + 1)).slice(0, 5).map((element) => `${element.tagName.toLowerCase()} "${element.textContent.trim().slice(0, 40)}" ends at ${Math.round(element.getBoundingClientRect().right)}px`) : []), [], `${name}: overflow at 320/200%`);
   await headerDoesNotOverlap();
   const clipped = await page.locator('main h1, main h2, main label, main button, main a, main summary').evaluateAll((elements) => elements.filter((element) => element.clientWidth && element.scrollWidth > element.clientWidth + 2).map((element) => element.textContent));
   assert.deepEqual(clipped, [], `${name}: essential text clips at 200%`);

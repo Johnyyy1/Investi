@@ -41,7 +41,8 @@ async function matrix(page, name) {
     await page.screenshot({ path: `${output}/${name}-${width}.png`, fullPage: true, animations: "disabled" });
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${name} overflow at 320/200%`);
+  // Names the innermost elements that stick out, so a failure shows what overflows.
+  assert.deepEqual(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth ? [...document.body.querySelectorAll("*")].filter((element) => element.getBoundingClientRect().right > innerWidth + 1 && ![...element.children].some((child) => child.getBoundingClientRect().right > innerWidth + 1)).slice(0, 5).map((element) => `${element.tagName.toLowerCase()} "${element.textContent.trim().slice(0, 40)}" ends at ${Math.round(element.getBoundingClientRect().right)}px`) : []), [], `${name} overflow at 320/200%`);
   const clipped = await page.locator('button, input, label, h1, h2, [role="radiogroup"]').evaluateAll((elements) => elements.filter((element) => element.clientWidth && element.scrollWidth > element.clientWidth + 2).map((element) => element.textContent));
   assert.deepEqual(clipped, [], `${name} clipped essential text`);
   if (["01-goal", "02-interests", "03-experience"].includes(name)) {
