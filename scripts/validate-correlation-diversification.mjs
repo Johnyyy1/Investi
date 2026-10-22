@@ -39,7 +39,17 @@ async function fill(value, correct = true) {
   await heading(correct ? "Správně" : "Zkus to ještě jednou");
 }
 // Retry clears the answers; wait for that render, or refilling an unchanged value fires no change event and is lost.
-async function retry() { await button("Zkusit znovu").click(); await button("Zkontrolovat odpověď").waitFor(); }
+async function retry() {
+  await button("Zkusit znovu").click();
+  await button("Zkontrolovat odpověď").waitFor();
+  // The action button is reused. Wait for the controlled fields themselves to be cleared and
+  // editable before filling values that may be identical to the previous attempt.
+  await page.waitForFunction(() => {
+    const fields = [...document.querySelectorAll('section[aria-labelledby$="-question"] input, section[aria-labelledby$="-question"] select')];
+    return fields.length > 0 && fields.every((field) => !field.matches(":disabled") && (field.type === "radio" ? !field.checked : field.value === ""));
+  });
+  assert.equal(await button("Zkontrolovat odpověď").isDisabled(), true, "retry requires a fresh answer");
+}
 async function layout(label, screenshots = false) {
   for (const width of [320, 375, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
