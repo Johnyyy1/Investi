@@ -11,7 +11,7 @@ const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
 const output = process.env.FACTS_SCREENSHOT_DIR ?? "/tmp/investi-facts-132";
 try {
-  const response = await page.goto(`${baseURL}/dev/facts?date=2026-10-21`);
+  const response = await page.goto(`${baseURL}/dev/facts?date=2026-10-22`);
   if (process.env.FACTS_EXPECT_PRODUCTION === "1") {
     assert.equal(response.status(), 404);
     assert.equal(await page.getByRole("heading", { name: "Registr faktů", exact: true }).count(), 0);
@@ -19,7 +19,7 @@ try {
   } else {
     assert.equal(response.status(), 200);
     await page.getByRole("heading", { name: "Registr faktů", exact: true }).waitFor();
-    assert.equal(await page.locator("details").count(), 28);
+    assert.equal(await page.locator("details").count(), 49);
     assert.equal(await page.getByRole("status").count(), 0);
     assert.equal((await page.locator("main").innerText()).includes("{{"), false);
     const first = page.locator("summary").first();
