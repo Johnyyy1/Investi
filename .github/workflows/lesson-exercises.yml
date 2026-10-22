@@ -48,6 +48,8 @@ jobs:
       BETTER_AUTH_SECRET: ci-only-placeholder-secret-not-used-anywhere-0123456789
       BETTER_AUTH_URL: http://localhost:3131
       ARTIFACTS_QA_DISPOSABLE: '1'
+      # Match the browser suites: ubuntu-latest already includes Google Chrome.
+      BROWSER_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -55,7 +57,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
       - run: npm run db:migrate
       - run: npm run db:seed
       - run: npm run test:lesson-exercises-persistence
