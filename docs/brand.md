@@ -38,6 +38,7 @@ The SVG text is outlined (Manrope and Inter glyph paths), so the files render wi
 - `www.investnik.cz` answers with a 308 to the same path and query on the apex (`canonicalHostRedirects` in `src/lib/site.ts`, applied by `next.config.ts`). The rule matches that host only. Localhost, `tryinvesti.vercel.app` and preview URLs are not redirected by code.
 - `robots.txt` allows indexing on production and on deployments outside Vercel, and disallows everything when `VERCEL_ENV` is `preview` or `development`. `/api/` and `/dev/` are always disallowed.
 - Signed-in routes (`(app)` layout), onboarding and one-off auth steps (forgot/reset password, e-mail verification) carry `noindex, nofollow`.
+- Those noindex routes stay out of `robots.txt` on purpose. A crawler only sees `noindex` on a page it may fetch, and a blocked URL can still be indexed without content from links such as the landing page's „Začít se učit“ → `/onboarding`. `src/lib/site.test.ts` keeps them crawlable (#49).
 - `sitemap.xml` lists the landing page and the two legal pages.
 - The landing page emits JSON-LD for `Organization` and `WebSite`. It describes the product only: the operator's legal identity is still a placeholder in `src/components/legal/legal-page.tsx`.
 - `manifest.webmanifest` installs the app as „Investník“ with start URL `/learn`. There is no service worker, so no cached assets need invalidating.

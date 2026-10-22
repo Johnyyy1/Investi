@@ -41,6 +41,13 @@ describe("metadata routes", () => {
     expect(robots()).toEqual({ rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/dev/"] }, sitemap: "https://investnik.cz/sitemap.xml", host: "https://investnik.cz" });
   });
 
+  it("leaves noindex routes crawlable so search engines can read their noindex", () => {
+    vi.stubEnv("VERCEL_ENV", "production");
+    const disallowed = [robots().rules].flat().flatMap(({ disallow }) => [disallow ?? []].flat());
+    const noindexRoutes = ["/onboarding", "/onboarding/plan", "/learn", "/lab", "/progress", "/settings", "/dashboard", "/forgot-password", "/reset-password", "/verify-email"];
+    for (const path of noindexRoutes) expect(disallowed.some((prefix) => path.startsWith(prefix)), path).toBe(false);
+  });
+
   it("keeps preview deployments out of search", () => {
     vi.stubEnv("VERCEL_ENV", "preview");
     expect(robots()).toEqual({ rules: { userAgent: "*", disallow: "/" } });
