@@ -96,10 +96,10 @@ export const auth = betterAuth({
     // A reset is how a learner locks out whoever knew the old password, so every session ends with it.
     revokeSessionsOnPasswordReset: true,
     // Better Auth answers the same way for unknown addresses; the send runs after the response so timing matches too.
-    sendResetPassword: async ({ user, url }) => sendEmailAfterResponse(passwordResetEmail({ to: user.email, url })),
+    sendResetPassword: async ({ user, url }) => sendEmailAfterResponse({ ...passwordResetEmail({ to: user.email, url }), userId: user.id }),
     // Opening the reset link proves the learner reads this mailbox.
     onPasswordReset: async ({ user }) => {
-      sendEmailAfterResponse(passwordChangedEmail({ to: user.email, origin: env.BETTER_AUTH_URL }));
+      sendEmailAfterResponse({ ...passwordChangedEmail({ to: user.email, origin: env.BETTER_AUTH_URL }), userId: user.id });
       if (!user.emailVerified) await db.update(schema.user).set({ emailVerified: true, updatedAt: new Date() }).where(eq(schema.user.id, user.id));
     },
   },
@@ -108,7 +108,7 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     expiresIn: EMAIL_VERIFICATION_TOKEN_SECONDS,
     sendVerificationEmail: async ({ user, url }, request): Promise<void> => {
-      const message = verificationEmail({ to: user.email, url });
+      const message = { ...verificationEmail({ to: user.email, url }), userId: user.id };
       // Only an authenticated explicit resend may expose delivery failure.
       const explicit = request && new URL(request.url).pathname.endsWith("/send-verification-email");
       const current = explicit ? await auth.api.getSession({ headers: request.headers }) : null;
@@ -119,7 +119,7 @@ export const auth = betterAuth({
     },
   },
   user: {
-    additionalFields: { anonymousKind: { type: "string", required: false, input: false } },
+    additionalFields: { emailDeliveryEpoch: { type: "date", required: false, input: false, returned: false }, anonymousKind: { type: "string", required: false, input: false } },
     // Deleting the user row cascades every learner-owned row; shared curriculum and market data stay.
     // guardAccountDeletion adds the password and fresh-sign-in requirements.
     deleteUser: { enabled: true },
@@ -127,7 +127,7 @@ export const auth = betterAuth({
       enabled: true,
       updateEmailWithoutVerification: false,
       sendChangeEmailConfirmation: async ({ user, url }) => {
-        try { await sendEmail(emailChangeConfirmation({ to: user.email, url })); }
+        try { await sendEmail({ ...emailChangeConfirmation({ to: user.email, url }), userId: user.id }); }
         catch { throw new APIError("INTERNAL_SERVER_ERROR", { code: "EMAIL_DELIVERY_FAILED", message: "Email delivery failed." }); }
       },
     },
@@ -145,7 +145,7 @@ export const auth = betterAuth({
     const result = ctx.context.returned;
     if (!result || typeof result !== "object" || !("user" in result)) return;
     const current = ctx.context.session;
-    if (current) sendEmailAfterResponse(passwordChangedEmail({ to: current.user.email, origin: env.BETTER_AUTH_URL }));
+    if (current) sendEmailAfterResponse({ ...passwordChangedEmail({ to: current.user.email, origin: env.BETTER_AUTH_URL }), userId: current.user.id });
   }) },
   databaseHooks: {
     // The guest client asks for a guest explicitly; every other anonymous sign-in stays a demo.
@@ -153,20 +153,22 @@ export const auth = betterAuth({
     user: { create: { before: async (user, ctx) => {
       if (!user.isAnonymous) return { data: user };
       return { data: { ...user, anonymousKind: ctx?.headers?.get(GUEST_KIND_HEADER) === "guest" ? "guest" : "demo" } };
-    } }, update: { after: async (updated, ctx) => {
+    } }, update: { before: async (data, ctx) => {
+      if (typeof data.email === "string" && ctx?.path === "/verify-email") return { data: { ...data, emailDeliveryEpoch: new Date() } };
+    }, after: async (updated, ctx) => {
       // Better Auth has already authenticated this verification JWT and committed the email update.
       // Verify again before selecting the old notification recipient, including logged-out link visits.
       if (ctx?.path !== "/verify-email" || typeof ctx.query?.token !== "string") return;
       const payload = await verifyJWT<{ email?: string; updateTo?: string; requestType?: string }>(ctx.query.token, env.BETTER_AUTH_SECRET).catch(() => null);
       if (payload?.requestType !== "change-email-verification" || !payload.email || payload.updateTo !== updated.email || payload.email === updated.email) return;
-      sendEmailAfterResponse(accountSecurityEmail({ to: payload.email, origin: env.BETTER_AUTH_URL, kind: "email-changed" }));
+      sendEmailAfterResponse({ ...accountSecurityEmail({ to: payload.email, origin: env.BETTER_AUTH_URL, kind: "email-changed" }), userId: updated.id });
     } } },
     account: { create: { after: async (linked) => {
       if (linked.providerId !== "google" && linked.providerId !== "facebook") return;
       const owner = await db.query.user.findFirst({ where: eq(schema.user.id, linked.userId) });
       if (!owner || owner.isAnonymous) return;
       const accounts = await db.query.account.findMany({ where: eq(schema.account.userId, linked.userId), columns: { id: true } });
-      if (accounts.length > 1) sendEmailAfterResponse(accountSecurityEmail({ to: owner.email, origin: env.BETTER_AUTH_URL, kind: "social-linked", provider: linked.providerId }));
+      if (accounts.length > 1) sendEmailAfterResponse({ ...accountSecurityEmail({ to: owner.email, origin: env.BETTER_AUTH_URL, kind: "social-linked", provider: linked.providerId }), userId: owner.id });
     } } },
     session: { create: { before: async (session) => {
       const owner = await db.query.user.findFirst({ where: eq(schema.user.id, session.userId) });

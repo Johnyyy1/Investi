@@ -12,7 +12,7 @@ import styles from "@/components/settings/settings.module.css";
 type Message = { ok: boolean; text: string };
 
 /** Verification status of the account e-mail, with a way to send the link again. */
-export function EmailVerification({ email, verified }: { email: string; verified: boolean }) {
+export function EmailVerification({ email, verified, suppressed }: { email: string; verified: boolean; suppressed?: boolean }) {
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<Message>();
   const lock = useRef(false);
@@ -37,6 +37,7 @@ export function EmailVerification({ email, verified }: { email: string; verified
       <div className="min-w-0"><p className="text-body font-semibold [overflow-wrap:anywhere]">{email}</p><p className={`mt-1 text-small ${verified ? "text-success-ink" : "text-secondary"}`}>{verified ? "Ověřený" : "Zatím neověřený. Ověření potvrdí, že adresa patří tobě."}</p></div>
       {!verified && <Button variant="secondary" size="compact" loading={pending} onClick={() => void send()}>{pending ? "Odesílám…" : "Poslat ověřovací odkaz"}</Button>}
     </div>
+    {suppressed && <p role="status" className="mt-3 text-small text-danger-ink">Na tuto adresu se e-maily nedaří doručit. Zkontroluj ji, nebo ji změň. <a href="#change-email" className="inline-flex min-h-11 items-center font-semibold underline">Změnit e-mail</a></p>}
     {message && <p className={message.ok ? styles.status : styles.error} role={message.ok ? "status" : "alert"}>{message.text}</p>}
   </div>;
 }

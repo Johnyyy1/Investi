@@ -13,6 +13,8 @@ on:
       - src/features/email/**
       - src/lib/auth*.ts
       - src/lib/env.ts
+      - src/app/api/account/**
+      - src/app/api/webhooks/resend/**
       - src/app/(auth)/**
       - scripts/validate-account-recovery*
       - .github/actions/prepare-app/**
@@ -37,6 +39,8 @@ env:
   BROWSER_CHANNEL: chrome
   SCREENSHOTS: ${{ github.workspace }}/browser-screenshots
   # No Resend key in CI: the server writes every e-mail here and the account-recovery suite reads it back.
+  # Public fixture key, only on disposable CI runtimes.
+  RESEND_WEBHOOK_SECRET: whsec_Y2ktb25seS13ZWJob29rLXNlY3JldC1ub3QtZm9yLXByb2R1Y3Rpb24=
   EMAIL_TRANSPORT: outbox
   EMAIL_OUTBOX_DIR: ${{ github.workspace }}/email-outbox
 

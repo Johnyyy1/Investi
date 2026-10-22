@@ -1,10 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ cleanup: vi.fn(), sessions: vi.fn(), env: { CRON_SECRET: undefined as string | undefined } }));
+const mocks = vi.hoisted(() => ({ cleanup: vi.fn(), sessions: vi.fn(), deliveries: vi.fn(), env: { CRON_SECRET: undefined as string | undefined } }));
 vi.mock("@/db", () => ({ db: { marker: "db" } }));
 vi.mock("@/lib/env", () => ({ env: mocks.env }));
 vi.mock("@/features/guest/cleanup", () => ({ deleteUnreachableAnonymousIdentities: mocks.cleanup }));
 vi.mock("@/features/account/session-retention", () => ({ deleteExpiredSessions: mocks.sessions }));
+
+vi.mock("@/features/email/repository", () => ({ deleteExpiredDeliveries: mocks.deliveries }));
 
 import { GET } from "./route";
 
@@ -15,6 +17,7 @@ describe("GET /api/cron/cleanup-anonymous", () => {
   beforeEach(() => {
     mocks.cleanup.mockReset();
     mocks.sessions.mockReset();
+    mocks.deliveries.mockReset().mockResolvedValue({ removed: 5, complete: true });
     mocks.env.CRON_SECRET = secret;
     vi.spyOn(console, "info").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -27,6 +30,7 @@ describe("GET /api/cron/cleanup-anonymous", () => {
     }
     expect(mocks.cleanup).not.toHaveBeenCalled();
     expect(mocks.sessions).not.toHaveBeenCalled();
+    expect(mocks.deliveries).not.toHaveBeenCalled();
   });
 
   it("stays closed when CRON_SECRET is not configured", async () => {
@@ -40,7 +44,7 @@ describe("GET /api/cron/cleanup-anonymous", () => {
     mocks.sessions.mockResolvedValue({ removed: 41, complete: false });
     const response = await call(`Bearer ${secret}`);
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ removed: { demo: 3, guest: 2 }, complete: true, expiredSessions: { removed: 41, complete: false } });
+    expect(await response.json()).toEqual({ removed: { demo: 3, guest: 2 }, complete: true, expiredSessions: { removed: 41, complete: false }, emailDeliveries: { removed: 5, complete: true } });
     expect(mocks.cleanup).toHaveBeenCalledWith({ marker: "db" });
     expect(mocks.sessions).toHaveBeenCalledWith({ marker: "db" });
   });

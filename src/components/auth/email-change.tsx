@@ -28,7 +28,7 @@ export function EmailChange({ verified }: { verified: boolean }) {
     } catch { setMessage({ ok: false, text: "Připojení se nepodařilo. Zkus to znovu." }); }
     finally { lock.current = false; setPending(false); }
   }
-  return <div className="mt-4">
+  return <div id="change-email" className="mt-4 scroll-mt-24">
     {open ? <form action={submit} aria-label="Změnit e-mail" className="max-w-md space-y-4">
       <TextInput ref={input} label="Nový e-mail" name="email" type="email" autoComplete="email" required disabled={pending} />
       <p className="text-small text-secondary">Změna vyžaduje přihlášení z posledních 10 minut. {verified ? "Potvrď ji v současné schránce a ověř novou adresu." : "Novou adresu musíš nejdřív ověřit."}</p>

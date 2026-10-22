@@ -5,6 +5,7 @@ const at = new Date("2026-10-16T08:30:00.000Z");
 function rows(): AccountExportRows {
   return {
     owner: { id: "u1", name: "Klára", email: "klara@example.com", emailVerified: true, image: null, isAnonymous: false, anonymousKind: null, createdAt: at, updatedAt: at },
+    deliveries: [],
     accounts: [{ providerId: "credential", accountId: "u1", scope: null, createdAt: at, updatedAt: at }],
     sessions: [{ createdAt: at, updatedAt: at, expiresAt: at, ipAddress: "198.51.100.7", userAgent: "Firefox" }],
     profile: { brokerFeeProfileId: null, userId: "u1", experienceLevel: "BEGINNER", goals: [], interests: [], dailyGoalMinutes: 10, timeZone: "Europe/Prague", recommendedStart: null, onboardingStep: 6, diagnosticResult: null, personalizedOnboardingCompletedAt: null, onboardingCompletedAt: at, updatedAt: at } as AccountExportRows["profile"],

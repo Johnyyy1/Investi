@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import { Webhook } from "svix";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
@@ -22,9 +23,12 @@ delete process.env.EMAIL_FROM;
 const outbox = await mkdtemp(join(tmpdir(), "investi-recovery-outbox-"));
 process.env.EMAIL_OUTBOX_DIR = outbox;
 process.env.EMAIL_TRANSPORT = "outbox";
+process.env.RESEND_WEBHOOK_SECRET = `whsec_${Buffer.from("disposable-local-qa-signing-key-114").toString("base64")}`;
 
 const { db } = await import("../src/db");
-const { account, rateLimitBucket, session, user, verification } = await import("../src/db/schema");
+const { emailDelivery, account, rateLimitBucket, session, user, verification } = await import("../src/db/schema");
+const { hasSuppressedEmail, deleteExpiredDeliveries } = await import("../src/features/email/repository");
+const { POST: webhook } = await import("../src/app/api/webhooks/resend/route");
 const { auth } = await import("../src/lib/auth");
 const { rateLimiter } = await import("../src/features/rate-limit");
 const { CHANGE_PASSWORD_USER_RULE, EMAIL_LINK_ACCOUNT_RULE } = await import("../src/features/rate-limit/policy");
@@ -74,11 +78,13 @@ async function newMail(expected: number) {
 }
 const linkIn = (mail: Sent) => mail.text.match(/https?:\/\/\S+/)?.[0] ?? assert.fail("e-mail without a link");
 
+const createdUserIds = new Set<string>();
 async function signUp(address: string, password: string) {
   const response = await call("/sign-up/email", { body: { name: "Recovery QA", email: address, password, callbackURL: "/verify-email" } });
   assert.equal(response.status, 200, "sign-up succeeds");
   const created = await db.query.user.findFirst({ where: eq(user.email, address) });
   assert.ok(created);
+  createdUserIds.add(created.id);
   return { id: created.id, cookie: sessionCookie(response)! };
 }
 const signIn = (address: string, password: string) => call("/sign-in/email", { body: { email: address, password } });
@@ -205,6 +211,60 @@ try {
     assert.equal((await signIn(newAddress, "first-password-1")).status, 200);
   }
 
+  // Signed webhooks, replay safety, address-scoped suppression, retention and cascade.
+  const deliveryAddress = email("delivery");
+  const { id: deliveryUser, cookie: deliveryCookie } = await signUp(deliveryAddress, "first-password-1");
+  await newMail(1);
+  let sent = await db.query.emailDelivery.findFirst({ where: eq(emailDelivery.userId, deliveryUser) });
+  for (let attempt = 0; attempt < 50 && !sent?.providerMessageId; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    sent = await db.query.emailDelivery.findFirst({ where: eq(emailDelivery.userId, deliveryUser) });
+  }
+  assert.ok(sent?.providerMessageId);
+  assert.equal(sent.status, "sent");
+  assert.equal(JSON.stringify(sent).includes(deliveryAddress), false);
+  const sendEvent = async (type: string, messageId = sent!.providerMessageId!, valid = true) => {
+    const payload = JSON.stringify({ type, data: { email_id: messageId, to: [deliveryAddress], subject: "never persist this token" } });
+    const at = new Date();
+    const signature = new Webhook(process.env.RESEND_WEBHOOK_SECRET!).sign("qa-event", at, payload);
+    return webhook(new Request(`${baseURL}/api/webhooks/resend`, { method: "POST", headers: { "svix-id": "qa-event", "svix-timestamp": String(Math.floor(at.getTime() / 1000)), "svix-signature": valid ? signature : "v1,invalid" }, body: payload }));
+  };
+  assert.equal((await sendEvent("email.bounced", sent.providerMessageId, false)).status, 401);
+  assert.equal((await sendEvent("email.bounced")).status, 200);
+  await Promise.all([sendEvent("email.sent"), sendEvent("email.delivered"), sendEvent("email.bounced")]);
+  const bounced = await db.query.emailDelivery.findFirst({ where: eq(emailDelivery.id, sent.id) });
+  assert.equal(bounced?.status, "bounced");
+  assert.equal(await hasSuppressedEmail(deliveryUser), true);
+  await sendEvent("email.bounced");
+  await sendEvent("email.delivered");
+  assert.deepEqual(await db.query.emailDelivery.findFirst({ where: eq(emailDelivery.id, sent.id) }), bounced, "replay and out-of-order delivery are no-ops");
+  await sendEvent("email.bounced", "unknown-message");
+  assert.equal((await db.query.emailDelivery.findMany({ where: eq(emailDelivery.userId, deliveryUser) })).length, 1);
+  assert.equal((await call("/send-verification-email", { cookie: deliveryCookie, body: { email: deliveryAddress } })).status, 500);
+  assert.equal((await newMail(0)).length, 0, "suppressed verification is not sent");
+  await call("/request-password-reset", { body: { email: deliveryAddress } });
+  assert.equal((await newMail(1))[0].kind, "password-reset", "password recovery bypasses suppression");
+  const replacement = email("delivery-replacement");
+  assert.equal((await call("/change-email", { cookie: deliveryCookie, body: { newEmail: replacement, callbackURL: "/verify-email" } })).status, 200);
+  const [replacementMail] = await newMail(1);
+  assert.equal(replacementMail.to, replacement, "current-address suppression never blocks a different target mailbox");
+  await call(linkIn(replacementMail));
+  await newMail(1);
+  assert.equal(await hasSuppressedEmail(deliveryUser), false, "changing the address atomically clears suppression");
+  await sendEvent("email.complained");
+  assert.equal(await hasSuppressedEmail(deliveryUser), false, "late old-address complaints cannot suppress the new mailbox");
+  if (process.env.ACCOUNT_RECOVERY_QA_DISPOSABLE === "1") {
+    assert.ok(/(?:_qa|_ci)$/.test(new URL(databaseUrl).pathname), "retention needs a dedicated QA/CI database");
+    const oldId = `${run}-old-delivery`;
+    await db.insert(emailDelivery).values({ id: oldId, userId: deliveryUser, kind: "email-verification", provider: "outbox", status: "failed", createdAt: new Date(Date.now() - 91 * 86_400_000) });
+    assert.ok((await deleteExpiredDeliveries()).removed >= 1);
+    assert.equal(await db.query.emailDelivery.findFirst({ where: eq(emailDelivery.id, oldId) }), undefined);
+    assert.ok(await db.query.emailDelivery.findFirst({ where: eq(emailDelivery.id, sent.id) }));
+    assert.equal((await deleteExpiredDeliveries()).removed, 0, "retention is idempotent");
+  }
+  await db.delete(user).where(eq(user.id, deliveryUser));
+  assert.equal((await db.query.emailDelivery.findMany({ where: eq(emailDelivery.userId, deliveryUser) })).length, 0, "account deletion cascades delivery records");
+
   // A stale session cannot initiate an address change or set a social account's first password.
   const socialAddress = email("social");
   const { id: socialId, cookie: socialCookie } = await signUp(socialAddress, "first-password-1");
@@ -256,7 +316,7 @@ try {
 
   console.log("Account recovery validation passed: enumeration-safe reset, single-use expiring tokens, session revocation, verification, password change and rate limits.");
 } finally {
-  const createdIds = (await db.select({ id: user.id }).from(user).where(like(user.email, `${run}-%`))).map(({ id }) => id);
+  const createdIds = [...new Set([...createdUserIds, ...(await db.select({ id: user.id }).from(user).where(like(user.email, `${run}-%`))).map(({ id }) => id)])];
   // Reset tokens store the user id and have no foreign key, so they are removed explicitly.
   if (createdIds.length) await db.delete(verification).where(inArray(verification.value, createdIds));
   await db.delete(user).where(like(user.email, `${run}-%`));

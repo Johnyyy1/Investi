@@ -1,3 +1,4 @@
+import { hasSuppressedEmail } from "@/features/email/repository";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SettingsExperience } from "@/components/settings/settings-experience";
@@ -20,7 +21,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
   // Independent reads keyed by the user; none of them writes for an account that still needs onboarding.
-  const [summary, accounts, unlock, params, session, hasPassword] = await Promise.all([
+  const [summary, accounts, unlock, params, session, hasPassword, emailSuppressed] = await Promise.all([
     loadLearner(),
     auth.api.listUserAccounts({ headers: await headers() }).then(mapLinkedAccounts).catch(() => null),
     loadPortfolioLabUnlockStatus(user.id),
@@ -28,6 +29,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     getCurrentSession(),
     // Unknown (null) when sign-in methods cannot be read; deletion then asks for a reload instead of guessing.
     user.isAnonymous ? false : hasPasswordCredential(user.id).catch(() => null),
+    user.isAnonymous ? false : hasSuppressedEmail(user.id),
   ]);
   const { profile } = summary;
   if (requiresInitialOnboarding(profile, !profile?.onboardingCompletedAt && await hasLearningHistory(user.id))) redirect("/onboarding");
@@ -37,7 +39,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   // Rendered per request, so freshness is measured now; the server checks it again on deletion.
   const fresh = session ? isFreshForAccountDeletion(new Date(session.createdAt)) : false;
   return <SettingsExperience section={section}
-    identity={{ name: user.name, email: user.email, emailVerified: user.emailVerified, demo: isDemoIdentity(user), guest: isGuestIdentity(user), since: formatDate(user.createdAt, { timeZone: profile?.timeZone ?? "UTC" }), completed: summary.completed.length, total: summary.lessons.length }}
+    identity={{ name: user.name, email: user.email, emailVerified: user.emailVerified, emailSuppressed, demo: isDemoIdentity(user), guest: isGuestIdentity(user), since: formatDate(user.createdAt, { timeZone: profile?.timeZone ?? "UTC" }), completed: summary.completed.length, total: summary.lessons.length }}
     initialPreferences={{ primaryGoal: learner.primaryGoal, interests: learner.interests, selfAssessedExperience: learner.selfAssessedExperience, preferredSessionMinutes: learner.preferredSessionMinutes }}
     personalized={learner.personalized} hasDiagnostic={Boolean(learner.diagnostic)} providers={authProviderAvailability} initialAccounts={accounts}
     initialError={errorCode ? getSocialAuthErrorMessage(errorCode) : undefined} portfolioUnlocked={unlock.unlocked} timeZone={profile?.timeZone ?? "UTC"}

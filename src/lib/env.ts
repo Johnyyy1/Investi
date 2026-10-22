@@ -10,6 +10,7 @@ export const env = createEnv({
     CRON_SECRET: z.string().min(32).optional(),
     DATABASE_URL: z.url(),
     ...emailEnvironmentShape,
+    RESEND_WEBHOOK_SECRET: z.string().startsWith("whsec_").optional(),
     GOOGLE_CLIENT_ID: z.string().trim().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().trim().min(1).optional(),
     FACEBOOK_CLIENT_ID: z.string().trim().min(1).optional(),

@@ -107,3 +107,26 @@ the account address. The email-change hook verifies the signed verification toke
 the old notification recipient. Initial social registration and existing social sign-in do not send a
 link notification. Existing verified-email account-linking safeguards remain unchanged. Notifications
 contain Prague time and a recovery CTA, never tokens or the new email address.
+
+
+### Delivery records (#114, phase 4)
+
+`email_delivery` stores only the owner, kind, provider/message ID, outcome, safe error code and times.
+Every send boundary requires an authoritative user ID; no unknown-account reset creates a record.
+No address, mail body, URL or token enters the table. The optional current-address epoch is compared
+with `user.email_delivery_epoch` to isolate suppression across address changes. Both use millisecond
+Postgres timestamps, matching JavaScript Date precision. Proposed new recipients and old-address
+security notifications have a null epoch and cannot suppress the current mailbox.
+
+Signed Resend webhooks advance outcomes atomically with monotonic precedence, so retries and older
+outcomes cannot erase a bounce or complaint. Ordinary current-mailbox verification sends are suppressed
+after a bounce/complaint; password recovery and security messages remain eligible. Settings shows a
+warning with a link to the email-change form. A mailbox update changes the epoch in the same update,
+so even a delayed event for the old address cannot affect the new mailbox.
+
+The existing authorized daily cron deletes records older than 90 days; account deletion cascades them.
+The personal-data export includes delivery metadata. See [environment](environment.md) for the exact
+webhook subscription, secret setup, privacy notes and QA settings. A provider acknowledgment records
+`sent`, not proof of inbox delivery. Unknown message IDs (including an event that arrives before its
+send response has been recorded) are ignored, per the issue contract; the table is not a durable mail
+queue or a replacement for provider delivery diagnostics.

@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   if (!body.success) return Response.json({ code: "INVALID_PASSWORD_LENGTH" }, { status: 400, headers });
   try {
     await auth.api.setPassword({ headers: request.headers, body: body.data });
-    sendEmailAfterResponse(passwordChangedEmail({ to: current.user.email, origin: env.BETTER_AUTH_URL }));
+    sendEmailAfterResponse({ ...passwordChangedEmail({ to: current.user.email, origin: env.BETTER_AUTH_URL }), userId: current.user.id });
     return Response.json({ status: true }, { headers });
   } catch {
     // Never reflect a provider exception or password. setPassword refuses accounts with an existing password.

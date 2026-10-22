@@ -127,6 +127,20 @@
       "when": 1792604726290,
       "tag": "0017_calm_the_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792671847707,
+      "tag": "0018_email_delivery",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1792672144542,
+      "tag": "0019_email_delivery_timestamp_precision",
+      "breakpoints": true
     }
   ]
 }
