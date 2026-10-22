@@ -101,14 +101,26 @@ try {
   await heading("Správně");
   assert.equal(await page.getByRole("button", { name: "Pokračovat", exact: true }).evaluate((element) => element === document.activeElement), true);
   // A failed save returns the learner to the unsaved step with the answer kept, and Continue retries it.
-  const failSave = (intercepted) => intercepted.request().method() === "POST" && intercepted.request().headers()["next-action"] ? intercepted.fulfill({ status: 500, body: "" }) : intercepted.fallback();
+  // Hold the failed response until the optimistic step has been observed. An immediate 500 can
+  // roll back before Playwright sees that short-lived heading on a fast/contended CI runner.
+  let releaseFailure;
+  const failureGate = new Promise((resolve) => { releaseFailure = resolve; });
+  const failSave = async (intercepted) => {
+    if (intercepted.request().method() !== "POST" || !intercepted.request().headers()["next-action"]) return intercepted.fallback();
+    await failureGate;
+    await intercepted.fulfill({ status: 500, body: "" });
+  };
   await page.route(`${baseURL}${route}`, failSave);
-  await next("Počáteční hodnota se mění");
+  try { await next("Počáteční hodnota se mění"); }
+  finally { releaseFailure(); }
   const saveError = page.getByRole("alert").filter({ hasText: "Postup se nepodařilo uložit. Zkus to znovu." });
   await saveError.waitFor();
   await heading("Předpověz výsledek");
   await heading("Správně");
-  assert.equal(await page.getByRole("button", { name: "Pokračovat", exact: true }).evaluate((element) => element === document.activeElement), true, "Retry focuses Continue");
+  // Error recovery schedules focus for the next animation frame; wait for that real effect.
+  const retryContinue = page.getByRole("button", { name: "Pokračovat", exact: true });
+  await retryContinue.and(page.locator(":focus")).waitFor();
+  assert.equal(await retryContinue.evaluate((element) => element === document.activeElement), true, "Retry focuses Continue");
   await saved();
   assert.equal((await row()).last_position, 1, "A failed save leaves the cursor where it was");
   await page.unroute(`${baseURL}${route}`, failSave);
