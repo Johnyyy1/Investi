@@ -1,0 +1,27 @@
+Copyright (c) 2026 Jonas Sobotka. All rights reserved.
+
+This repository contains the source code, curriculum and lesson content,
+illustrations, brand assets and documentation of Investník
+(https://investnik.cz). It is proprietary software and is not open source.
+
+No licence is granted. Without the prior written permission of the copyright
+holder, you may not use, copy, modify, merge, publish, distribute, sublicense,
+sell or create derivative works from this repository or any part of it.
+
+If the repository is publicly visible on GitHub, you may view and fork it on
+GitHub only to the extent required by the GitHub Terms of Service. That grants
+no other rights.
+
+The name Investník, its wordmark and its symbol identify the product. Nothing
+in this repository grants any right to use them.
+
+Third-party software installed as dependencies (listed in package.json and
+package-lock.json) and third-party data loaded at runtime remain under their
+own licences and terms. This notice does not cover them.
+
+THE MATERIALS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY ARISING FROM THE MATERIALS OR THEIR USE.
+
+To request permission, contact the copyright holder through the GitHub
+account @Johnyyy1.
