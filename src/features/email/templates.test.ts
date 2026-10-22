@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMAIL_VERIFICATION_TOKEN_SECONDS, passwordResetEmail, PASSWORD_RESET_TOKEN_SECONDS, verificationEmail } from "./templates";
+import { passwordChangedEmail, EMAIL_VERIFICATION_TOKEN_SECONDS, passwordResetEmail, PASSWORD_RESET_TOKEN_SECONDS, verificationEmail } from "./templates";
 
 const url = "https://investnik.test/api/auth/reset-password/abc?callbackURL=%2Freset-password&x=<b>\"";
 
@@ -11,7 +11,7 @@ describe("transactional e-mail templates", () => {
 
   it("renders the reset e-mail in Czech with the link, its lifetime and a safe way to ignore it", () => {
     const email = passwordResetEmail({ to: "learner@example.com", url });
-    expect(email).toMatchObject({ kind: "password-reset", to: "learner@example.com", subject: "Obnovení hesla k účtu v Investníku" });
+    expect(email).toMatchObject({ kind: "password-reset", to: "learner@example.com", subject: "Obnovení hesla k účtu investi" });
     expect(email.text).toContain(url);
     expect(email.text).toContain("30 minut");
     expect(email.text).toContain("jen jednou");
@@ -39,4 +39,13 @@ describe("transactional e-mail templates", () => {
     expect(email.html).toContain('<a href="https://investnik.cz" style="color:#41443E">investnik.cz</a>');
     expect(`${email.subject}${email.text}${email.html}`).not.toMatch(/investi(?![\p{L}])/u);
   });
+});
+
+it("renders a Prague-dated password notification without secrets", () => {
+  const message = passwordChangedEmail({ to: "person@example.com", origin: "https://investnik.cz", at: new Date("2026-10-22T10:30:00Z") });
+  expect(message.subject).toBe("Heslo k účtu investi bylo změněno");
+  expect(message.text).toContain("12:30");
+  expect(message.text).toContain("https://investnik.cz/forgot-password");
+  expect(message.html).toContain("Nepoznáváš tuto změnu? Obnov si heslo");
+  expect(message.text).not.toMatch(/token|person@/);
 });

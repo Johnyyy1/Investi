@@ -1,3 +1,4 @@
+import { StripToken } from "@/components/auth/strip-token";
 import Link from "next/link";
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
@@ -12,6 +13,7 @@ export default async function ResetPasswordPage({ searchParams }: { searchParams
   const footer = <>Heslo si pamatuješ? <Link href="/sign-in" className="font-semibold text-primary underline underline-offset-4">Přihlásit se</Link></>;
   if (!value || error) return (
     <AuthLayout demo={false} title="Odkaz už neplatí" description="Odkaz pro obnovení hesla platí 30 minut a dá se použít jen jednou. Požádej o nový." guide="Nevadí, nový odkaz je hned na cestě." footer={footer}>
+      <StripToken />
       <Link href="/forgot-password" className={buttonVariants({ className: "w-full" })}>Poslat nový odkaz</Link>
     </AuthLayout>
   );

@@ -27,7 +27,7 @@ async function renderApplicationLayout(children: React.ReactNode) {
     loadPortfolioLabUnlockStatus(user.id),
   ]);
   if (requiresInitialOnboarding(profile, !profile?.onboardingCompletedAt && await perfMeasure("layout.hasLearningHistory", "db", () => hasLearningHistory(user.id)))) redirect("/onboarding");
-  return <AppShell userName={user.name} isDemo={isDemoIdentity(user)} isGuest={isGuestIdentity(user)} needsTimeZone={!profile?.timeZone} portfolioLabLocked={!portfolioLabUnlock.unlocked}>
+  return <AppShell userName={user.name} isDemo={isDemoIdentity(user)} isGuest={isGuestIdentity(user)} needsTimeZone={!profile?.timeZone} portfolioLabLocked={!portfolioLabUnlock.unlocked} needsEmailVerification={!user.isAnonymous && !user.emailVerified}>
     {/* One boundary that stays mounted across navigations. On a full load it streams the shell and this
         fallback first. On a client navigation it is already showing content, so React keeps the current
         page until the next one is ready instead of committing a fallback; a route-level loading.tsx would

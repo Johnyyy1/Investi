@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getAuthErrorMessage } from "./auth-error";
+import { getAuthErrorMessage, retryAfterMessage } from "./auth-error";
 import { getSocialAuthErrorMessage } from "./social-auth-error";
 
 describe("getAuthErrorMessage", () => {
@@ -26,8 +26,8 @@ describe("getAuthErrorMessage", () => {
     expect(getAuthErrorMessage({ code: "PASSWORD_TOO_LONG" }, "Fallback")).toBe("Heslo může mít nejvýše 128 znaků.");
   });
 
-  it("uses the service message for unexpected errors", () => {
-    expect(getAuthErrorMessage({ message: "Service unavailable" }, "Fallback")).toBe("Service unavailable");
+  it("uses the Czech fallback for unexpected errors", () => {
+    expect(getAuthErrorMessage({ message: "Service unavailable" }, "Fallback")).toBe("Fallback");
   });
 
   it("makes an existing account actionable after an unlinked social sign-in", () => {
@@ -35,4 +35,18 @@ describe("getAuthErrorMessage", () => {
       "Účet s tímto e-mailem už existuje. Přihlas se původním způsobem a v Nastavení si Google nebo Facebook připoj.",
     );
   });
+});
+
+it("formats Retry-After without rendering provider text", () => {
+  expect(retryAfterMessage("61")).toContain("2 min.");
+  expect(retryAfterMessage(null)).toContain("1 min.");
+  expect(retryAfterMessage("secret address")).toContain("1 min.");
+  expect(retryAfterMessage("Thu, 22 Oct 2026 10:02:00 GMT", Date.parse("2026-10-22T10:00:00Z"))).toContain("2 min.");
+});
+
+it("maps verification and account-change codes in Czech", () => {
+  expect(getAuthErrorMessage({ code: "EMAIL_ALREADY_VERIFIED" }, "Fallback")).toContain("už ověřený");
+  expect(getAuthErrorMessage({ code: "EMAIL_MISMATCH" }, "Fallback")).toContain("správnému účtu");
+  expect(getAuthErrorMessage({ code: "SESSION_NOT_FRESH" }, "Fallback")).toContain("přihlas znovu");
+  expect(getAuthErrorMessage({ code: "PASSWORD_ALREADY_SET" }, "Fallback")).toContain("už má heslo");
 });

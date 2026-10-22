@@ -43,7 +43,7 @@ export function passwordResetEmail({ to, url }: { to: string; url: string }): Em
     url,
     note: "Pokud žádost nepochází od tebe, e-mail ignoruj. Heslo zůstane beze změny.",
   };
-  return { kind: "password-reset", to, subject: "Obnovení hesla k účtu v Investníku", text: text(content), html: layout(content) };
+  return { kind: "password-reset", to, subject: "Obnovení hesla k účtu investi", text: text(content), html: layout(content) };
 }
 
 export function verificationEmail({ to, url }: { to: string; url: string }): EmailMessage {
@@ -56,4 +56,16 @@ export function verificationEmail({ to, url }: { to: string; url: string }): Ema
     note: "Pokud sis účet v Investníku nezakládáš, e-mail ignoruj. Bez ověření se nic nezmění.",
   };
   return { kind: "email-verification", to, subject: "Ověř svůj e-mail pro Investník", text: text(content), html: layout(content) };
+}
+
+export function passwordChangedEmail({ to, origin, at = new Date() }: { to: string; origin: string; at?: Date }): EmailMessage {
+  const time = new Intl.DateTimeFormat("cs-CZ", { timeZone: "Europe/Prague", dateStyle: "long", timeStyle: "short" }).format(at);
+  const content = {
+    heading: "Heslo k účtu investi bylo změněno",
+    intro: `Ke změně hesla došlo ${time} (Europe/Prague).`,
+    action: "Nepoznáváš tuto změnu? Obnov si heslo",
+    url: new URL("/forgot-password", origin).href,
+    note: "Pokud změna pochází od tebe, není potřeba nic dělat.",
+  };
+  return { kind: "password-changed", to, subject: content.heading, text: text(content), html: layout(content) };
 }

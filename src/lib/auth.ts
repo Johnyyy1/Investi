@@ -18,7 +18,7 @@ import { env } from "@/lib/env";
 import { createSocialAuthConfig } from "@/lib/auth-providers";
 import { rateLimiter } from "@/features/rate-limit";
 import { ACCOUNT_DELETION_USER_RULE, authIpRules, CHANGE_PASSWORD_USER_RULE, DEMO_CREATION_IP_RULE, EMAIL_LINK_ACCOUNT_RULE, NO_TRUSTED_IP_SUBJECT, normalizeAccountSubject, SIGN_IN_ACCOUNT_RULE, type RateLimitBucket } from "@/features/rate-limit/policy";
-import { EMAIL_VERIFICATION_TOKEN_SECONDS, passwordResetEmail, PASSWORD_RESET_TOKEN_SECONDS, sendEmailAfterResponse, verificationEmail } from "@/features/email";
+import { EMAIL_VERIFICATION_TOKEN_SECONDS, passwordResetEmail, PASSWORD_RESET_TOKEN_SECONDS, passwordChangedEmail, sendEmail, sendEmailAfterResponse, verificationEmail } from "@/features/email";
 
 const socialAuth = createSocialAuthConfig(env);
 export const authProviderAvailability = socialAuth.availability;
@@ -90,6 +90,7 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user, url }) => sendEmailAfterResponse(passwordResetEmail({ to: user.email, url })),
     // Opening the reset link proves the learner reads this mailbox.
     onPasswordReset: async ({ user }) => {
+      sendEmailAfterResponse(passwordChangedEmail({ to: user.email, origin: env.BETTER_AUTH_URL }));
       if (!user.emailVerified) await db.update(schema.user).set({ emailVerified: true, updatedAt: new Date() }).where(eq(schema.user.id, user.id));
     },
   },
@@ -97,7 +98,16 @@ export const auth = betterAuth({
   emailVerification: {
     sendOnSignUp: true,
     expiresIn: EMAIL_VERIFICATION_TOKEN_SECONDS,
-    sendVerificationEmail: async ({ user, url }) => sendEmailAfterResponse(verificationEmail({ to: user.email, url })),
+    sendVerificationEmail: async ({ user, url }, request): Promise<void> => {
+      const message = verificationEmail({ to: user.email, url });
+      // Only an authenticated explicit resend may expose delivery failure.
+      const explicit = request && new URL(request.url).pathname.endsWith("/send-verification-email");
+      const current = explicit ? await auth.api.getSession({ headers: request.headers }) : null;
+      if (current) {
+        try { await sendEmail(message); }
+        catch { throw new APIError("INTERNAL_SERVER_ERROR", { code: "EMAIL_DELIVERY_FAILED", message: "Email delivery failed." }); }
+      } else sendEmailAfterResponse(message);
+    },
   },
   user: {
     additionalFields: { anonymousKind: { type: "string", required: false, input: false } },
@@ -113,7 +123,13 @@ export const auth = betterAuth({
   // Vercel overwrites X-Forwarded-For with the connecting client's IP, so a client cannot spoof it there.
   // Better Auth trusts only a single-value header; anything else falls back to one shared bucket.
   advanced: { ipAddress: { ipAddressHeaders: ["x-forwarded-for"] } },
-  hooks: { before: authAttemptLimits },
+  hooks: { before: authAttemptLimits, after: createAuthMiddleware(async (ctx) => {
+    if (ctx.path !== "/change-password") return;
+    const result = ctx.context.returned;
+    if (!result || typeof result !== "object" || !("user" in result)) return;
+    const current = ctx.context.session;
+    if (current) sendEmailAfterResponse(passwordChangedEmail({ to: current.user.email, origin: env.BETTER_AUTH_URL }));
+  }) },
   databaseHooks: {
     // The guest client asks for a guest explicitly; every other anonymous sign-in stays a demo.
     // Choosing "guest" grants nothing: it only skips the demo seed and open Lab access.

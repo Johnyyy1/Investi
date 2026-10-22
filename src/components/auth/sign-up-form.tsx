@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/learning/text-input";
 import { authClient } from "@/lib/auth-client";
+import { rememberVerificationNotice } from "./verification-notice";
 import { getAuthErrorMessage } from "@/lib/auth-error";
 
 export function SignUpForm({ redirectTo = "/onboarding" }: { redirectTo?: string }) {
@@ -23,6 +24,7 @@ export function SignUpForm({ redirectTo = "/onboarding" }: { redirectTo?: string
       callbackURL: "/verify-email",
     });
     if (error) { setErrorMessage(getAuthErrorMessage(error, "Účet se nepodařilo vytvořit. Zkus to znovu.")); setIsSubmitting(false); return; }
+    rememberVerificationNotice(String(formData.get("email") ?? ""), redirectTo);
     router.replace(redirectTo); router.refresh();
     } catch { setErrorMessage("Připojení se nepodařilo. Zkus to znovu."); }
     finally { setIsSubmitting(false); }

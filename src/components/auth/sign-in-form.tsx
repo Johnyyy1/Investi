@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/learning/text-input";
 import { authClient } from "@/lib/auth-client";
+import { readRecoveryEmail, rememberRecoveryEmail } from "./recovery-storage";
 import { getAuthErrorMessage } from "@/lib/auth-error";
 
 export function SignInForm() {
   const router = useRouter();
+  const emailInput = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (emailInput.current) emailInput.current.value = readRecoveryEmail(); }, []);
   const [errorMessage, setErrorMessage] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   async function onSubmit(formData: FormData) {
@@ -22,10 +25,10 @@ export function SignInForm() {
     finally { setIsSubmitting(false); }
   }
   return <form action={onSubmit} className="space-y-5">
-    <TextInput label="E-mail" type="email" name="email" autoComplete="email" placeholder="ty@example.com" required />
+    <TextInput label="E-mail" type="email" name="email" ref={emailInput} autoComplete="email" placeholder="ty@example.com" required />
     <div>
       <TextInput label="Heslo" type="password" name="password" autoComplete="current-password" required />
-      <Link href="/forgot-password" className="mt-1 inline-flex min-h-11 items-center text-small font-semibold text-primary underline underline-offset-4">Zapomenuté heslo?</Link>
+      <Link onClick={() => rememberRecoveryEmail(emailInput.current?.value ?? "")} href="/forgot-password" className="mt-1 inline-flex min-h-11 items-center text-small font-semibold text-primary underline underline-offset-4">Zapomenuté heslo?</Link>
     </div>
     {errorMessage ? <p className="text-small text-danger-ink" role="alert">{errorMessage}</p> : null}
     <Button className="w-full" type="submit" loading={isSubmitting}>{isSubmitting ? "Přihlašuji…" : "Přihlásit se"}</Button>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { PasswordInput } from "./password-input";
 import { TextInput } from "@/components/learning/text-input";
 import { authClient } from "@/lib/auth-client";
 import { getAuthErrorMessage } from "@/lib/auth-error";
@@ -21,7 +22,7 @@ export function EmailVerification({ email, verified }: { email: string; verified
     lock.current = true; setPending(true); setMessage(undefined);
     try {
       const { error } = await authClient.sendVerificationEmail({ email, callbackURL: "/verify-email" });
-      if (error) setMessage({ ok: false, text: error.code === "EMAIL_ALREADY_VERIFIED" ? "E-mail je už ověřený. Obnov stránku." : getAuthErrorMessage(error, "Odkaz se nepodařilo odeslat. Zkus to znovu.") });
+      if (error) setMessage({ ok: false, text: error.code === "EMAIL_ALREADY_VERIFIED" ? "E-mail je už ověřený. Obnov stránku." : getAuthErrorMessage(error, "Odkaz se nepodařilo odeslat. Zkus to za chvíli znovu.") });
       else setMessage({ ok: true, text: `Odkaz jsme poslali na ${email}. Platí 24 hodin.` });
     } catch {
       setMessage({ ok: false, text: "Připojení se nepodařilo. Zkus to znovu." });
@@ -51,11 +52,9 @@ export function PasswordChange({ hasPassword }: { hasPassword: boolean }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<Message>();
-  const [mismatch, setMismatch] = useState(false);
   const lock = useRef(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const current = useRef<HTMLInputElement>(null);
-  const confirmation = useRef<HTMLInputElement>(null);
   const opened = useRef(false);
   // Focus follows the form: into it when it opens, back to the trigger once it closes.
   useEffect(() => {
@@ -65,7 +64,7 @@ export function PasswordChange({ hasPassword }: { hasPassword: boolean }) {
   }, [open]);
 
   function close(result?: Message) {
-    setOpen(false); setMismatch(false); setMessage(result);
+    setOpen(false); setMessage(result);
   }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -73,10 +72,7 @@ export function PasswordChange({ hasPassword }: { hasPassword: boolean }) {
     if (lock.current) return;
     const form = new FormData(event.currentTarget);
     const newPassword = String(form.get("new-password") ?? "");
-    if (newPassword !== String(form.get("confirmation") ?? "")) {
-      setMismatch(true); setMessage({ ok: false, text: "Nová hesla se neshodují." }); confirmation.current?.focus(); return;
-    }
-    lock.current = true; setPending(true); setMismatch(false); setMessage(undefined);
+    lock.current = true; setPending(true); setMessage(undefined);
     try {
       const { error } = await authClient.changePassword({ currentPassword: String(form.get("current-password") ?? ""), newPassword, revokeOtherSessions: form.get("revoke") === "on" });
       if (error) { setMessage({ ok: false, text: passwordChangeError(error) }); return; }
@@ -93,10 +89,10 @@ export function PasswordChange({ hasPassword }: { hasPassword: boolean }) {
     {!hasPassword ? <div className="mt-3 border-y border-border py-4">
       <p className="text-small text-secondary">K účtu zatím nemáš heslo. Nastavíš si ho přes odkaz, který ti pošleme e-mailem.</p>
       <Link href="/forgot-password" className={buttonVariants({ variant: "secondary", size: "compact", className: "mt-3" })}>Nastavit heslo</Link>
-    </div> : open ? <form noValidate onSubmit={submit} className="mt-3 max-w-md space-y-5 border-y border-border py-4" aria-label="Změnit heslo">
+    </div> : open ? <form onSubmit={submit} className="mt-3 max-w-md space-y-5 border-y border-border py-4" aria-label="Změnit heslo">
       <TextInput ref={current} label="Současné heslo" type="password" name="current-password" autoComplete="current-password" required disabled={pending} />
-      <TextInput label="Nové heslo" type="password" name="new-password" autoComplete="new-password" minLength={8} maxLength={128} required disabled={pending} hint="Použij alespoň 8 znaků." />
-      <TextInput ref={confirmation} label="Nové heslo znovu" type="password" name="confirmation" autoComplete="new-password" minLength={8} maxLength={128} required disabled={pending} aria-invalid={mismatch || undefined} />
+      <PasswordInput label="Nové heslo" type="password" name="new-password" autoComplete="new-password" minLength={8} maxLength={128} required disabled={pending} hint="Použij alespoň 8 znaků." />
+
       <label className={styles.choice}><input type="checkbox" name="revoke" defaultChecked disabled={pending} /><span><strong>Odhlásit ostatní zařízení</strong><small>Hodí se, pokud heslo zná i někdo další.</small></span></label>
       {message && !message.ok && <p className={styles.error} role="alert">{message.text}</p>}
       <div className={styles.actions}><Button type="submit" loading={pending}>{pending ? "Ukládám…" : "Uložit nové heslo"}</Button><Button variant="secondary" size="compact" disabled={pending} onClick={() => close()}>Zrušit</Button></div>
