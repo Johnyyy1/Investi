@@ -244,5 +244,19 @@
     {"blocks":["look-through-check"],"grading":[{"id":"look-through-check","type":"numericQuestion","answer":42.4,"tolerance":0.05}]},
     {"blocks":["correlation-check"],"grading":[{"id":"correlation-check","type":"multipleChoiceQuestion","options":["chip","pharma","same"],"correctOptionId":"pharma"}]},
     {"blocks":["lab-bridge","summary","takeaway","checkpoint"],"grading":[]}
+  ]},
+  {"id":"before-investing-budget","moduleId":"module-before-investing","moduleSlug":"before-investing","slug":"budget","steps":[
+    {"blocks":["opening","prediction"],"grading":[{"id":"prediction","type":"multipleChoiceQuestion","options":["budget","gross","stocks"],"correctOptionId":"budget"}]},
+    {"blocks":["cash-flow","example","rate-formula"],"grading":[]},
+    {"blocks":["rate"],"grading":[{"id":"rate","type":"numericQuestion","answer":21.1,"tolerance":0.1}]},
+    {"blocks":["irregular","monthly"],"grading":[{"id":"monthly","type":"numericQuestion","answer":600,"tolerance":0}]},
+    {"blocks":["adjusted"],"grading":[]},
+    {"blocks":["categories"],"grading":[]},
+    {"blocks":["sorting"],"grading":[{"id":"sorting","type":"categorizeQuestion","answerKey":{"rent":"fixed","subscription":"fixed","gifts":"irregular","food":"variable","inspection":"irregular","mortgage":"fixed","repair":"irregular","ticket":"variable"}}]},
+    {"blocks":["priorities","tomas"],"grading":[{"id":"tomas","type":"multipleChoiceQuestion","options":["invest","audit","dividend"],"correctOptionId":"audit"}]},
+    {"blocks":["builder"],"grading":[]},
+    {"blocks":["recall"],"grading":[{"id":"recall","type":"multipleChoiceQuestion","options":["all","net","cut"],"correctOptionId":"net"}]},
+    {"blocks":["reflection"],"grading":[]},
+    {"blocks":["summary","safeguard","next-topic"],"grading":[]}
   ]}
 ]

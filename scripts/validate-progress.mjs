@@ -18,7 +18,7 @@ await mkdir(output, { recursive: true });
 const userIds = [];
 const errors = [];
 const lessons = await sql`select l.id,l.title,l.slug,m.slug as module_slug from lesson l join learning_module m on m.id=l.module_id where l.is_published=true order by m.position,l.position`;
-assert.equal(lessons.length, 27);
+assert.equal(lessons.length, 28);
 const foundation = lessons.filter((lesson) => lesson.module_slug === "investing-foundations");
 const returns = lessons.filter((lesson) => lesson.module_slug === "returns");
 const href = (lesson) => `/learn/${lesson.module_slug}/${lesson.slug}`;
@@ -39,9 +39,10 @@ async function learner(name) {
 /** Historical v3 fixtures deliberately retain module-based amounts; v4 never reprices these receipts. */
 async function complete(userId, items) {
   for (const item of items) {
-    const capital = item.module_slug === "investing-foundations" ? 0 : 200000;
+    const capital = ["investing-foundations", "before-investing"].includes(item.module_slug) ? 0 : 200000;
+    const policy = item.module_slug === "before-investing" ? 4 : 3;
     await sql`insert into lesson_progress(user_id,lesson_id,status,last_position,completed_at,updated_at) values(${userId},${item.id},'completed',0,clock_timestamp(),clock_timestamp()) on conflict(user_id,lesson_id) do update set status='completed',completed_at=clock_timestamp(),updated_at=clock_timestamp()`;
-    await sql`insert into lesson_award(user_id,lesson_id,xp,practice_capital_minor,reward_policy_version,learning_date,time_zone,awarded_at) values(${userId},${item.id},60,${capital},3,(now() at time zone 'Europe/Prague')::date,'Europe/Prague',clock_timestamp()) on conflict(user_id,lesson_id) do nothing`;
+    await sql`insert into lesson_award(user_id,lesson_id,xp,practice_capital_minor,reward_policy_version,learning_date,time_zone,awarded_at) values(${userId},${item.id},60,${capital},${policy},(now() at time zone 'Europe/Prague')::date,'Europe/Prague',clock_timestamp()) on conflict(user_id,lesson_id) do nothing`;
   }
 }
 const koruna = (minor) => `${new Intl.NumberFormat("cs-CZ").format(minor / 100)}\u00a0Kč`;
@@ -64,14 +65,14 @@ async function render(page, label, { state, xp, capital, count, action, actionHr
   await page.goto(`${baseURL}/progress`); await settle();
   assert.equal(await root().getAttribute("data-state"), state, `${label}: state`);
   assert.equal(await root().getByTestId("total-xp").textContent(), `${new Intl.NumberFormat("cs-CZ").format(xp)} XP`);
-  assert.equal(await root().getByTestId("available-progress").textContent(), `${count} / 27`);
+  assert.equal(await root().getByTestId("available-progress").textContent(), `${count} / ${lessons.length}`);
   // Capital is read from receipts and agrees in the summary and the breakdown card.
   assert.equal(await root().getByTestId("total-practice-capital").textContent(), koruna(capital), `${label}: capital`);
   assert.equal(await root().getByTestId("earned-practice-capital").textContent(), koruna(capital), `${label}: summary capital`);
   assert.equal(await root().getByRole("link", { name: lab.link, exact: true }).getAttribute("href"), "/lab/portfolio");
   assert.equal(await root().getByRole("heading", { name: lab.title, exact: true }).count(), 1, `${label}: Lab card title`);
   assert.equal(await root().locator("[data-level]").count(), 9, `${label}: all curriculum levels visible in the map`);
-  assert.equal(await root().getByTestId("journey-modules").locator("ol a").count(), 27, "all published lessons retain their display placement");
+  assert.equal(await root().getByTestId("journey-modules").locator("ol a").count(), lessons.length, "all published lessons retain their display placement");
   assert.equal(await root().getByTestId("journey-modules").locator("[data-level][open]").count(), state === "complete" ? 0 : 1, "only continuation level starts expanded");
   assert.equal(await root().getByText(/^(?:\d+ )?(?:streak|série)/i).count(), 0, `${label}: no streaks`);
   const continuation = root().getByRole("link", { name: action, exact: true });
@@ -177,7 +178,7 @@ try {
   assert.equal(await root().locator('[aria-current="step"]').getAttribute("href"), href(returns[0]));
 
   await complete(id, lessons);
-  root = await render(page, "complete", { state: "complete", xp: 1620, capital: 4500000, count: 27, action: "Prozkoumat Lab", actionHref: "/lab", lab: unlocked });
+  root = await render(page, "complete", { state: "complete", xp: 1680, capital: 4500000, count: 28, action: "Prozkoumat Lab", actionHref: "/lab", lab: unlocked });
   assert.equal(await root().locator('[aria-current="step"]').count(), 0);
   assert.equal(await root().getByRole("list", { name: "Za co je cvičný kapitál" }).getByRole("listitem").count(), 5, "newest five receipts");
   assert.equal(await root().getByText("Starší odměny (16)", { exact: true }).count(), 1, "older receipts wait behind a disclosure");

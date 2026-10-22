@@ -38,12 +38,12 @@ describe("real learner summary", () => {
     expect(summary.next.id).toBe("returns-log-returns");
     expect(getLearnerSummary([...prior, row("returns-log-returns", "completed")]).allComplete).toBe(true);
   });
-  it("counts only implemented learning and offers review when all twenty-seven are complete", () => {
+  it("counts only implemented learning and offers review when all twenty-eight are complete", () => {
     const summary = getLearnerSummary(curriculumLessons.map((lesson) => row(lesson.id, "completed")));
     expect(summary.percentage).toBe(100);
     expect(summary.allComplete).toBe(true);
-    expect(summary.completed).toHaveLength(27);
-    expect(summary.recent).toHaveLength(27);
+    expect(summary.completed).toHaveLength(28);
+    expect(summary.recent).toHaveLength(28);
   });
   it("ignores unknown/planned progress and never unlocks upcoming lessons", () => {
     const states = [row("foundations-checkpoint", "completed"), row("unknown", "in_progress")];

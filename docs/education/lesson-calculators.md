@@ -2,7 +2,7 @@
 
 `src/features/lessons/figure-catalog.ts` is the maintained inventory of figure IDs, data classification, model locations and owners. `curriculum` means the curriculum maintainer role responsible for the educational assumptions and model tests. The catalog defines `LessonFigureId`; a new ID must also implement the exhaustive lazy renderer map in `src/components/lesson/lazy-blocks.tsx`. Stable IDs and persisted lesson answers do not change.
 
-This platform supports incremental delivery with the lessons. It does not pre-build the planned budget, tax, pension, DCF or leverage calculators.
+This platform supports incremental delivery with the lessons. The private `budget-builder` ships with [lesson 0.1.1](budget-0.1.1.md); tax, pension, DCF and leverage calculators remain planned.
 
 ## Adding a figure
 

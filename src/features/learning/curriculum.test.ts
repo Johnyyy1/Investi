@@ -52,7 +52,8 @@ describe("curriculum registry", () => {
 
   it("places every published lesson exactly once and only lessons from the manifests", () => {
     expect(lessonPlacements.map((placement) => placement.lessonId).sort()).toEqual(availableLessons.map((lesson) => lesson.id).sort());
-    expect(lessonPlacements).toHaveLength(27);
+    expect(lessonPlacements).toHaveLength(28);
+    expect(getLessonPlacement("before-investing-budget")).toMatchObject({ displayCode: "0.1.1", required: "recommended", prerequisites: [] });
   });
 
   it("derives a unique display code from the display module and order", () => {

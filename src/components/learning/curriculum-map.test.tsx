@@ -12,12 +12,12 @@ const summary = (states: LearnerState[] = []) => ({ ...getLearnerSummary(states)
 const moduleOf = (levels: ReturnType<typeof curriculumMapModel>, code: string) => levels.flatMap((level) => level.modules).find((module) => module.code === code)!;
 
 describe("Curriculum map presentation", () => {
-  it("places all 27 published lessons exactly once, keeping storage URLs and display order", () => {
+  it("places all 28 published lessons exactly once, keeping storage URLs and display order", () => {
     const levels = curriculumMapModel(summary());
     const lessons = levels.flatMap((level) => level.modules.flatMap((module) => module.lessons));
     expect(levels).toHaveLength(9);
     expect(levels.flatMap((level) => level.modules)).toHaveLength(25);
-    expect(lessons).toHaveLength(27);
+    expect(lessons).toHaveLength(28);
     expect(new Set(lessons.map((lesson) => lesson.id))).toEqual(new Set(availableLessons.map((lesson) => lesson.id)));
     for (const lesson of lessons) expect(lesson.href).toBe(`/learn/${lesson.moduleSlug}/${lesson.slug}`);
     expect(moduleOf(levels, "3.3").lessons.map((lesson) => lesson.moduleSlug)).toEqual(["correlation", "correlation", ...Array(5).fill("diversification")]);
