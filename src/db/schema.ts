@@ -388,3 +388,23 @@ export const rateLimitBucket = pgTable("rate_limit_bucket", {
   check("rate_limit_bucket_window_check", sql`${table.expiresAt} > ${table.windowStartedAt}`),
   check("rate_limit_bucket_key_length_check", sql`length(${table.key}) <= 256`),
 ]);
+
+/**
+ * Landing-page views per Europe/Prague calendar day for the product funnel (#355). A bare counter: no
+ * cookie, IP address, user agent or any other identifier is stored, so a row says nothing about anyone.
+ */
+export const analyticsLandingViewDay = pgTable("analytics_landing_view_day", {
+  day: date("day").primaryKey(),
+  views: integer("views").notNull(),
+}, (table) => [
+  check("analytics_landing_view_day_views_check", sql`${table.views} >= 1`),
+]);
+
+/**
+ * The first return to the app on calendar days 1–7 after an account or guest started (#355). At most one
+ * row per user, written only inside that window; it cascades with the user and is part of the data export.
+ */
+export const analyticsEarlyReturn = pgTable("analytics_early_return", {
+  userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
+  returnedAt: timestamp("returned_at", { withTimezone: true }).notNull(),
+});

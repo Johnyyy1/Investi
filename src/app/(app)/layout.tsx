@@ -1,5 +1,9 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
+import { db } from "@/db";
+import { isEarlyReturnDay } from "@/features/analytics/funnel";
+import { recordEarlyReturn } from "@/features/analytics/repository";
 import { requiresInitialOnboarding } from "@/features/personalization/profile";
 import { getLearningProfile, hasLearningHistory } from "@/features/onboarding/repository";
 import { AppShell } from "@/components/app-shell";
@@ -8,6 +12,7 @@ import { getCurrentUser } from "@/lib/session";
 import { isDemoIdentity, isGuestIdentity } from "@/features/guest/identity";
 import { loadPortfolioLabUnlockStatus } from "@/features/progression/repository";
 import { perfMeasure, perfSegment } from "@/lib/perf";
+import { logUnexpectedError } from "@/lib/server-errors";
 
 /** Signed-in pages are personal; the title template and the rest of the root metadata still apply. */
 export const metadata = { robots: { index: false, follow: false } };
@@ -19,6 +24,11 @@ export default function ApplicationLayout({ children }: { children: React.ReactN
 async function renderApplicationLayout(children: React.ReactNode) {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
+  // Product funnel (#355): a return on days 1–7 after starting. Demos are not learners; after() keeps the write off the response.
+  const now = new Date();
+  if (!isDemoIdentity(user) && isEarlyReturnDay(user.createdAt, now)) {
+    after(() => recordEarlyReturn(db, user, now).catch((error: unknown) => logUnexpectedError("analytics", "early return", error)));
+  }
   // Both need only the user id. The page renders in parallel and reads the same memoized values.
   // An account that still needs onboarding has no learning history and is not a demo, so its
   // unlock check is a plain read that records nothing before the redirect below.

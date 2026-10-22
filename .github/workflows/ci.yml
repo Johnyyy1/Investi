@@ -109,6 +109,12 @@ jobs:
         run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/investi_artifacts_qa npm run test:ips-persistence
         env:
           IPS_QA_DISPOSABLE: "1"
+      - name: Product funnel migration, early returns and landing views
+        run: |
+          node --input-type=module -e 'import postgres from "postgres"; const sql = postgres(process.env.DATABASE_URL); await sql`CREATE DATABASE investi_funnel_qa`; await sql.end();'
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/investi_funnel_qa npm run test:product-analytics
+        env:
+          FUNNEL_QA_DISPOSABLE: "1"
       # Deletes every session in the database that expired more than 30 days ago.
       - name: npm run test:account-deletion
         run: npm run test:account-deletion

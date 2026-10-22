@@ -56,6 +56,7 @@ async function withEverything(userId: string, lessonIds: string[]) {
   }
   await sql`insert into learning_profile (user_id, goals, daily_goal_minutes, time_zone, onboarding_step, onboarding_completed_at, updated_at) values (${userId}, '{QUANT}', 10, 'Europe/Prague', 6, now(), now())`;
   await sql`insert into progression_unlock (user_id, unlock_id, practice_capital_minor, reason, unlocked_at) values (${userId}, 'PORTFOLIO_LAB', 500000, 'qa', now())`;
+  await sql`insert into analytics_early_return (user_id, returned_at) values (${userId}, now())`;
   const closed = `${userId}-p1`, active = `${userId}-p2`;
   await sql`insert into portfolio (id, user_id, opened_at, closed_at, opening_capital_minor) values (${closed}, ${userId}, now() - interval '2 days', now() - interval '1 day', 500000)`;
   await sql`insert into portfolio (id, user_id, opened_at, reset_from_portfolio_id, opening_capital_minor) values (${active}, ${userId}, now(), ${closed}, 700000)`;
@@ -81,6 +82,7 @@ async function owned(userId: string) {
     (select count(*) from lesson_progress where user_id = ${userId})::int as progress,
     (select count(*) from lesson_award where user_id = ${userId})::int as awards,
     (select count(*) from progression_unlock where user_id = ${userId})::int as unlocks,
+    (select count(*) from analytics_early_return where user_id = ${userId})::int as "earlyReturns",
     (select count(*) from portfolio where id like ${`${userId}-%`})::int as portfolios,
     (select count(*) from portfolio_trade where portfolio_id like ${`${userId}-%`})::int as trades,
     (select count(*) from portfolio_allocation where portfolio_id like ${`${userId}-%`})::int as allocations,
@@ -90,7 +92,8 @@ async function owned(userId: string) {
 const shared = async () => ({ ...(await sql`select
   (select count(*) from learning_module)::int as modules, (select count(*) from lesson)::int as lessons,
   (select count(*) from market_data_cache where cache_key = ${run})::int as cache,
-  (select count(*) from rate_limit_bucket where key = ${run})::int as buckets`)[0] });
+  (select count(*) from rate_limit_bucket where key = ${run})::int as buckets,
+  (select count(*) from analytics_landing_view_day where day = date '1999-01-01')::int as "landingViews"`)[0] });
 async function refusal(response: Response) {
   return { status: response.status, code: ((await response.json()) as { code?: string }).code };
 }
@@ -101,12 +104,13 @@ try {
   assert.equal(lessons.length, 2, "Run db:migrate and db:seed first.");
   await sql`insert into market_data_cache (family, cache_key, format_version, value, stored_at, expires_at) values ('instrument', ${run}, 1, '{}', now(), now() + interval '1 hour')`;
   await sql`insert into rate_limit_bucket (key, count, window_started_at, expires_at) values (${run}, 1, now(), now() + interval '1 hour')`;
+  await sql`insert into analytics_landing_view_day (day, views) values (date '1999-01-01', 1) on conflict (day) do nothing`;
 
   const target = await signUp("target");
   const other = await signUp("other");
   await withEverything(target.id, lessons);
   await withEverything(other.id, lessons);
-  const full = { user: 1, sessions: 1, accounts: 1, artifacts: 2, profile: 1, progress: 2, awards: 2, unlocks: 1, portfolios: 2, trades: 2, allocations: 1, lines: 1 };
+  const full = { user: 1, sessions: 1, accounts: 1, artifacts: 2, profile: 1, progress: 2, awards: 2, unlocks: 1, earlyReturns: 1, portfolios: 2, trades: 2, allocations: 1, lines: 1 };
   assert.deepEqual(await owned(target.id), full);
   const otherBefore = await owned(other.id);
   const sharedBefore = await shared();
@@ -120,6 +124,7 @@ try {
   const data = JSON.parse(text);
   assert.equal(data.user.email, target.email);
   assert.equal(data.learnerArtifacts.length, 2, "all artifact revisions are exported");
+  assert.ok(data.productMeasurement.earlyReturnAt, "the funnel's early-return record is exported");
   assert.equal(data.portfolios.length, 2);
   assert.equal(data.portfolios.flatMap((generation: { trades: unknown[] }) => generation.trades).length, 2);
   assert.equal(data.portfolios[1].targetMixes[0].lines[0].weightBasisPoints, 9000);
@@ -163,7 +168,7 @@ try {
   assert.ok(deleted.headers.getSetCookie().some((value) => value.startsWith("better-auth.session_token=;") || /better-auth\.session_token=[^;]*;.*Max-Age=0/i.test(value)), "the session cookie is cleared");
   assert.deepEqual(await owned(target.id), Object.fromEntries(Object.keys(full).map((key) => [key, 0])), "every owned row is gone");
   assert.deepEqual(await owned(other.id), otherBefore, "another user keeps everything");
-  assert.deepEqual(await shared(), sharedBefore, "curriculum, market-data cache and rate-limit rows are untouched");
+  assert.deepEqual(await shared(), sharedBefore, "curriculum, market-data cache, rate-limit and landing-view rows are untouched");
   assert.equal((await exportFor(target.cookie)).status, 401, "the old cookie no longer exports anything");
   assert.equal((await call("/delete-user", { cookie: target.cookie, body: { password } })).status, 401, "a retry finds no session");
   console.log("PASS: deletion cascades through sessions, accounts, profile, progress, receipts, unlocks, portfolios, trades and mixes; other users and shared data stay.");
@@ -205,6 +210,7 @@ try {
   }
   await sql`delete from market_data_cache where cache_key = ${run}`;
   await sql`delete from rate_limit_bucket where key = ${run}`;
+  await sql`delete from analytics_landing_view_day where day = date '1999-01-01'`;
   await sql.end();
   process.exit(process.exitCode ?? 0);
 }

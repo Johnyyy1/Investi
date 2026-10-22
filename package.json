@@ -81,7 +81,9 @@
     "test:ips-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-ips.mts",
     "test:ips-browser": "node scripts/validate-ips-browser.mjs",
     "test:lesson-exercises-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-lesson-exercises.mts",
-    "test:lesson-exercises-browser": "node scripts/validate-lesson-exercises-browser.mjs"
+    "test:lesson-exercises-browser": "node scripts/validate-lesson-exercises-browser.mjs",
+    "analytics:funnel": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/report-funnel.mts",
+    "test:product-analytics": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-product-analytics.mts"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.10",
