@@ -96,6 +96,18 @@ buys after     : min(shortfall, cash above target reserve) → quantity affordab
 
 An exact monotonic quantity search includes commission and conversion in each buy budget. Each total buy debit is therefore at most its target budget, cash never goes negative, and every rounding remainder stays as cash. Differences under 1 Kč are not traded. The client sends only instrument identities, integer weights and an idempotency key; trades use derived keys `allocation:<key>:<n>`. If any involved quote is not usable for execution (market closed, stale, unavailable, other provider), nothing is written. `reviewAllocation` runs the same plan without writing, as an estimate for the review step.
 
+## Market-data budget
+
+Buy, sell and saving a mix observe server-side metadata, a quote and FX for instrument ids the client chose, before any cash or holding check. Failed provider lookups are not cached, so these calls count against the per-user market-data budget shared by every instance (`src/features/rate-limit/policy.ts`), like search, previews, detail, compare and backtests:
+
+| Call | Minute bucket (per request) | Daily `market:daily` units |
+| --- | --- | --- |
+| buy / sell | `market:trade`, 20 per minute | 1 |
+| save a mix | `market:allocation`, 10 per minute | one per distinct instrument observed (lines + current holdings) |
+| review a mix, allocation quotes | `market:allocation-quotes`, 10 per minute | one per distinct instrument observed |
+
+The repository charges after a duplicate idempotency key has been answered from the ledger and before the first lookup. A retry of a completed buy, sell or mix is therefore free, and a refused call observes and writes nothing; the learner sees the usual "Tržní data načítáš příliš rychle" or daily-limit message. Two concurrent first attempts with the same key can both be charged, because the second duplicate check runs under the learner lock after observation. The budget caps provider calls; it does not cache unknown instruments.
+
 ## Price and FX attribution
 
 The investment gain/loss is split read-only, from the ledger and the same observations as the valuation:

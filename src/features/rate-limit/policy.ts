@@ -14,6 +14,8 @@ export interface RateLimitBucket {
   readonly scope: string;
   readonly subject: string;
   readonly rule: RateLimitRule;
+  /** Hits this request adds; 1 when omitted. */
+  readonly cost?: number;
 }
 
 export interface RateLimitDecision {
@@ -58,7 +60,7 @@ export const CHANGE_PASSWORD_USER_RULE: RateLimitRule = { window: 15 * MINUTE, m
 /** Full personal-data exports per user; each one reads every row the user owns. */
 export const ACCOUNT_EXPORT_USER_RULE: RateLimitRule = { window: HOUR, max: 10 };
 
-export type MarketDataFamily = "search" | "instrument-preview" | "allocation-quotes" | "instrument-detail" | "instrument-compare" | "backtest";
+export type MarketDataFamily = "search" | "instrument-preview" | "allocation-quotes" | "instrument-detail" | "instrument-compare" | "backtest" | "trade" | "allocation";
 
 /** Per-user bursts per surface; a debounced search box stays far below these. */
 export const marketDataMinuteRules: Readonly<Record<MarketDataFamily, RateLimitRule>> = {
@@ -68,15 +70,23 @@ export const marketDataMinuteRules: Readonly<Record<MarketDataFamily, RateLimitR
   "instrument-detail": { window: MINUTE, max: 30 },
   "instrument-compare": { window: MINUTE, max: 30 },
   backtest: { window: MINUTE, max: 20 },
+  // Buy/sell and saving a mix observe fresh quotes for client-chosen instruments before any cash check.
+  trade: { window: MINUTE, max: 20 },
+  allocation: { window: MINUTE, max: 10 },
 };
 /** One daily budget per user across every market-data surface, so one account cannot drain the provider quota. */
 export const MARKET_DATA_DAILY_RULE: RateLimitRule = { window: DAY, max: 600 };
 export const MARKET_DATA_DAILY_SCOPE = "market:daily";
 
-export function marketDataBuckets(userId: string, family: MarketDataFamily): RateLimitBucket[] {
+/**
+ * The minute bucket counts requests; the daily budget counts instrument lookups, so a request that
+ * observes a whole mix spends as much of the provider quota as the same lookups made one by one.
+ */
+export function marketDataBuckets(userId: string, family: MarketDataFamily, lookups = 1): RateLimitBucket[] {
+  if (!Number.isInteger(lookups) || lookups < 1) throw new Error("A market-data request must count at least one whole lookup.");
   return [
     { scope: `market:${family}`, subject: userId, rule: marketDataMinuteRules[family] },
-    { scope: MARKET_DATA_DAILY_SCOPE, subject: userId, rule: MARKET_DATA_DAILY_RULE },
+    { scope: MARKET_DATA_DAILY_SCOPE, subject: userId, rule: MARKET_DATA_DAILY_RULE, ...(lookups > 1 ? { cost: lookups } : {}) },
   ];
 }
 

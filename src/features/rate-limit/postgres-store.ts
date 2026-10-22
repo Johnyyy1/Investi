@@ -13,9 +13,9 @@ const COUNT_CAP = 1_000_000_000;
 type Database = Pick<typeof applicationDatabase, "insert" | "delete">;
 
 /**
- * Postgres-backed shared counters. One multi-row INSERT … ON CONFLICT DO UPDATE adds a hit to every
+ * Postgres-backed shared counters. One multi-row INSERT … ON CONFLICT DO UPDATE adds its cost to every
  * counter of a request: Postgres row-locks each conflicting key, so concurrent requests on any
- * instance serialize per key and never lose an increment. A window that has ended restarts at 1.
+ * instance serialize per key and never lose an increment. A window that has ended restarts at the request's cost.
  * Keys are locked in sorted order so two requests sharing keys cannot deadlock. Errors propagate:
  * a limiter that cannot count denies by failing the request instead of silently allowing it.
  */
@@ -29,16 +29,17 @@ export class PostgresRateLimitStore implements RateLimitStore {
     if (unique.length === 0) return [];
     for (const counter of unique) {
       if (!Number.isInteger(counter.windowSeconds) || counter.windowSeconds <= 0) throw new Error("A rate-limit window must be a positive whole number of seconds.");
+      if (!Number.isInteger(counter.cost) || counter.cost <= 0 || counter.cost > COUNT_CAP) throw new Error("A rate-limit cost must be a positive whole number.");
     }
     const startedAt = new Date(now);
     const expired = sql`${rateLimitBucket.expiresAt} <= excluded.window_started_at`;
     const rows = await this.db
       .insert(rateLimitBucket)
-      .values(unique.map((counter) => ({ key: counter.key, count: 1, windowStartedAt: startedAt, expiresAt: new Date(now + counter.windowSeconds * 1_000) })))
+      .values(unique.map((counter) => ({ key: counter.key, count: counter.cost, windowStartedAt: startedAt, expiresAt: new Date(now + counter.windowSeconds * 1_000) })))
       .onConflictDoUpdate({
         target: rateLimitBucket.key,
         set: {
-          count: sql`case when ${expired} then 1 else least(${rateLimitBucket.count} + 1, ${COUNT_CAP}) end`,
+          count: sql`case when ${expired} then excluded.count else least(${rateLimitBucket.count} + excluded.count, ${COUNT_CAP}) end`,
           windowStartedAt: sql`case when ${expired} then excluded.window_started_at else ${rateLimitBucket.windowStartedAt} end`,
           expiresAt: sql`case when ${expired} then excluded.expires_at else ${rateLimitBucket.expiresAt} end`,
         },

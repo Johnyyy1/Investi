@@ -76,7 +76,45 @@ describe("market-data budget", () => {
     await searchPortfolioInstrumentsAction("Apple");
     await loadInstrumentPreviewAction("US-XNAS:AAPL");
     await loadAllocationQuotesAction(["US-XNAS:AAPL"]);
-    expect(mocks.budget.mock.calls).toEqual([["unlocked-user", "search"], ["unlocked-user", "instrument-preview"], ["unlocked-user", "allocation-quotes"]]);
+    expect(mocks.budget.mock.calls).toEqual([["unlocked-user", "search"], ["unlocked-user", "instrument-preview"], ["unlocked-user", "allocation-quotes", 1]]);
+  });
+
+  it("charges allocation quotes once per distinct instrument", async () => {
+    mocks.quotes.mockResolvedValue([]);
+    await loadAllocationQuotesAction(["US-XNAS:AAPL", "US-XNAS:MSFT", "US-XNAS:AAPL"]);
+    expect(mocks.budget.mock.calls).toEqual([["unlocked-user", "allocation-quotes", 2]]);
+    expect(mocks.quotes).toHaveBeenCalledWith(["US-XNAS:AAPL", "US-XNAS:MSFT"]);
+  });
+
+  it("charges buy, sell, mix review and mix execution to their own families for every instrument observed", async () => {
+    // The repository decides how many instruments it will observe and charges before the first lookup.
+    mocks.execute.mockImplementation(async (_user, _input, charge: (lookups: number) => Promise<unknown>) => { await charge(1); return { duplicate: false }; });
+    mocks.reviewAllocation.mockImplementation(async (_user, _input, charge: (lookups: number) => Promise<unknown>) => { await charge(3); return { plan: { totalValueMinor: 0n, targetCashMinor: 0n, resultingCashMinor: 0n, trades: [], positions: [] }, observations: new Map() }; });
+    mocks.executeAllocation.mockImplementation(async (_user, _input, charge: (lookups: number) => Promise<unknown>) => { await charge(4); return { duplicate: false, tradeCount: 2 }; });
+    const trade = { instrumentId: "US-XNAS:AAPL", quantity: "1", clientIdempotencyKey: crypto.randomUUID() };
+    expect(await buyPortfolioAction(trade)).toMatchObject({ ok: true });
+    expect(await sellPortfolioAction({ ...trade, clientIdempotencyKey: crypto.randomUUID() })).toMatchObject({ ok: true });
+    expect(await reviewPortfolioAllocationAction(mix)).toMatchObject({ ok: true });
+    expect(await savePortfolioAllocationAction({ ...mix, clientIdempotencyKey: crypto.randomUUID() })).toMatchObject({ ok: true });
+    expect(mocks.budget.mock.calls).toEqual([
+      ["unlocked-user", "trade", 1], ["unlocked-user", "trade", 1], ["unlocked-user", "allocation-quotes", 3], ["unlocked-user", "allocation", 4],
+    ]);
+  });
+
+  it("refuses an over-budget trade or mix with the rate-limit message and executes nothing past the charge", async () => {
+    mocks.budget.mockRejectedValue(new RequestRateLimitedError({ allowed: false, retryAfterSeconds: 7_200, deniedScope: "market:daily" }));
+    const executed = vi.fn();
+    mocks.execute.mockImplementation(async (_user, _input, charge: (lookups: number) => Promise<unknown>) => { await charge(1); executed(); });
+    mocks.executeAllocation.mockImplementation(async (_user, _input, charge: (lookups: number) => Promise<unknown>) => { await charge(2); executed(); });
+    const results = [
+      await buyPortfolioAction({ instrumentId: "US-XNAS:AAPL", quantity: "1", clientIdempotencyKey: crypto.randomUUID() }),
+      await sellPortfolioAction({ instrumentId: "US-XNAS:AAPL", quantity: "1", clientIdempotencyKey: crypto.randomUUID() }),
+      await savePortfolioAllocationAction({ ...mix, clientIdempotencyKey: crypto.randomUUID() }),
+    ];
+    for (const result of results) expect(result).toEqual({ ok: false, message: "Denní limit tržních dat pro tvůj účet je vyčerpaný. Zkus to znovu za 2 h." });
+    expect(executed).not.toHaveBeenCalled();
+    expect(mocks.view).not.toHaveBeenCalled();
+    expect(mocks.revalidate).not.toHaveBeenCalled();
   });
 
   it("does not spend budget on input that never reaches the provider", async () => {
@@ -87,6 +125,8 @@ describe("market-data budget", () => {
 
   it("refuses an over-budget read with a retry hint and never calls the provider", async () => {
     mocks.budget.mockRejectedValue(new RequestRateLimitedError({ allowed: false, retryAfterSeconds: 42, deniedScope: "market:search" }));
+    const observed = vi.fn();
+    mocks.reviewAllocation.mockImplementation(async (_user, _input, charge: (lookups: number) => Promise<unknown>) => { await charge(1); observed(); });
     const results = await Promise.all([
       searchPortfolioInstrumentsAction("Apple"),
       loadInstrumentPreviewAction("US-XNAS:AAPL"),
@@ -97,7 +137,7 @@ describe("market-data budget", () => {
     expect(mocks.search).not.toHaveBeenCalled();
     expect(mocks.preview).not.toHaveBeenCalled();
     expect(mocks.quotes).not.toHaveBeenCalled();
-    expect(mocks.reviewAllocation).not.toHaveBeenCalled();
+    expect(observed).not.toHaveBeenCalled();
   });
 });
 
@@ -124,7 +164,7 @@ describe("target mix input boundary", () => {
     mocks.executeAllocation.mockResolvedValue({ allocationId: "a", tradeCount: 1, duplicate: false });
     const key = crypto.randomUUID();
     expect(await savePortfolioAllocationAction({ ...mix, clientIdempotencyKey: key })).toEqual({ ok: true, duplicate: false, tradeCount: 1 });
-    expect(mocks.executeAllocation).toHaveBeenCalledWith("unlocked-user", { ...mix, clientIdempotencyKey: key });
+    expect(mocks.executeAllocation).toHaveBeenCalledWith("unlocked-user", { ...mix, clientIdempotencyKey: key }, expect.any(Function));
     expect(mocks.revalidate).toHaveBeenCalledWith("/lab/portfolio");
   });
 });

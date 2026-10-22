@@ -93,7 +93,7 @@ async function tradeAction(input: unknown, side: "BUY" | "SELL") {
   try {
     const current = await authenticatedUser();
     const parsed = tradeInputSchema.parse(input);
-    const result = await executeTrade(current.id, { ...parsed, side });
+    const result = await executeTrade(current.id, { ...parsed, side }, (lookups) => enforceMarketDataBudget(current.id, "trade", lookups));
     const portfolio = await loadPortfolioView(current.id);
     revalidatePath("/lab/portfolio");
     return { ok: true as const, duplicate: result.duplicate, portfolio };
@@ -149,9 +149,9 @@ export async function resetPortfolioAction(input: unknown) {
 export async function loadAllocationQuotesAction(instrumentIds: unknown) {
   try {
     const current = await authenticatedUser();
-    const ids = z.array(instrumentIdSchema).min(1).max(24).parse(instrumentIds);
-    await enforceMarketDataBudget(current.id, "allocation-quotes");
-    return { ok: true as const, quotes: await loadAllocationQuotes([...new Set(ids)]) };
+    const ids = [...new Set(z.array(instrumentIdSchema).min(1).max(24).parse(instrumentIds))];
+    await enforceMarketDataBudget(current.id, "allocation-quotes", ids.length);
+    return { ok: true as const, quotes: await loadAllocationQuotes(ids) };
   } catch (error) {
     return { ok: false as const, message: failure("load allocation quotes", error) };
   }
@@ -162,8 +162,7 @@ export async function reviewPortfolioAllocationAction(input: unknown) {
   try {
     const current = await authenticatedUser();
     const parsed = allocationInputSchema.parse(input);
-    await enforceMarketDataBudget(current.id, "allocation-quotes");
-    const { plan, observations } = await reviewAllocation(current.id, parsed);
+    const { plan, observations } = await reviewAllocation(current.id, parsed, (lookups) => enforceMarketDataBudget(current.id, "allocation-quotes", lookups));
     const describe = (instrumentId: string) => {
       const observation = observations.get(instrumentId)!;
       return {
@@ -204,7 +203,7 @@ export async function savePortfolioAllocationAction(input: unknown) {
   try {
     const current = await authenticatedUser();
     const parsed = allocationExecutionSchema.parse(input);
-    const result = await executeAllocation(current.id, parsed);
+    const result = await executeAllocation(current.id, parsed, (lookups) => enforceMarketDataBudget(current.id, "allocation", lookups));
     revalidatePath("/lab/portfolio");
     return { ok: true as const, duplicate: result.duplicate, tradeCount: result.tradeCount };
   } catch (error) {
