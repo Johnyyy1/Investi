@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LandingViewBeacon } from "@/components/marketing/landing-view-beacon";
 import { PenLanding } from "@/components/marketing/pen-landing";
 import { BRAND_NAME, SITE_DESCRIPTION, SITE_URL } from "@/lib/site";
 
@@ -24,5 +25,6 @@ export default function MarketingPage() {
     {/* A data block, not a script: CSP does not apply and `<` is escaped against markup injection. */}
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }} />
     <PenLanding />
+    <LandingViewBeacon />
   </>;
 }

@@ -18,6 +18,7 @@ function rows(): AccountExportRows {
     trades: [{ id: "t1", portfolioId: "p1", quantity: "0.33333333", unitPrice: "1.25000000", fxRateToBase: "23.456789012345", grossAmountBaseMinor: 977n, feeBaseMinor: 0n, cashDeltaBaseMinor: -977n } as AccountExportRows["trades"][number]],
     allocations: [{ id: "a1", portfolioId: "p2", createdAt: at, cashWeightBasisPoints: 1000, appliedValueMinor: 700000n, clientIdempotencyKey: "m" }],
     artifacts: [{ id: "artifact1", userId: "u1", kind: "goal_map", version: 1, payload: { goals: [] }, createdAt: at, sourceLessonId: "foundations-why-invest", requestId: "r1" }],
+    earlyReturn: { returnedAt: at },
     lines: [{ allocationId: "a1", position: 0, instrumentId: "i1", instrumentSymbol: "VWCE", instrumentName: "World ETF", instrumentAssetType: "etf", quoteCurrency: "EUR", weightBasisPoints: 9000 }],
   };
 }
@@ -33,6 +34,7 @@ describe("account export", () => {
     expect(parsed.lessonRewardReceipts[0].practiceCapitalMinor).toBe("200000");
     expect(parsed.progressionUnlocks[0].practiceCapitalMinor).toBe("500000");
     expect(parsed.portfolios[0].trades[0]).toMatchObject({ quantity: "0.33333333", fxRateToBase: "23.456789012345", cashDeltaBaseMinor: "-977" });
+    expect(parsed.productMeasurement).toEqual({ earlyReturnAt: at.toISOString() });
     expect(parsed.sessions[0]).toEqual({ createdAt: at.toISOString(), updatedAt: at.toISOString(), expiresAt: at.toISOString(), ipAddress: "198.51.100.7", userAgent: "Firefox" });
   });
 
@@ -42,9 +44,10 @@ describe("account export", () => {
   });
 
   it("exports a learner without profile or portfolio", () => {
-    const empty = { ...rows(), profile: null, portfolios: [], trades: [], allocations: [], lines: [], unlocks: [] };
+    const empty = { ...rows(), profile: null, portfolios: [], trades: [], allocations: [], lines: [], unlocks: [], earlyReturn: null };
     const data = buildAccountExport(empty, at);
     expect(data.learningProfile).toBeNull();
+    expect(data.productMeasurement).toEqual({ earlyReturnAt: null });
     expect(data.portfolios).toEqual([]);
   });
 

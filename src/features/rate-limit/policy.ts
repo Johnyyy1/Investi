@@ -59,6 +59,8 @@ export const EMAIL_LINK_ACCOUNT_RULE: RateLimitRule = { window: HOUR, max: 5 };
 export const CHANGE_PASSWORD_USER_RULE: RateLimitRule = { window: 15 * MINUTE, max: 5 };
 /** Full personal-data exports per user; each one reads every row the user owns. */
 export const ACCOUNT_EXPORT_USER_RULE: RateLimitRule = { window: HOUR, max: 10 };
+/** Counted landing-page views from one IP; more than a curious visitor reloading, too few to skew the funnel. */
+export const LANDING_VIEW_IP_RULE: RateLimitRule = { window: HOUR, max: 30 };
 
 export type MarketDataFamily = "search" | "instrument-preview" | "allocation-quotes" | "instrument-detail" | "instrument-compare" | "backtest" | "trade" | "allocation";
 

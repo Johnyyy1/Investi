@@ -121,6 +121,7 @@ Every suite below is an npm script in `package.json` unless it is written as `no
 | `test:rate-limit` | Shared rate limits | ✓ |
 | `test:account-deletion` | Account deletion, data export, session retention (needs `ACCOUNT_DATA_QA_DISPOSABLE=1`) | ✓ |
 | `test:anonymous-cleanup` | Anonymous identity cleanup (needs `ANONYMOUS_CLEANUP_QA_DISPOSABLE=1`) | ✓ |
+| `test:product-analytics` | Product funnel migration, early returns and landing views (needs `FUNNEL_QA_DISPOSABLE=1` and a database named `investi_funnel_qa`, see [product analytics](docs/product-analytics.md)) | ✓ |
 | `test:personalization-persistence` | Onboarding profile and recommendations (needs `PERSONALIZATION_QA_DISPOSABLE=1`, see [onboarding](docs/onboarding.md)) | |
 | `test:prepared-statements` | Prepared-statement compatibility of a pooler endpoint (see [performance baseline](docs/performance-baseline.md)) | |
 
@@ -163,6 +164,7 @@ Every suite below is an npm script in `package.json` unless it is written as `no
 | Script | Purpose |
 | --- | --- |
 | `demo:cleanup` | Dry run of the anonymous identity cleanup; `-- --apply` applies it |
+| `analytics:funnel` | Read-only funnel to milestone A: last 7 and 30 days, weekly cohorts, lesson drop-off; `-- --json` for JSON (see [product analytics](docs/product-analytics.md)) |
 | `smoke:fmp` | Manual smoke test of the live FMP market-data adapter |
 | `smoke:fmp-fundamentals` | Manual smoke test of live FMP equity fundamentals and their cache |
 | `bench:navigation` | Client navigation benchmark (see [performance baseline](docs/performance-baseline.md)) |
@@ -175,7 +177,7 @@ A daily Vercel Cron job (`vercel.json`) calls `/api/cron/cleanup-anonymous`, whi
 
 ## Personal data
 
-A saved account downloads its data from Settings → Moje data (`GET /api/account/export`, session owner only, rate limited per user): profile, sign-in methods without secrets, sessions, learning profile, progress, reward receipts, unlocks, portfolio generations with trades and target mixes, with money in minor units and decimals as exact strings. The same screen deletes the account through Better Auth's `/delete-user`; a guard in `src/lib/auth.ts` requires the password for password accounts, a sign-in from the last 10 minutes for Google/Facebook-only accounts, refuses guests and demos (the cleanup above removes those), and limits attempts per user. The user row cascades everything the user owns; shared curriculum, market data and rate-limit counters stay. `/privacy` and `/terms` are linked from every footer and the sign-up step; the operator's identity and contact in `src/components/legal/legal-page.tsx` must be filled in and the texts reviewed before they are relied on.
+A saved account downloads its data from Settings → Moje data (`GET /api/account/export`, session owner only, rate limited per user): profile, sign-in methods without secrets, sessions, learning profile, progress, reward receipts, unlocks, the funnel's early-return record, portfolio generations with trades and target mixes, with money in minor units and decimals as exact strings. The same screen deletes the account through Better Auth's `/delete-user`; a guard in `src/lib/auth.ts` requires the password for password accounts, a sign-in from the last 10 minutes for Google/Facebook-only accounts, refuses guests and demos (the cleanup above removes those), and limits attempts per user. The user row cascades everything the user owns; shared curriculum, market data and rate-limit counters stay. `/privacy` and `/terms` are linked from every footer and the sign-up step; the operator's identity and contact in `src/components/legal/legal-page.tsx` must be filled in and the texts reviewed before they are relied on.
 
 The operator command applies the same rule and needs only `DATABASE_URL`:
 

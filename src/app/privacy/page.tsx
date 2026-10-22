@@ -21,15 +21,17 @@ const sections: readonly LegalSection[] = [
     <div><dt>Výstupy z lekcí</dt><dd>Jen s tvým potvrzením ukládáme mapu cílů, shrnutí finančního check-upu, profil poplatků, checklisty, investiční plán, pojistky, mapu byznysu, tezi a deník včetně předchozích verzí. Check-up ukládá kategorie a další krok, bez částek příjmů a dluhů. Host bez účtu tyto výstupy neukládá.</dd></div>
     <div><dt>Portfolio Lab</dt><dd>Cvičná portfolia, provedené cvičné obchody a uložené mixy. Jde o cvičný kapitál, ne o skutečné investice.</dd></div>
     <div><dt>Ochrana proti zneužití</dt><dd>Počítadla požadavků, která brání hádání hesel a přetěžování služby. Místo IP adresy nebo e-mailu v nich ukládáme jen jednosměrný otisk.</dd></div>
+    <div><dt>Měření produktu</dt><dd>U účtu a hosta okamžik prvního návratu do aplikace v prvních 7 dnech po založení (jen jeden záznam, později už nic). Zobrazení úvodní stránky jen sčítáme po dnech: bez cookies, IP adresy a jakéhokoli identifikátoru, takže počet o nikom nic neříká.</dd></div>
     <div><dt>Host a demo</dt><dd>Když se učíš bez účtu, vytvoříme anonymní profil bez e-mailu. Ukládáme k němu stejná data o učení a relacích jako k účtu.</dd></div>
   </dl> },
   { id: "neukladame", title: "Co nezpracováváme", body: <ul>
     <li>Platební údaje, bankovní účty ani skutečné investice. Investník není obchodník s cennými papíry a nepracuje se skutečnými penězi.</li>
-    <li>Reklamní ani analytické sledování a profilování pro marketing. Údaje neprodáváme.</li>
+    <li>Reklamní sledování, analytické nástroje třetích stran ani profilování pro marketing. Údaje neprodáváme.</li>
   </ul> },
   { id: "ucely", title: "Proč údaje zpracováváme", body: <ul>
     <li><strong>Provoz účtu a služby</strong>: přihlášení, uložení pokroku, odměn a cvičného portfolia a doporučení dalšího kroku v učení. Právním základem je plnění smlouvy podle <Link href="/terms">podmínek použití</Link> (čl. 6 odst. 1 písm. b) GDPR).</li>
     <li><strong>Bezpečnost</strong>: údaje o relacích a počítadla požadavků slouží k ochraně účtů a služby. Právním základem je náš oprávněný zájem (čl. 6 odst. 1 písm. f) GDPR).</li>
+    <li><strong>Zlepšování výuky</strong>: z výše uvedených údajů a měření produktu počítáme souhrnné počty, například kolik nových učících se dokončí diagnostiku, první lekci nebo první výstup a kolik se jich do týdne vrátí a po které lekci lidé končí. Výsledkem jsou jen součty, nikdy údaje o tobě. Počítáme je sami ve vlastní databázi a nikomu je nepředáváme. Právním základem je náš oprávněný zájem (čl. 6 odst. 1 písm. f) GDPR).</li>
   </ul> },
   { id: "prijemci", title: "Komu údaje předáváme", body: <>
     <p>Údaje zpracovávají jen poskytovatelé, bez kterých služba nefunguje, a to podle našich pokynů:</p>
@@ -46,6 +48,7 @@ const sections: readonly LegalSection[] = [
     <li><strong>Relace</strong> s IP adresou a identifikací prohlížeče: 30 dní po vypršení, pak je automaticky smaže denní úloha.</li>
     <li><strong>Profil hosta a demo</strong>: automaticky ho smažeme den poté, co vyprší jeho poslední relace.</li>
     <li><strong>Počítadla požadavků</strong>: jen po dobu svého časového okna, nejdéle 24 hodin.</li>
+    <li><strong>Záznam o návratu do 7 dní</strong>: do smazání účtu. Denní počty zobrazení úvodní stránky nejsou osobní údaje.</li>
     <li>Smazané údaje mohou krátce přetrvat v zálohách databáze, dokud se v běžném cyklu nepřepíší.</li>
   </ul> },
   { id: "cookies", title: "Cookies a úložiště v prohlížeči", body: <>
@@ -54,7 +57,7 @@ const sections: readonly LegalSection[] = [
       <li><strong>Přihlašovací cookie</strong> (začíná na <code>better-auth.</code>): udržuje tvé přihlášení, platí po dobu relace.</li>
       <li><strong>Dočasné cookies přihlášení přes Google nebo Facebook</strong>: chrání přihlášení před podvržením a po návratu z poskytovatele zaniknou.</li>
     </ul>
-    <p>Do úložiště prohlížeče si ukládáme rozepsané odpovědi z úvodního nastavení (do zavření karty) a skrytí nabídky přizpůsobení. Nepoužíváme analytické, reklamní ani sledovací cookies třetích stran.</p>
+    <p>Do úložiště prohlížeče si ukládáme rozepsané odpovědi z úvodního nastavení (do zavření karty) a skrytí nabídky přizpůsobení. Nepoužíváme analytické, reklamní ani sledovací cookies. Zobrazení úvodní stránky počítáme bez cookies a bez úložiště v prohlížeči; když prohlížeč posílá signál Global Privacy Control nebo Do Not Track, nepočítáme ho vůbec.</p>
   </> },
   { id: "prava", title: "Tvoje práva", body: <>
     <ul>
@@ -70,6 +73,6 @@ const sections: readonly LegalSection[] = [
 ];
 
 export default function PrivacyPage() {
-  return <LegalPage title="Zásady ochrany osobních údajů" sections={sections} updatedAt="21. října 2026"
+  return <LegalPage title="Zásady ochrany osobních údajů" sections={sections} updatedAt="22. října 2026"
     intro={<p>Investník je vzdělávací služba, ve které se učíš investovat s cvičným kapitálem. Ukládáme jen to, co k tomu potřebujeme, a všechno si můžeš kdykoli stáhnout nebo smazat.</p>} />;
 }
