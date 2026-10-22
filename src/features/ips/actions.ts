@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/session";
 import { isGuestIdentity } from "@/features/guest/identity";
 import { requirePortfolioLabUnlock } from "@/features/progression/repository";
+import { PortfolioLabLockedError } from "@/features/progression/errors";
 import { enforceMarketDataBudget } from "@/features/rate-limit";
+import { isRequestRateLimitedError } from "@/features/rate-limit/limiter";
+import { isMarketDataError } from "@/features/market-data/errors";
+import { logUnexpectedError } from "@/lib/server-errors";
 import { portfolioMarketData } from "@/features/portfolio/environment";
 import { PortfolioInputError } from "@/features/portfolio/decimal";
 import { applyIpsTarget } from "./repository";
@@ -22,6 +26,8 @@ export async function applyIpsTargetAction(input: unknown) {
     revalidatePath("/lab/portfolio");
     return { ok: true as const, ...result };
   } catch (error) {
+    // Input is validated above, so a schema error here is a stored plan that no longer parses: a failure.
+    if (!(error instanceof PortfolioInputError || error instanceof PortfolioLabLockedError || isRequestRateLimitedError(error))) logUnexpectedError("ips", "apply target", error);
     return { ok: false as const, message: error instanceof PortfolioInputError ? error.message : "Cílový mix se nepodařilo uložit. Ověř odemčení Labu a dostupnost nástrojů a zkus to znovu." };
   }
 }
@@ -35,5 +41,8 @@ export async function searchIpsInstrumentsAction(query: string) {
     await enforceMarketDataBudget(owner.id, "search");
     const results = await portfolioMarketData.service.searchInstruments(parsed);
     return { ok: true as const, results: results.filter(({ assetType }) => assetType === "equity" || assetType === "etf" || assetType === "bond") };
-  } catch { return { ok: false as const, results: [], message: "Hledání se nepodařilo. Zkus jiný název nebo to zkus později." }; }
+  } catch (error) {
+    if (!(error instanceof z.ZodError || isRequestRateLimitedError(error) || (isMarketDataError(error) && error.code === "InvalidSearchQuery"))) logUnexpectedError("ips", "search instruments", error);
+    return { ok: false as const, results: [], message: "Hledání se nepodařilo. Zkus jiný název nebo to zkus později." };
+  }
 }

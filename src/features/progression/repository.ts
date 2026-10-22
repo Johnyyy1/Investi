@@ -7,6 +7,7 @@ import { requestMemo } from "@/lib/request-memo";
 import { lessonAward, lessonProgress, portfolio, progressionUnlock, user } from "@/db/schema";
 import { isDemoIdentity, isGuestIdentity } from "@/features/guest/identity";
 import { PORTFOLIO_LAB_UNLOCK_ID, progressionUnlocks, resolvePortfolioLabUnlock, type PortfolioLabUnlockFacts } from "./unlocks";
+import { PortfolioLabLockedError } from "./errors";
 
 type ProgressionQuery = Pick<typeof db, "select" | "insert">;
 
@@ -80,7 +81,7 @@ export const loadPortfolioLabUnlockStatus = requestMemo("portfolioLabUnlock", as
 
 export async function requirePortfolioLabUnlock(userId: string) {
   const status = await loadPortfolioLabUnlock(userId);
-  if (status.requiresAccount) throw new Error("Portfolio Lab otevřeš, až si uložíš účet.");
-  if (!status.unlocked) throw new Error("Portfolio Lab je zamčený. Odemkneš ho dokončením Základů investování.");
+  if (status.requiresAccount) throw new PortfolioLabLockedError("Portfolio Lab otevřeš, až si uložíš účet.");
+  if (!status.unlocked) throw new PortfolioLabLockedError("Portfolio Lab je zamčený. Odemkneš ho dokončením Základů investování.");
   return status;
 }

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 const mocks = vi.hoisted(() => ({ user: vi.fn(), complete: vi.fn(), start: vi.fn(), save: vi.fn(), count: vi.fn(), revalidate: vi.fn() }));
 vi.mock("@/lib/session", () => ({ getCurrentUser: mocks.user }));
 vi.mock("./repository", () => ({ completeLesson: mocks.complete, markLessonInProgress: mocks.start, saveLessonProgress: mocks.save, getModuleProgress: mocks.count }));
@@ -86,5 +86,33 @@ describe("shared persisted lesson actions", () => {
     for (const result of [await saveLessonPositionAction("foundations-why-invest", 1), await completeLessonAction("foundations-why-invest")]) {
       expect(result).toMatchObject({ ok: false, message: "Nejdřív ulož výstup požadovaný v tomto kroku lekce." });
     }
+  });
+});
+
+describe("progress action failure logging", () => {
+  let log: MockInstance<typeof console.error>;
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mocks.user.mockResolvedValue({ id: "session-owner" });
+    log = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => log.mockRestore());
+
+  it("logs each unexpected failure once with the module prefix and keeps the learner message", async () => {
+    const failure = new Error("lock timeout");
+    mocks.start.mockRejectedValue(failure); mocks.complete.mockRejectedValue(failure); mocks.save.mockRejectedValue(failure);
+    expect(await markLessonStartedAction("foundations-stocks")).toEqual({ ok: false, message: "Postup se nepodařilo uložit. Tvoje práce je na této stránce stále dostupná." });
+    expect(await completeLessonAction("foundations-stocks")).toEqual({ ok: false, message: "Dokončení se nepodařilo uložit. Zkus to znovu." });
+    expect(await saveLessonPositionAction("foundations-stocks", 1)).toEqual({ ok: false, message: "Tvé místo se nepodařilo uložit. Zkus to znovu." });
+    expect(log.mock.calls).toEqual(["mark lesson started", "complete lesson", "save lesson position"].map((operation) => [`[progress] ${operation} failed`, { error: { name: "Error", message: "lock timeout" } }]));
+  });
+
+  it("does not log invalid input or a missing required lesson output", async () => {
+    mocks.complete.mockRejectedValue(new ArtifactRequiredError()); mocks.save.mockRejectedValue(new ArtifactRequiredError());
+    await markLessonStartedAction("not-a-lesson");
+    await saveLessonPositionAction("foundations-stocks", 999);
+    await saveLessonPositionAction("foundations-why-invest", 1);
+    await completeLessonAction("foundations-why-invest");
+    expect(log).not.toHaveBeenCalled();
   });
 });

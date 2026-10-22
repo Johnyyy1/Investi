@@ -8,6 +8,7 @@ import { enforceMarketDataBudget } from "@/features/rate-limit";
 import { isRequestRateLimitedError } from "@/features/rate-limit/limiter";
 import { marketDataLimitMessage } from "@/features/rate-limit/policy";
 import { getCurrentUser } from "@/lib/session";
+import { logUnexpectedError } from "@/lib/server-errors";
 import { backtestHistoryPlans, type HistoryBacktestResult } from "./catalog";
 import { runHistoryBacktests } from "./run";
 import { BacktestDataError, rebalanceRules, experimentSettingsSchema } from "./spec";
@@ -44,7 +45,7 @@ export async function runHistoryBacktestAction(input: unknown): Promise<HistoryB
     return { ok: true, results };
   } catch (error) {
     if (!(error instanceof FinancialInputError || error instanceof z.ZodError || isRequestRateLimitedError(error))) {
-      console.error("[backtest-history] run failed", { error: isMarketDataError(error) ? { code: error.code, message: error.message, context: error.context } : error instanceof BacktestDataError ? { reason: error.reason, message: error.message } : error });
+      logUnexpectedError("backtest-history", "run", error);
     }
     return { ok: false, message: messageFor(error) };
   }
