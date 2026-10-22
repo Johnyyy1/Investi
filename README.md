@@ -72,7 +72,7 @@ Stop the stack with `docker compose down`. PostgreSQL data remains in the named 
 
 ## Verification
 
-GitHub Actions runs the gates automatically. `.github/workflows/ci.yml` runs on every pull request and every push to `main`: one job generates Next.js route types (`next typegen`, which a clean checkout needs before `tsc`) and runs lint, typecheck, unit tests and build; a second job migrates and seeds a disposable PostgreSQL service container and runs the persistence, migration and concurrency suites. `.github/workflows/browser.yml` runs the Playwright browser suites nightly (and on demand) against `next start`. Both use deterministic sample data. `main` requires both CI jobs to pass before merging.
+GitHub Actions runs the gates automatically. `.github/workflows/ci.yml` runs on every pull request and every push to `main`: one job generates Next.js route types (`next typegen`, which a clean checkout needs before `tsc`) and runs lint, typecheck, unit tests and build; a second job migrates and seeds a disposable PostgreSQL service container and runs the persistence, migration and concurrency suites. `.github/workflows/browser.yml` runs every Playwright browser suite nightly, on demand, and on pull requests that change a suite or the workflow. Four parallel jobs each migrate and seed their own disposable databases: core suites against `next start`, sign-in/onboarding/personalization/settings, Progress/IPS/lesson outputs on their dedicated databases, and development-only routes against `next dev`. `.github/workflows/lesson-exercises.yml` runs the lesson-exercise suites on pull requests that touch lessons. All of them use deterministic sample data. `main` requires both CI jobs to pass before merging.
 
 Locally, run `npx next typegen` once on a fresh checkout before `npm run typecheck` (`next dev` and `next build` also generate the types).
 
@@ -82,7 +82,7 @@ Run migrations and seed on a disposable local QA database, with `DATABASE_URL` a
 
 ## Scripts and test suites
 
-Every suite below is an npm script in `package.json` unless it is written as `node scripts/…`. "CI" marks what GitHub Actions runs: `ci.yml` on every pull request, `browser.yml` nightly.
+Every suite below is an npm script in `package.json` unless it is written as `node scripts/…`. "CI" says where GitHub Actions runs a suite: ✓ is `ci.yml` on every pull request; a browser suite names its nightly `browser.yml` job in parentheses, or `lesson-exercises.yml`, which runs on lesson changes.
 
 **App and database**
 
@@ -127,27 +127,35 @@ Every suite below is an npm script in `package.json` unless it is written as `no
 
 | Script | Covers | CI |
 | --- | --- | --- |
-| `test:product` | Product shell and Backtesting | ✓ |
-| `test:foundations-browser` | Foundations lessons | ✓ |
-| `test:portfolio-browser` | Portfolio Lab | ✓ |
-| `test:progression-browser` | Unlock progression | ✓ |
-| `test:backtesting-browser` | Backtesting Lab | ✓ |
-| `test:marketing-browser` | Landing page | ✓ |
-| `test:not-found-browser` | 404 pages: unmatched URL, lesson, instrument | ✓ |
-| `test:log-returns-browser`, `test:returns-browser` | Returns module | |
-| `test:portfolio-browser-closed` | Closed/stale market states (server started with `DETERMINISTIC_MARKET_NOW`) | |
-| `test:instrument-browser-unavailable` | Unavailable instrument history/quotes | |
-| `test:studovna` | Learn page | |
-| `test:onboarding-redesign` | Guest onboarding | |
-| `test:personalization-browser`, `test:personalization-compatibility` | Personalization and legacy accounts | |
-| `test:settings` | Settings and linked accounts | |
-| `test:legal-browser` | Privacy and terms pages | |
-| `test:demo-session` | Demo and guest session lifetimes | |
-| `test:request-isolation` | Request-scoped memoization across users | |
-| `test:navigation-feedback` | Client navigation feedback | |
-| `test:auth-browser` | Social sign-in with fake providers (see [authentication](docs/authentication.md)) | |
-| `test:progress-browser` | Progress page (needs `PROGRESS_QA_DISPOSABLE=1` and an `investi_progress_qa` database) | |
-| `test:design-system-browser` | Design system (requires `npm run dev`) | |
+| `test:product` | Product shell and Backtesting | browser (core) |
+| `test:studovna` | Learn page: inline question, saved continuation, reflow | browser (core) |
+| `test:foundations-browser` | Foundations lessons | browser (core) |
+| `test:returns-browser`, `test:log-returns-browser` | Returns module | browser (core) |
+| `test:volatility-browser` | Volatility module | browser (core) |
+| `test:correlation-browser` | Returns checkpoint, Correlation and Diversification modules | browser (core) |
+| `test:portfolio-browser` | Portfolio Lab | browser (core) |
+| `test:portfolio-browser-closed` | Closed/stale market states (server started with `DETERMINISTIC_MARKET_NOW=2026-01-17T12:00:00.000Z`) | browser (core) |
+| `test:instrument-browser-unavailable` | Unavailable instrument history/quotes (server started with `DETERMINISTIC_MARKET_NOW=2026-03-20T15:00:00.000Z`) | browser (core) |
+| `test:compare-browser` | Instrument comparison | browser (core) |
+| `test:progression-browser` | Unlock progression | browser (core) |
+| `test:backtesting-browser` | Backtesting Lab | browser (core) |
+| `test:marketing-browser` | Landing page | browser (core) |
+| `test:not-found-browser` | 404 pages: unmatched URL, lesson, instrument | browser (core) |
+| `test:legal-browser` | Privacy and terms pages | browser (core) |
+| `test:account-recovery-browser` | Password reset and e-mail verification through the local outbox | browser (core) |
+| `test:demo-session` | Demo and guest session lifetimes | browser (core) |
+| `test:request-isolation` | Request-scoped memoization across users | browser (core) |
+| `test:navigation-feedback` | Client navigation feedback | browser (core) |
+| `test:auth-browser` | Sign-in/sign-up and social sign-in with fake providers; two servers and an `investi_6a4_qa` database (see [authentication](docs/authentication.md)) | browser (accounts) |
+| `test:personalization-browser`, `test:personalization-compatibility` | Personalization and legacy accounts (`investi_6a3a_qa`, `PERSONALIZATION_QA_DISPOSABLE=1`) | browser (accounts) |
+| `test:onboarding-redesign` | Guest onboarding (same database and opt-in) | browser (accounts) |
+| `test:settings` | Settings, linked accounts, account deletion and data export (same database and opt-in) | browser (accounts) |
+| `test:progress-browser` | Progress page (needs `PROGRESS_QA_DISPOSABLE=1` and an `investi_progress_qa` database) | browser (dedicated databases) |
+| `test:ips-browser` | Investment policy statement (`investi_artifacts_qa`, `IPS_QA_DISPOSABLE=1`) | browser (dedicated databases) |
+| `test:artifacts-browser` | Lesson outputs: with `ARTIFACTS_TEST_URL` the shipped Settings UI, without it an editor harness on its own `next dev` (`investi_artifacts_qa`, `ARTIFACTS_QA_DISPOSABLE=1`) | browser (both) |
+| `test:design-system-browser` | Design system (development-only route, needs `next dev`) | browser (development runtime) |
+| `test:facts-browser` | Facts registry (development-only route); `FACTS_EXPECT_PRODUCTION=1` checks its production 404 instead | browser (development runtime, core) |
+| `test:lesson-exercises-browser` | Server-validated lesson exercises | lesson-exercises |
 
 **Operator and diagnostics**
 

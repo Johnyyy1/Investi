@@ -12,12 +12,14 @@ const [owner] = await sql`select email from "user" where id = ${id!}`;
 assert.ok(owner?.email.startsWith("personalization-browser-"));
 const { foundationsLessons } = await import("../src/features/lessons/foundations/manifest");
 const { returnsLessons } = await import("../src/features/lessons/returns/manifest");
+const { availableLessons } = await import("../src/features/learning/catalog");
 const { lessonSteps } = await import("../src/features/progress/transition");
 const { completeLesson } = await import("../src/features/progress/repository");
 const { executeTrade } = await import("../src/features/portfolio/repository");
 const mode = process.env.PERSONALIZATION_QA_LESSONS ?? "foundations";
-assert.ok(["foundations", "first-return", "all-returns"].includes(mode));
-const lessons = (mode === "foundations" ? foundationsLessons : returnsLessons).filter((lesson) => lesson.status === "available");
+assert.ok(["foundations", "first-return", "all-published"].includes(mode));
+// all-published completes every published lesson, the same catalog that decides when Learn shows the curriculum as complete.
+const lessons = mode === "all-published" ? availableLessons : (mode === "foundations" ? foundationsLessons : returnsLessons).filter((lesson) => lesson.status === "available");
 for (const lesson of mode === "first-return" ? lessons.slice(0, 1) : lessons) {
   await sql`insert into lesson_progress (user_id, lesson_id, status, last_position, updated_at) values (${id!}, ${lesson.id}, 'in_progress', ${lessonSteps(lesson.id).length - 1}, now()) on conflict (user_id, lesson_id) do update set last_position = excluded.last_position`;
   await completeLesson(id!, lesson.id);

@@ -73,26 +73,32 @@ try {
   await page.goto(`${baseURL}/onboarding`); await finishOnboarding(page);
   await page.getByRole("button", { name: "Teď ne", exact: true }).click();
   await layouts("new");
-  await learn().getByRole("radio", { name: /Co nejvyšší dlouhodobý růst/ }).check();
+  // The first step of the first lesson has no question: the preview shows the step and starts the lesson.
+  assert.equal(await learn().getByRole("radio").count(), 0, "a step without a question previews no answers");
+  assert.equal(await learn().getByRole("link", { name: "Pokračovat", exact: true }).getAttribute("href"), "/learn/investing-foundations/why-invest");
+  // Isolated cursor fixture: the authored inflation question at step 2 and the real server transition.
+  await sql`insert into lesson_progress(user_id,lesson_id,status,last_position,updated_at) values(${userId},'foundations-why-invest','in_progress',1,now())`;
+  const cursor = async () => (await sql`select status,last_position from lesson_progress where user_id=${userId} and lesson_id='foundations-why-invest'`)[0];
+  await page.goto(`${baseURL}/learn`); await settle();
+  await learn().getByRole("radio", { name: /Nic\. Pořád je to 10 000 Kč/ }).check();
   await page.getByRole("status").filter({ hasText: "Zkus to ještě jednou." }).waitFor();
-  assert.equal((await sql`select * from lesson_progress where user_id=${userId}`).length, 0, "wrong preview answer does not persist or skip");
-  await learn().getByRole("radio", { name: /Snadný přístup a stabilita/ }).check();
+  assert.equal((await cursor()).last_position, 1, "wrong preview answer does not persist or skip");
+  await learn().getByRole("radio", { name: /Koupím si za ně o něco méně/ }).check();
   await page.getByRole("status").filter({ hasText: "Správně." }).waitFor();
   await context.setOffline(true);
   await learn().getByRole("button", { name: "Pokračovat v lekci", exact: true }).click();
   await learn().getByRole("alert").waitFor();
   await context.setOffline(false);
-  assert.equal((await sql`select * from lesson_progress where user_id=${userId}`).length, 0, "failed save keeps cursor");
+  assert.equal((await cursor()).last_position, 1, "failed save keeps cursor");
   await learn().getByRole("button", { name: "Pokračovat v lekci", exact: true }).click();
   await page.waitForURL("**/learn/investing-foundations/why-invest");
-  await page.getByRole("heading", { name: "Spoření a investování řeší jiné potřeby", exact: true }).waitFor();
-  const [saved] = await sql`select * from lesson_progress where user_id=${userId}`;
-  assert.equal(saved.last_position, 1); assert.equal(saved.status, "in_progress");
+  await page.locator('main[data-save-state="idle"]').waitFor();
+  assert.deepEqual({ ...(await cursor()) }, { status: "in_progress", last_position: 2 });
   assert.equal((await sql`select * from lesson_award where user_id=${userId}`).length, 0, "preview never completes or awards capital");
   await page.goto(`${baseURL}/learn`);
   await learn().getByRole("link", { name: "Pokračovat", exact: true }).click();
   await page.waitForURL("**/learn/investing-foundations/why-invest");
-  await page.getByRole("heading", { name: "Spoření a investování řeší jiné potřeby", exact: true }).waitFor();
+  await page.locator('main[data-save-state="idle"]').waitFor();
   // Isolated cursor fixture: actual authored market question and real server transition.
   await sql`insert into lesson_progress(user_id,lesson_id,status,last_position,updated_at) values(${userId},'foundations-markets','in_progress',2,now())`;
   await page.goto(`${baseURL}/learn`); await layouts("resume");
