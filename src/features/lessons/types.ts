@@ -84,6 +84,8 @@ export type AuthoredLesson = {
   eyebrow: string;
   position: number;
   estimatedMinutes: number;
+  /** Fixed applicability date for a historical/scenario lesson; omitted means today's rules. */
+  factContext?: { asOf?: string; kind?: "tax" | "regulatory" | "research" };
   sections: LessonSection[];
   navigation?: { previous?: { href: string; label: string }; next?: { href: string; label: string } };
   blocks: LessonBlock[];

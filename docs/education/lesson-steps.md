@@ -73,7 +73,7 @@ Nehodnotí se. `persona.facts` ukazují data i dopočítané lhůty vedle sebe, 
 
 ### L · `factNotice` — daňový a regulatorní blok
 
-`factKeys` odkazují do [registru faktů](../../src/features/facts/registry.ts). Čísla nikdy nepiš natvrdo do textu ani do bloku. Blok vypíše hodnoty, původ a upozornění „Vzdělávací obsah, ne daňové poradenství“. Fakt ve stavu `pending` ukáže klidně, šedě a s hodinami. Lekce s `factNotice` dostane na prvním kroku štítek „Stav k …“, který se odvozuje od nejstaršího ověření. Nový fakt přidej do registru se zdrojem, datem, vlastníkem a příští revizí; bez ověření primárním zdrojem zůstává `pending`.
+`factKeys` odkazují do [registru faktů](../../src/features/facts/registry.ts). Čísla nikdy nepiš natvrdo do textu ani do bloku. Blok vypíše hodnoty, původ a upozornění „Vzdělávací obsah, ne daňové poradenství“. Blok vybírá verzi faktu platnou v den zobrazení. Neověřený (`unverified`) nebo redakčně blokovaný (`publicationBlockedBy`) fakt ukáže klidně, šedě a s hodinami; publikovaná lekce ho ale obsahovat nesmí, stejně jako u tokenů to hlídá `npm run check:facts`. Lekce s `factNotice` dostane na prvním kroku štítek „Stav k …“, který se odvozuje od nejstaršího ověření. Nový fakt přidej do registru podle [průvodce datovanými fakty](facts.md); bez ověření primárním zdrojem zůstává `unverified`.
 
 ![L · blok](../design/lesson-steps/l-tax-notice-390-header-and-block.png)
 
@@ -90,7 +90,7 @@ Nehodnotí se. `persona.facts` ukazují data i dopočítané lhůty vedle sebe, 
 - **Ukládání typu `writtenReflection`** (NQ-11) a **promítnutí rubriky do zvládnutí** (NQ-12). Pro samostatně uložený výstup s čtyřúrovňovým sebehodnocením použij `rubricSelfAssessment` níže.
 - **Tokeny faktů v textu** (`{{klíč}}`) a redakční workflow ověření (#132, #133). Registr je zatím minimální a jeho fakta čekají na ověření.
 
-Otevřené otázky NQ-01 až NQ-14 jsou popsané na nástěnkách v Pen souboru.
+Otevřené otázky NQ-01 až NQ-19 jsou popsané na nástěnkách v Pen souboru. Obrazovky mimo lekce (mapa Učení, vstupní test, IPS, krizový nácvik, daňová mapa, Pokrok…) jsou v [obrazovkách produktu P–Z](../design/product-screens.md).
 
 ## Komponenty (00 · Nové komponenty)
 

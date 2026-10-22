@@ -11,16 +11,21 @@ import { getGuidedSteps } from "@/features/lessons/steps";
 import { isGuestIdentity } from "@/features/guest/identity";
 import { loadLessonHistory, loadLessonRiskHistory, lessonUsesHistory, lessonUsesRiskHistory } from "@/features/lessons/real-history/load";
 import { getConfiguredMarketDataProviderName, getConfiguredMarketDataService } from "@/features/market-data/environment";
+import { prepareLessonFacts } from "@/features/facts/lesson-facts";
+import { factRegistry } from "@/features/facts/registry";
+import { factToday } from "@/features/facts/resolve";
 
 type LessonPageProps = { params: Promise<{ moduleSlug: string; lessonSlug: string }> };
 export async function generateMetadata({ params }: LessonPageProps) {
   const { moduleSlug, lessonSlug } = await params;
-  return { title: getAuthoredLesson(moduleSlug, lessonSlug)?.title ?? "Lekce není dostupná" };
+  const authored = getAuthoredLesson(moduleSlug, lessonSlug);
+  return { title: authored ? prepareLessonFacts(authored, factRegistry, { today: factToday(), published: true }).lesson.title : "Lekce není dostupná" };
 }
 export default async function LessonPage({ params }: LessonPageProps) {
   const { moduleSlug, lessonSlug } = await params;
-  const lesson = getAuthoredLesson(moduleSlug, lessonSlug);
-  if (!lesson) notFound();
+  const authored = getAuthoredLesson(moduleSlug, lessonSlug);
+  if (!authored) notFound();
+  const { lesson, notice } = prepareLessonFacts(authored, factRegistry, { today: factToday(), published: true });
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
   const [progress, completedLessons, summary, history, riskHistory] = await Promise.all([
@@ -32,5 +37,5 @@ export default async function LessonPage({ params }: LessonPageProps) {
   ]);
   const status = progress?.status ?? "not_started";
   if (!summary.gamification) redirect("/sign-in");
-  return <GuidedLesson key={lesson.id} lesson={lesson} initialStatus={status} initialPosition={Math.min(progress?.lastPosition ?? 0, getGuidedSteps(lesson).length - 1)} initialCompletedLessons={completedLessons} initialLearningMomentum={toLearningMomentum(summary.gamification)} initialEarnedPracticeCapitalMinor={serializePracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)} nextHref={summary.allComplete ? "/lab" : `/learn/${summary.next.moduleSlug}/${summary.next.slug}`} guest={isGuestIdentity(user)} history={history} riskHistory={riskHistory} />;
+  return <GuidedLesson key={lesson.id} lesson={lesson} factNotice={notice} initialStatus={status} initialPosition={Math.min(progress?.lastPosition ?? 0, getGuidedSteps(lesson).length - 1)} initialCompletedLessons={completedLessons} initialLearningMomentum={toLearningMomentum(summary.gamification)} initialEarnedPracticeCapitalMinor={serializePracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)} nextHref={summary.allComplete ? "/lab" : `/learn/${summary.next.moduleSlug}/${summary.next.slug}`} guest={isGuestIdentity(user)} history={history} riskHistory={riskHistory} />;
 }

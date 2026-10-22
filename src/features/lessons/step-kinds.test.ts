@@ -110,6 +110,6 @@ describe("step kind helpers", () => {
     for (const block of [spec.fadedExample, spec.choice, spec.factNotice, spec.writtenReflection]) expect(stepWidth([block])).toBe("max-w-[760px]");
   });
   it("collects a lesson's facts once, in order", () => {
-    expect(lessonFactKeys({ blocks: [spec.factNotice, spec.factNotice, spec.choice] })).toEqual(["cz.tax.securities.time_test", "cz.tax.securities.value_test"]);
+    expect(lessonFactKeys({ blocks: [spec.factNotice, spec.factNotice, spec.choice] })).toEqual(["dan.casovy_test_cp", "dan.limit_100k"]);
   });
 });

@@ -1,5 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { getFact } from "@/features/facts/registry";
+import { formatFactValue } from "@/features/facts/resolve";
 import { correctAnswers, wrongAnswers } from "@/features/lessons/answer-keys";
 import { timeTestSpecimens as spec } from "@/features/lessons/specimens/time-test";
 import type { LessonBlock } from "@/features/lessons/types";
@@ -65,12 +67,17 @@ describe("content step kinds", () => {
   });
 
   it("L: shows registry values and a calm pending state with the educational notice", () => {
-    const html = render(spec.factNotice);
-    expect(html).toContain("100 000 Kč za rok");
-    expect(html).toContain("Vzdělávací obsah, ne daňové poradenství");
-    expect(html).toContain("Údaj čeká na ověření");
-    expect(html).toContain("Naposledy ověřeno 20. 10. 2026");
-    expect(renderToStaticMarkup(<FactStatusChip factKeys={spec.factNotice.factKeys} />)).toContain("Údaj čeká na ověření");
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-21T12:00:00Z") });
+    try {
+      const html = render(spec.factNotice);
+      expect(html).toContain(formatFactValue(getFact("dan.limit_100k").value));
+      expect(html).toContain("Vzdělávací obsah, ne daňové poradenství");
+      expect(html).toContain("Údaj čeká na ověření");
+      expect(html).toContain("Naposledy kontrolováno 21. 10. 2026");
+      expect(renderToStaticMarkup(<FactStatusChip factKeys={spec.factNotice.factKeys} />)).toContain("Údaj čeká na ověření");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("M: keeps the rubric as hints and hides the sample answer until sending", () => {

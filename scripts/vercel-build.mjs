@@ -11,6 +11,9 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+// Reject invalid educational facts before any deployment-side database work.
+run("npm", ["run", "check:facts"]);
+
 if (process.env.VERCEL_ENV === "production") {
   console.log("vercel-build: applying database migrations (production deploy)");
   run("npx", ["drizzle-kit", "migrate"]);

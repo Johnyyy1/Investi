@@ -16,6 +16,8 @@ import type { CompletionRewardPresentation, LearningMomentum } from "@/features/
 import { formatPracticeCapitalMinor, type SerializedPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { LearningStats } from "@/components/gamification/learning-stats";
 import { cn } from "@/lib/utils";
+import type { LessonFactNotice as FactNotice } from "@/features/facts/types";
+import { LessonFactNotice } from "./lesson-fact-notice";
 import { GuidedBlock } from "./guided-block";
 import { GuidedQuestion } from "./guided-question";
 import { LessonActionBar, LessonTopBar } from "./lesson-chrome";
@@ -26,10 +28,11 @@ import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, Leaf, RotateCcw } fro
 
 const primaryClassName = "min-w-0 flex-1 whitespace-normal px-3 min-[420px]:px-6 md:flex-none";
 
-export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref, guest = false, history, riskHistory }: {
+export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref, guest = false, history, riskHistory, factNotice }: {
   lesson: AuthoredLesson; initialStatus: "not_started" | "in_progress" | "completed"; initialPosition: number; initialCompletedLessons: number; initialLearningMomentum: LearningMomentum; initialEarnedPracticeCapitalMinor: SerializedPracticeCapitalMinor; nextHref: string;
   /** A guest's finished lesson leads to saving an account first (Pen onboarding step 6). */
   guest?: boolean;
+  factNotice?: FactNotice;
   /** Frozen history for the lesson's historical-data figures, loaded on the server. */
   history?: readonly LessonHistoryEntry[];
   /** Frozen daily closes for the Volatility lessons' historical figures. */
@@ -140,6 +143,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
     <LessonTopBar eyebrow={`${learningModule.title} · Lekce ${lesson.position}${review ? " · Opakování" : ""}`} title={lesson.title} minutes={lesson.estimatedMinutes} segments={steps.map((item) => ({ mastery: item.kind === "mastery" }))} current={position} finished={finished} />
     <div className="flex-1 px-5 pt-5 pb-7 md:px-8 md:pt-10 md:pb-14 lg:px-16 lg:pt-12 lg:pb-[72px]">
       <div className={cn("mx-auto flex w-full min-w-0 flex-col gap-5 md:gap-7", finished ? "max-w-[760px]" : stepWidth(step.blocks))}>
+        {!finished && factNotice ? <LessonFactNotice notice={factNotice} /> : null}
         {error ? <p role="alert" className="flex items-start gap-2 rounded-control bg-danger-soft px-4 py-3 text-[15px]/[23px] text-danger"><CircleAlert aria-hidden="true" className="mt-0.5 size-[18px] shrink-0" />{error}</p> : null}
         {finished ? <div className="overflow-hidden rounded-surface border border-border-card bg-surface shadow-elevation-1">
           <CompletionScreen autoFocusAction title={review ? "Opakování dokončeno" : "Lekce dokončena"} description={lesson.title} xpAwarded={reward?.xpAwarded} practiceCapitalAwardedMinor={reward && reward.practiceCapitalAwardedMinor !== "0" ? reward.practiceCapitalAwardedMinor : undefined} actionLabel={guest ? "Ulož si, co už víš" : reward?.portfolioLabUnlocked ? "Otevřít Portfolio Lab" : reward?.allComplete ? "Prozkoumat Lab" : "Další lekce"} onContinue={() => { router.push(guest ? "/onboarding/save" : reward?.portfolioLabUnlocked ? "/lab/portfolio" : reward?.nextHref ?? nextHref); router.refresh(); }}>
