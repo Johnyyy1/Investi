@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 const mocks = vi.hoisted(() => ({ user: vi.fn(), save: vi.fn(), list: vi.fn(), remove: vi.fn() }));
 vi.mock("@/lib/session", () => ({ getCurrentUser: mocks.user }));
 vi.mock("./repository", () => ({ saveLearnerArtifact: mocks.save, listLearnerArtifacts: mocks.list, deleteLearnerArtifact: mocks.remove }));
@@ -37,5 +37,25 @@ describe("artifact server action boundaries", () => {
   it("returns recoverable errors without private database details", async () => {
     mocks.save.mockRejectedValue(new Error("private payload connection secret")); mocks.list.mockRejectedValue(new Error("private")); mocks.remove.mockRejectedValue(new Error("private"));
     for (const result of [await saveArtifact(input), await listArtifacts(), await deleteArtifact({ id })]) { expect(result).toMatchObject({ ok: false }); expect(JSON.stringify(result)).not.toContain("private"); }
+  });
+});
+
+describe("artifact failure logging", () => {
+  let log: MockInstance<typeof console.error>;
+  beforeEach(() => { vi.resetAllMocks(); mocks.user.mockResolvedValue({ id: "owner", isAnonymous: false }); log = vi.spyOn(console, "error").mockImplementation(() => {}); });
+  afterEach(() => log.mockRestore());
+
+  it("logs a repository failure once per action and keeps the learner message", async () => {
+    for (const mock of [mocks.save, mocks.list, mocks.remove]) mock.mockRejectedValue(new Error("connection terminated"));
+    for (const result of [await saveArtifact(input), await listArtifacts(), await deleteArtifact({ id })]) expect(result).toEqual({ ok: false, message: "Výstup se nepodařilo zpracovat. Zkus to znovu." });
+    expect(log.mock.calls.map(([entry]) => entry)).toEqual(["[artifacts] save failed", "[artifacts] list failed", "[artifacts] delete failed"]);
+  });
+
+  it("does not log refused input or a missing account", async () => {
+    await saveArtifact({ ...input, consent: false });
+    await deleteArtifact({ id: "bad" });
+    mocks.user.mockResolvedValue(null);
+    await listArtifacts();
+    expect(log).not.toHaveBeenCalled();
   });
 });

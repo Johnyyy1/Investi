@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { isMarketDataError } from "@/features/market-data/errors";
+import { isMarketDataError, type MarketDataErrorCode } from "@/features/market-data/errors";
 import { enforceMarketDataBudget } from "@/features/rate-limit";
 import { isRequestRateLimitedError } from "@/features/rate-limit/limiter";
 import { marketDataLimitMessage } from "@/features/rate-limit/policy";
 import { getCurrentUser } from "@/lib/session";
 import { requirePortfolioLabUnlock } from "@/features/progression/repository";
+import { PortfolioLabLockedError } from "@/features/progression/errors";
+import { logUnexpectedError } from "@/lib/server-errors";
 import { PortfolioInputError, priceToDecimal, quantityToDecimal, fxToDecimal } from "./decimal";
 import { portfolioMarketData } from "./environment";
 import { allocationExecutionSchema, allocationInputSchema, idempotencySchema, instrumentIdSchema, tradeInputSchema } from "./input";
@@ -36,11 +38,27 @@ function tradeMessageFor(error: unknown) {
   return "Portfolio se nepodařilo aktualizovat. Zkus to znovu.";
 }
 
+const expectedMarketDataCodes = new Set<MarketDataErrorCode>(["InstrumentNotFound", "UnsupportedInstrument", "InvalidSearchQuery"]);
+
+/** Refusals the learner can act on. Provider outages and misconfiguration, database errors and anything else are failures. */
+function isExpected(error: unknown) {
+  return error instanceof PortfolioInputError || error instanceof z.ZodError || isRequestRateLimitedError(error)
+    || (isMarketDataError(error) && expectedMarketDataCodes.has(error.code));
+}
+
+function failure(operation: string, error: unknown, context?: "preview") {
+  if (!isExpected(error)) logUnexpectedError("portfolio", operation, error);
+  return messageFor(error, context);
+}
+
 async function authenticatedUser() {
   const current = await getCurrentUser();
   if (!current) throw new PortfolioInputError("PortfolioUnavailable", "Relace skončila. Přihlas se znovu a pokračuj v Portfolio Labu.");
   try { await requirePortfolioLabUnlock(current.id); }
-  catch { throw new PortfolioInputError("PortfolioUnavailable", "Portfolio Lab je zamčený. Dokonči Základy investování a odemkni ho."); }
+  catch (error) {
+    if (!(error instanceof PortfolioLabLockedError)) logUnexpectedError("portfolio", "unlock check", error);
+    throw new PortfolioInputError("PortfolioUnavailable", "Portfolio Lab je zamčený. Dokonči Základy investování a odemkni ho.");
+  }
   return current;
 }
 
@@ -54,7 +72,7 @@ export async function searchPortfolioInstrumentsAction(query: string) {
     const results = await portfolioMarketData.service.searchInstruments(value);
     return { ok: true as const, results: results.filter(({ assetType }) => assetType !== "cash" && assetType !== "index") };
   } catch (error) {
-    return { ok: false as const, message: messageFor(error), results: [] };
+    return { ok: false as const, message: failure("search instruments", error), results: [] };
   }
 }
 
@@ -67,7 +85,7 @@ export async function loadInstrumentPreviewAction(instrumentId: string) {
     if (!preview) return { ok: false as const, message: "S tímto instrumentem nelze ve vzdělávacím portfoliu obchodovat." };
     return { ok: true as const, preview };
   } catch (error) {
-    return { ok: false as const, message: messageFor(error, "preview") };
+    return { ok: false as const, message: failure("load instrument preview", error, "preview") };
   }
 }
 
@@ -80,7 +98,7 @@ async function tradeAction(input: unknown, side: "BUY" | "SELL") {
     revalidatePath("/lab/portfolio");
     return { ok: true as const, duplicate: result.duplicate, portfolio };
   } catch (error) {
-    return { ok: false as const, message: messageFor(error) };
+    return { ok: false as const, message: failure(side === "BUY" ? "buy" : "sell", error) };
   }
 }
 
@@ -91,7 +109,7 @@ export async function reviewPortfolioTradeAction(input: unknown) {
     await enforceMarketDataBudget(current.id, "instrument-preview");
     return { ok: true as const, cost: await reviewTrade(current.id, parsed) };
   } catch (error) {
-    return { ok: false as const, message: messageFor(error, "preview") };
+    return { ok: false as const, message: failure("review trade", error, "preview") };
   }
 }
 
@@ -103,7 +121,7 @@ export async function setBrokerFeeProfileAction(input: unknown) {
     revalidatePath("/lab/portfolio");
     return { ok: true as const, feeProfileId };
   } catch (error) {
-    return { ok: false as const, message: messageFor(error) };
+    return { ok: false as const, message: failure("set broker fee profile", error) };
   }
 }
 
@@ -124,7 +142,7 @@ export async function resetPortfolioAction(input: unknown) {
     revalidatePath("/lab/portfolio");
     return { ok: true as const, duplicate: result.duplicate, portfolio };
   } catch (error) {
-    return { ok: false as const, message: messageFor(error) };
+    return { ok: false as const, message: failure("reset portfolio", error) };
   }
 }
 
@@ -135,7 +153,7 @@ export async function loadAllocationQuotesAction(instrumentIds: unknown) {
     await enforceMarketDataBudget(current.id, "allocation-quotes");
     return { ok: true as const, quotes: await loadAllocationQuotes([...new Set(ids)]) };
   } catch (error) {
-    return { ok: false as const, message: messageFor(error) };
+    return { ok: false as const, message: failure("load allocation quotes", error) };
   }
 }
 
@@ -178,7 +196,7 @@ export async function reviewPortfolioAllocationAction(input: unknown) {
       },
     };
   } catch (error) {
-    return { ok: false as const, message: messageFor(error) };
+    return { ok: false as const, message: failure("review allocation", error) };
   }
 }
 
@@ -190,6 +208,6 @@ export async function savePortfolioAllocationAction(input: unknown) {
     revalidatePath("/lab/portfolio");
     return { ok: true as const, duplicate: result.duplicate, tradeCount: result.tradeCount };
   } catch (error) {
-    return { ok: false as const, message: messageFor(error) };
+    return { ok: false as const, message: failure("save allocation", error) };
   }
 }

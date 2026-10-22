@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   user: vi.fn(), requireUnlock: vi.fn(), search: vi.fn(), execute: vi.fn(), reset: vi.fn(),
@@ -14,6 +14,9 @@ vi.mock("./service", () => ({ loadInstrumentPreview: mocks.preview, loadPortfoli
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 
 import { RequestRateLimitedError } from "@/features/rate-limit/limiter";
+import { MarketDataError } from "@/features/market-data/errors";
+import { PortfolioLabLockedError } from "@/features/progression/errors";
+import { PortfolioInputError } from "./decimal";
 import {
   buyPortfolioAction, loadAllocationQuotesAction, loadInstrumentPreviewAction, resetPortfolioAction, reviewPortfolioAllocationAction,
   reviewPortfolioTradeAction, setBrokerFeeProfileAction,
@@ -26,7 +29,7 @@ describe("Portfolio Lab server authorization", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.user.mockResolvedValue({ id: "locked-user" });
-    mocks.requireUnlock.mockRejectedValue(new Error("locked"));
+    mocks.requireUnlock.mockRejectedValue(new PortfolioLabLockedError("locked"));
   });
 
   it("blocks every portfolio entry point before parsing or domain work", async () => {
@@ -149,5 +152,54 @@ describe("cost authority boundary", () => {
     mocks.setProfile.mockResolvedValue("investi-low-fx-v1");
     expect(await setBrokerFeeProfileAction({ profileId: "investi-low-fx-v1" })).toEqual({ ok: true, feeProfileId: "investi-low-fx-v1" });
     expect(mocks.setProfile).toHaveBeenCalledWith("owner", "investi-low-fx-v1");
+  });
+});
+
+describe("Portfolio Lab failure logging", () => {
+  let log: MockInstance<typeof console.error>;
+  const trade = () => ({ instrumentId: "US-XNAS:AAPL", quantity: "1", clientIdempotencyKey: crypto.randomUUID() });
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mocks.user.mockResolvedValue({ id: "unlocked-user" });
+    mocks.requireUnlock.mockResolvedValue(undefined);
+    log = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => log.mockRestore());
+
+  it("logs an unexpected failure once with the operation and keeps the learner message", async () => {
+    mocks.execute.mockRejectedValue(Object.assign(new Error("canceling statement due to lock timeout"), { code: "55P03" }));
+    mocks.reset.mockRejectedValue(new Error("connection terminated"));
+    mocks.search.mockRejectedValue(new MarketDataError("ProviderUnavailable", "Provider timed out.", { provider: "fmp" }));
+    expect(await buyPortfolioAction(trade())).toEqual({ ok: false, message: "Portfolio se nepodařilo aktualizovat. Zkus to znovu." });
+    expect(await resetPortfolioAction({ clientIdempotencyKey: crypto.randomUUID() })).toEqual({ ok: false, message: "Portfolio se nepodařilo aktualizovat. Zkus to znovu." });
+    expect(await searchPortfolioInstrumentsAction("Apple")).toMatchObject({ ok: false, message: "Aktuální tržní pozorování není dostupné. Obchod nebyl proveden." });
+    expect(log.mock.calls).toEqual([
+      ["[portfolio] buy failed", { error: { name: "Error", code: "55P03", message: "canceling statement due to lock timeout" } }],
+      ["[portfolio] reset portfolio failed", { error: { name: "Error", message: "connection terminated" } }],
+      ["[portfolio] search instruments failed", { error: { name: "MarketDataError", code: "ProviderUnavailable", message: "Provider timed out.", context: { provider: "fmp" } } }],
+    ]);
+  });
+
+  it("does not log refusals the learner can act on", async () => {
+    mocks.execute.mockRejectedValueOnce(new PortfolioInputError("InsufficientCash", "Na tento nákup nemáš dost hotovosti."))
+      .mockRejectedValueOnce(new PortfolioInputError("MarketClosed", "Trh je zavřený."));
+    mocks.budget.mockRejectedValueOnce(new RequestRateLimitedError({ allowed: false, retryAfterSeconds: 30, deniedScope: "market-data:search" }));
+    mocks.preview.mockRejectedValueOnce(new MarketDataError("InstrumentNotFound", "Not found."));
+    await buyPortfolioAction(trade());
+    await sellPortfolioAction(trade());
+    await searchPortfolioInstrumentsAction("Apple");
+    await loadInstrumentPreviewAction("US-XNAS:AAPL");
+    await savePortfolioAllocationAction({ lines: [] });
+    expect(log).not.toHaveBeenCalled();
+  });
+
+  it("logs a failed unlock check once but still answers that the Lab is locked", async () => {
+    mocks.requireUnlock.mockRejectedValue(new Error("connection terminated"));
+    expect(await buyPortfolioAction(trade())).toEqual({ ok: false, message: "Portfolio Lab je zamčený. Dokonči Základy investování a odemkni ho." });
+    expect(log.mock.calls).toEqual([["[portfolio] unlock check failed", { error: { name: "Error", message: "connection terminated" } }]]);
+    log.mockClear();
+    mocks.requireUnlock.mockRejectedValue(new PortfolioLabLockedError("locked"));
+    await buyPortfolioAction(trade());
+    expect(log).not.toHaveBeenCalled();
   });
 });

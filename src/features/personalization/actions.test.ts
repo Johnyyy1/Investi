@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { z } from "zod";
 const mocks = vi.hoisted(() => ({ user: vi.fn(), complete: vi.fn(), update: vi.fn(), retake: vi.fn(), skip: vi.fn(), revalidate: vi.fn() }));
 vi.mock("@/lib/session", () => ({ getCurrentUser: mocks.user }));
 vi.mock("./repository", () => ({ completePersonalization: mocks.complete, updatePersonalizedPreferences: mocks.update, retakeDiagnostic: mocks.retake, skipPersonalization: mocks.skip }));
@@ -31,5 +32,23 @@ describe("personalization authority", () => {
     expect(result).toMatchObject({ ok: false });
     expect(JSON.stringify(result)).not.toContain("private");
     expect(mocks.revalidate).not.toHaveBeenCalled();
+  });
+});
+
+describe("personalization failure logging", () => {
+  let log: MockInstance<typeof console.error>;
+  beforeEach(() => { vi.resetAllMocks(); mocks.user.mockResolvedValue({ id: "owner" }); log = vi.spyOn(console, "error").mockImplementation(() => {}); });
+  afterEach(() => log.mockRestore());
+
+  it("logs an unexpected failure once with the operation and keeps the learner message", async () => {
+    mocks.retake.mockRejectedValue(new Error("deadlock detected"));
+    expect(await retakeDiagnosticAction({})).toEqual({ ok: false, message: "Přizpůsobení se nepodařilo uložit. Zkontroluj odpovědi a zkus to znovu." });
+    expect(log.mock.calls).toEqual([["[personalization] retake diagnostic failed", { error: { name: "Error", message: "deadlock detected" } }]]);
+  });
+
+  it("does not log answers that fail validation", async () => {
+    mocks.complete.mockImplementation(async (_owner: string, input: unknown) => { z.object({ goal: z.string() }).parse(input); });
+    expect(await completePersonalizationAction({})).toMatchObject({ ok: false });
+    expect(log).not.toHaveBeenCalled();
   });
 });
