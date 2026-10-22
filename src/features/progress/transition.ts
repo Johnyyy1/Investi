@@ -1,3 +1,5 @@
+import type { LessonBlock } from "@/features/lessons/types";
+import { lessonAnswersSchema } from "@/features/lessons/answer-contract";
 import { availableLessons } from "@/features/learning/catalog";
 import { getAuthoredLesson } from "@/features/lessons/registry";
 import { getGuidedSteps } from "@/features/lessons/steps";
@@ -15,7 +17,12 @@ export function lessonSteps(lessonId: string) {
  * That holds while each step has at most one graded question and the final step has none; transition tests enforce both.
  */
 export function validateMove(lessonId: string, current: number, next: number, answers: Record<string, string> = {}) {
-  const steps = lessonSteps(lessonId);
+  return validateStepMove(lessonSteps(lessonId), current, next, answers);
+}
+
+export function validateStepMove(steps: readonly { blocks: readonly LessonBlock[] }[], current: number, next: number, answers: Record<string, string> = {}) {
+  lessonAnswersSchema.parse(answers);
+  if (!Number.isInteger(current) || current < 0 || current >= steps.length) throw new Error("Invalid current step.");
   if (!Number.isInteger(next) || next < 0 || next >= steps.length || next > current + 1) throw new Error("Continue one step at a time.");
   if (next > current && steps[current].blocks.filter(isQuestion).some((question) => evaluateQuestion(question, answers) !== true)) {
     throw new Error("Answer the question correctly before continuing.");

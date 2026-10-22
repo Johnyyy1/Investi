@@ -2,6 +2,7 @@ import type { ArtifactKind, ArtifactPayload } from "./schemas";
 
 const goal = { label: "Dlouhodobý plán", purpose: "retirement", horizonMonths: 360, priority: "important" } as const;
 export const artifactExamples = {
+  lesson_output: { type: "checklist", blockId: "example-checklist", checkedItemIds: [] },
   goal_map: { goals: [goal] },
   financial_checkup: { budget: "reviewed", expensiveDebt: "none", reserve: "building", nextStep: "build_reserve" },
   fee_profile: { label: "Fiktivní broker A", currency: "EUR", orderFeeMinor: "25", minimumOrderFeeMinor: "100", orderFeeBasisPoints: 10, fxSpreadBasisPoints: 50, monthlyFeeMinor: "0" },

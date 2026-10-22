@@ -1,0 +1,1 @@
+ALTER TYPE "public"."learner_artifact_kind" ADD VALUE 'lesson_output' BEFORE 'goal_map';

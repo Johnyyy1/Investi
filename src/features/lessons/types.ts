@@ -5,6 +5,18 @@ import type { FactKey } from "@/features/facts/registry";
 export type LessonSection = { id: string; label: string };
 
 type BaseBlock = { id: string };
+type GradedBlock = BaseBlock & { prompt: string; correctExplanation: string; incorrectExplanation: string };
+export type DocumentRegion = { id: string; label: string; content: string };
+export type DecisionNode = { id: string } & ({ prompt: string; choices: { id: string; label: string; nextId: string }[] } | { outcome: string });
+export type ExerciseBlock =
+  | (GradedBlock & { type: "categorizeQuestion"; categories: { id: string; label: string }[]; items: { id: string; label: string; categoryId: string }[] })
+  | (GradedBlock & { type: "orderQuestion"; items: { id: string; label: string }[]; correctOrder: string[] })
+  | (GradedBlock & { type: "documentSearchQuestion"; document: { title: string; regions: DocumentRegion[] }; target: { type: "region"; regionId: string } | { type: "numeric"; answer: number; tolerance: number; unit: string } })
+  | (GradedBlock & { type: "findErrorQuestion"; steps: { id: string; label: string }[]; incorrectStepId: string });
+export type OutputBlock = BaseBlock & (
+  | { type: "checklist"; title: string; items: { id: string; label: string }[] }
+  | { type: "rubricSelfAssessment"; title: string; prompt: string; criteria: { id: string; label: string; levels: [string, string, string, string] }[] }
+);
 
 /**
  * A choice. `explanation` replaces the shared incorrect explanation when this wrong option is chosen;
@@ -28,6 +40,9 @@ export type DocumentRow = { id: string; cells: Record<string, string>; selectabl
 export type LabMissionTarget = "/lab/portfolio" | "/lab/backtesting" | "/lab/compare";
 
 export type LessonBlock =
+  | ExerciseBlock
+  | OutputBlock
+  | (BaseBlock & { type: "decisionTree"; title: string; startId: string; nodes: DecisionNode[] })
   | (BaseBlock & { type: "heading"; title: string; body?: string })
   | (BaseBlock & { type: "paragraph"; content: string })
   | (BaseBlock & { type: "formula"; expression: string; latex?: string; variables: { symbol: string; description: string }[] })

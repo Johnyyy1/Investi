@@ -1,8 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { RiskHistoryEntry } from "@/features/lessons/real-history/risk-window";
 import type { LessonBlock } from "@/features/lessons/types";
 import { GuidedBlock } from "./guided-block";
+
+vi.mock("@/features/artifacts/actions", () => ({ listArtifacts: vi.fn(), saveArtifact: vi.fn() }));
 
 const bridge: LessonBlock = { id: "lab-bridge", type: "labBridge", title: "Největší propad v Labu", content: "Na detailu instrumentu se propad počítá z denních zavíracích cen.", metric: "max-drawdown" };
 const aapl = { instrumentId: "FMP:NASDAQ:AAPL", symbol: "AAPL", name: "Apple Inc.", assetType: "equity" } as const;

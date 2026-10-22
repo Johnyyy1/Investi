@@ -1,0 +1,68 @@
+name: Lesson exercises
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/lesson-exercises.yml
+      - 'src/components/lesson/**'
+      - 'src/features/lessons/**'
+      - 'src/features/progress/**'
+      - 'src/features/artifacts/**'
+      - 'src/db/**'
+      - 'drizzle/**'
+      - 'scripts/validate-lesson-exercises*'
+      - package.json
+      - package-lock.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lesson-exercises-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  exercises:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: investi_artifacts_qa
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d investi_artifacts_qa"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      MARKET_DATA_PROVIDER: deterministic
+      FX_DATA_PROVIDER: deterministic
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_artifacts_qa
+      BETTER_AUTH_SECRET: ci-only-placeholder-secret-not-used-anywhere-0123456789
+      BETTER_AUTH_URL: http://localhost:3131
+      ARTIFACTS_QA_DISPOSABLE: '1'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm run test:lesson-exercises-persistence
+      - run: npm run test:lesson-exercises-browser
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: lesson-exercises-${{ github.run_id }}
+          path: test-results/lesson-exercises/
+          retention-days: 7

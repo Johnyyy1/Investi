@@ -1,6 +1,7 @@
 import type { ArtifactKind } from "./schemas";
 
 export const artifactLabels: Record<ArtifactKind, string> = {
+  lesson_output: "Výstup cvičení",
   goal_map: "Mapa cílů",
   financial_checkup: "Finanční check-up",
   fee_profile: "Profil poplatků",

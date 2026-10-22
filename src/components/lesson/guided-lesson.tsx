@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CompletionScreen } from "@/components/learning/completion-screen";
@@ -26,7 +26,7 @@ import { FactStatusChip } from "./step-kinds/fact-notice";
 import { lessonFactKeys, stepWidth } from "@/features/lessons/step-kinds";
 import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, Leaf, RotateCcw } from "lucide-react";
 
-const primaryClassName = "min-w-0 flex-1 whitespace-nowrap px-3 min-[420px]:px-6 md:flex-none";
+const primaryClassName = "min-w-0 flex-1 whitespace-normal px-3 min-[420px]:px-6 md:flex-none";
 
 export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref, guest = false, history, riskHistory, factNotice }: {
   lesson: AuthoredLesson; initialStatus: "not_started" | "in_progress" | "completed"; initialPosition: number; initialCompletedLessons: number; initialLearningMomentum: LearningMomentum; initialEarnedPracticeCapitalMinor: SerializedPracticeCapitalMinor; nextHref: string;
@@ -49,6 +49,8 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
   const [completedLessons, setCompletedLessons] = useState(initialCompletedLessons);
   const [reward, setReward] = useState<CompletionRewardPresentation>();
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [outputReady, setOutputReady] = useState<Record<string, boolean>>({});
+  const onOutputReady = useCallback((id: string, ready: boolean) => setOutputReady((current) => current[id] === ready ? current : { ...current, [id]: ready }), []);
   const [verdict, setVerdict] = useState<boolean>();
   const [pending, setPending] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -119,7 +121,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
   }
   function retry() {
     setAnswers({}); setVerdict(undefined);
-    requestAnimationFrame(() => questionRef.current?.querySelector<HTMLInputElement>("input")?.focus());
+    requestAnimationFrame(() => questionRef.current?.querySelector<HTMLInputElement>("input, select")?.focus());
   }
 
   const step = steps[position];
@@ -130,11 +132,12 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
   const evaluation = question ? evaluateQuestion(question, answers) : undefined;
   const isLast = position === steps.length - 1;
   const factKeys = lessonFactKeys(lesson);
+  const missingSubmission = step.blocks.some((block) => block.type === "rubricSelfAssessment" && !outputReady[block.id]);
   const primary = question && verdict === undefined
     ? { label: "Zkontrolovat odpověď", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: evaluation === undefined, onClick: () => setVerdict(evaluation) }
     : question && verdict === false
       ? { label: "Zkusit znovu", icon: <RotateCcw aria-hidden="true" className="size-[18px]" />, disabled: false, onClick: retry }
-      : { label: question || !isLast ? "Pokračovat" : review ? "Dokončit opakování" : "Dokončit lekci", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: false, onClick: (event: MouseEvent) => question ? move(position + 1, answers, event) : isLast ? void complete() : move(position + 1, undefined, event) };
+      : { label: question || !isLast ? "Pokračovat" : review ? "Dokončit opakování" : "Dokončit lekci", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: missingSubmission, onClick: (event: MouseEvent) => question ? move(position + 1, answers, event) : isLast ? void complete() : move(position + 1, undefined, event) };
 
   return <main className="flex min-h-dvh flex-col" data-save-state={saving ? "saving" : "idle"}>
     <LessonTopBar eyebrow={`${learningModule.title} · Lekce ${lesson.position}${review ? " · Opakování" : ""}`} title={lesson.title} minutes={lesson.estimatedMinutes} segments={steps.map((item) => ({ mastery: item.kind === "mastery" }))} current={position} finished={finished} />
@@ -159,7 +162,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
             {mastery ? <p className="text-sm/5 text-muted">Bez časového limitu. Když odpověď nevyjde, ukážeme proč a zkusíš to znovu.</p> : null}
             {position === 0 && factKeys.length ? <FactStatusChip factKeys={factKeys} /> : null}
           </div>
-          {step.blocks.filter((block) => !isQuestion(block)).map((block) => <GuidedBlock key={block.id} block={block} history={history} riskHistory={riskHistory} />)}
+          {step.blocks.filter((block) => !isQuestion(block)).map((block) => <GuidedBlock key={block.id} block={block} lessonId={lesson.id} guest={guest} onOutputReady={onOutputReady} history={history} riskHistory={riskHistory} />)}
           {question ? <div ref={questionRef} className="flex flex-col">
             {mastery && verdict ? <MasteryGuide /> : null}
             <div className="relative z-[1]"><GuidedQuestion block={question} answers={answers} verdict={verdict} mastery={mastery} onAnswer={(id, value) => setAnswers((current) => ({ ...current, [id]: value }))} /></div>
@@ -169,7 +172,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
     </div>
     {finished ? null : <LessonActionBar>
       {position > 0 ? <Button variant="ghost" disabled={pending} onClick={(event) => move(position - 1, undefined, event)} className="min-h-[52px] shrink-0 px-1 text-[15px] font-semibold text-foreground hover:bg-surface-muted md:min-h-12 md:px-3"><ArrowLeft aria-hidden="true" className="size-4" /><span className="max-[359px]:sr-only">Předchozí</span></Button> : null}
-      <Button buttonRef={primaryRef} loading={pending} disabled={primary.disabled} aria-describedby={question && verdict !== undefined ? `${question.id}-feedback` : undefined} onClick={primary.onClick} className={cn(primaryClassName, position === 0 && "md:ml-auto")}>{primary.label}{pending ? null : <span className="contents max-[374px]:hidden">{primary.icon}</span>}</Button>
+      <Button buttonRef={primaryRef} loading={pending} disabled={primary.disabled} aria-describedby={question && verdict !== undefined ? `${question.id}-feedback` : undefined} onClick={primary.onClick} className={cn(primaryClassName, position === 0 && "md:ml-auto")}><span className="min-w-0 [overflow-wrap:anywhere]">{primary.label}</span>{pending ? null : <span className="contents max-[374px]:hidden">{primary.icon}</span>}</Button>
     </LessonActionBar>}
   </main>;
 }
