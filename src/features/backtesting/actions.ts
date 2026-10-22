@@ -10,10 +10,11 @@ import { marketDataLimitMessage } from "@/features/rate-limit/policy";
 import { getCurrentUser } from "@/lib/session";
 import { backtestHistoryPlans, type HistoryBacktestResult } from "./catalog";
 import { runHistoryBacktests } from "./run";
-import { BacktestDataError, rebalanceRules } from "./spec";
+import { BacktestDataError, rebalanceRules, experimentSettingsSchema } from "./spec";
 
 /** The browser sends only choices from the catalog; prices, values and results come from the server. */
 const inputSchema = z.object({
+  experiments: experimentSettingsSchema.optional(),
   strategy: z.string().min(1).max(40),
   benchmark: z.string().min(1).max(80),
   rebalance: z.enum(rebalanceRules),

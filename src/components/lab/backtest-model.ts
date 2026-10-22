@@ -71,8 +71,8 @@ export function formatCostRate(rateBps: number) {
 export type CostView = "with" | "without";
 export function viewWithCosts(result: BacktestResult, view: CostView): BacktestResult {
   if (view === "with" || result.source.kind !== "history" || !("withoutCosts" in result) || !result.withoutCosts) return result;
-  const { metrics, benchmark, points } = result.withoutCosts;
-  return { ...result, metrics, benchmark, points };
+  const { metrics, benchmark, points, education, split } = result.withoutCosts;
+  return { ...result, metrics, benchmark, points, education, split };
 }
 export function formatBacktestMonth(month: string) {
   return new Intl.DateTimeFormat("cs-CZ", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${month}-01T00:00:00Z`));

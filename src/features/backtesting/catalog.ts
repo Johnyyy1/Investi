@@ -1,7 +1,8 @@
 import type { CalendarDate, Currency, InstrumentId, UtcTimestamp } from "@/features/market-data/contracts";
 import type { BacktestMetrics } from "@/features/lab/backtest";
+import type { ExperimentSummary, SplitPerformance } from "./experiments";
 import type { TradingSummary } from "./costs";
-import { FULL_WEIGHT_BPS, type BacktestCosts, type BacktestSpec, type CalendarMonth, type RebalanceRule } from "./spec";
+import { FULL_WEIGHT_BPS, type BacktestCosts, type BacktestSpec, type ExperimentSettings, type CalendarMonth, type RebalanceRule } from "./spec";
 
 export type BacktestStrategyDefinition = {
   id: string;
@@ -133,11 +134,13 @@ export type HistorySource = {
 export type CostSettings = { rate: string; fixedFee: string };
 
 /** `costs` echoes the learner's input; null means the run had no costs. */
-export type HistoryBacktestConfig = { source: "history"; strategy: string; benchmark: InstrumentId; start: number; end: number; amount: string; rebalance: RebalanceRule; costs: CostSettings | null };
+export type HistoryBacktestConfig = { source: "history"; strategy: string; benchmark: InstrumentId; start: number; end: number; amount: string; rebalance: RebalanceRule; costs: CostSettings | null; experiments?: ExperimentSettings };
 
 type CurvePoint = { label: string; value: number; benchmark: number };
 
 export type HistoryBacktestResult = {
+  education?: { strategy: ExperimentSummary; benchmark: ExperimentSummary };
+  split?: { strategy: SplitPerformance; benchmark: SplitPerformance };
   config: HistoryBacktestConfig;
   strategy: { id: string; name: string; description: string };
   benchmarkName: string;
@@ -153,7 +156,7 @@ export type HistoryBacktestResult = {
   costs: BacktestCosts;
   trading: { strategy: TradingSummary; benchmark: TradingSummary };
   /** The same closes simulated without costs; null when the run had none. */
-  withoutCosts: { metrics: BacktestMetrics; benchmark: BacktestMetrics; points: CurvePoint[] } | null;
+  withoutCosts: { metrics: BacktestMetrics; benchmark: BacktestMetrics; points: CurvePoint[]; education?: { strategy: ExperimentSummary; benchmark: ExperimentSummary }; split?: { strategy: SplitPerformance; benchmark: SplitPerformance } } | null;
   /** Fixed mix: month ends at which it was rebalanced. Trend filter: months held in the instrument and switches. */
   rebalances: number;
   monthsInvested: number;

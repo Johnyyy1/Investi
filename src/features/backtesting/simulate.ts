@@ -1,4 +1,5 @@
 import { metricsFromValues, type BacktestMetrics } from "@/features/lab/backtest";
+import { hasExperimentFlows, simulateExperiment, type ExperimentSummary } from "./experiments";
 import { noTrading, tradeToTargets, type Book, type TradingSummary } from "./costs";
 import type { AlignedMonthlyCloses } from "./monthly";
 import { addMonths, BacktestDataError, FULL_WEIGHT_BPS, lookbackMonths, monthRange, type BacktestSpec, type BuyAndHoldBenchmark, type CalendarMonth } from "./spec";
@@ -19,6 +20,7 @@ export type SimulationResult = {
   /** Every purchase and sale, including the initial purchase, and what they cost. */
   trading: TradingSummary;
   metrics: BacktestMetrics;
+  education?: ExperimentSummary;
 };
 
 function expectShape(spec: BacktestSpec, data: AlignedMonthlyCloses) {
@@ -44,6 +46,7 @@ function expectShape(spec: BacktestSpec, data: AlignedMonthlyCloses) {
  */
 export function simulateBacktest(spec: BacktestSpec, data: AlignedMonthlyCloses): SimulationResult {
   const months = expectShape(spec, data);
+  if (hasExperimentFlows(spec)) return simulateExperiment(spec, data);
   const { closes } = data;
   const base = lookbackMonths(spec.rule) - 1;
   const initial = spec.initialAmount;
@@ -103,6 +106,6 @@ export function simulateBacktest(spec: BacktestSpec, data: AlignedMonthlyCloses)
 export function simulateBuyAndHold(benchmark: BuyAndHoldBenchmark, data: AlignedMonthlyCloses): SimulationResult {
   if (benchmark.adjustment !== "split-adjusted") throw new BacktestDataError("Benchmark musí mít stejnou sémantiku výnosu jako strategie: jen cenu bez dividend.", "incomplete");
   const { instrumentId, startMonth, endMonth, initialAmount, frequency, currency, adjustment, costs } = benchmark;
-  const spec: BacktestSpec = { holdings: [{ instrumentId, weightBps: FULL_WEIGHT_BPS }], cashWeightBps: 0, rule: { kind: "fixed-weights", rebalance: "none" }, startMonth, endMonth, initialAmount, frequency, currency, adjustment, costs };
+  const spec: BacktestSpec = { ...benchmark, holdings: [{ instrumentId, weightBps: FULL_WEIGHT_BPS }], cashWeightBps: 0, rule: { kind: "fixed-weights", rebalance: "none" }, startMonth, endMonth, initialAmount, frequency, currency, adjustment, costs };
   return simulateBacktest(spec, data);
 }

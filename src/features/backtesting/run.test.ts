@@ -48,6 +48,28 @@ const fmpRequest = { ...request, benchmark: "FMP:AMEX:SPY" };
 const monthEnd = (points: readonly { date: string; close: number }[], month: string) => points.filter((point) => point.date.startsWith(month)).at(-1)!.close;
 
 describe("history backtest with the deterministic provider", () => {
+  it("runs flows, fund costs and a continuous split identically for strategy and benchmark when their rules match", async () => {
+    const plan: BacktestHistoryPlan = { ...backtestHistoryPlans.deterministic, strategies: [{ id: "all-in", name: "SPX", description: "Test", spec: { holdings: [{ instrumentId: "US-XCBO:SPX", weightBps: 10_000 }], cashWeightBps: 0, rule: { kind: "fixed-weights" } } }] };
+    const experiments = { contributions: { monthlyAmount: 0.25 }, lumpSumSplit: { months: 12 }, annualFundCostBps: 25, withdrawals: { annualRate: 0.01 }, outOfSampleStartMonth: "2021-01" };
+    const [result] = await runHistoryBacktests(deterministic(), plan, { ...request, strategy: "all-in", rebalance: "none", experiments, costs: { rate: "0,1", fixedFee: "0" } });
+    expect(result.metrics).toEqual(result.benchmark);
+    expect(result.education?.strategy).toEqual(result.education?.benchmark);
+    expect(result.education?.strategy.contributed).toBeCloseTo(10_030, 8);
+    expect(result.split?.strategy).toEqual(result.split?.benchmark);
+    expect(result.split?.strategy.outOfSample.startValue).toBe(result.points[60].value);
+    expect(result.split?.strategy.outOfSample.months).toBe(60);
+    expect(result.withoutCosts?.education?.strategy.fundCosts).toBe(0);
+    expect(result.withoutCosts?.metrics.finalValue).toBeGreaterThan(result.metrics.finalValue);
+    expect(result.config.experiments).toEqual(experiments);
+  });
+  it("refuses out-of-period flows and holdouts before requesting market data", async () => {
+    const service = deterministic();
+    const spy = vi.spyOn(service, "getHistoricalPrices");
+    for (const experiments of [{ contributions: { monthlyAmount: 10, startMonth: "2008-01" } }, { outOfSampleStartMonth: "2026-01" }, { withdrawals: { annualRate: -1 } }]) {
+      await expect(runHistoryBacktests(service, backtestHistoryPlans.deterministic, { ...request, experiments })).rejects.toThrow();
+    }
+    expect(spy).not.toHaveBeenCalled();
+  });
   it("runs a 60 / 40 mix over 120 months and labels the closes as sample data", async () => {
     const [result] = await runHistoryBacktests(deterministic(), backtestHistoryPlans.deterministic, request);
     expect(result.months).toBe(120);
