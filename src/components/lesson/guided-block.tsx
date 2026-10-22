@@ -55,8 +55,8 @@ export function GuidedBlock({ block, history, riskHistory, lessonId, guest, onOu
     case "interactiveFigure": return <section aria-labelledby={`${block.id}-title`} className="overflow-hidden rounded-surface border border-primary/30 bg-surface shadow-elevation-1">
       <div className="flex flex-col gap-1.5 border-b border-primary/20 bg-primary-soft px-[18px] py-4 md:px-7 md:py-5">
         <p className={cn(eyebrow, "flex items-center gap-1.5 text-primary")}><SlidersHorizontal aria-hidden="true" className="size-3.5" />Vyzkoušej si</p>
-        <h3 id={`${block.id}-title`} className="text-xl/[26px] font-semibold tracking-[-0.3px] md:text-[22px]/7">{block.title}</h3>
-        <p className="text-sm/[21px] text-secondary md:text-[15px]/[23px]">{block.description}</p>
+        <h3 id={`${block.id}-title`} className="text-xl/[1.3] font-semibold tracking-[-0.3px] [overflow-wrap:anywhere] md:text-[1.375rem]/[1.273]">{block.title}</h3>
+        <p className="text-sm/[1.5] text-secondary [overflow-wrap:anywhere] md:text-[0.9375rem]/[1.533]">{block.description}</p>
       </div>
       <div className="p-4 pb-[18px] md:p-7"><LessonFigure figure={block.figure} history={history} riskHistory={riskHistory} /></div>
     </section>;

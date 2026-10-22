@@ -1,3 +1,4 @@
+import type { LessonFigureId } from "./figure-catalog";
 import type { MetricId } from "@/features/learning/metric-glossary";
 import type { ArtifactRequirement } from "@/features/artifacts/schemas";
 import type { FactKey } from "@/features/facts/registry";
@@ -48,7 +49,7 @@ export type LessonBlock =
   | (BaseBlock & { type: "formula"; expression: string; latex?: string; variables: { symbol: string; description: string }[] })
   | (BaseBlock & { type: "workedExample"; title: string; introduction?: string; steps: { label: string; value: string; emphasis?: boolean }[]; conclusion: string })
   | (BaseBlock & { type: "conceptCallout"; title: string; content: string })
-  | (BaseBlock & { type: "interactiveFigure"; figure: "return-calculator" | "price-series-explorer" | "historical-period-returns" | "historical-cumulative-returns" | "historical-volatility" | "historical-drawdown" | "volatility-paths" | "standard-deviation-explorer" | "annualisation-explorer" | "max-drawdown-explorer" | "correlation-explorer" | "common-factor-explorer" | "crisis-correlation-explorer" | "historical-correlation" | "concentration-explorer" | "exposure-explorer" | "look-through-explorer" | "portfolio-correlation-explorer" | "diversification-scenario" | "compounding-explorer" | "recovery-explorer" | "growth-comparison" | "ownership-explorer" | "market-cap-explorer" | "stock-position-explorer" | "index-etf-visual" | "etf-holdings-visual" | "bond-cashflow-explorer" | "asset-comparison" | "market-quote-explorer" | "liquidity-comparison" | "risk-scenario-explorer" | "drawdown-explorer" | "diversification-preview" | "time-horizon-explorer" | "portfolio-builder" | "diversification-impact" | "portfolio-horizon-scenario" | "risk-capacity-scenario"; title: string; description: string })
+  | (BaseBlock & { type: "interactiveFigure"; figure: LessonFigureId; title: string; description: string })
   | (BaseBlock & { type: "multipleChoiceQuestion"; prompt: string; options: ChoiceOption[]; correctOptionId: string; correctExplanation: string; incorrectExplanation: string })
   /** Design F: worked example whose last row the learner completes. Graded like a question. */
   | (BaseBlock & { type: "fadedExample"; title: string; introduction?: string; steps: LabeledValue[]; blank: FadedBlank; misconception?: string; correctExplanation: string; incorrectExplanation: string })

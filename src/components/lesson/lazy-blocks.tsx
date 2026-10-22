@@ -1,6 +1,8 @@
 "use client";
 
 import { lazy, Suspense, type ComponentType, type ReactNode } from "react";
+import { lessonFigureCatalog } from "@/features/lessons/figure-catalog";
+import { FigureDataLabel } from "@/components/learning/figure-data-label";
 import type { LessonBlock } from "@/features/lessons/types";
 import type { LessonHistoryEntry } from "@/features/lessons/real-history/snapshot";
 import type { RiskHistoryEntry } from "@/features/lessons/real-history/risk-window";
@@ -120,7 +122,10 @@ const figures: Record<FigureKind, { preload: () => Promise<unknown>; render: (da
 };
 
 export function LessonFigure({ figure, ...data }: { figure: FigureKind } & FigureData) {
-  return figures[figure].render(data);
+  return <div className="min-w-0 space-y-4 [overflow-wrap:anywhere]">
+    {lessonFigureCatalog[figure].data === "model" ? <FigureDataLabel data={{ kind: "model" }} /> : null}
+    {figures[figure].render(data)}
+  </div>;
 }
 
 /** Loads the figure and formula modules a lesson uses, so its later steps render them without a placeholder. */

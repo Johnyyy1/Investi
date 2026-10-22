@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { parseNumericAnswer } from "@/features/finance/numeric-input";
 import { FinanceInput } from "@/components/learning/finance-input";
 import { ConceptCard } from "@/components/learning/concept-card";
 import { MetricResult } from "@/components/learning/metric-result";
@@ -80,7 +81,7 @@ export function StockPositionExplorer() {
   const invalid = { "aria-invalid": Boolean(error), "aria-describedby": error ? errorId : undefined };
   return <section aria-label="Výpočet hodnoty akciové pozice" className="min-w-0 space-y-6">
     <div className="grid gap-5 sm:grid-cols-2"><FinanceInput {...invalid} label="Počet akcií" value={quantity} onValueChange={setQuantity} /><FinanceInput {...invalid} label="Tržní cena jedné akcie" prefix="Kč" value={price} onValueChange={setPrice} /></div>
-    {error ? <p id={errorId} role="alert" className="text-small text-danger-ink">{error}</p> : value !== undefined ? <div aria-live="polite" aria-atomic="true" className="border-y border-border py-6"><MetricResult label="Hodnota pozice" value={formatCurrency(value, "CZK", { maximumFractionDigits: 2 })} /><p className="mt-3 text-small text-secondary">{number(Number(quantity))} akcie × {formatCurrency(Number(price), "CZK", { maximumFractionDigits: 2 })} za akcii = {formatCurrency(value, "CZK", { maximumFractionDigits: 2 })}</p></div> : null}
+    {error ? <p id={errorId} role="alert" className="text-small text-danger-ink">{error}</p> : value !== undefined ? <div aria-live="polite" aria-atomic="true" className="border-y border-border py-6"><MetricResult label="Hodnota pozice" value={formatCurrency(value, "CZK", { maximumFractionDigits: 2 })} /><p className="mt-3 text-small text-secondary">{number(parseNumericAnswer(quantity))} akcie × {formatCurrency(parseNumericAnswer(price), "CZK", { maximumFractionDigits: 2 })} za akcii = {formatCurrency(value, "CZK", { maximumFractionDigits: 2 })}</p></div> : null}
   </section>;
 }
 

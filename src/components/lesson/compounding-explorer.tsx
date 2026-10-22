@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { parseNumericAnswer } from "@/features/finance/numeric-input";
 import { FinanceInput } from "@/components/learning/finance-input";
 import { MetricResult } from "@/components/learning/metric-result";
 import { LearningChart } from "@/components/learning/learning-chart";
@@ -13,7 +14,7 @@ function formatValue(value: number) { return formatDecimal(value, { minimumFract
 function formatPercent(value: number) { return `${value > 0 ? "+" : ""}${formatPercentage(value)}`; }
 function parsePercent(value: string, period: number) {
   if (value.trim() === "") throw new FinancialInputError(`Výnos za období ${period} je povinný.`);
-  const parsed = Number(value);
+  const parsed = parseNumericAnswer(value);
   if (!Number.isFinite(parsed)) throw new FinancialInputError(`Výnos za období ${period} musí být číslo.`);
   if (parsed < -100) throw new FinancialInputError(`Výnos za období ${period} nemůže být nižší než −100 %.`);
   return parsed / 100;

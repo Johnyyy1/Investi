@@ -1,0 +1,47 @@
+/** Client-safe metadata only. Renderers stay in lazy-blocks.tsx; never import their modules here.
+ * Owner is the curriculum maintainer role, responsible for model tests, labels and dated fact review.
+ * Provider-backed figures label the selected snapshot at runtime, including sample/unavailable states.
+ */
+type FigureDefinition = { owner: "curriculum"; data: "model" | "provider"; model: string };
+export const lessonFigureCatalog = {
+  "return-calculator": { owner: "curriculum", data: "model", model: "src/features/finance/returns.ts" },
+  "price-series-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/returns.ts" },
+  "historical-period-returns": { owner: "curriculum", data: "provider", model: "src/features/lessons/real-history/" },
+  "historical-cumulative-returns": { owner: "curriculum", data: "provider", model: "src/features/lessons/real-history/" },
+  "historical-volatility": { owner: "curriculum", data: "provider", model: "src/features/lessons/real-history/" },
+  "historical-drawdown": { owner: "curriculum", data: "provider", model: "src/features/lessons/real-history/" },
+  "volatility-paths": { owner: "curriculum", data: "model", model: "src/features/lessons/volatility/model.ts" },
+  "standard-deviation-explorer": { owner: "curriculum", data: "model", model: "src/features/lessons/volatility/model.ts" },
+  "annualisation-explorer": { owner: "curriculum", data: "model", model: "src/features/lessons/volatility/model.ts" },
+  "max-drawdown-explorer": { owner: "curriculum", data: "model", model: "src/features/lessons/volatility/model.ts" },
+  "correlation-explorer": { owner: "curriculum", data: "model", model: "src/features/lessons/correlation/model.ts" },
+  "common-factor-explorer": { owner: "curriculum", data: "model", model: "src/features/lessons/correlation/model.ts" },
+  "crisis-correlation-explorer": { owner: "curriculum", data: "model", model: "src/features/lessons/correlation/model.ts" },
+  "historical-correlation": { owner: "curriculum", data: "provider", model: "src/features/lessons/real-history/" },
+  "concentration-explorer": { owner: "curriculum", data: "model", model: "src/features/lessons/diversification/model.ts" },
+  "exposure-explorer": { owner: "curriculum", data: "model", model: "src/features/lessons/diversification/model.ts" },
+  "look-through-explorer": { owner: "curriculum", data: "model", model: "src/features/lessons/diversification/model.ts" },
+  "portfolio-correlation-explorer": { owner: "curriculum", data: "model", model: "src/features/lessons/diversification/model.ts" },
+  "diversification-scenario": { owner: "curriculum", data: "model", model: "src/features/lessons/diversification/model.ts" },
+  "compounding-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/returns.ts" },
+  "recovery-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/returns.ts" },
+  "growth-comparison": { owner: "curriculum", data: "model", model: "src/features/finance/returns.ts" },
+  "ownership-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "market-cap-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "stock-position-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "index-etf-visual": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "etf-holdings-visual": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "bond-cashflow-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "asset-comparison": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "market-quote-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "liquidity-comparison": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "risk-scenario-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "drawdown-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "diversification-preview": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "time-horizon-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "portfolio-builder": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "diversification-impact": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "portfolio-horizon-scenario": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+  "risk-capacity-scenario": { owner: "curriculum", data: "model", model: "src/features/finance/foundations.ts" },
+} as const satisfies Record<string, FigureDefinition>;
+export type LessonFigureId = keyof typeof lessonFigureCatalog;

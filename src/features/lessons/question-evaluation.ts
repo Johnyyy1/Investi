@@ -1,15 +1,13 @@
+import { parseNumericAnswer } from "@/features/finance/numeric-input";
 import { evaluateCategorize, evaluateDocumentSearch, evaluateFindError, evaluateOrder } from "./exercise-evaluation";
 import type { LessonBlock } from "./types";
+
+export { parseNumericAnswer } from "@/features/finance/numeric-input";
 
 const questionTypes = ["multipleChoiceQuestion", "numericQuestion", "multiNumericQuestion", "fadedExample", "documentTap", "findError", "categorizeQuestion", "orderQuestion", "documentSearchQuestion", "findErrorQuestion"] as const;
 export type QuestionBlock = Extract<LessonBlock, { type: (typeof questionTypes)[number] }>;
 export function isQuestion(block: LessonBlock): block is QuestionBlock {
   return (questionTypes as readonly string[]).includes(block.type);
-}
-
-/** Normalize the Czech decimal separator at the answer-input boundary. */
-export function parseNumericAnswer(value: string) {
-  return value.trim() === "" ? Number.NaN : Number(value.replace(",", "."));
 }
 
 /** Document selections travel as one comma-separated answer, so they fit the saved-answer contract (≤ 10 keys, ≤ 100 chars). */

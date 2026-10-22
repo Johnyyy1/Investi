@@ -1,3 +1,5 @@
+import { parseNumericAnswer } from "./numeric-input";
+
 export class FinancialInputError extends Error {
   constructor(message: string) {
     super(message);
@@ -127,7 +129,7 @@ export function parsePrice(value: string, label: string) {
   if (value.trim() === "") {
     throw new FinancialInputError(`Pole „${label}“ je povinné.`);
   }
-  const parsed = Number(value);
+  const parsed = parseNumericAnswer(value);
   assertFinite(parsed, label);
   return parsed;
 }
