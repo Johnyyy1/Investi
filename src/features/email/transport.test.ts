@@ -2,7 +2,7 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { createOutboxTransport, createResendTransport, createUnconfiguredTransport, EmailDeliveryError, isReservedTestAddress, RESEND_ENDPOINT, selectEmailTransport, type EmailMessage } from "./transport";
+import { createOutboxTransport, createResendTransport, createLogTransport, EmailDeliveryError, isReservedTestAddress, RESEND_ENDPOINT, selectEmailTransport, type EmailMessage } from "./transport";
 
 const message: EmailMessage = { kind: "password-reset", to: "learner@example.cz", subject: "Předmět", text: "Text https://app.test/x", html: "<p>HTML</p>" };
 
@@ -59,31 +59,43 @@ describe("createOutboxTransport", () => {
   });
 });
 
-describe("createUnconfiguredTransport", () => {
+describe("createLogTransport", () => {
   it("prints the message during development so the flow can be finished by hand", async () => {
     const log = { warn: vi.fn(), error: vi.fn() };
-    await createUnconfiguredTransport({ development: true, log }).send(message);
+    await createLogTransport({ development: true, log }).send(message);
     expect(log.warn.mock.calls[0][0]).toContain("https://app.test/x");
     expect(log.error).not.toHaveBeenCalled();
   });
 
   it("logs a configuration error in production without the link or the address", async () => {
     const log = { warn: vi.fn(), error: vi.fn() };
-    await createUnconfiguredTransport({ development: false, log }).send(message);
-    expect(log.error).toHaveBeenCalledTimes(1);
-    expect(log.error.mock.calls[0][0]).not.toMatch(/app\.test|learner@example\.cz/);
+    await createLogTransport({ development: false, log }).send(message);
+    expect(log.warn).toHaveBeenCalledTimes(1);
+    expect(log.warn.mock.calls[0][0]).not.toMatch(/app\.test|learner@example\.cz/);
   });
 });
 
 describe("selectEmailTransport", () => {
-  it("uses Resend only when both the key and the sender are set", () => {
-    expect(selectEmailTransport({ resendApiKey: "re_test", from: "a@b.c", outboxDir: "/tmp/x", development: false }).name).toBe("resend");
-    expect(selectEmailTransport({ resendApiKey: "re_test", development: false }).name).toBe("unconfigured");
-    expect(selectEmailTransport({ from: "a@b.c", development: false }).name).toBe("unconfigured");
+  it("selects explicitly and never sends just because credentials exist", () => {
+    const credentials = { resendApiKey: "re_test", from: "investi <ucet@mail.investnik.cz>", development: false };
+    expect(selectEmailTransport(credentials).name).toBe("log");
+    expect(selectEmailTransport({ ...credentials, transport: "resend" }).name).toBe("resend");
+    expect(selectEmailTransport({ ...credentials, transport: "outbox", outboxDir: "/tmp/x" }).name).toBe("outbox");
+    expect(() => selectEmailTransport({ transport: "resend", development: false })).toThrow("Resend requires");
+    expect(() => selectEmailTransport({ transport: "outbox", development: false })).toThrow("Outbox requires");
   });
 
-  it("falls back to the QA outbox, then to logging", () => {
-    expect(selectEmailTransport({ outboxDir: "/tmp/x", development: false }).name).toBe("outbox");
-    expect(selectEmailTransport({ development: true }).name).toBe("unconfigured");
+  it("refuses hosted preview Resend and incomplete production regardless of general env validation", () => {
+    expect(() => selectEmailTransport({ transport: "resend", vercelEnv: "preview", resendApiKey: "secret", from: "a@b.cz", development: false })).toThrow("Resend is forbidden");
+    expect(() => selectEmailTransport({ vercelEnv: "production", development: false })).toThrow("Production requires");
   });
+});
+
+it("logs only an allowlisted Resend error name, status and kind", async () => {
+  for (const name of ["validation_error", "learner@example.cz", "validation_error\nsecret"]) {
+    const fetch = vi.fn<typeof globalThis.fetch>(async () => Response.json({ name, message: "secret token https://private.test", recipient: message.to }, { status: 403 }));
+    const error = await createResendTransport({ apiKey: "secret-key", from: "a@b.cz", fetch }).send(message).catch((error: unknown) => error);
+    expect(error).toMatchObject({ status: 403, providerCode: name === "validation_error" ? name : "unknown_error" });
+    expect(String(error)).not.toMatch(/learner@|secret|private/);
+  }
 });

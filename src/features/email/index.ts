@@ -7,6 +7,8 @@ import { EmailDeliveryError, selectEmailTransport, type EmailMessage } from "./t
 export { passwordResetEmail, verificationEmail, EMAIL_VERIFICATION_TOKEN_SECONDS, PASSWORD_RESET_TOKEN_SECONDS } from "./templates";
 
 const transport = selectEmailTransport({
+  transport: env.EMAIL_TRANSPORT,
+  vercelEnv: env.VERCEL_ENV,
   resendApiKey: env.RESEND_API_KEY,
   from: env.EMAIL_FROM,
   outboxDir: env.EMAIL_OUTBOX_DIR,

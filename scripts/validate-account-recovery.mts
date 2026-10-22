@@ -21,6 +21,7 @@ delete process.env.RESEND_API_KEY;
 delete process.env.EMAIL_FROM;
 const outbox = await mkdtemp(join(tmpdir(), "investi-recovery-outbox-"));
 process.env.EMAIL_OUTBOX_DIR = outbox;
+process.env.EMAIL_TRANSPORT = "outbox";
 
 const { db } = await import("../src/db");
 const { rateLimitBucket, session, user, verification } = await import("../src/db/schema");

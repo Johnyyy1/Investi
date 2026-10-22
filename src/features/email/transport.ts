@@ -1,3 +1,4 @@
+import { emailEnvironmentSchema } from "./config";
 import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -12,17 +13,24 @@ export interface EmailMessage {
 }
 
 export interface EmailTransport {
-  readonly name: "resend" | "outbox" | "unconfigured";
+  readonly name: "resend" | "outbox" | "log";
   send(message: EmailMessage): Promise<void>;
 }
 
 /** Normalized failure: carries the transport and HTTP status, never the address, key or provider body. */
 export class EmailDeliveryError extends Error {
-  constructor(readonly transport: EmailTransport["name"], readonly kind: EmailMessage["kind"], readonly status?: number) {
-    super(`E-mail "${kind}" could not be sent through ${transport}${status ? ` (HTTP ${status})` : ""}.`);
+  constructor(readonly transport: EmailTransport["name"], readonly kind: EmailMessage["kind"], readonly status?: number, readonly providerCode?: string) {
+    super(`E-mail "${kind}" could not be sent through ${transport}${status ? ` (HTTP ${status})` : ""}${providerCode ? ` [${providerCode}]` : ""}.`);
     this.name = "EmailDeliveryError";
   }
 }
+
+const SAFE_RESEND_ERROR_NAMES = new Set([
+  "validation_error", "missing_required_field", "invalid_access", "invalid_parameter", "invalid_region",
+  "invalid_api_key", "restricted_api_key", "missing_api_key", "method_not_allowed", "not_found",
+  "rate_limit_exceeded", "daily_quota_exceeded", "monthly_quota_exceeded", "internal_server_error",
+  "application_error", "invalid_idempotent_request", "concurrent_idempotent_requests",
+]);
 
 export const RESEND_ENDPOINT = "https://api.resend.com/emails";
 
@@ -49,7 +57,13 @@ export function createResendTransport({ apiKey, from, fetch: fetchImpl = fetch }
       } catch {
         throw new EmailDeliveryError("resend", message.kind);
       }
-      if (!response.ok) throw new EmailDeliveryError("resend", message.kind, response.status);
+      if (!response.ok) {
+        // Never reflect provider-controlled strings: even the error name could contain personal data.
+        const payload: unknown = await response.json().catch(() => null);
+        const name = payload && typeof payload === "object" && "name" in payload ? payload.name : undefined;
+        const code = typeof name === "string" && SAFE_RESEND_ERROR_NAMES.has(name) ? name : "unknown_error";
+        throw new EmailDeliveryError("resend", message.kind, response.status, code);
+      }
     },
   };
 }
@@ -65,30 +79,34 @@ export function createOutboxTransport(directory: string): EmailTransport {
   };
 }
 
-/** Without a provider nothing is sent. Development prints the link so the flow stays testable by hand. */
-export function createUnconfiguredTransport({ development, log = console }: { development: boolean; log?: Pick<Console, "warn" | "error"> }): EmailTransport {
+/** Log links only in local development. Hosted previews log template metadata without personal data. */
+export function createLogTransport({ development, log = console }: { development: boolean; log?: Pick<Console, "warn"> }): EmailTransport {
   return {
-    name: "unconfigured",
+    name: "log",
     async send(message) {
-      if (development) {
-        log.warn(`[investi:email] RESEND_API_KEY or EMAIL_FROM is not set; "${message.kind}" was not sent.\n${message.text}`);
-        return;
-      }
-      log.error(`[investi:email] RESEND_API_KEY or EMAIL_FROM is not set; "${message.kind}" was not sent.`);
+      log.warn(`[investi:email] EMAIL_TRANSPORT=log; "${message.kind}" was not sent.${development ? `\n${message.text}` : ""}`);
     },
   };
 }
 
 export interface EmailConfig {
+  readonly transport?: "resend" | "outbox" | "log";
+  readonly vercelEnv?: "production" | "preview" | "development";
   readonly resendApiKey?: string;
   readonly from?: string;
   readonly outboxDir?: string;
   readonly development: boolean;
 }
 
-/** Resend when fully configured, else the QA outbox when one is set, else the logging fallback. */
+/** Credentials never select a transport implicitly. Revalidate here even if general env validation is skipped. */
 export function selectEmailTransport(config: EmailConfig, fetchImpl?: typeof fetch): EmailTransport {
-  if (config.resendApiKey && config.from) return createResendTransport({ apiKey: config.resendApiKey, from: config.from, fetch: fetchImpl });
-  if (config.outboxDir) return createOutboxTransport(config.outboxDir);
-  return createUnconfiguredTransport({ development: config.development });
+  const parsed = emailEnvironmentSchema.safeParse({
+    EMAIL_TRANSPORT: config.transport, VERCEL_ENV: config.vercelEnv,
+    RESEND_API_KEY: config.resendApiKey, EMAIL_FROM: config.from, EMAIL_OUTBOX_DIR: config.outboxDir,
+  });
+  if (!parsed.success) throw new Error(`Invalid e-mail configuration: ${parsed.error.issues.map((issue) => issue.message).join("; ")}`);
+  const selected = parsed.data;
+  if (selected.EMAIL_TRANSPORT === "resend") return createResendTransport({ apiKey: selected.RESEND_API_KEY!, from: selected.EMAIL_FROM!, fetch: fetchImpl });
+  if (selected.EMAIL_TRANSPORT === "outbox") return createOutboxTransport(selected.EMAIL_OUTBOX_DIR!);
+  return createLogTransport({ development: config.development && !config.vercelEnv });
 }
