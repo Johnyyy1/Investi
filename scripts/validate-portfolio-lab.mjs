@@ -383,7 +383,32 @@ try {
   assert.equal(await page.getByTestId("portfolio-cost-effect").textContent(), "−13,24 Kč");
   assert.equal(await page.getByTestId("portfolio-fx-effect").textContent(), "0 Kč", "commission is not attributed to currency movement");
   assert.match(clean(await page.getByTestId("holding-AAPL").innerText()), /AAPL 32,6 %/, "weight is measured against the whole portfolio, cash included");
-  assert.equal(await page.getByText(/cíl \d|Můj mix|mimo mix/).count(), 0, "no targets or mixes");
+  assert.equal(await page.locator('section[aria-labelledby="allocation-title"]').getByText(/cíl \d|Můj mix|mimo mix/).count(), 0, "actual allocation never becomes a target");
+  const processFeedback = page.getByTestId("portfolio-process");
+  await processFeedback.getByRole("heading", { name: "Jak se drží tvůj plán" }).waitFor();
+  assert.equal(await processFeedback.locator("li").count(), 6);
+  assert.match(await page.getByTestId("process-allocation").innerText(), /Nedostupné[\s\S]*Bez něj nemáme tvůj cíl/);
+  assert.match(clean(await page.getByTestId("process-costs").innerText()), /13,24 Kč/, "process costs match ledger fees and FX markup");
+  assert.equal(await page.getByTestId("process-hhi").getAttribute("data-status"), "information", "one stock does not get an invented pass or fail");
+  assert.match(clean(await page.getByTestId("process-hhi").innerText()), /10 000/);
+  const calculation = page.getByTestId("process-hhi").getByLabel("Jak se počítá: Koncentrace pozic (HHI)");
+  await calculation.focus();
+  await page.keyboard.press("Enter");
+  assert.equal(await calculation.locator("..").getAttribute("open"), "", "calculation is keyboard accessible");
+  await page.keyboard.press("Enter");
+  // The persisted current IPS supplies its own band; no order is created by viewing a plan.
+  const processPlan = { schemaVersion: 2, goals: [{ label: "Dlouhodobý plán", purpose: "retirement", horizonMonths: 360, priority: "important" }],
+    foundation: { emergencyFund: "building", highCostDebt: "none" },
+    allocation: { lines: [{ instrumentId: "US-XNAS:AAPL", weightBps: 1000 }], cashBps: 9000 },
+    instruments: ["Výuková akcie"], platform: "Fiktivní broker", contribution: { amountMinor: "250000", dayOfMonth: 15 },
+    rebalancing: { mode: "band", bandBps: 500 }, drawdownRule: { action: "keep_plan", text: "Přečtu si plán před rozhodnutím." },
+    checkFrequency: "quarterly", reviewMonth: 10, changeReason: "První výukový plán.", signedAt: new Date().toISOString() };
+  const planId = randomUUID();
+  await sql`insert into learner_artifact (id,user_id,kind,version,payload,request_id) values (${planId},${userId},'investment_plan',1,${sql.json(processPlan)},${randomUUID()})`;
+  await page.reload();
+  assert.equal(await page.getByTestId("process-allocation").getAttribute("data-status"), "outside-plan");
+  assert.match(await page.getByTestId("process-allocation").innerText(), /Mimo pásmo plánu/);
+  await targetsAtLeast44(page, ['[data-testid="portfolio-process"] summary']);
   assert.match(clean(await page.getByRole("img", { name: /Rozložení portfolia/ }).getAttribute("aria-label")), /^Rozložení portfolia: Akcie 32,6 %, 648,38 Kč; Hotovost 67,4 %, 1 338,38 Kč\.$/, "the split names each share in koruny");
   assert.equal(await page.getByText(/Poplatky a přirážka konverze otevřených pozic ubraly/).count(), 1, "costs are explained independently of price and FX");
   assert.equal(clean(await page.getByTestId("contribution-costs").locator('td[role="cell"]').textContent()), "−13,24 Kč", "the contribution chart explains costs without inventing market movement");
@@ -401,6 +426,13 @@ try {
     await page.getByText("Jak výnosy počítáme", { exact: true }).click();
   } });
   await performanceHelp.click();
+
+  processPlan.allocation = { lines: [{ instrumentId: "US-XNAS:AAPL", weightBps: 3260 }], cashBps: 6740 };
+  await sql`insert into learner_artifact (id,user_id,kind,version,payload,request_id) values (${randomUUID()},${userId},'investment_plan',2,${sql.json(processPlan)},${randomUUID()})`;
+  await page.reload();
+  assert.equal(await page.getByTestId("process-allocation").getAttribute("data-status"), "within-plan");
+  assert.match(await processFeedback.innerText(), /IPS verze 2/);
+  assert.equal((await sql`select count(*)::int as count from portfolio_trade where portfolio_id in (select id from portfolio where user_id=${userId})`)[0].count, 1, "viewing process feedback never places trades");
 
   // A second purchase from the overview search: an ETF bought on its detail page, one order.
   const buySearch = page.getByRole("combobox", { name: "Koupit akcii, ETF nebo dluhopis" });
@@ -533,6 +565,9 @@ try {
   await page.getByRole("heading", { name: "Co víme jistě" }).waitFor();
   assert.equal(await page.getByTestId("portfolio-value").count(), 0, "an incomplete valuation shows no total at all");
   assert.equal(await page.getByTestId("portfolio-gain-loss").count(), 0, "and no gain or loss");
+  assert.equal(await page.getByTestId("process-hhi").getAttribute("data-status"), "unavailable");
+  assert.match(await page.getByTestId("process-hhi").innerText(), /Chybí úplné ocenění/);
+  assert.equal(await page.getByTestId("process-costs").getAttribute("data-status"), "information", "ledger costs survive missing quotes");
   assert.match(clean(await page.getByTestId("holding-NVDA").innerText()), /cena chybí/);
   assert.match(clean(await page.getByTestId("holding-NVDA").innerText()), /nakoupeno 22 Kč|22 Kč/);
   await page.getByRole("button", { name: "Načíst znovu" }).click();

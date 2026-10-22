@@ -88,6 +88,9 @@ jobs:
       - run: npm run test:portfolio-migration
       - run: npm run test:persistence
       - run: npm run test:portfolio-persistence
+      - run: npm run test:portfolio-process
+        env:
+          PROCESS_QA_DISPOSABLE: "1"
       - run: npm run test:market-data-cache
       - run: npm run test:rate-limit
       - run: npm run test:account-recovery

@@ -18,6 +18,7 @@ import type { PortfolioView } from "@/features/portfolio/service";
 import { formatDecimal } from "@/lib/formatters";
 import { AllocationDonut } from "./allocation-donut";
 import { PerformanceSummary } from "./performance-summary";
+import { ProcessFeedback } from "./process-feedback";
 import { InstrumentSearch } from "./instrument-search";
 import {
   contributionRows, contributionStory, currencyName, dataStatus, exposureFacts, exposureLabel, fxRate, groupOf, groupOrder, groups, groupSummaries, minor, money,
@@ -125,7 +126,7 @@ export function PortfolioOverview({ view, notice: initialNotice = null }: { view
       {notice ? <div className={styles.notice} role="status"><CircleCheck size={18} aria-hidden="true" /><div className={styles.noticeText}><strong>{notice.title}</strong><p>{notice.detail}</p></div><button type="button" aria-label="Zavřít potvrzení" onClick={() => setNotice(null)}><X size={18} aria-hidden="true" /></button></div> : null}
 
       {!hasCapital && !hasHoldings ? <ZeroCapital cashMinor={view.availableCashMinor} />
-        : firstVisit ? <FirstVisit view={view} />
+        : firstVisit ? <><FirstVisit view={view} /><div className={styles.layout}><ProcessFeedback feedback={view.process} /></div></>
           : <>
             <StatusBanner view={view} status={status} refreshing={refreshing} onRetry={refresh} />
             {status.kind === "unavailable" ? <Missing view={view} status={status} refreshing={refreshing} onRetry={refresh} /> : <Overview view={view} status={status} />}
@@ -244,16 +245,15 @@ function Overview({ view, status }: { view: PortfolioView; status: DataStatus })
   const rows = groupSummaries(view);
   const contributions = view.holdings.length > 0 ? contributionRows(view, rows) : null;
   const story = contributions ? contributionStory(view, contributions) : null;
-  return <div className={styles.layout}>
-    <div className={styles.column}>
+  return <div className={`${styles.layout} ${styles.processLayout}`}>
+    <ProcessFeedback feedback={view.process} />
+    <div className={`${styles.column} ${styles.processContext}`}>
       <ValueCard view={view} status={status} />
-      {contributions && story ? <Story view={view} contributions={contributions} story={story} /> : null}
-    </div>
-    <div className={styles.column}>
       <HoldingsCard view={view} />
       <AllocationCard view={view} rows={rows} />
       <Activity view={view} />
     </div>
+    {contributions && story ? <div className={styles.processStory}><Story view={view} contributions={contributions} story={story} /></div> : null}
   </div>;
 }
 
@@ -439,6 +439,7 @@ function Missing({ view, status, refreshing, onRetry }: { view: PortfolioView; s
   const partial = status.missing < status.total;
   return <div className={styles.layout}>
     <div className={styles.column}>
+      <ProcessFeedback feedback={view.process} />
       <div className={styles.missing}>
         <div className={styles.missingScene}>
           <p className={styles.bubble}>Hledám nejnovější ceny. Hádat je nebudu.</p>

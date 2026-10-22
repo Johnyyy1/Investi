@@ -37,6 +37,7 @@
     "test:persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-persistence.mts",
     "test:migration": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-practice-capital-migration.mts",
     "test:portfolio-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-portfolio-persistence.mts",
+    "test:portfolio-process": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-portfolio-process.mts",
     "test:portfolio-allocation": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-portfolio-allocation.mts",
     "test:portfolio-closed-market": "MARKET_DATA_PROVIDER=deterministic FX_DATA_PROVIDER=deterministic DETERMINISTIC_MARKET_NOW=2026-01-17T12:00:00.000Z tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-portfolio-closed-market.mts",
     "test:portfolio-browser": "node scripts/validate-portfolio-lab.mjs",

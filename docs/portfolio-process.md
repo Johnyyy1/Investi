@@ -1,0 +1,28 @@
+# Portfolio Lab process feedback
+
+Issue #140 adds read-only feedback above financial outcomes in the overview's reading order. It does not introduce a score, trading incentive, investment recommendation, migration, order, balance, reward or persistence change. Every row exposes a value, an explicit criterion (including when no threshold exists), a textual status, and its calculation. The approved X process-feedback screens inform the hierarchy; unsupported example figures and capabilities in the designs are not implemented.
+
+The server derives the summary from the complete active-generation ledger, its existing exact valuation and the owner's latest investment-plan artifact. It never uses the eight-row recent-activity preview or a client-submitted financial value. Latest IPS revision numbers are shown; legacy plans remain saved but cannot supply structured bands. Reset changes the generation and ledger window, not the IPS or prior records.
+
+## Conventions
+
+- **HHI:** sum of squared position market values divided by squared invested market value, multiplied by 10,000. Cash is excluded, so a new reward does not change HHI. One position produces 10,000; two equal positions produce 5,000. This is instrument concentration, not ETF look-through diversification. There is no universal pass threshold.
+- **Largest position:** largest position market value divided by portfolio total including cash. The current IPS schema has no position cap. No 25% limit is inferred.
+- **Recorded costs:** sum of ledger trade fees plus recorded FX markups on both buys and sells. Markups are already in execution gross amounts; this summary does not deduct them again. Legacy NULL markup fields identify the old fee-free model and remain zero under that historical contract. This is not all-in investing cost: fund TER, unrecorded market spreads, taxes and other non-ledger costs are excluded.
+- **Trading volume ratio:** sum of buy and sell execution gross amounts (without separate fees), divided by current portfolio total including cash. Both sides count; it can exceed 100%. This is explicitly not annualized turnover relative to average NAV, for which sufficient historical portfolio values are unavailable. It is informational, with no turnover budget inferred from check frequency. Contributions are not trades; new contributions can change the current-value denominator.
+- **IPS allocation deviation:** maximum absolute difference in percentage points across all instrument targets, actual positions and cash. An unheld target has current weight zero; an unplanned holding has target zero. The learner's exact band is inclusive, evaluated before rounding. Calendar and contribution-based rebalancing plans have no numeric band, so deviation is informational. Asset-class-only plans are unavailable for this comparison: no bond/equity exposure is inferred from the generic ETF type. Concrete targets, including a cash-only plan, are supported. Execution, contribution rebalancing and richer asset-class mapping remain #144.
+- **Cash relative to IPS:** cash share, the IPS cash target and excess above that target (floored at zero). The written band status compares absolute deviation in both directions when a band exists. Cash is never assigned a universal ideal, and “excess” is not a fabricated lost return or an instruction to invest.
+
+Costs and trading volume use the inclusive interval from the later of generation opening and read time minus 365 × 24 hours, through the ledger snapshot read time. Shorter histories are not extrapolated to a year. The displayed dates use Europe/Prague; exact boundaries are UTC instants. Current valuation and IPS comparisons are snapshots, not historical time series or proof of a behavioral bias.
+
+Money and ratios use bigint and centralized roundDivide. HHI rounds once to its integer scale; shares and deviations round to basis points before display. The UI shows tenths of a percent/percentage point, so a just-outside-band value can display the rounded boundary while its status remains outside. Missing prices or FX invalidate all valuation-dependent ratios; ledger costs and gross trading volume remain known. Zero capital and no invested positions have explicit unavailable reasons.
+
+## Permanent interaction constraints
+
+The audit and enduring design rules are recorded in [DESIGN.md](../DESIGN.md#portfolio-process-feedback). No trading celebrations, trade/activity rewards, leaderboards, price notifications or inactivity prompts were found in the audited Lab/order/portfolio code. Trading success receipts are plain confirmations. Waiting and keeping the plan remain valid choices.
+
+## Validation
+
+Run `npm run lint`, `npm run typecheck`, `npm test` and `npm run build`. On a migrated and seeded disposable loopback PostgreSQL database with deterministic providers and an open deterministic market instant, run `PROCESS_QA_DISPOSABLE=1 npm run test:portfolio-process`, `npm run test:portfolio-persistence` and `npm run test:portfolio-allocation`. The process suite checks more than eight exact-decimal executions, owned/current IPS selection, no financial writes when reading, and reset isolation.
+
+Run `PORTFOLIO_TEST_URL=http://localhost:<port> npm run test:portfolio-browser` against a fresh production runtime using that database. It verifies process states without an IPS, outside and within a saved IPS band, calculation disclosures by keyboard, missing-quote behavior, unchanged financial flows, six responsive widths and 200% text. It creates and deletes isolated fixture identities. Real-device and screen-reader hardware testing is outside this coverage.

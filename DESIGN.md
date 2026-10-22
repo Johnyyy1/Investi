@@ -215,6 +215,14 @@ Numbered chapter groups combine title, duration, completion count, a thin progre
 
 The read-only allocation ring is paired with a textual legend and values from the existing portfolio view. ETF is a distinct category. Locked, empty, unavailable, and incomplete valuation states use explicit copy rather than illustrative balances or made-up segments. Sample market data remains labeled.
 
+### Portfolio process feedback
+
+Portfolio Lab leads with explainable process feedback: position concentration, recorded costs, trading volume, and comparison with the learner's IPS. Portfolio value, cash, holdings and MWR/TWR remain visible as context. Use a semantic list with the value, explicit criterion, written status and an expandable calculation for each indicator. Never replace this with an aggregate score or an invented universal allocation, concentration limit or cash target. Missing data or an unsupported IPS comparison means unavailable, never failure.
+
+Trading must not earn XP, Practice Capital, confetti, celebratory motion, rankings, return leaderboards or lottery rewards. Do not add price-movement notifications or inactivity prompts to trade. A calm execution receipt is confirmation, not a reward. Keeping the plan or waiting can be successful outcomes; process feedback must not pressure a trade.
+
+The 2026-10-22 audit of the Portfolio Lab, instrument order flow and portfolio actions found structured execution receipts, no trade celebrations, no leaderboards and no price notification mechanism. The sparkle icon beside “Co se stalo?” identifies a static explanation, not a trading celebration. These are permanent product constraints. Calculation conventions and current limitations are in [docs/portfolio-process.md](docs/portfolio-process.md).
+
 ## Do's and Don'ts
 
 ### Do:

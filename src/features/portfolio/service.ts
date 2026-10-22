@@ -1,6 +1,8 @@
 import "server-only";
 
 import { db } from "@/db";
+import { listLearnerArtifacts } from "@/features/artifacts/repository";
+import { portfolioProcess, type ProcessFeedback } from "./process";
 import type { Currency } from "@/features/market-data/contracts";
 import { attributeHolding, foldQuoteCost, impliedPurchaseFxUnits } from "./attribution";
 import { allocationBasisPoints, foldTrades, valuePortfolio, type HoldingValuation } from "./domain";
@@ -38,6 +40,7 @@ export type PortfolioExposureView =
   };
 
 export interface PortfolioView {
+  process: ProcessFeedback;
   feeProfileId: string;
   portfolioId: string;
   baseCurrency: Currency;
@@ -128,9 +131,10 @@ export type InstrumentPreview = PortfolioInstrumentPreview;
 export async function loadPortfolioView(userId: string): Promise<PortfolioView> {
   const current = await perfMeasure("portfolio.getOrCreateActivePortfolio", "db", () => getOrCreateActivePortfolio(userId));
   // The saved mix needs only the generation id, so it loads alongside the ledger.
-  const [rows, allocation] = await Promise.all([
+  const [rows, allocation, plans] = await Promise.all([
     loadLedgerRows(userId, current),
     perfMeasure("portfolio.latestAllocation", "db", () => loadLatestAllocation(current.id)),
+    perfMeasure("portfolio.processIps", "db", () => listLearnerArtifacts(userId, "investment_plan")),
   ]);
   const baseCurrency = rows.portfolio.baseCurrency as Currency;
   const folded = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades);
@@ -217,6 +221,11 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
     }),
   };
   return {
+    process: portfolioProcess({
+      openedAt: rows.portfolio.openedAt.toISOString(), asOf: rows.readAt.toISOString(),
+      cashMinor: folded.cashMinor, totalMinor: total,
+      holdings: valued.holdings, trades: rows.trades, ips: plans[0] ?? null,
+    }),
     feeProfileId: (await readBrokerFeeProfile(db, userId)).id,
     portfolioId: rows.portfolio.id,
     baseCurrency: rows.portfolio.baseCurrency as Currency,

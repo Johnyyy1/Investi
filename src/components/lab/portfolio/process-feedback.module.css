@@ -1,0 +1,19 @@
+.panel { padding: 20px; }
+.panel h2 { font-family: var(--font-sans); font-size: 1.0625rem; font-weight: 600; line-height: 1.35; }
+.headline { margin-top: 8px; font-size: 1.25rem; font-weight: 600; line-height: 1.35; }
+.intro, .explanation, .criterion, .period { font-size: .8125rem; line-height: 1.5; color: var(--color-secondary); }
+.intro { margin-top: 8px; }
+.rules { margin-top: 16px; }
+.rule { padding-block: 16px; border-top: 1px solid var(--color-divider); }
+.ruleHead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-bottom: 8px; }
+.ruleHead h3 { display: flex; align-items: center; gap: 8px; font-family: var(--font-sans); font-size: .9375rem; font-weight: 600; line-height: 1.4; }
+.ruleHead svg { flex: none; align-self: center; }
+.status { font-size: .75rem; line-height: 1.4; color: var(--color-secondary); }
+.rule[data-status="within-plan"] .status, .rule[data-status="within-plan"] svg { color: var(--color-primary); }
+.rule[data-status="outside-plan"] .status, .rule[data-status="outside-plan"] svg { color: var(--color-warning-ink); }
+.criterion, .explanation { margin-top: 6px; }
+.method { margin-top: 4px; font-size: .8125rem; line-height: 1.5; color: var(--color-secondary); }
+.method summary { width: fit-content; min-height: 44px; align-content: center; color: var(--color-primary); font-weight: 600; cursor: pointer; }
+.method summary:focus-visible { outline: 3px solid var(--color-foreground); outline-offset: 4px; }
+.method p { padding-block: 4px 8px; }
+.period { border-top: 1px solid var(--color-divider); padding-top: 14px; }

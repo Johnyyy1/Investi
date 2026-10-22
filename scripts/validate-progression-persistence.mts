@@ -73,7 +73,15 @@ try {
   assert.equal((await executeTrade(demo, demoBuy)).duplicate, true);
   const otherDemoAfter = await loadPortfolioView(otherDemo);
   assert.ok(otherDemoAfter.performance.endedAt >= otherDemoView.performance.endedAt, "performance period ends at read time");
-  assert.deepEqual({ ...otherDemoAfter, performance: { ...otherDemoAfter.performance, endedAt: otherDemoView.performance.endedAt } }, otherDemoView, "demo trading remains isolated, including return values");
+  assert.equal(otherDemoView.process.period.endedAt, otherDemoView.performance.endedAt, "process and performance use the same ledger read time");
+  assert.equal(otherDemoAfter.process.period.endedAt, otherDemoAfter.performance.endedAt, "both clocks advance together on the next read");
+  // Only read-time metadata changes. Keep every financial value, process metric,
+  // IPS revision and window start in the isolation comparison.
+  assert.deepEqual({
+    ...otherDemoAfter,
+    performance: { ...otherDemoAfter.performance, endedAt: otherDemoView.performance.endedAt },
+    process: { ...otherDemoAfter.process, period: { ...otherDemoAfter.process.period, endedAt: otherDemoView.process.period.endedAt } },
+  }, otherDemoView, "demo trading remains isolated, including return values and process metrics");
   await executeTrade(demo, { ...demoBuy, side: "SELL", clientIdempotencyKey: randomUUID() });
   await resetActivePortfolio(demo, randomUUID());
   await ensureDemoSeed(demo);

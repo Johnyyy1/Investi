@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { adjustmentPolicies } from "@/features/market-data/contracts";
 
-const mocks = vi.hoisted(() => ({ rows: vi.fn(), observe: vi.fn(), history: vi.fn(), fx: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rows: vi.fn(), observe: vi.fn(), history: vi.fn(), fx: vi.fn(), plans: vi.fn() }));
 vi.mock("@/db", () => ({ db: {} }));
+vi.mock("@/features/artifacts/repository", () => ({ listLearnerArtifacts: mocks.plans }));
 vi.mock("./repository", () => ({
   getOrCreateActivePortfolio: vi.fn().mockResolvedValue({ id: "p" }), loadLedgerRows: mocks.rows,
   loadLatestAllocation: vi.fn().mockResolvedValue(null), readBrokerFeeProfile: vi.fn().mockResolvedValue({ id: "investi-standard-v1" }),
@@ -18,6 +19,7 @@ const base = { portfolio: { id: "p", baseCurrency: "CZK", openedAt, openingCapit
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.plans.mockResolvedValue([]);
   mocks.rows.mockResolvedValue(base);
   mocks.observe.mockResolvedValue({ instrumentId: "X", marketValueMinor: 110_000n, currentPrice: "1100", currentPriceCurrency: "CZK", quoteObservedAt: readAt.toISOString() });
   mocks.history.mockResolvedValue({ instrumentId: "X", currency: "CZK", adjustment: adjustmentPolicies.raw, points: [{ date: "2026-01-31", close: 1100 }], provenance: { completeness: "complete" } });
@@ -25,6 +27,14 @@ beforeEach(() => {
 });
 
 describe("portfolio performance view", () => {
+  it("loads the owned latest IPS and the complete generation ledger for process feedback", async () => {
+    const view = await loadPortfolioView("u");
+    expect(mocks.plans).toHaveBeenCalledWith("u", "investment_plan");
+    expect(view.process.ipsVersion).toBeNull();
+    expect(view.process.turnover).toMatchObject({ tradeCount: 1, grossMinor: "100000" });
+    expect(view.process.costs.value).toBe("0");
+    expect(view.process.period.endedAt).toBe(readAt.toISOString());
+  });
   it("#106: a reward leaves Kč gain and TWR unchanged when prices do not move", async () => {
     const before = await loadPortfolioView("u");
     mocks.rows.mockResolvedValue({ ...base, earnedPracticeCapitalMinor: 700_000n, contributions: [...base.contributions, { at: readAt, amountMinor: 200_000n }] });
