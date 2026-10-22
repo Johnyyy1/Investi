@@ -48,6 +48,9 @@ async function retry() {
     const fields = [...document.querySelectorAll('section[aria-labelledby$="-question"] input, section[aria-labelledby$="-question"] select')];
     return fields.length > 0 && fields.every((field) => !field.matches(":disabled") && (field.type === "radio" ? !field.checked : field.value === ""));
   });
+  // Retry also schedules focus in requestAnimationFrame. Waiting only for cleared inputs
+  // can start fill() before that callback steals focus from a subsequent numeric field.
+  await page.locator('section[aria-labelledby$="-question"] input, section[aria-labelledby$="-question"] select').first().and(page.locator(":focus")).waitFor();
   assert.equal(await button("Zkontrolovat odpověď").isDisabled(), true, "retry requires a fresh answer");
 }
 async function layout(label, screenshots = false) {
