@@ -49,8 +49,16 @@ try {
   await page.getByRole("heading", { level: 1, name: "Vítej v Investníku, Returns.", exact: true }).waitFor();
   [{ id: userId }] = await sql`select id from "user" where email = ${email}`;
   assert.equal(await page.locator(".investi-theme").count(), 1, "Learn uses the shared theme");
-  // Studovna chapters list lessons directly; the Returns module page has no link from /learn any more.
-  assert.equal(await page.getByRole("list", { name: "Lekce kapitoly Výnosy", exact: true }).locator(`a[href="${route}"]`).count(), 1, "Learn lists the Returns lessons");
+  // Returns now sits in display module 3.1 within the initially collapsed portfolio level.
+  // Exercise the actual map navigation and keep checking the historical lesson route.
+  const portfolioLevel = page.getByTestId("journey-modules").locator('[data-level="L3"]');
+  assert.equal(await portfolioLevel.evaluate((element) => element.open), false, "non-current level starts collapsed");
+  await portfolioLevel.locator(":scope > summary").click();
+  const lessonLink = portfolioLevel.locator(`[data-display-module="3.1"] a[href="${route}"]`);
+  await lessonLink.waitFor({ state: "visible" });
+  assert.equal(await lessonLink.count(), 1, "Learn lists the Returns lesson in its new display module");
+  await lessonLink.click();
+  await heading("Od jednoho období k posloupnosti");
   await page.goto(`${baseURL}/learn/returns`);
   await heading("Výnos a složené zhodnocení");
   assert.equal(await page.getByTestId("module-progress").textContent(), "0 / 6 lekcí dokončeno");
@@ -62,7 +70,8 @@ try {
     assert.equal(await mobileNav.isVisible(), width < 1024);
   }
   assert.equal(await page.getByRole("listitem").filter({ hasText: "Kontrola výnosů" }).getByRole("button", { name: "Začít lekci" }).count(), 1, "the checkpoint is published");
-  await compounding.getByRole("button", { name: "Začít lekci" }).click();
+  // Opening the lesson from the map records its initial cursor; the overview now resumes it.
+  await compounding.getByRole("button", { name: "Pokračovat v lekci", exact: true }).click();
   await heading("Od jednoho období k posloupnosti");
   assert.equal(await page.getByRole("navigation", { name: /^(Hlavní|Mobilní) navigace$/ }).count(), 0, "Lesson mode has no app navigation");
   await next("Předpověz výsledek");
