@@ -119,8 +119,8 @@ try {
   await page.getByLabel("Od ledna", { exact: true }).selectOption("2020");
   await button("Spustit backtest").click();
   await page.locator("main").getByRole("alert").waitFor({ state: "hidden" });
-  // Anchored: the Monte Carlo explanation (#32) mentions the same period.
-  await page.getByText(/^Leden 2020 – prosinec 2020 ·/).waitFor();
+  // Check the rendered run summary; the simulation intro repeats this period.
+  await page.getByTestId("backtest-result-period").filter({ hasText: /^Leden 2020 – prosinec 2020 · 12 měsíců ·/ }).waitFor();
   await button("Změnit nastavení").click();
   await page.emulateMedia({ reducedMotion: "reduce" });
   assert.equal(await button("Spustit backtest").evaluate((el) => getComputedStyle(el).transitionDuration), "0s");

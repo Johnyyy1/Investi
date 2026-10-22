@@ -177,3 +177,7 @@ npm run demo:cleanup -- --apply
 ```
 
 See [current product contracts](docs/product-reset.md) for reward, streak, daily-goal, synthetic-data, migration, compatibility, and validation semantics. Current policy v3: Foundations lessons earn XP only, finishing Foundations unlocks Portfolio Lab with a one-time 5,000 Kč, and every lesson outside Foundations adds 2,000 Kč; stored receipts keep their original amounts.
+
+## License
+
+Investník is proprietary: all rights reserved, no licence granted. See [LICENSE](LICENSE) and [ownership, licence and trademark](docs/ownership.md).
