@@ -4,7 +4,7 @@ import { ChevronDown, LockKeyhole, LogOut, Settings } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { initializeTimeZoneAction } from "@/features/gamification/actions";
-import { availableLessons } from "@/features/learning/catalog";
+import { isFocusedLesson } from "@/features/learning/catalog";
 import { authClient } from "@/lib/auth-client";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export function AppShell({ children, userName, isDemo = false, isGuest = false, 
     } catch { setError("Odhlášení se nezdařilo. Zkus to znovu."); setPending(false); }
   }
   // Focused flows render without the shell: lessons, and the mix builder whose sticky save bar replaces the tab bar.
-  if (availableLessons.some((lesson) => pathname === `/learn/${lesson.moduleSlug}/${lesson.slug}`)) return children;
+  if (isFocusedLesson(pathname)) return children;
 
   const displayName = isDemo ? "Demo" : isGuest ? "Host" : userName;
   const initial = displayName.trim().charAt(0).toUpperCase() || "I";

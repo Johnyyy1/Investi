@@ -5,8 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CompletionScreen } from "@/components/learning/completion-screen";
 import { Button, ButtonLink } from "@/components/ui/button";
-import { getGuidedSteps } from "@/features/lessons/steps";
-import { getModuleBySlug } from "@/features/learning/catalog";
+import type { GuidedStep } from "@/features/lessons/steps";
 import { evaluateQuestion, isQuestion } from "@/features/lessons/question-evaluation";
 import type { AuthoredLesson } from "@/features/lessons/types";
 import type { LessonHistoryEntry } from "@/features/lessons/real-history/snapshot";
@@ -20,16 +19,26 @@ import type { LessonFactNotice as FactNotice } from "@/features/facts/types";
 import { LessonFactNotice } from "./lesson-fact-notice";
 import { GuidedBlock } from "./guided-block";
 import { GuidedQuestion } from "./guided-question";
+import { preloadLessonBlocks } from "./lazy-blocks";
 import { LessonActionBar, LessonTopBar } from "./lesson-chrome";
 import { createLessonSaveQueue } from "./lesson-save-queue";
 import { FactStatusChip } from "./step-kinds/fact-notice";
-import { lessonFactKeys, stepWidth } from "@/features/lessons/step-kinds";
+import { stepWidth } from "@/features/lessons/step-kinds";
+import type { FactKey } from "@/features/facts/registry";
 import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, Leaf, RotateCcw } from "lucide-react";
 
 const primaryClassName = "min-w-0 flex-1 whitespace-normal px-3 min-[420px]:px-6 md:flex-none";
 
-export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref, guest = false, history, riskHistory, factNotice }: {
-  lesson: AuthoredLesson; initialStatus: "not_started" | "in_progress" | "completed"; initialPosition: number; initialCompletedLessons: number; initialLearningMomentum: LearningMomentum; initialEarnedPracticeCapitalMinor: SerializedPracticeCapitalMinor; nextHref: string;
+/** What the lesson screen needs besides its steps; the authored blocks arrive only inside `steps`. */
+type GuidedLessonSummary = Pick<AuthoredLesson, "id" | "moduleSlug" | "title" | "position" | "estimatedMinutes">;
+
+export function GuidedLesson({ lesson, moduleTitle, steps, factKeys, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref, guest = false, history, riskHistory, factNotice }: {
+  lesson: GuidedLessonSummary; moduleTitle: string;
+  /** This lesson's guided steps, resolved on the server so no other lesson's content reaches the browser. */
+  steps: readonly GuidedStep[];
+  /** Facts the lesson shows, for the "Stav k" chip on its first step. */
+  factKeys: readonly FactKey[];
+  initialStatus: "not_started" | "in_progress" | "completed"; initialPosition: number; initialCompletedLessons: number; initialLearningMomentum: LearningMomentum; initialEarnedPracticeCapitalMinor: SerializedPracticeCapitalMinor; nextHref: string;
   /** A guest's finished lesson leads to saving an account first (Pen onboarding step 6). */
   guest?: boolean;
   factNotice?: FactNotice;
@@ -39,9 +48,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
   riskHistory?: readonly RiskHistoryEntry[];
 }) {
   const router = useRouter();
-  const learningModule = getModuleBySlug(lesson.moduleSlug)!;
   const moduleHref = `/learn/${lesson.moduleSlug}`;
-  const steps = getGuidedSteps(lesson);
   // A server revalidation after completion must not relabel this attempt as review.
   const [review] = useState(initialStatus === "completed");
   const [position, setPosition] = useState(review ? 0 : Math.min(Math.max(initialPosition, 0), steps.length - 1));
@@ -72,6 +79,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
     onPendingChange: setSaving,
   }));
 
+  useEffect(() => preloadLessonBlocks(steps.flatMap((item) => item.blocks)), [steps]);
   useEffect(() => {
     if (initialStatus === "not_started") void markLessonStartedAction(lesson.id).then((result) => {
       if (!result.ok) setError(result.message);
@@ -131,7 +139,6 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
   const question = step.blocks.find(isQuestion);
   const evaluation = question ? evaluateQuestion(question, answers) : undefined;
   const isLast = position === steps.length - 1;
-  const factKeys = lessonFactKeys(lesson);
   const missingSubmission = step.blocks.some((block) => block.type === "rubricSelfAssessment" && !outputReady[block.id]);
   const primary = question && verdict === undefined
     ? { label: "Zkontrolovat odpověď", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: evaluation === undefined, onClick: () => setVerdict(evaluation) }
@@ -140,7 +147,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
       : { label: question || !isLast ? "Pokračovat" : review ? "Dokončit opakování" : "Dokončit lekci", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: missingSubmission, onClick: (event: MouseEvent) => question ? move(position + 1, answers, event) : isLast ? void complete() : move(position + 1, undefined, event) };
 
   return <main className="flex min-h-dvh flex-col" data-save-state={saving ? "saving" : "idle"}>
-    <LessonTopBar eyebrow={`${learningModule.title} · Lekce ${lesson.position}${review ? " · Opakování" : ""}`} title={lesson.title} minutes={lesson.estimatedMinutes} segments={steps.map((item) => ({ mastery: item.kind === "mastery" }))} current={position} finished={finished} />
+    <LessonTopBar eyebrow={`${moduleTitle} · Lekce ${lesson.position}${review ? " · Opakování" : ""}`} title={lesson.title} minutes={lesson.estimatedMinutes} segments={steps.map((item) => ({ mastery: item.kind === "mastery" }))} current={position} finished={finished} />
     <div className="flex-1 px-5 pt-5 pb-7 md:px-8 md:pt-10 md:pb-14 lg:px-16 lg:pt-12 lg:pb-[72px]">
       <div className={cn("mx-auto flex w-full min-w-0 flex-col gap-5 md:gap-7", finished ? "max-w-[760px]" : stepWidth(step.blocks))}>
         {!finished && factNotice ? <LessonFactNotice notice={factNotice} /> : null}
@@ -153,7 +160,7 @@ export function GuidedLesson({ lesson, initialStatus, initialPosition, initialCo
             <div className="mt-7 rounded-surface border border-border bg-surface p-5 text-left"><LearningStats stats={reward?.learningMomentum ?? initialLearningMomentum} earnedPracticeCapitalMinor={reward?.earnedPracticeCapitalMinor ?? initialEarnedPracticeCapitalMinor} goal /></div>
             {reward && !reward.allComplete && !reward.portfolioLabUnlocked && <p className="mt-6 text-small text-secondary">Další na řadě: {reward.nextTitle}</p>}
           </CompletionScreen>
-          <div className="flex flex-wrap justify-center gap-2 border-t border-divider px-6 py-4"><ButtonLink variant="ghost" className="text-foreground hover:bg-surface-muted" href="/learn"><ArrowLeft aria-hidden="true" className="size-4" />Zpět na Učení</ButtonLink><ButtonLink variant="ghost" className="text-foreground hover:bg-surface-muted" href={moduleHref}>Zobrazit modul</ButtonLink><p className="sr-only" data-testid="completion-progress">Počet dokončených dostupných lekcí v modulu {learningModule.title}: {completedLessons} · {guest ? "Uloženo v tomto prohlížeči" : "Uloženo k účtu"}</p></div>
+          <div className="flex flex-wrap justify-center gap-2 border-t border-divider px-6 py-4"><ButtonLink variant="ghost" className="text-foreground hover:bg-surface-muted" href="/learn"><ArrowLeft aria-hidden="true" className="size-4" />Zpět na Učení</ButtonLink><ButtonLink variant="ghost" className="text-foreground hover:bg-surface-muted" href={moduleHref}>Zobrazit modul</ButtonLink><p className="sr-only" data-testid="completion-progress">Počet dokončených dostupných lekcí v modulu {moduleTitle}: {completedLessons} · {guest ? "Uloženo v tomto prohlížeči" : "Uloženo k účtu"}</p></div>
         </div> : <article key={position} className="flex min-w-0 flex-col gap-5 md:gap-7" aria-labelledby="step-title">
           {review ? <p className="flex items-center gap-2 text-sm text-muted"><CheckCircle2 aria-hidden="true" className="size-4 shrink-0 text-primary" /><span>Lekce už je dokončena. Opakování uložený postup nezmění.</span></p> : null}
           <div className="flex flex-col gap-2 md:gap-2.5">

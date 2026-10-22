@@ -632,3 +632,45 @@ npx -y lighthouse@13.5.0 http://localhost:3462/ --only-categories=performance --
 Fonts were settled in #47: the root layout loads only Manrope and Inter through `src/styles/fonts.ts`, both with `latin` + `latin-ext` and `display: "swap"`. Nunito Sans and `LearningTheme` are gone, so Phase 6 follow-up 1 no longer applies. `/` and `/sign-in` preload four font files: Inter and Manrope, each in Latin and Latin Extended, so Czech diacritics arrive with the first paint.
 
 `katex/dist/katex.min.css` (24.8 KB, 4 KB gzip) was imported by the root layout, so every page downloaded it. It is now imported by the two components that render formulas, `FormulaBlock` and `GuidedBlock`. In the production build the KaTeX chunk is referenced only by `/learn/[moduleSlug]/[lessonSlug]` and the dev-only `/dev/design-system`. `/`, `/sign-in`, `/sign-up`, `/privacy` and the 404 page no longer link it. `test:log-returns-browser` asserts that KaTeX's rules still apply in a lesson.
+
+## Phase 8: lesson route JavaScript (measured 2026-10-22, issue #131)
+
+The curriculum grows from 27 to about 157 lessons, so the lesson route's JavaScript must not grow with it.
+
+### What shipped before
+
+`GuidedLesson` (a client component) called `getGuidedSteps`, so `src/features/lessons/steps.ts` and the step maps of every module were in the lesson bundle. Foundations defines its blocks inline in `foundations/content.ts`, so its lesson text was there too (141 authored strings in one chunk). `GuidedBlock` imported every interactive figure and KaTeX statically, so every lesson downloaded Recharts (about 106 KB gzip) and KaTeX (about 77 KB gzip) whether it used them or not.
+
+### What changed
+
+- The lesson page resolves the steps on the server (`getGuidedSteps`, after the fact tokens are filled in) and passes only that lesson's steps, its fact keys and the module title to `GuidedLesson`. No client module imports `steps.ts` or the lesson registry.
+- `isFocusedLesson` moved to `src/features/learning/catalog.ts`. It uses only manifest data (IDs, slugs, titles), which the app shell already loaded.
+- Interactive figures and the formula block load per block through `src/components/lesson/lazy-blocks.tsx`. `GuidedLesson` preloads the modules its lesson uses on mount. `next/dynamic` and plain `React.lazy` suspend on the first client render of a component even when its module is in memory, and React then holds the placeholder for its ~300 ms reveal throttle. That broke the formula assertion in `test:returns-browser`. So once a module has loaded, the wrapper renders the component directly, inside the same Suspense boundary on the server and the client so hydration matches. The KaTeX stylesheet stays a static import of `GuidedBlock`.
+- Server rendering is unchanged. React outlines a completed boundary larger than 500 bytes once 12.8 KB of HTML has been flushed, so a hard load that resumes on a step with a large figure or formulas streams the placeholder and its content in the same response. A frame-counting check found the swap happening in the first frame's `requestAnimationFrame` callbacks, before the first paint, on all five such loads.
+
+### Result (production build, local `next start`)
+
+Initial JS of `/learn/[moduleSlug]/[lessonSlug]` (gzip, from the build manifests, `npm run check:lesson-bundle`):
+
+| | Initial JS | Lesson text in client chunks |
+| --- | --- | --- |
+| Before (`origin/main` @ `d0b692d`) | 546.8 KB | 141 strings |
+| After | 322.3 KB | none |
+| After + 50 synthetic lessons (20 paragraphs each, throwaway build) | 323.2 KB | none |
+
+JS transferred by Chrome on a hard load (Playwright, fresh context, KB compressed):
+
+| Lesson | Before: until `load` / total | After: until `load` / total |
+| --- | --- | --- |
+| `investing-foundations/why-invest` (no figures) | 547.5 / 547.5 | 313.4 / 313.4 |
+| `returns/compounding-and-cumulative-returns` | 547.5 / 547.5 | 313.4 / 508.7 |
+| `volatility/max-drawdown` | 547.5 / 547.5 | 313.4 / 513.8 |
+| `diversification/diversification-scenario` | 547.5 / 547.5 | 313.4 / 322.2 |
+
+"Total" includes the figure and KaTeX chunks preloaded after mount. A lesson with Recharts figures or formulas still downloads them, but after first load, and only those it uses.
+
+### Budget
+
+`npm run check:lesson-bundle` runs in CI after `npm run build`. It fails when any client chunk of the build contains an authored lesson string (30+ characters, from every lesson's blocks, with `\uXXXX` escapes decoded), or when the lesson route's initial JS exceeds 340 KB gzip. A new lesson adds only its manifest entry, about 0.02 KB gzip per lesson in the experiment above, so the headroom covers the planned lessons. Raise the budget only together with a new measurement here. `LESSON_BUNDLE_REPORT=1` lists the chunks without failing on the budget.
+
+What remains in the initial 322 KB: `react-dom` 70 KB, Next runtime 44 KB, Motion 40 KB and a 31 KB chunk that contains zod; the rest is under 25 KB each. Not investigated here.

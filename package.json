@@ -11,6 +11,7 @@
     "prebuild": "npm run check:facts",
     "build": "next build",
     "check:facts": "tsx scripts/check-facts.mts",
+    "check:lesson-bundle": "tsx scripts/check-lesson-bundle.mts",
     "test:facts-browser": "node scripts/validate-facts.mjs",
     "vercel-build": "node scripts/vercel-build.mjs",
     "start": "next start",

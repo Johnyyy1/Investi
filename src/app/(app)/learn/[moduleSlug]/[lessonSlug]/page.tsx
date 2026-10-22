@@ -1,13 +1,14 @@
 import { loadLearner } from "@/features/learning/load-learner";
 import { notFound, redirect } from "next/navigation";
 import { GuidedLesson } from "@/components/lesson/guided-lesson";
-import { getModuleLessons } from "@/features/learning/catalog";
+import { getModuleBySlug, getModuleLessons } from "@/features/learning/catalog";
 import { getAuthoredLesson } from "@/features/lessons/registry";
 import { getLessonProgress, getModuleProgress } from "@/features/progress/repository";
 import { getCurrentUser } from "@/lib/session";
 import { serializePracticeCapitalMinor } from "@/features/rewards/presentation";
 import { toLearningMomentum } from "@/features/progress/contracts";
 import { getGuidedSteps } from "@/features/lessons/steps";
+import { lessonFactKeys } from "@/features/lessons/step-kinds";
 import { isGuestIdentity } from "@/features/guest/identity";
 import { loadLessonHistory, loadLessonRiskHistory, lessonUsesHistory, lessonUsesRiskHistory } from "@/features/lessons/real-history/load";
 import { getConfiguredMarketDataProviderName, getConfiguredMarketDataService } from "@/features/market-data/environment";
@@ -37,5 +38,7 @@ export default async function LessonPage({ params }: LessonPageProps) {
   ]);
   const status = progress?.status ?? "not_started";
   if (!summary.gamification) redirect("/sign-in");
-  return <GuidedLesson key={lesson.id} lesson={lesson} factNotice={notice} initialStatus={status} initialPosition={Math.min(progress?.lastPosition ?? 0, getGuidedSteps(lesson).length - 1)} initialCompletedLessons={completedLessons} initialLearningMomentum={toLearningMomentum(summary.gamification)} initialEarnedPracticeCapitalMinor={serializePracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)} nextHref={summary.allComplete ? "/lab" : `/learn/${summary.next.moduleSlug}/${summary.next.slug}`} guest={isGuestIdentity(user)} history={history} riskHistory={riskHistory} />;
+  // Only this lesson's steps cross to the client; the registries of every lesson stay on the server.
+  const steps = getGuidedSteps(lesson);
+  return <GuidedLesson key={lesson.id} lesson={{ id: lesson.id, moduleSlug: lesson.moduleSlug, title: lesson.title, position: lesson.position, estimatedMinutes: lesson.estimatedMinutes }} moduleTitle={getModuleBySlug(moduleSlug)!.title} steps={steps} factKeys={lessonFactKeys(lesson)} factNotice={notice} initialStatus={status} initialPosition={Math.min(progress?.lastPosition ?? 0, steps.length - 1)} initialCompletedLessons={completedLessons} initialLearningMomentum={toLearningMomentum(summary.gamification)} initialEarnedPracticeCapitalMinor={serializePracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)} nextHref={summary.allComplete ? "/lab" : `/learn/${summary.next.moduleSlug}/${summary.next.slug}`} guest={isGuestIdentity(user)} history={history} riskHistory={riskHistory} />;
 }

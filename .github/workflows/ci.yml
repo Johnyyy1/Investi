@@ -46,6 +46,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      # Lesson content must stay out of client JS and the lesson route within its JS budget (#131).
+      - run: npm run check:lesson-bundle
 
   persistence:
     name: Database, persistence and concurrency

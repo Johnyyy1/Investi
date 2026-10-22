@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { authoredLessons } from "./registry";
 import { isQuestion } from "./question-evaluation";
-import { availableLessons } from "../learning/catalog";
-import { getGuidedSteps, getStepDefinitions, isFocusedLesson, moduleSteps } from "./steps";
+import { availableLessons, isFocusedLesson } from "../learning/catalog";
+import { getGuidedSteps, getStepDefinitions, moduleSteps } from "./steps";
 
 describe("shared guided lessons", () => {
   it.each(authoredLessons)("preserves every authored block in $title", (lesson) => {
