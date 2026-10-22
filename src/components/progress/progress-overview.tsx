@@ -1,8 +1,8 @@
 import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import type { LucideIcon } from "lucide-react";
-import { ArrowRight, BookOpen, ChevronDown, Circle, CircleCheck, CircleDot, Clock3, Info, Layers, LockKeyhole, Receipt, RotateCcw, Scale } from "lucide-react";
-import { ResponsiveDisclosure } from "@/components/learning/responsive-disclosure";
+import { ArrowRight, BookOpen, ChevronDown, Circle, CircleCheck, CircleDot, Info, Layers, LockKeyhole, Receipt, RotateCcw, Scale } from "lucide-react";
+import { CurriculumMap } from "@/components/learning/curriculum-map";
 import paper from "@/components/learning/studovna-page.module.css";
 import { LESSON_XP } from "@/features/gamification/domain";
 import type { PortfolioLedgerSummary } from "@/features/portfolio/ledger-summary";
@@ -11,7 +11,7 @@ import { PORTFOLIO_LAB_UNLOCK_ID, progressionUnlocks } from "@/features/progress
 import { LESSON_PRACTICE_CAPITAL_MINOR, type PracticeCapitalLedger } from "@/features/rewards/practice-capital";
 import { formatPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { czechPlural, formatCount, formatDate, formatDecimal } from "@/lib/formatters";
-import { progressModel, type LessonStatus, type OutcomeIcon, type ProgressSummary } from "./progress-model";
+import { progressModel, type OutcomeIcon, type ProgressSummary } from "./progress-model";
 import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./progress-overview.module.css";
 import { buttonVariants } from "@/components/ui/button";
@@ -24,7 +24,6 @@ type Summary = ProgressSummary & {
 };
 type Unlock = Pick<ReturnType<typeof evaluateUnlock>, "unlocked" | "totalXp" | "xpRequired" | "completedPrerequisiteLessons" | "requiredPrerequisiteLessons">;
 type Model = ReturnType<typeof progressModel>;
-type Chapter = Model["chapters"][number];
 
 const numberWords = ["nula", "jedna", "dvě", "tři", "čtyři", "pět", "šest", "sedm", "osm", "devět", "deset", "jedenáct", "dvanáct"];
 const spoken = (count: number) => numberWords[count] ?? formatDecimal(count);
@@ -34,11 +33,9 @@ const from = (count: number) => [3, 4, 6, 7, 13, 14, 16, 17].includes(count) ? "
 const lessonCount = (count: number) => formatCount(count, ["lekce", "lekce", "lekcí"]);
 const lessonGenitive = (count: number) => `${formatDecimal(count)} ${count === 1 ? "lekce" : "lekcí"}`;
 const outcomeIcons: Record<OutcomeIcon, LucideIcon> = { layers: Layers, receipt: Receipt, scale: Scale };
-const markers: Record<LessonStatus, LucideIcon> = { done: CircleCheck, active: CircleDot, next: CircleDot, todo: Circle };
 const unlockReasons: Record<string, string> = { learning_requirements: "Základy investování hotové", demo_access: "Ukázkový účet" };
 /** Receipts beyond this many wait behind a disclosure, newest first, so the side column stays short. */
 const VISIBLE_RECEIPTS = 5;
-const chips = { done: { label: "Hotovo", icon: CircleCheck }, started: { label: "Rozpracováno", icon: CircleDot }, todo: { label: "Nezačato", icon: Circle } } as const;
 
 function doneSummary(done: number, active: number) {
   const finished = `${capitalized(spoken(done))} ${done === 1 ? "lekce hotová" : done <= 4 ? "lekce hotové" : "hotových lekcí"}`;
@@ -52,28 +49,6 @@ function Shelf({ lesson, timeZone }: { lesson: Model["knowledge"][number]; timeZ
     {lesson.ideas.length > 0 && <ul className={styles.ideas}>{lesson.ideas.map((idea) => <li key={idea.id}><div><h4>{idea.title}</h4><p>{idea.text}</p></div><span className={styles.stepRef}>krok&nbsp;{idea.step}</span></li>)}</ul>}
     <Link className={styles.review} href={lesson.href}><RotateCcw size={14} aria-hidden="true" />Zopakovat celou lekci · ≈ {lesson.estimatedMinutes} min</Link>
   </article>;
-}
-
-function ChapterBlock({ chapter }: { chapter: Chapter }) {
-  const chip = chips[chapter.status];
-  const ChipIcon = chip.icon;
-  return <ResponsiveDisclosure className={`${styles.chapter} ${chapter.current ? styles.chapterCurrent : ""}`} initiallyOpen={chapter.current}>
-    <summary className={styles.chapterHead}>
-      <span className={styles.chapterNumber}>{chapter.number}</span>
-      <span className={styles.chapterName}><h3>{chapter.title}</h3><span>{lessonCount(chapter.lessons.length)} · ≈ {chapter.minutes} min</span></span>
-      <span className={styles.chapterStatus}><span className={styles.chip} data-status={chapter.status}><ChipIcon size={13} aria-hidden="true" />{chip.label}</span><span className={styles.chapterCount}>{chapter.completed} / {chapter.lessons.length}<span className={styles.countWord}> hotovo</span></span></span>
-      <ChevronDown size={20} className={styles.toggle} aria-hidden="true" />
-    </summary>
-    <div className={styles.segments} aria-hidden="true">{chapter.lessons.map((lesson) => <span key={lesson.id} data-status={lesson.status} />)}</div>
-    <ol className={styles.lessons} aria-label={`Lekce kapitoly ${chapter.title}`}>{chapter.lessons.map((lesson) => {
-      const Marker = markers[lesson.status];
-      return <li key={lesson.id}><Link className={`${styles.lessonRow} ${lesson.highlighted ? styles.lessonCurrent : ""}`} data-status={lesson.status} href={lesson.href} aria-current={lesson.highlighted ? "step" : undefined}>
-        <Marker size={16} aria-hidden="true" />
-        <span className={styles.lessonTitle}>{lesson.title}</span>
-        <span className={styles.lessonState}>{lesson.status === "active" ? `krok ${lesson.step!.position}\u00a0z\u00a0${lesson.step!.count}` : lesson.status === "next" ? "Následuje" : <span className="sr-only">{lesson.status === "done" ? "Hotovo" : "Nezačato"}</span>}</span>
-      </Link></li>;
-    })}</ol>
-  </ResponsiveDisclosure>;
 }
 
 function Receipts({ entries, timeZone }: { entries: PracticeCapitalLedger["entries"]; timeZone: string }) {
@@ -219,9 +194,8 @@ export function ProgressOverview({ summary, unlock, portfolio, capital }: { summ
 
       <div className={styles.lower}>
         <section className={styles.curriculum} aria-labelledby="curriculum-title">
-          <div className={styles.curriculumHead}><h2 id="curriculum-title">Kurikulum podle kapitol</h2><Link className={styles.textLink} href="/learn#curriculum">Otevřít Učení<ArrowRight size={15} aria-hidden="true" /></Link></div>
-          {model.chapters.map((chapter) => <ChapterBlock key={chapter.slug} chapter={chapter} />)}
-          {model.planned && <div className={styles.planned}><span className={styles.chapterNumber}>{model.planned.number}</span><span className={styles.chapterName}><h3>{model.planned.title}</h3><span>{model.planned.topics.join(" · ")}</span></span><span className={styles.chapterStatus}><span className={styles.chip} data-status="planned"><Clock3 size={13} aria-hidden="true" />Připravujeme</span></span></div>}
+          <div className={styles.curriculumHead}><h2 id="curriculum-title">Kurikulum podle úrovní</h2><Link className={styles.textLink} href="/learn#curriculum">Otevřít Učení<ArrowRight size={15} aria-hidden="true" /></Link></div>
+          <CurriculumMap levels={model.levels} />
           <ul className={styles.legend} aria-label="Stavy lekcí"><li data-status="done">hotovo</li><li data-status="active">rozpracováno</li><li data-status="todo">nezačato</li></ul>
         </section>
         <div className={styles.side}>

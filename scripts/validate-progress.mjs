@@ -70,7 +70,9 @@ async function render(page, label, { state, xp, capital, count, action, actionHr
   assert.equal(await root().getByTestId("earned-practice-capital").textContent(), koruna(capital), `${label}: summary capital`);
   assert.equal(await root().getByRole("link", { name: lab.link, exact: true }).getAttribute("href"), "/lab/portfolio");
   assert.equal(await root().getByRole("heading", { name: lab.title, exact: true }).count(), 1, `${label}: Lab card title`);
-  assert.equal(await root().getByText("Připravujeme", { exact: true }).count(), 0, `${label}: every chapter is published`);
+  assert.equal(await root().locator("[data-level]").count(), 9, `${label}: all curriculum levels visible in the map`);
+  assert.equal(await root().getByTestId("journey-modules").locator("ol a").count(), 27, "all published lessons retain their display placement");
+  assert.equal(await root().getByTestId("journey-modules").locator("[data-level][open]").count(), state === "complete" ? 0 : 1, "only continuation level starts expanded");
   assert.equal(await root().getByText(/^(?:\d+ )?(?:streak|série)/i).count(), 0, `${label}: no streaks`);
   const continuation = root().getByRole("link", { name: action, exact: true });
   assert.equal(await continuation.count(), 1, `${label}: one ${action} link`);
@@ -99,7 +101,7 @@ async function render(page, label, { state, xp, capital, count, action, actionHr
       assert.equal(await target.evaluate((el) => el === document.activeElement && getComputedStyle(el).outlineStyle !== "none" && parseFloat(getComputedStyle(el).outlineWidth) >= 3), true, `visible keyboard focus: ${await target.textContent()}`);
       assert.ok((await target.boundingBox()).height >= 44, `touch target ${width}: ${await target.textContent()}`);
     }
-    const chapter = root().locator("details").filter({ has: page.locator('[aria-label="Lekce kapitoly Základy investování"]') });
+    const chapter = root().locator('[data-level="L1"]');
     const wasOpen = await chapter.evaluate((element) => element.open);
     await chapter.locator(":scope > summary").focus(); await chapter.locator(":scope > summary").press("Enter");
     assert.equal(await chapter.evaluate((element) => element.open), !wasOpen, "chapter toggles from the keyboard");

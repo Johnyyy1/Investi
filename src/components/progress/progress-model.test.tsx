@@ -126,7 +126,7 @@ describe("Progress presentation model", () => {
     expect(html).not.toContain("jak poznat, jestli se investici daří?");
   });
 
-  it("shows all-complete progress and receipt-derived capital, with no upcoming chapter once every module is published", () => {
+  it("shows all-published-complete progress and receipt-derived capital without claiming planned milestones", () => {
     const states = availableLessons.map((lesson) => done(lesson.id));
     const model = progressModel(learner(states));
     expect(model.milestone).toBeUndefined();
@@ -138,7 +138,7 @@ describe("Progress presentation model", () => {
     expect(html).toContain("Prozkoumat Lab");
     expect(html).toContain('href="/lab"');
     expect(html).toMatch(/1\s234,56\sKč/);
-    expect(html).not.toContain("Připravujeme");
+    expect(html).toContain("Splnění milníku zatím nevyhodnocujeme.");
     expect(html).toContain("Teď si je vyzkoušej v Labu.");
     expect(html).not.toContain("Následuje");
     expect(html).not.toContain('aria-current="step"');

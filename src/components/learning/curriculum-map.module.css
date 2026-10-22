@@ -1,0 +1,51 @@
+.map { min-width: 0; color: var(--color-foreground); }
+.level { border-bottom: 1px solid var(--color-border); min-width: 0; }
+.levelHead { display: grid; grid-template-columns: 2rem minmax(0, 1fr) 20px; align-items: center; gap: 16px; padding-block: 22px; min-height: 48px; cursor: pointer; list-style: none; }
+.levelHead::-webkit-details-marker { display: none; }
+.levelHead:hover .name h3 { color: var(--color-primary); }
+.levelHead:focus-visible, .lesson:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 4px; border-radius: 4px; }
+.code { font: 600 1.5rem/1.2 var(--font-display); color: var(--color-primary); }
+.name { min-width: 0; }
+.name h3 { font: 600 1.25rem/1.35 var(--font-display); overflow-wrap: anywhere; }
+.name > span { display: block; margin-top: 6px; font-size: .875rem; color: var(--color-muted); }
+.chevron { transition: transform 150ms ease-out; }
+.level[open] > summary .chevron { transform: rotate(180deg); }
+.levelBody { padding-bottom: 24px; }
+.goal { font-size: .875rem; color: var(--color-primary); }
+.progress { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; margin-top: 14px; font-size: .8125rem; color: var(--color-muted); }
+.meter { background: var(--color-track); height: 4px; flex: 1; min-width: 80px; overflow: hidden; border-radius: 2px; }
+.meter span { display: block; height: 100%; background: var(--color-progress); }
+.module { margin-top: 24px; }
+.moduleHead { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; }
+.moduleHead h4 { font-size: 1rem; font-weight: 600; }
+.moduleHead > span { font-size: .8125rem; color: var(--color-muted); }
+.lessons { list-style: none; padding: 0; margin-top: 8px; }
+.lessons li + li { border-top: 1px solid var(--color-divider); }
+.lesson { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 14px 8px; min-height: 48px; border-radius: 6px; font-size: .9375rem; }
+.lesson:hover { background: var(--color-surface-practice); }
+.lesson[aria-current] { background: var(--color-primary-soft); }
+.lesson[data-status="done"] > svg, .lesson[data-status="active"] > svg { color: var(--color-primary); }
+.lesson > span { overflow-wrap: anywhere; }
+.lesson small { display: block; color: var(--color-muted); font-size: .75rem; margin-block: 2px; }
+.lessonState { font-size: .8125rem; color: var(--color-muted); }
+.deepening { margin-top: 40px; }
+.deepening > h3, .milestones > h3 { font: 600 1.5rem/1.3 var(--font-display); }
+.deepening > p, .milestones > p { margin-block: 12px; color: var(--color-muted); font-size: .9375rem; max-width: 65ch; }
+.milestones { margin-top: 40px; }
+.milestones dl > div { padding-block: 16px; border-bottom: 1px solid var(--color-divider); }
+.milestones dt { font-weight: 600; }
+.milestones dd { margin-top: 6px; font-size: .875rem; color: var(--color-muted); }
+.milestones dd span { display: block; margin-top: 6px; }
+@media (max-width: 600px) {
+  .lesson { grid-template-columns: 18px minmax(0, 1fr); }
+  .lesson > svg { grid-row: 1 / 3; align-self: start; margin-top: 4px; }
+  .lessonState { grid-column: 2; }
+  .lessonState small { display: inline; margin-left: 12px; }
+}
+@media (max-width: 360px) {
+  .levelHead { grid-template-columns: minmax(0, 1fr) 20px; gap: 12px; }
+  .code { grid-column: 1; }
+  .chevron { grid-column: 2; grid-row: 1; }
+  .name { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (prefers-reduced-motion: reduce) { .chevron { transition: none; } }

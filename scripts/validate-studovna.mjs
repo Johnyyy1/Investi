@@ -29,6 +29,11 @@ async function layouts(state, capture = true) {
   for (const width of [1440, 1024, 768, 390, 375, 320]) {
     await page.setViewportSize({ width, height: 900 }); await settle();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${state}: overflow at ${width}`);
+    const map = page.getByTestId("journey-modules");
+    assert.equal(await map.locator("[data-level]").count(), 9, "all levels including optional tracks");
+    assert.equal(await map.locator("[data-display-module]").count(), 25, "registry display modules");
+    assert.equal(await map.locator("ol a").count(), 27, "every published lesson appears once");
+    assert.equal(await map.locator("[data-level][open]").count(), state === "complete" ? 0 : 1, "only continuation level starts expanded at every viewport");
     assert.equal(await page.locator("h1:visible").count(), 1);
     assert.equal(await page.locator("#main-content").count(), 1);
     assert.ok(await page.locator("main img").evaluateAll((images) => images.every((image) => image.complete && image.naturalWidth > 0)), "illustration loads");
@@ -45,7 +50,7 @@ async function layouts(state, capture = true) {
       const box = await link.boundingBox(); assert.ok(box && box.height >= 44);
     }
     if (width === 390) {
-      const chapter = page.getByTestId("journey-modules").locator("details").nth(1);
+      const chapter = page.getByTestId("journey-modules").locator('[data-level="L6"]');
       const wasOpen = await chapter.evaluate((element) => element.open);
       await chapter.locator("summary").focus(); await chapter.locator("summary").press("Enter");
       await chapter.getByRole("link", { name: /Logaritmické/ }).waitFor({ state: wasOpen ? "hidden" : "visible" });
@@ -73,6 +78,12 @@ try {
   await page.goto(`${baseURL}/onboarding`); await finishOnboarding(page);
   await page.getByRole("button", { name: "Teď ne", exact: true }).click();
   await layouts("new");
+  const published = await sql`select l.slug,m.slug as module_slug from lesson l join learning_module m on m.id=l.module_id where l.is_published=true`;
+  const expectedPaths = published.map((lesson) => `/learn/${lesson.module_slug}/${lesson.slug}`).sort();
+  assert.deepEqual(await page.getByTestId("journey-modules").locator("ol a").evaluateAll((links) => links.map((link) => link.getAttribute("href")).sort()), expectedPaths, "display placement preserves original lesson routes");
+  for (const slug of new Set(published.map((lesson) => lesson.module_slug))) {
+    assert.equal((await context.request.get(`${baseURL}/learn/${slug}`)).status(), 200, `legacy module overview ${slug}`);
+  }
   // The first step of the first lesson has no question: the preview shows the step and starts the lesson.
   assert.equal(await learn().getByRole("radio").count(), 0, "a step without a question previews no answers");
   assert.equal(await learn().getByRole("link", { name: "Pokračovat", exact: true }).getAttribute("href"), "/learn/investing-foundations/why-invest");
@@ -111,6 +122,13 @@ try {
   await page.goto(`${baseURL}/learn`);
   assert.equal(await learn().getByRole("radio").count(), 0, "numeric current step resumes in focused lesson rather than previewing a later choice");
   assert.equal(await learn().getByRole("link", { name: "Pokračovat", exact: true }).getAttribute("href"), "/learn/investing-foundations/how-markets-work");
+  // A saved lesson in an optional path opens that level without moving its persistence identity.
+  await sql`insert into lesson_progress(user_id,lesson_id,status,last_position,updated_at) values(${userId},'returns-log-returns','in_progress',2,now())`;
+  await page.goto(`${baseURL}/learn`); await settle();
+  const quantLevel = page.getByTestId("journey-modules").locator('[data-level="L6"]');
+  assert.equal(await quantLevel.evaluate((element) => element.open), true, "optional continuation level opens");
+  assert.equal(await quantLevel.locator('[aria-current="step"]').getAttribute("href"), "/learn/returns/log-returns", "quant placement retains Returns route");
+  assert.match(await quantLevel.locator('[aria-current="step"]').textContent(), /krok 3/);
   // All-complete view is derived from published DB lessons, with no reward fabricated.
   await sql`insert into lesson_progress(user_id,lesson_id,status,last_position,updated_at,completed_at) select ${userId},id,'completed',0,now(),now() from lesson where is_published=true on conflict(user_id,lesson_id) do update set status='completed',completed_at=now()`;
   await page.goto(`${baseURL}/learn`); await page.getByRole("heading", { name: "To je všechno. Zatím.", exact: true }).waitFor(); await layouts("complete", false);

@@ -209,7 +209,11 @@ Desktop navigation uses quiet Inter text with an Action Teal underline for the c
 
 ### Chapter Disclosure
 
-Numbered chapter groups combine title, duration, completion count, a thin progress track, and semantic lesson lists. Desktop starts expanded. On mobile, the active chapter starts open and other chapters remain native disclosures; completed, current, and unstarted rows include text or markers in addition to color.
+Learn and Progress share a registry-driven map of levels containing display modules and semantic lesson lists. The level containing the saved continuation starts expanded at every viewport size; other levels start collapsed, and all remain native keyboard-operable disclosures. The Continue learning card remains the dominant action above the Learn map. Display placement and codes do not replace stable lesson identities or existing lesson URLs.
+
+Level summaries show completed and available lesson counts with a written status. Expanded levels add a thin, labeled meter for available lesson completion and module-level status; modules without published lessons say “Připravujeme”. Completed, active, next, and unstarted lesson rows combine text and icons, and only the continuation lesson has `aria-current="step"`. Narrow screens move lesson status below its title and reflow level headings rather than shrinking essential text.
+
+The optional analyst, quantitative, and advanced levels sit under “Prohloubení”. Milestones A–D are goals with their practical requirements and an explicit notice that completion is not yet evaluated; available-lesson percentages never represent mastery or milestone completion. Use semantic Paper, divider, muted-text, primary, primary-soft, and progress tokens to organize the map without adding a card around every level.
 
 ### Portfolio Summary
 
