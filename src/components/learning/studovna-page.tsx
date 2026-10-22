@@ -1,57 +1,21 @@
+import { CurriculumMap } from "./curriculum-map";
+import { curriculumMapModel } from "./curriculum-map-model";
 import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
-import { ArrowRight, ArrowRightCircle, BookOpen, ChevronDown, Circle, CircleCheck, Clock3 } from "lucide-react";
+import { ArrowRight, BookOpen, ChevronDown, Clock3 } from "lucide-react";
 import { getModuleLessons, moduleCatalog } from "@/features/learning/catalog";
-import { getStepDefinitions } from "@/features/lessons/steps";
 import type { PortfolioView } from "@/features/portfolio/service";
 import { formatPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { PersonalizationPrompt } from "@/components/personalization/personalization-prompt";
 import { reasonLabels, contextLabels, scaffoldLabels } from "@/features/personalization/presentation";
 import { ResponsiveDisclosure } from "./responsive-disclosure";
 import { StudovnaQuestion } from "./studovna-question";
-import { blockDescription, chapterTitle, PLANNED_CHAPTER_TITLE, portfolioComposition, studovnaLesson, type LearnerSummary } from "./studovna-model";
+import { blockDescription, portfolioComposition, studovnaLesson, type LearnerSummary } from "./studovna-model";
 import { legalLinks } from "@/components/legal/legal-links";
 import styles from "./studovna-page.module.css";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/brand/wordmark";
-
-type Chapter = (typeof moduleCatalog)[number];
-
-function ChapterCard({ chapter, index, summary }: { chapter: Chapter; index: number; summary: LearnerSummary }) {
-  const lessons = getModuleLessons(chapter.slug).filter((lesson) => lesson.status === "available");
-  const finished = lessons.filter((lesson) => summary.completed.some((done) => done.id === lesson.id)).length;
-  const focused = summary.next.moduleSlug === chapter.slug && !summary.allComplete;
-  const title = chapterTitle(chapter);
-  return <ResponsiveDisclosure className={`${styles.chapter} ${focused ? styles.chapterActive : ""}`} initiallyOpen={focused || summary.allComplete}>
-    <summary className={styles.chapterHead}>
-      <span className={styles.chapterNumber}>{String(index + 1).padStart(2, "0")}</span>
-      <span className={styles.chapterName}><h3>{title}</h3><span>{lessons.length} lekcí · ≈ {lessons.reduce((minutes, lesson) => minutes + lesson.estimatedMinutes, 0)} min<span className={styles.mobileCounter}> · {finished} / {lessons.length}</span></span></span>
-      <span className={styles.chapterCounter}>{finished} / {lessons.length}</span>
-      <ChevronDown size={20} className={styles.chapterToggle} aria-hidden="true" />
-    </summary>
-    <div className={styles.chapterProgressRow}><div className={styles.chapterProgress} role="meter" aria-valuemin={0} aria-valuemax={lessons.length} aria-valuenow={finished} aria-label={`Dokončené lekce kapitoly ${title}`}><span style={{ width: `${finished / lessons.length * 100}%` }} /></div><span>{finished} / {lessons.length}</span></div>
-    <ol className={styles.lessonList} aria-label={`Lekce kapitoly ${title}`}>
-      {lessons.map((lesson) => {
-        const row = summary.states.find((state) => state.lessonId === lesson.id);
-        const done = row?.status === "completed";
-        const active = row?.status === "in_progress";
-        const next = !summary.allComplete && summary.next.id === lesson.id && !active;
-        const stepCount = getStepDefinitions(lesson.id).length;
-        const position = Math.min((row?.lastPosition ?? 0) + 1, stepCount);
-        const Marker = done ? CircleCheck : active || next ? ArrowRightCircle : Circle;
-        return <li key={lesson.id}><Link className={`${styles.lessonRow} ${next ? styles.lessonCurrent : ""}`} href={`/learn/${lesson.moduleSlug}/${lesson.slug}`} aria-current={active || next ? "step" : undefined}>
-          <Marker size={20} className={done || active || next ? styles.lessonActiveMarker : styles.lessonMarker} aria-hidden="true" />
-          <span className={styles.lessonText}>{lesson.title}<small>≈ {lesson.estimatedMinutes} min</small></span>
-          <span className={styles.lessonDuration}>≈ {lesson.estimatedMinutes} min</span>
-          <span className={`${styles.lessonState} ${active || next ? styles.lessonActiveState : ""}`}>
-            {done ? "Hotovo" : active ? <><span className={styles.desktopState}>Krok {position} z {stepCount}</span><span className={styles.mobileState}>{position} / {stepCount}</span></> : next ? "Následuje" : <span className="sr-only">Nezačato</span>}
-          </span>
-        </Link></li>;
-      })}
-    </ol>
-  </ResponsiveDisclosure>;
-}
 
 function PortfolioCard({ summary, portfolio }: { summary: LearnerSummary; portfolio: PortfolioView | null | undefined }) {
   const composition = portfolio && portfolioComposition(portfolio);
@@ -79,8 +43,6 @@ export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; 
   const lessonIndex = moduleLessons.findIndex((item) => item.id === lesson.id) + 1;
   const minutes = Math.max(1, Math.ceil(lesson.estimatedMinutes * (summary.stepCount - summary.position) / summary.stepCount));
   const description = step.blocks.map(blockDescription).find(Boolean) ?? summary.next.summary;
-  const chapters = moduleCatalog.filter((chapter) => chapter.status === "available");
-  const planned = moduleCatalog.filter((chapter) => chapter.status === "planned");
   const recommendationReason = reasonLabels[summary.recommendation.reasonCode];
   const recommendedLesson = summary.lessons.find((item) => item.id === summary.recommendation.nextLessonId && item.id !== summary.next.id);
   return <main className={styles.page} data-investi-studovna>
@@ -98,7 +60,7 @@ export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; 
         </section>
       </div>
       <div className={styles.columns}>
-        <section className={styles.curriculum} id="curriculum" aria-labelledby="curriculum-title"><div className={styles.curriculumHeading}><p className={styles.eyebrow}>Kurikulum</p><h2 id="curriculum-title">Všechny lekce jsou otevřené.</h2><p>Doporučujeme pořadí shora dolů, ale začít můžeš kdekoli.</p></div><div className={styles.chapterList} data-testid="journey-modules">{chapters.map((chapter, index) => <ChapterCard key={chapter.slug} chapter={chapter} index={index} summary={summary} />)}{planned.length > 0 && <section className={styles.plannedChapter} aria-label={`${PLANNED_CHAPTER_TITLE} – připravujeme`}><span className={styles.chapterNumber}>{String(chapters.length + 1).padStart(2, "0")}</span><div><h3>{PLANNED_CHAPTER_TITLE}</h3><p>{planned.map((chapter) => chapter.title).join(" · ")}</p></div><span className={styles.plannedState}><Clock3 size={16} aria-hidden="true" />Připravujeme</span></section>}</div></section>
+        <section className={styles.curriculum} id="curriculum" aria-labelledby="curriculum-title"><div className={styles.curriculumHeading}><p className={styles.eyebrow}>Kurikulum</p><h2 id="curriculum-title">Všechny lekce jsou otevřené.</h2><p>Doporučujeme pořadí shora dolů, ale začít můžeš kdekoli.</p></div><CurriculumMap levels={curriculumMapModel(summary)} /></section>
         <aside className={styles.side} aria-label="Lab a studijní pokrok"><PortfolioCard summary={summary} portfolio={portfolio} /><Link href="/lab/backtesting" className={styles.backtesting}><Clock3 size={15} aria-hidden="true" />Otevřít Backtesting Lab<ArrowRight size={15} aria-hidden="true" /></Link><section className={styles.sideCard}><p className={styles.eyebrow}>Tvůj pokrok</p><div className={styles.progressValue}><strong>{summary.percentage} %</strong><span>{summary.completed.length} z {summary.lessons.length} lekcí<small>dokončeno</small></span></div><p className={styles.progressNote}>Učení není závod. K hotovým lekcím se můžeš vracet vlastním tempem.</p><Link href="/progress" className={styles.sideLink}>Zobrazit pokrok<ArrowRight size={16} aria-hidden="true" /></Link></section></aside>
       </div>
       <section className={styles.planContext} aria-label="Tvůj studijní plán"><p>{recommendationReason}</p>{recommendedLesson && <Link className={styles.recommendedLink} href={`/learn/${recommendedLesson.moduleSlug}/${recommendedLesson.slug}`}>Doporučená lekce: {recommendedLesson.title}<ArrowRight size={16} aria-hidden="true" /></Link>}<details><summary>Jak si rozvrhnout učení</summary><p>{contextLabels[summary.recommendation.exampleContext]}</p><p>{scaffoldLabels[summary.recommendation.scaffoldLevel]}</p>{summary.recommendation.splitLessonAcrossSessions && <p>Lekci si můžeš rozdělit do více sezení. Uložený postup tě dovede zpět.</p>}</details></section>

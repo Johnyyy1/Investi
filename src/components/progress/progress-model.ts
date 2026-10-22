@@ -1,3 +1,4 @@
+import { curriculumMapModel } from "@/components/learning/curriculum-map-model";
 import { moduleCatalog } from "@/features/learning/catalog";
 import type { LearnerState } from "@/features/learning/learner-summary";
 import type { loadLearner } from "@/features/learning/load-learner";
@@ -99,7 +100,7 @@ export function progressModel(summary: ProgressSummary) {
 
   const activeCount = summary.lessons.filter((lesson) => statusOf(lesson) === "active").length;
   return {
-    chapters, planned, knowledge, featured, shelved, milestone, current, activeCount,
+    levels: curriculumMapModel(summary), chapters, planned, knowledge, featured, shelved, milestone, current, activeCount,
     ideaCount: knowledge.reduce((sum, lesson) => sum + lesson.ideas.length, 0),
     labBridge: bridge ? { text: bridge.labBridge!, lessonTitle: bridge.title } : undefined,
     continueHref: summary.allComplete ? "/lab" : href(summary.next),
