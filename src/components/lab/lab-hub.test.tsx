@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { PortfolioView } from "@/features/portfolio/service";
+import { portfolioProcess } from "@/features/portfolio/process";
 import { HubGuide, LabHub, PortfolioCard } from "./lab-hub";
 
 type Holding = PortfolioView["holdings"][number];
@@ -19,6 +20,7 @@ function holding(input: Partial<Holding> & Pick<Holding, "instrumentId" | "symbo
 
 function view(overrides: Partial<PortfolioView> = {}): PortfolioView {
   return {
+    process: portfolioProcess({ openedAt: "2026-09-01T08:00:00.000Z", asOf: "2026-10-22T12:00:00.000Z", cashMinor: 1000000n, totalMinor: 1000000n, holdings: [], trades: [], ips: null }),
     feeProfileId: "investi-standard-v1",
     portfolioId: "p1", baseCurrency: "CZK", openedAt: "2026-09-01T08:00:00.000Z", openingCapitalMinor: "1000000", earnedPracticeCapitalMinor: "1000000",
     availableCashMinor: "1000000", holdingsMarketValueMinor: "0", portfolioTotalMinor: "1000000", investmentGainLossMinor: "0",

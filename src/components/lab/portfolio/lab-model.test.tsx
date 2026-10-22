@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { PortfolioView } from "@/features/portfolio/service";
+import { portfolioProcess } from "@/features/portfolio/process";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }) }));
 vi.mock("@/features/portfolio/actions", () => ({ resetPortfolioAction: vi.fn(), searchPortfolioInstrumentsAction: vi.fn() }));
@@ -28,6 +29,7 @@ const cashOnly: PortfolioView["exposure"]["sector"] = { status: "valued", catego
 
 function view(overrides: Partial<PortfolioView> = {}): PortfolioView {
   return {
+    process: portfolioProcess({ openedAt: "2026-10-13T08:00:00.000Z", asOf: "2026-10-22T12:00:00.000Z", cashMinor: 500000n, totalMinor: 500000n, holdings: [], trades: [], ips: null }),
     feeProfileId: "investi-standard-v1",
     portfolioId: "p1", baseCurrency: "CZK", openedAt: "2026-10-13T08:00:00.000Z", openingCapitalMinor: "500000", earnedPracticeCapitalMinor: "500000",
     availableCashMinor: "500000", holdingsMarketValueMinor: "0", portfolioTotalMinor: "500000", investmentGainLossMinor: "0",
@@ -171,7 +173,10 @@ describe("overview states", () => {
     const html = render(view({ holdings: [vt, bnd], allocation: saved, availableCashMinor: "289300", cashWeightBasisPoints: "2990", portfolioTotalMinor: "1000000" }));
     expect(html).toMatch(/Rozložení portfolia: ETF 40,4\s%, 4\s095\sKč; Dluhopisy 29,7\s%, 3\s012\sKč; Hotovost 29,9\s%, 2\s893\sKč\./);
     expect(html).toContain('role="combobox"');
-    expect(html).not.toMatch(/cíl|Můj mix|mimo mix/);
+    // IPS targets belong in the process summary, never in the actual allocation list.
+    const allocation = html.match(/<section[^>]+aria-labelledby="allocation-title"[\s\S]*?<\/section>/)?.[0];
+    expect(allocation).toBeDefined();
+    expect(allocation).not.toMatch(/cíl|Můj mix|mimo mix/);
   });
 
   it("explains weights with the learner's real capital and keeps concept poses in their lessons", () => {

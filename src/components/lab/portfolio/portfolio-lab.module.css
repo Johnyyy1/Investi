@@ -66,6 +66,13 @@
 /* Overview layout */
 .layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 16px; }
 .column { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.processLayout { grid-template-areas: "process" "context" "story"; align-items: start; }
+.processLayout > :first-child { grid-area: process; }
+.processContext { grid-area: context; }
+.processStory { grid-area: story; min-width: 0; }
+@media (min-width: 1024px) {
+  .processLayout { grid-template-areas: "process context" "story context"; grid-template-rows: auto 1fr; }
+}
 
 /* Value and change (state 3) */
 .value { padding: 20px; box-shadow: var(--shadow-elevation-1); }
