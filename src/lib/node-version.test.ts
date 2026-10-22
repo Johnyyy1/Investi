@@ -34,12 +34,14 @@ describe("Node.js version pinning", () => {
     expect(dockerfile).toMatch(new RegExp(`^FROM node:${major}-`, "m"));
   });
 
-  it("makes every workflow read the Node.js version from .nvmrc", async () => {
-    const workflowDirectory = path.join(repositoryRoot, ".github", "workflows");
-    const workflows = (await readdir(workflowDirectory)).filter((file) => /\.ya?ml$/.test(file));
+  it("makes every workflow and local action read the Node.js version from .nvmrc", async () => {
+    const githubDirectory = path.join(repositoryRoot, ".github");
+    const workflows = (await readdir(githubDirectory, { recursive: true }))
+      .filter((file) => /^(workflows|actions)\//.test(file) && /\.ya?ml$/.test(file));
+    expect(workflows).toContain(path.join("actions", "prepare-app", "action.yml"));
 
     for (const workflow of workflows) {
-      const content = await readFile(path.join(workflowDirectory, workflow), "utf8");
+      const content = await readFile(path.join(githubDirectory, workflow), "utf8");
       const setupNodeSteps = content.match(/uses: actions\/setup-node@/g) ?? [];
       const versionFileInputs = content.match(/node-version-file: \.nvmrc$/gm) ?? [];
 
