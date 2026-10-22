@@ -1,28 +1,16 @@
 import { DecisionTree } from "./decision-tree";
 import { LessonOutput } from "./lesson-output";
-import katex from "katex";
+// The KaTeX stylesheet stays static so a server-rendered formula is styled before its lazy module arrives.
 import "katex/dist/katex.min.css";
 import type { ReactNode } from "react";
-import { ArrowRight, Bookmark, BookOpenCheck, Calculator, ChartPie, Flag, Lightbulb, Sigma, SlidersHorizontal } from "lucide-react";
+import { ArrowRight, Bookmark, BookOpenCheck, Calculator, ChartPie, Flag, Lightbulb, SlidersHorizontal } from "lucide-react";
 import { AppLink as Link } from "@/components/shell/app-link";
-import { AssetComparison, BondCashflowExplorer, DiversificationImpact, DiversificationPreview, DrawdownExplorer, EtfHoldingsVisual, GrowthComparison, LiquidityComparison, MarketQuoteExplorer, PortfolioHorizonScenario, RiskCapacityScenario, RiskScenarioExplorer, ShareExplorer, StockPositionExplorer, TimeHorizonExplorer, IndexEtfVisual } from "./foundations-explorers";
 import type { LessonBlock } from "@/features/lessons/types";
 import type { LessonHistoryEntry } from "@/features/lessons/real-history/snapshot";
 import type { RiskHistoryEntry } from "@/features/lessons/real-history/risk-window";
 import { metricLabLink } from "@/features/learning/metric-glossary";
 import { cn } from "@/lib/utils";
-import { CompoundingExplorer } from "./compounding-explorer";
-import { ReturnCalculator } from "./return-calculator";
-import { PriceSeriesExplorer } from "./price-series-explorer";
-import { HistoricalReturnsExercise } from "./historical-returns-exercise";
-import { RecoveryExplorer } from "./recovery-explorer";
-import { PortfolioBuilder } from "./portfolio-builder";
-import { HistoricalRiskExercise } from "./historical-risk-exercise";
-import { AnnualisationExplorer, MaxDrawdownExplorer, StandardDeviationExplorer, VolatilityPaths } from "./volatility-explorers";
-import { CommonFactorExplorer, CorrelationExplorer, CrisisCorrelationExplorer } from "./correlation-explorers";
-import { HistoricalCorrelationExercise } from "./historical-correlation-exercise";
-import { ConcentrationExplorer, ExposureExplorer, LookThroughExplorer, PortfolioCorrelationExplorer } from "./diversification-explorers";
-import { DiversificationScenario } from "./diversification-scenario";
+import { LessonFigure, LessonFormula } from "./lazy-blocks";
 import { FactNotice } from "./step-kinds/fact-notice";
 import { LabMission } from "./step-kinds/lab-mission";
 import { PersonaDecision } from "./step-kinds/persona-decision";
@@ -39,7 +27,7 @@ export function GuidedBlock({ block, history, riskHistory, lessonId, guest, onOu
     case "rubricSelfAssessment": return lessonId ? <LessonOutput block={block} lessonId={lessonId} guest={guest} onReady={onOutputReady} /> : null;
     case "heading": return <div className="flex flex-col gap-2"><h3 className="text-[21px]/[26px] font-semibold tracking-[-0.5px] md:text-2xl/[30px]">{block.title}</h3>{block.body ? <p className="text-base/[25px] text-secondary">{block.body}</p> : null}</div>;
     case "paragraph": return <p className="text-base/[25px] text-secondary">{block.content}</p>;
-    case "formula": return <Formula latex={block.latex ?? block.expression} variables={block.variables} />;
+    case "formula": return <LessonFormula latex={block.latex ?? block.expression} variables={block.variables} />;
     case "workedExample": return <section aria-labelledby={`${block.id}-title`} className="flex flex-col gap-3.5 rounded-surface border border-border-card bg-surface p-[18px] md:gap-[18px] md:px-7 md:py-6">
       <div className="flex flex-col gap-1.5">
         <p className={cn(eyebrow, "flex items-center gap-1.5 text-primary")}><Calculator aria-hidden="true" className="size-3.5" />Řešený příklad</p>
@@ -70,7 +58,7 @@ export function GuidedBlock({ block, history, riskHistory, lessonId, guest, onOu
         <h3 id={`${block.id}-title`} className="text-xl/[26px] font-semibold tracking-[-0.3px] md:text-[22px]/7">{block.title}</h3>
         <p className="text-sm/[21px] text-secondary md:text-[15px]/[23px]">{block.description}</p>
       </div>
-      <div className="p-4 pb-[18px] md:p-7">{block.figure === "growth-comparison" ? <GrowthComparison /> : block.figure === "ownership-explorer" ? <ShareExplorer kind="ownership" /> : block.figure === "market-cap-explorer" ? <ShareExplorer kind="market-cap" /> : block.figure === "stock-position-explorer" ? <StockPositionExplorer /> : block.figure === "index-etf-visual" ? <IndexEtfVisual /> : block.figure === "etf-holdings-visual" ? <EtfHoldingsVisual /> : block.figure === "bond-cashflow-explorer" ? <BondCashflowExplorer /> : block.figure === "asset-comparison" ? <AssetComparison /> : block.figure === "market-quote-explorer" ? <MarketQuoteExplorer /> : block.figure === "liquidity-comparison" ? <LiquidityComparison /> : block.figure === "risk-scenario-explorer" ? <RiskScenarioExplorer /> : block.figure === "drawdown-explorer" ? <DrawdownExplorer /> : block.figure === "diversification-preview" ? <DiversificationPreview /> : block.figure === "time-horizon-explorer" ? <TimeHorizonExplorer /> : block.figure === "portfolio-builder" ? <PortfolioBuilder /> : block.figure === "diversification-impact" ? <DiversificationImpact /> : block.figure === "portfolio-horizon-scenario" ? <PortfolioHorizonScenario /> : block.figure === "risk-capacity-scenario" ? <RiskCapacityScenario /> : block.figure === "return-calculator" ? <ReturnCalculator /> : block.figure === "price-series-explorer" ? <PriceSeriesExplorer /> : block.figure === "historical-period-returns" ? <HistoricalReturnsExercise mode="period" history={history} /> : block.figure === "historical-cumulative-returns" ? <HistoricalReturnsExercise mode="cumulative" history={history} /> : block.figure === "compounding-explorer" ? <CompoundingExplorer /> : block.figure === "recovery-explorer" ? <RecoveryExplorer /> : block.figure === "volatility-paths" ? <VolatilityPaths /> : block.figure === "standard-deviation-explorer" ? <StandardDeviationExplorer /> : block.figure === "annualisation-explorer" ? <AnnualisationExplorer /> : block.figure === "max-drawdown-explorer" ? <MaxDrawdownExplorer /> : block.figure === "historical-volatility" ? <HistoricalRiskExercise mode="volatility" history={riskHistory} /> : block.figure === "historical-drawdown" ? <HistoricalRiskExercise mode="max-drawdown" history={riskHistory} /> : block.figure === "correlation-explorer" ? <CorrelationExplorer /> : block.figure === "common-factor-explorer" ? <CommonFactorExplorer /> : block.figure === "crisis-correlation-explorer" ? <CrisisCorrelationExplorer /> : block.figure === "historical-correlation" ? <HistoricalCorrelationExercise history={riskHistory} /> : block.figure === "concentration-explorer" ? <ConcentrationExplorer /> : block.figure === "exposure-explorer" ? <ExposureExplorer /> : block.figure === "look-through-explorer" ? <LookThroughExplorer /> : block.figure === "portfolio-correlation-explorer" ? <PortfolioCorrelationExplorer /> : block.figure === "diversification-scenario" ? <DiversificationScenario /> : null}</div>
+      <div className="p-4 pb-[18px] md:p-7"><LessonFigure figure={block.figure} history={history} riskHistory={riskHistory} /></div>
     </section>;
     case "personaDecision": return <PersonaDecision block={block} />;
     case "labMission": return <LabMission block={block} />;
@@ -95,37 +83,4 @@ function Titled({ as: Tag = "section", icon, title, className, titleClassName, c
     <div className="flex items-start gap-2">{icon}<h3 className={cn("min-w-0 flex-1 tracking-normal", titleClassName)}>{title}</h3></div>
     {children}
   </Tag>;
-}
-
-function Formula({ latex, variables }: { latex: string; variables: { symbol: string; description: string }[] }) {
-  let html: string | undefined;
-  try {
-    html = katex.renderToString(latex, { displayMode: true, output: "htmlAndMathml", throwOnError: true, trust: false, strict: "error" });
-  } catch {
-    html = undefined;
-  }
-  return <figure className="overflow-hidden rounded-surface border border-border bg-surface">
-    <div className="flex flex-col gap-3.5 px-[18px] pt-4 pb-[22px] md:gap-[18px] md:px-7 md:pt-5 md:pb-[30px]">
-      <p className={cn(eyebrow, "flex items-center gap-1.5 text-muted")}><Sigma aria-hidden="true" className="size-3.5" />Vzorec</p>
-      {html ? <div className="lesson-formula overflow-x-auto text-[23px] text-foreground md:text-[30px]" dangerouslySetInnerHTML={{ __html: html }} /> : <div role="status"><p className="text-sm text-danger">Tento vzorec se nepodařilo zobrazit.</p><code className="break-all text-sm">{latex}</code></div>}
-    </div>
-    {variables.length ? <div className="flex flex-col gap-2 border-t border-divider bg-surface-sunken px-[18px] pt-3.5 pb-4 md:gap-2.5 md:px-7 md:pt-4 md:pb-[18px]">
-      <p className={cn(eyebrow, "text-muted")}>Co znamenají symboly</p>
-      <dl className="flex flex-col gap-2 md:gap-2.5">{variables.map(({ symbol, description }) => <div key={symbol} className="flex items-center gap-3">
-        <dt className="w-20 shrink-0 text-[19px]/[22px] text-foreground md:w-24 md:text-[21px]/6"><MathSymbol symbol={symbol} /></dt>
-        <dd lang="cs" className="min-w-0 flex-1 text-sm/[21px] text-secondary md:text-[15px]/[23px] [overflow-wrap:normal]">{description}</dd>
-      </div>)}</dl>
-    </div> : null}
-  </figure>;
-}
-
-/** Authored symbols are plain text ("V_0", "P_(t−1)", "Vᵢ"); typeset them like the formula without a second MathML tree. */
-function MathSymbol({ symbol }: { symbol: string }) {
-  const match = /^([A-Za-z]+|Π)([₀-₉ᵢₚ]*)(?:_\(?([^)]*)\)?)?$/.exec(symbol);
-  if (!match) return <span className="font-[KaTeX_Main,serif]">{symbol}</span>;
-  const [, base, unicodeSub, sub] = match;
-  return <span className="font-[KaTeX_Main,serif] whitespace-nowrap">
-    <span className={base.length === 1 && base !== "Π" ? "font-[KaTeX_Math,serif] italic" : undefined}>{base}</span>{unicodeSub}
-    {sub ? <sub className="text-[0.63em]">{/^[A-Za-z]$/.test(sub) ? <span className="font-[KaTeX_Math,serif] italic">{sub}</span> : sub}</sub> : null}
-  </span>;
 }
