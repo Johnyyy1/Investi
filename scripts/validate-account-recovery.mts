@@ -24,7 +24,7 @@ process.env.EMAIL_OUTBOX_DIR = outbox;
 process.env.EMAIL_TRANSPORT = "outbox";
 
 const { db } = await import("../src/db");
-const { rateLimitBucket, session, user, verification } = await import("../src/db/schema");
+const { account, rateLimitBucket, session, user, verification } = await import("../src/db/schema");
 const { auth } = await import("../src/lib/auth");
 const { rateLimiter } = await import("../src/features/rate-limit");
 const { CHANGE_PASSWORD_USER_RULE, EMAIL_LINK_ACCOUNT_RULE } = await import("../src/features/rate-limit/policy");
@@ -177,6 +177,57 @@ try {
 
   assert.deepEqual((await newMail(1)).map(({ kind, to }) => ({ kind, to })), [{ kind: "password-changed", to: changer }]);
 
+  // Address changes preserve the old address until all required approvals have completed.
+  for (const verified of [true, false]) {
+    const oldAddress = email(`change-${verified}`), newAddress = email(`changed-${verified}`);
+    const { id, cookie } = await signUp(oldAddress, "first-password-1");
+    const [initial] = await newMail(1);
+    if (verified) await call(linkIn(initial));
+    const response = await call("/change-email", { cookie, body: { newEmail: newAddress, callbackURL: "/verify-email" } });
+    assert.equal(response.status, 200);
+    const [first] = await newMail(1);
+    assert.equal(first.to, verified ? oldAddress : newAddress);
+    assert.equal((await db.query.user.findFirst({ where: eq(user.id, id) }))?.email, oldAddress);
+    let approval = first;
+    if (verified) {
+      assert.equal(first.kind, "email-change-confirmation");
+      await call(linkIn(first));
+      [approval] = await newMail(1);
+      assert.equal(approval.to, newAddress);
+      assert.equal((await db.query.user.findFirst({ where: eq(user.id, id) }))?.email, oldAddress);
+    }
+    await call(linkIn(approval));
+    const updated = await db.query.user.findFirst({ where: eq(user.id, id) });
+    assert.equal(updated?.email, newAddress);
+    assert.equal(updated?.emailVerified, true);
+    assert.deepEqual((await newMail(1)).map(({ kind, to }) => ({ kind, to })), [{ kind: "email-changed", to: oldAddress }]);
+    assert.equal((await signIn(oldAddress, "first-password-1")).status, 401);
+    assert.equal((await signIn(newAddress, "first-password-1")).status, 200);
+  }
+
+  // A stale session cannot initiate an address change or set a social account's first password.
+  const socialAddress = email("social");
+  const { id: socialId, cookie: socialCookie } = await signUp(socialAddress, "first-password-1");
+  await newMail(1);
+  await db.delete(account).where(eq(account.userId, socialId));
+  const adapter = (await auth.$context).internalAdapter;
+  await adapter.createAccount({ userId: socialId, providerId: "google", accountId: `google-${run}` });
+  assert.equal((await newMail(0)).length, 0, "first social login is not linking");
+  await adapter.createAccount({ userId: socialId, providerId: "facebook", accountId: `facebook-${run}` });
+  assert.deepEqual((await newMail(1)).map(({ kind, to }) => ({ kind, to })), [{ kind: "social-linked", to: socialAddress }]);
+  const { POST: setPassword } = await import("../src/app/api/account/password/route");
+  const setFirstPassword = (cookie = socialCookie, origin = new URL(baseURL).origin) => setPassword(new Request(`${baseURL}/api/account/password`, { method: "POST", headers: { cookie, origin, "content-type": "application/json" }, body: JSON.stringify({ newPassword: "social-password-1" }) }));
+  assert.equal((await setFirstPassword("", baseURL)).status, 401);
+  assert.equal((await setFirstPassword(socialCookie, "https://untrusted.test")).status, 403);
+  await db.update(session).set({ createdAt: new Date(Date.now() - 11 * 60_000) }).where(eq(session.userId, socialId));
+  assert.equal((await call("/change-email", { cookie: socialCookie, body: { newEmail: email("refused") } })).status, 403);
+  assert.equal((await setFirstPassword()).status, 403);
+  await db.update(session).set({ createdAt: new Date() }).where(eq(session.userId, socialId));
+  assert.equal((await setFirstPassword()).status, 200);
+  assert.equal((await newMail(1))[0].kind, "password-changed");
+  assert.equal((await setFirstPassword()).status, 400, "cannot overwrite an existing password");
+  assert.equal((await signIn(socialAddress, "social-password-1")).status, 200);
+
   // 8. Current-password guesses are limited per user, whichever IPs they come from.
   const guesser = email("guesser");
   const { cookie: guesserCookie } = await signUp(guesser, "first-password-1");
@@ -211,8 +262,8 @@ try {
   await db.delete(user).where(like(user.email, `${run}-%`));
   const keys = [
     ...usedIps.flatMap((ip) => [...calledPaths].map((path) => rateLimiter.keyFor(`auth:${path}`, ip))),
-    ...createdIds.map((id) => rateLimiter.keyFor("auth:change-password", id)),
-    ...accountSubjects.flatMap((address) => ["auth:sign-in-account", "auth:password-reset-account", "auth:verification-email-account"].map((scope) => rateLimiter.keyFor(scope, address))),
+    ...createdIds.flatMap((id) => ["auth:change-password", "auth:change-email", "auth:set-password"].map((scope) => rateLimiter.keyFor(scope, id))),
+    ...accountSubjects.flatMap((address) => ["auth:sign-in-account", "auth:password-reset-account", "auth:verification-email-account", "auth:email-change-address"].map((scope) => rateLimiter.keyFor(scope, address))),
   ];
   for (let index = 0; index < keys.length; index += 500) await db.delete(rateLimitBucket).where(inArray(rateLimitBucket.key, keys.slice(index, index + 500)));
   await rm(outbox, { recursive: true, force: true });

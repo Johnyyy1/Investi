@@ -199,6 +199,32 @@ try {
   await context.clearCookies();
   assert.ok((await context.request.post(`${baseURL}/api/auth/sign-in/email`, { headers: { origin: baseURL }, data: { email, password: "third-password-3" } })).ok(), "the changed password signs in");
 
+  // 9. Verified-current email change: approve old, then verify new, and notify old.
+  await page.goto(`${baseURL}/settings?section=security`);
+  await page.getByRole("button", { name: "Změnit e-mail", exact: true }).click();
+  await page.waitForFunction(() => document.activeElement?.getAttribute("name") === "email");
+  const nextEmail = `rcv-${run}-changed@example.com`;
+  await page.getByLabel("Nový e-mail", { exact: true }).fill(nextEmail);
+  await reflow("settings-email-change", page.getByRole("button", { name: "Poslat potvrzení změny" }));
+  await page.getByRole("button", { name: "Poslat potvrzení změny" }).click();
+  await page.getByRole("status").filter({ hasText: "Zkontroluj současnou schránku" }).waitFor();
+  assert.equal((await sql`select email from "user" where id = ${user.id}`)[0].email, email);
+  await page.goto(await mailFor(email, "email-change-confirmation"));
+  assert.equal((await sql`select email from "user" where id = ${user.id}`)[0].email, email);
+  await page.goto(await mailFor(nextEmail, "email-verification"));
+  await page.getByRole("heading", { name: "E-mail je ověřený" }).waitFor();
+  assert.equal((await sql`select email from "user" where id = ${user.id}`)[0].email, nextEmail);
+  await mailFor(email, "email-changed");
+
+  // 10. Social-only first password is set directly with a fresh session, without waiting for mail.
+  await sql`delete from account where user_id = ${user.id} and provider_id = 'credential'`;
+  await page.goto(`${baseURL}/settings?section=security`);
+  const firstPassword = page.getByRole("form", { name: "Nastavit heslo", exact: true });
+  await firstPassword.getByLabel("Nové heslo", { exact: true }).fill("fourth-password-4");
+  await firstPassword.getByRole("button", { name: "Nastavit heslo", exact: true }).click();
+  await page.getByRole("button", { name: "Změnit heslo", exact: true }).waitFor();
+  assert.ok((await context.request.post(`${baseURL}/api/auth/sign-in/email`, { headers: { origin: baseURL }, data: { email: nextEmail, password: "fourth-password-4" } })).ok());
+
   await otherDevice.close(); await thirdDevice.close();
   assert.deepEqual(errors, []);
   console.log(`Account recovery browser flow passed: forgot → e-mail → reset → sign-in, single-use link, verification, password change, focus, reflow. Screenshots: ${output}`);

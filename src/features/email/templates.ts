@@ -69,3 +69,15 @@ export function passwordChangedEmail({ to, origin, at = new Date() }: { to: stri
   };
   return { kind: "password-changed", to, subject: content.heading, text: text(content), html: layout(content) };
 }
+
+export function emailChangeConfirmation({ to, url }: { to: string; url: string }): EmailMessage {
+  const content = { heading: "Potvrď změnu e-mailu", intro: "Přišla žádost o změnu adresy účtu. Potvrď ji v této schránce. Potom bude ještě potřeba ověřit novou adresu.", action: "Potvrdit změnu e-mailu", url, note: "Pokud žádost nepochází od tebe, nepotvrzuj ji a obnov si heslo." };
+  return { kind: "email-change-confirmation", to, subject: content.heading, text: text(content), html: layout(content) };
+}
+
+export function accountSecurityEmail({ to, origin, kind, provider, at = new Date() }: { to: string; origin: string; kind: "email-changed" | "social-linked"; provider?: "google" | "facebook"; at?: Date }): EmailMessage {
+  const time = new Intl.DateTimeFormat("cs-CZ", { timeZone: "Europe/Prague", dateStyle: "long", timeStyle: "short" }).format(at);
+  const heading = kind === "email-changed" ? "E-mail účtu investi byl změněn" : `K účtu investi je připojené přihlášení přes ${provider === "facebook" ? "Facebook" : "Google"}`;
+  const content = { heading, intro: `Ke změně došlo ${time} (Europe/Prague).`, action: "Nepoznáváš tuto změnu? Obnov si heslo", url: new URL("/forgot-password", origin).href, note: "Pokud změna pochází od tebe, není potřeba nic dělat." };
+  return { kind, to, subject: heading, text: text(content), html: layout(content) };
+}

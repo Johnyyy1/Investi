@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { passwordChangedEmail, EMAIL_VERIFICATION_TOKEN_SECONDS, passwordResetEmail, PASSWORD_RESET_TOKEN_SECONDS, verificationEmail } from "./templates";
+import { accountSecurityEmail, emailChangeConfirmation, passwordChangedEmail, EMAIL_VERIFICATION_TOKEN_SECONDS, passwordResetEmail, PASSWORD_RESET_TOKEN_SECONDS, verificationEmail } from "./templates";
 
 const url = "https://investnik.test/api/auth/reset-password/abc?callbackURL=%2Freset-password&x=<b>\"";
 
@@ -48,4 +48,15 @@ it("renders a Prague-dated password notification without secrets", () => {
   expect(message.text).toContain("https://investnik.cz/forgot-password");
   expect(message.html).toContain("Nepoznáváš tuto změnu? Obnov si heslo");
   expect(message.text).not.toMatch(/token|person@/);
+});
+
+it("renders email-change approval and security notifications safely", () => {
+  expect(emailChangeConfirmation({ to: "old@example.com", url }).html).not.toContain("<b>");
+  for (const kind of ["email-changed", "social-linked"] as const) {
+    const message = accountSecurityEmail({ to: "old@example.com", origin: "https://investnik.cz", kind, provider: "facebook", at: new Date("2026-10-22T10:30:00Z") });
+    expect(message.text).toContain("12:30");
+    expect(message.text).toContain("https://investnik.cz/forgot-password");
+    expect(message.text).not.toMatch(/token|old@/);
+    if (kind === "social-linked") expect(message.subject).toContain("Facebook");
+  }
 });

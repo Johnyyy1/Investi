@@ -86,3 +86,24 @@ optional for learning. Successful reset/change sends a token-free security notif
 and a recovery link, after the response. Delivery failure cannot roll back the password change.
 Unknown Better Auth errors always use the caller's Czech fallback. HIBP remains optional and is not
 enabled; no new external password-check service or privacy-policy commitment is introduced here.
+
+
+### Account changes (#114, phase 3)
+
+Settings offers `changeEmail` through Better Auth with `updateEmailWithoutVerification=false`. A
+verified current address first approves the change, then the new address verifies it. An unverified
+current address skips old-address approval but still requires new-address verification. The address
+is unchanged until the final verification. Initiating a change requires a saved account and a session
+created less than 10 minutes ago, matching the deletion freshness helper. Shared Postgres limits apply
+per user and to both current and target mailboxes, in addition to Better Auth's per-IP limit.
+
+`POST /api/account/password` wraps Better Auth's server-only `setPassword` for social-only accounts.
+It verifies same-origin requests, the session, saved-account status, 10-minute freshness, input length
+and a shared per-user budget. It cannot replace an existing password. The email-reset fallback remains.
+No password or exception body is logged or returned.
+
+Successful address verification notifies the old address; new Google/Facebook account links notify
+the account address. The email-change hook verifies the signed verification token again before choosing
+the old notification recipient. Initial social registration and existing social sign-in do not send a
+link notification. Existing verified-email account-linking safeguards remain unchanged. Notifications
+contain Prague time and a recovery CTA, never tokens or the new email address.

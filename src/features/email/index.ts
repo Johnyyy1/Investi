@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { env } from "@/lib/env";
 import { EmailDeliveryError, selectEmailTransport, type EmailMessage } from "./transport";
 
-export { passwordChangedEmail, passwordResetEmail, verificationEmail, EMAIL_VERIFICATION_TOKEN_SECONDS, PASSWORD_RESET_TOKEN_SECONDS } from "./templates";
+export { accountSecurityEmail, emailChangeConfirmation, passwordChangedEmail, passwordResetEmail, verificationEmail, EMAIL_VERIFICATION_TOKEN_SECONDS, PASSWORD_RESET_TOKEN_SECONDS } from "./templates";
 
 const transport = selectEmailTransport({
   transport: env.EMAIL_TRANSPORT,

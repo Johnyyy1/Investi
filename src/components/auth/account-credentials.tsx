@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { FirstPassword } from "./first-password";
 import { PasswordInput } from "./password-input";
 import { TextInput } from "@/components/learning/text-input";
 import { authClient } from "@/lib/auth-client";
@@ -48,7 +48,7 @@ function passwordChangeError(error: { code?: string; status?: number; message?: 
 }
 
 /** Password change behind a trigger; accounts without a password set one through the e-mailed reset link. */
-export function PasswordChange({ hasPassword }: { hasPassword: boolean }) {
+export function PasswordChange({ hasPassword, onPasswordSet }: { hasPassword: boolean; onPasswordSet?: () => void }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<Message>();
@@ -86,10 +86,7 @@ export function PasswordChange({ hasPassword }: { hasPassword: boolean }) {
 
   return <div className="mt-8">
     <h3 className="text-card-title font-bold">Heslo</h3>
-    {!hasPassword ? <div className="mt-3 border-y border-border py-4">
-      <p className="text-small text-secondary">K účtu zatím nemáš heslo. Nastavíš si ho přes odkaz, který ti pošleme e-mailem.</p>
-      <Link href="/forgot-password" className={buttonVariants({ variant: "secondary", size: "compact", className: "mt-3" })}>Nastavit heslo</Link>
-    </div> : open ? <form onSubmit={submit} className="mt-3 max-w-md space-y-5 border-y border-border py-4" aria-label="Změnit heslo">
+    {!hasPassword ? <FirstPassword onSet={onPasswordSet} /> : open ? <form onSubmit={submit} className="mt-3 max-w-md space-y-5 border-y border-border py-4" aria-label="Změnit heslo">
       <TextInput ref={current} label="Současné heslo" type="password" name="current-password" autoComplete="current-password" required disabled={pending} />
       <PasswordInput label="Nové heslo" type="password" name="new-password" autoComplete="new-password" minLength={8} maxLength={128} required disabled={pending} hint="Použij alespoň 8 znaků." />
 

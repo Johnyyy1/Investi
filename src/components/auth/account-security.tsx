@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { EmailChange } from "./email-change";
 import { EmailVerification, PasswordChange } from "./account-credentials";
 import type { AuthProviderAvailability } from "@/lib/auth-providers";
 import { authClient } from "@/lib/auth-client";
@@ -130,8 +131,8 @@ export function AccountSecurity({ providers, initialError, initialAccounts, emai
         {(["google", "facebook"] as const).map((provider) => <AccountRow key={provider} label={providerLabels[provider]} connected={Boolean(accounts[provider])} available={providers[provider]} disabled={Boolean(pending)} pending={pending === provider || pending === `unlink-${provider}`} onConnect={() => void connect(provider)} onDisconnect={(event) => { disconnectTrigger.current = event.currentTarget; setDisconnecting(provider); setError(undefined); dialog.current?.showModal(); }} />)}
       </div> : pending === "load" ? <p className="mt-3 text-small text-secondary" role="status">Načítám způsoby přihlášení…</p> : <Button variant="secondary" size="compact" onClick={() => void refreshAccounts()}>Zkusit načíst znovu</Button>}
     </div>
-    {email && <EmailVerification email={email.address} verified={email.verified} />}
-    {email && accounts && <PasswordChange hasPassword={Boolean(accounts.credential)} />}
+    {email && <><EmailVerification email={email.address} verified={email.verified} /><EmailChange verified={email.verified} /></>}
+    {email && accounts && <PasswordChange hasPassword={Boolean(accounts.credential)} onPasswordSet={() => void refreshAccounts()} />}
     <dialog ref={dialog} className={styles.dialog} aria-labelledby="unlink-title" aria-describedby="unlink-description" onCancel={(event) => { if (pending) event.preventDefault(); }} onClose={() => disconnectTrigger.current?.focus()}><h2 id="unlink-title">Odpojit {disconnecting && providerLabels[disconnecting]}?</h2><p id="unlink-description">Tento způsob už nebude sloužit k přihlášení. Poslední způsob přihlášení nelze odpojit. Tvůj účet, lekce a portfolio zůstanou.</p>{error && <p className={styles.error} role="alert">{error}</p>}<div className={styles.actions}><Button variant="secondary" size="compact" autoFocus disabled={Boolean(pending)} onClick={() => dialog.current?.close()}>Ponechat připojení</Button><Button variant="danger" size="compact" loading={Boolean(pending)} onClick={() => { if (disconnecting) void disconnect(disconnecting); }}>Odpojit</Button></div></dialog>
   </section>;
 }
