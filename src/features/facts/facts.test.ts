@@ -17,16 +17,16 @@ function lesson(text = "Limit je {{test.limit}}."): AuthoredLesson {
 }
 
 describe("dated fact registry", () => {
-  it("has all 27 requested keys with complete, nonoverlapping versions", () => {
+  it("preserves the 27 original keys with complete, nonoverlapping versions", () => {
     expect(() => validateFactRegistry(factRegistry)).not.toThrow();
-    expect([...new Set(factRegistry.map((fact) => fact.key))].sort()).toEqual([
+    expect([...new Set(factRegistry.map((fact) => fact.key))]).toEqual(expect.arrayContaining([
       "dan.casovy_test_cp", "dan.limit_100k", "dan.strop_40m", "dan.hranice_priznani", "dan.oznameni_5m", "dan.lhuty_priznani", "dan.sazby_dpfo", "dan.dividendy_cz", "dan.dividendy_zahranicni", "dan.w8ben", "dan.jednotny_kurz", "dan.evidence_dukazni_bremeno", "dan.urok_srazka", "dps.statni_prispevek", "dps.odpocet", "dip.podminky", "zam.prispevek", "gfo.nahrada", "esma.cfd", "makro.inflace", "makro.repo", "cnb.jerrs", "eu.priips_ucits", "eu.mifid_vhodnost", "krypto.dane", "spiva.2025", "morningstar.gap",
-    ].sort());
+    ]));
   });
   it("resolves the historical 2025 cap and the distinct 2026 rule", () => {
     expect(resolveFact("dan.strop_40m", "2025-12-31", factRegistry).value.amount).toBe(40000000);
     expect(resolveFact("dan.strop_40m", "2026-01-01", factRegistry).value.amount).toMatch(/zrušen/);
-    expect(() => resolveFact("dan.jednotny_kurz", today, factRegistry)).toThrow(/applicable version/);
+    expect(resolveFact("dan.jednotny_kurz", today, factRegistry)).toMatchObject({ taxPeriod: "2026", verificationStatus: "unverified" });
     expect(() => resolveFact("dan.strop_40m", "2024-12-31", factRegistry)).toThrow();
   });
   it("rejects overlaps, duplicate versions and invalid calendar dates", () => {
@@ -103,7 +103,7 @@ describe("lesson fact tokens and publication gate", () => {
   });
   it("checks every published lesson in CI and fails publication of an unverified draft", () => {
     expect(() => checkPublishedFacts(factRegistry, authoredLessons, curriculumLessons, today)).not.toThrow();
-    const draft = lesson("{{dan.w8ben}}");
+    const draft = lesson("{{dan.parovani_transi}}");
     expect(() => checkPublishedFacts(factRegistry, [draft], [{ id: draft.id, status: "planned" }], today)).not.toThrow();
     expect(() => checkPublishedFacts(factRegistry, [draft], [{ id: draft.id, status: "available" }], today)).toThrow(/Unverified/);
     expect(() => checkPublishedFacts(factRegistry, [], [{ id: "missing", status: "available" }], today)).toThrow(/no authored/);

@@ -47,7 +47,7 @@ export default async function FactsPage({ searchParams }: { searchParams: Promis
         const blocked = fact.verificationStatus === "unverified" || fact.publicationBlockedBy;
         return <li key={`${fact.key}@${fact.version}`} className="py-3">
           <details>
-            <summary className="min-h-12 cursor-pointer rounded-control py-2 focus-visible:outline-2 focus-visible:outline-primary">
+            <summary className="min-h-12 cursor-pointer rounded-control py-2 [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-primary">
               <span className="font-semibold">{fact.label}</span>
               <span className="mt-1 block break-words text-sm text-secondary"><code>{fact.key}</code> · {fact.version} · {status}{blocked ? " · Publikace blokována" : ""}</span>
               <span className={`mt-1 block text-sm ${review.overdue ? "font-semibold text-warning-ink" : "text-secondary"}`}>{review.overdue ? `Po termínu revize (${review.overdueDays} dní)${review.stale ? " · Údaj může být zastaralý" : ""}` : `Revize do ${formatFactDate(fact.nextReviewAt)}`}</span>

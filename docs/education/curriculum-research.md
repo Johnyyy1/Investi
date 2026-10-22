@@ -1,5 +1,7 @@
 # Přestavět investi z kurzu metrik na přípravu k investování
 
+> Následná revize: [CONTENT-03 — ověření 27 nejistých bodů, 22. 10. 2026](reviews.md). Níže zachovaný původní brief není potvrzením aktuálních daňových pravidel; pro autorství platí datovaný registr a publikační blokace uvedené v revizi.
+
 **Hlavní závěr.** Současných 27 lekcí investi učí hlavně, jak měřit výnos a riziko. Neučí, jak reálně investovat. Kompletní kurikulum by mělo mít **sedm úrovní a jednu průběžnou behaviorální linii**:
 
 - 0: finanční připravenost

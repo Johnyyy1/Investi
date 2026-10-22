@@ -67,13 +67,13 @@ describe("content step kinds", () => {
   });
 
   it("L: shows registry values and a calm pending state with the educational notice", () => {
-    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-21T12:00:00Z") });
+    vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-10-22T12:00:00Z") });
     try {
       const html = render(spec.factNotice);
       expect(html).toContain(formatFactValue(getFact("dan.limit_100k").value));
       expect(html).toContain("Vzdělávací obsah, ne daňové poradenství");
       expect(html).toContain("Údaj čeká na ověření");
-      expect(html).toContain("Naposledy kontrolováno 21. 10. 2026");
+      expect(html).toContain("Naposledy kontrolováno 22. 10. 2026");
       expect(renderToStaticMarkup(<FactStatusChip factKeys={spec.factNotice.factKeys} />)).toContain("Údaj čeká na ověření");
     } finally {
       vi.useRealTimers();
