@@ -1,5 +1,6 @@
 // Fresh local production server only, started with EMAIL_TRANSPORT=outbox, RESEND_API_KEY empty and EMAIL_OUTBOX_DIR=$RECOVERY_OUTBOX_DIR,
 // so every e-mail lands in that directory instead of Resend. DATABASE_URL must be a disposable local database.
+import { Webhook } from "svix";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, writeFile, unlink } from "node:fs/promises";
@@ -88,7 +89,7 @@ try {
   assert.equal(await forgot.evaluate((e) => getComputedStyle(e).outlineStyle), "solid");
   assert.ok(await forgot.evaluate((e) => e.getBoundingClientRect().height >= 44));
   await page.getByLabel("E-mail", { exact: true }).fill(email);
-  await forgot.click(); await page.waitForURL("**/forgot-password");
+  await forgot.press("Enter"); await page.waitForURL("**/forgot-password");
   assert.equal(await page.getByRole("button", { name: "Vyzkoušet demo" }).count(), 0, "recovery screens leave the demo out");
   assert.equal(await page.getByLabel("E-mail", { exact: true }).inputValue(), email);
   await reflow("forgot-password");
@@ -123,9 +124,11 @@ try {
   await page.waitForURL((url) => url.pathname === "/reset-password" && !url.searchParams.has("token"));
   await reflow("reset-password");
   await page.getByLabel("Nové heslo", { exact: true }).fill("second-password-2");
-  await page.getByRole("button", { name: "Zobrazit heslo" }).click();
+  await page.keyboard.press("Tab");
+  assert.equal(await page.getByRole("button", { name: "Zobrazit heslo" }).evaluate((element) => element === document.activeElement), true);
+  await page.keyboard.press("Space");
   assert.equal(await page.getByLabel("Nové heslo", { exact: true }).getAttribute("type"), "text");
-  await page.getByRole("button", { name: "Skrýt heslo" }).click();
+  await page.keyboard.press("Space");
   await page.getByRole("button", { name: "Uložit nové heslo" }).click();
   await page.waitForURL("**/sign-in?password=reset");
   await page.getByRole("main").getByRole("status").filter({ hasText: "Heslo je změněné a ostatní přihlášení jsou ukončená." }).waitFor();
@@ -199,6 +202,17 @@ try {
   await context.clearCookies();
   assert.ok((await context.request.post(`${baseURL}/api/auth/sign-in/email`, { headers: { origin: baseURL }, data: { email, password: "third-password-3" } })).ok(), "the changed password signs in");
 
+  // A real signed bounce changes the delivery row and surfaces a current-address warning.
+  const deliveries = await sql`select provider_message_id from email_delivery where user_id = ${user.id} and kind = 'email-verification' and provider_message_id is not null order by created_at desc limit 1`;
+  assert.ok(deliveries[0]?.provider_message_id);
+  assert.ok(process.env.RESEND_WEBHOOK_SECRET, "browser server and suite require the same QA webhook secret");
+  const bounce = JSON.stringify({ type: "email.bounced", data: { email_id: deliveries[0].provider_message_id, to: [email] } });
+  const webhookTime = new Date();
+  const signedHeaders = { "svix-id": `qa-${run}`, "svix-timestamp": String(Math.floor(webhookTime.getTime() / 1000)), "svix-signature": new Webhook(process.env.RESEND_WEBHOOK_SECRET).sign(`qa-${run}`, webhookTime, bounce) };
+  assert.equal((await context.request.post(`${baseURL}/api/webhooks/resend`, { headers: signedHeaders, data: bounce })).status(), 200);
+  await page.goto(`${baseURL}/settings?section=security`);
+  await page.getByRole("status").filter({ hasText: "Na tuto adresu se e-maily nedaří doručit" }).waitFor();
+
   // 9. Verified-current email change: approve old, then verify new, and notify old.
   await page.goto(`${baseURL}/settings?section=security`);
   await page.getByRole("button", { name: "Změnit e-mail", exact: true }).click();
@@ -216,6 +230,9 @@ try {
   assert.equal((await sql`select email from "user" where id = ${user.id}`)[0].email, nextEmail);
   await mailFor(email, "email-changed");
 
+  await page.goto(`${baseURL}/settings?section=security`);
+  assert.equal(await page.getByText(/Na tuto adresu se e-maily nedaří doručit/).count(), 0);
+
   // 10. Social-only first password is set directly with a fresh session, without waiting for mail.
   await sql`delete from account where user_id = ${user.id} and provider_id = 'credential'`;
   await page.goto(`${baseURL}/settings?section=security`);
@@ -224,6 +241,25 @@ try {
   await firstPassword.getByRole("button", { name: "Nastavit heslo", exact: true }).click();
   await page.getByRole("button", { name: "Změnit heslo", exact: true }).waitFor();
   assert.ok((await context.request.post(`${baseURL}/api/auth/sign-in/email`, { headers: { origin: baseURL }, data: { email: nextEmail, password: "fourth-password-4" } })).ok());
+
+  // Signup acknowledges verification quietly at the destination, without putting the address in its URL.
+  const signupContext = await browser.newContext();
+  const signupPage = await signupContext.newPage();
+  const signupEmail = `rcv-${run}-signup@example.com`;
+  assert.ok((await signupContext.request.post(`${baseURL}/api/auth/sign-in/anonymous`, { headers: { origin: baseURL, "x-investi-anonymous-kind": "guest" }, data: {} })).ok());
+  const guestId = (await session(signupContext)).user.id;
+  ids.push(guestId);
+  await sql`insert into learning_profile (user_id, onboarding_completed_at) values (${guestId}, now()) on conflict (user_id) do update set onboarding_completed_at = now()`;
+  await signupPage.goto(`${baseURL}/onboarding/save`);
+  await signupPage.getByLabel("Jméno", { exact: true }).fill("Obnova QA");
+  await signupPage.getByLabel("E-mail", { exact: true }).fill(signupEmail);
+  await signupPage.getByLabel("Heslo", { exact: true }).fill("signup-password-1");
+  await signupPage.getByRole("button", { name: "Vytvořit účet", exact: true }).click();
+  await signupPage.waitForURL("**/learn");
+  ids.push((await session(signupContext)).user.id);
+  await signupPage.getByRole("status").filter({ hasText: `Na ${signupEmail} jsme poslali ověřovací odkaz.` }).waitFor();
+  assert.equal(signupPage.url().includes(signupEmail), false);
+  await signupContext.close();
 
   await otherDevice.close(); await thirdDevice.close();
   assert.deepEqual(errors, []);

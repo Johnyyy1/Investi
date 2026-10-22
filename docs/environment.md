@@ -17,6 +17,7 @@ Use `.env.example` as the template and keep all credential-bearing files ignored
 | `EMAIL_TRANSPORT` | Explicit mail transport | `resend`, `outbox`, or `log` (default). Production on Vercel requires `resend`; Preview refuses it, even if a key is accidentally present |
 | `VERCEL_ENV` | Vercel-controlled | Enforces production mail configuration independently of `NODE_ENV` (local production-mode QA can use an outbox) |
 | `RESEND_API_KEY`, `EMAIL_FROM` | Required with `EMAIL_TRANSPORT=resend` | Server-only Resend key and a single sender on a verified domain, intended as `investi <ucet@mail.investnik.cz>`. Reserved test domains (`example.com`, `.test`, …) are never sent to |
+| `RESEND_WEBHOOK_SECRET` | Required to accept Resend delivery events | Server-only `whsec_…` signing secret for `/api/webhooks/resend`; unset refuses every event |
 | `EMAIL_OUTBOX_DIR` | Required with `EMAIL_TRANSPORT=outbox` | Private local QA directory. JSON files contain mail content and links; never upload or commit them |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Optional in production | Both must be present to enable Google sign-in |
 | `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET` | Optional in production | Both must be present to enable Facebook sign-in |
@@ -102,3 +103,30 @@ The intended app origin is `https://investnik.cz`, with sender `investi <ucet@ma
 DNS propagation and inbox placement are external acceptance checks; a passing unit test or successful
 Resend API response cannot prove them. Until these steps pass, #114 remains open. PR phases 2–4 cover
 flow UX, account changes and delivery observability separately, as specified in the issue.
+
+
+### Delivery observability release steps (#114, phase 4)
+
+After migrating, add a Resend webhook for `https://investnik.cz/api/webhooks/resend` and copy its
+signing secret to Production `RESEND_WEBHOOK_SECRET`. Subscribe to `email.sent`, `email.failed`,
+`email.delivered`, `email.bounced`, and `email.complained`. Disable open/click tracking in Resend;
+the app does not process those events. Preview has no real Resend webhook or production key.
+
+The endpoint verifies the exact raw body with Svix (including timestamp tolerance). Invalid signatures
+return 401, unknown message IDs and unsupported signed event kinds are ignored, and persistence failure
+returns 503 for provider retry. Status precedence is queued → sent → failed → delivered → bounced →
+complained: replay is a no-op, and late sent/delivered events cannot clear a bounce/complaint.
+This stores the most consequential known outcome, not a full provider event archive.
+
+The existing authorized daily cleanup deletes delivery records after 90 days in bounded batches.
+`CRON_SECRET` and the existing cron must be configured. Account deletion cascades immediately. Suppression
+is scoped to the current mailbox epoch; changing an email clears it atomically, and old-address webhook
+replays cannot suppress the new address. Recovery/security mail is still attempted. The suppression
+trail expires with its 90-day retention. Links sent to a proposed new mailbox before verification have
+no current-mailbox epoch, so they cannot suppress the existing mailbox.
+
+`test:account-recovery` covers real persistence, signed events, replay, suppression, reset bypass,
+mailbox changes and cascade. `ACCOUNT_RECOVERY_QA_DISPOSABLE=1` additionally exercises global retention;
+it requires a local DB name ending `_qa` or `_ci`. Browser QA needs the same disposable
+`RESEND_WEBHOOK_SECRET` on server and suite. Outbox JSON files may contain addresses/links for QA and
+must never be uploaded; application delivery rows and logs contain neither.

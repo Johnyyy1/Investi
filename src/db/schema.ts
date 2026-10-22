@@ -32,6 +32,8 @@ export const user = pgTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
+  /** Changes atomically with the mailbox; old delivery events cannot suppress a new address. */
+  emailDeliveryEpoch: timestamp("email_delivery_epoch", { withTimezone: true, precision: 3 }).notNull().defaultNow(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   isAnonymous: boolean("is_anonymous").notNull().default(false),
@@ -43,6 +45,22 @@ export const user = pgTable("user", {
 }, (table) => [
   check("user_anonymous_kind_check", sql`${table.anonymousKind} is null or (${table.isAnonymous} and ${table.anonymousKind} in ('demo', 'guest'))`),
 ]);
+
+export const emailDeliveryStatus = pgEnum("email_delivery_status", ["queued", "sent", "failed", "delivered", "bounced", "complained"]);
+/** Operational metadata only: no address, subject, body, URL, token, or provider response. */
+export const emailDelivery = pgTable("email_delivery", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  provider: text("provider").notNull(),
+  providerMessageId: text("provider_message_id").unique(),
+  status: emailDeliveryStatus("status").notNull().default("queued"),
+  errorCode: text("error_code"),
+  /** Null for an alternate recipient (e.g. the previous address); never suppresses the current mailbox. */
+  addressEpoch: timestamp("address_epoch", { withTimezone: true, precision: 3 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [index("email_delivery_user_idx").on(table.userId), index("email_delivery_created_idx").on(table.createdAt)]);
 
 export const session = pgTable(
   "session",

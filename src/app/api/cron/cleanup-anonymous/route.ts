@@ -1,3 +1,4 @@
+import { deleteExpiredDeliveries } from "@/features/email/repository";
 import { db } from "@/db";
 import { deleteExpiredSessions } from "@/features/account/session-retention";
 import { deleteUnreachableAnonymousIdentities } from "@/features/guest/cleanup";
@@ -19,7 +20,8 @@ export async function GET(request: Request) {
     console.info(`anonymous cleanup: removed ${result.removed.demo} demo and ${result.removed.guest} guest identities${result.complete ? "" : "; more remain for the next run"}`);
     const expiredSessions = await deleteExpiredSessions(db);
     console.info(`session retention: removed ${expiredSessions.removed} expired sessions${expiredSessions.complete ? "" : "; more remain for the next run"}`);
-    return Response.json({ ...result, expiredSessions });
+    const emailDeliveries = await deleteExpiredDeliveries();
+    return Response.json({ ...result, expiredSessions, emailDeliveries });
   } catch (error) {
     console.error("anonymous cleanup failed", error);
     return Response.json({ error: "cleanup_failed" }, { status: 500 });

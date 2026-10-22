@@ -11,5 +11,5 @@ export const settingsSections = [
   { id: "data", label: "Moje data", icon: FileDown, group: "ÚČET" },
 ] as const;
 export type SettingsSection = typeof settingsSections[number]["id"];
-export type SettingsIdentity = { name: string; email: string; emailVerified: boolean; demo: boolean; guest?: boolean; since: string; completed: number; total: number };
+export type SettingsIdentity = { name: string; email: string; emailVerified: boolean; emailSuppressed?: boolean; demo: boolean; guest?: boolean; since: string; completed: number; total: number };
 export const displayNameSchema = z.string().trim().min(1, "Zadej své jméno.").max(80, "Jméno může mít nejvýše 80 znaků.").refine((name) => !/[\u0000-\u001f\u007f]/u.test(name), "Jméno nesmí obsahovat řídicí znaky.");

@@ -14,7 +14,7 @@ export interface EmailMessage {
 
 export interface EmailTransport {
   readonly name: "resend" | "outbox" | "log";
-  send(message: EmailMessage): Promise<void>;
+  send(message: EmailMessage): Promise<{ messageId: string } | void>;
 }
 
 /** Normalized failure: carries the transport and HTTP status, never the address, key or provider body. */
@@ -64,6 +64,10 @@ export function createResendTransport({ apiKey, from, fetch: fetchImpl = fetch }
         const code = typeof name === "string" && SAFE_RESEND_ERROR_NAMES.has(name) ? name : "unknown_error";
         throw new EmailDeliveryError("resend", message.kind, response.status, code);
       }
+      const result: unknown = await response.json().catch(() => null);
+      const id = result && typeof result === "object" && "id" in result ? result.id : undefined;
+      if (typeof id !== "string" || !/^[a-zA-Z0-9_-]{1,200}$/.test(id)) throw new EmailDeliveryError("resend", message.kind, undefined, "invalid_response");
+      return { messageId: id };
     },
   };
 }
@@ -77,7 +81,9 @@ export function createOutboxTransport(directory: string): EmailTransport {
       const fail = await access(join(directory, ".force-failure")).then(() => true, () => false);
       if (fail) throw new EmailDeliveryError("outbox", message.kind);
       await mkdir(directory, { recursive: true });
-      await writeFile(join(directory, `${Date.now()}-${randomUUID()}.json`), JSON.stringify({ ...message, sentAt: new Date().toISOString() }));
+      const messageId = `outbox-${randomUUID()}`;
+      await writeFile(join(directory, `${Date.now()}-${messageId}.json`), JSON.stringify({ ...message, providerMessageId: messageId, sentAt: new Date().toISOString() }));
+      return { messageId };
     },
   };
 }
