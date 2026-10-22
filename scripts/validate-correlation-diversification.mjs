@@ -48,6 +48,9 @@ async function retry() {
     const fields = [...document.querySelectorAll('section[aria-labelledby$="-question"] input, section[aria-labelledby$="-question"] select')];
     return fields.length > 0 && fields.every((field) => !field.matches(":disabled") && (field.type === "radio" ? !field.checked : field.value === ""));
   });
+  // Retry also schedules autofocus for the next animation frame. Let it finish before filling:
+  // otherwise it can move focus back to the first field while Playwright enters a later answer.
+  await page.locator('section[aria-labelledby$="-question"]').locator("input, select").first().and(page.locator(":focus")).waitFor();
   assert.equal(await button("Zkontrolovat odpověď").isDisabled(), true, "retry requires a fresh answer");
 }
 async function layout(label, screenshots = false) {
@@ -109,7 +112,13 @@ try {
   await button("Zkontrolovat odpověď").click();
   await heading("Zkus to ještě jednou");
   await retry();
-  for (const [label, value] of [["1. rok", "25"], ["2. rok", "-20"], ["3. rok", "20"]]) await page.getByRole("textbox", { name: label, exact: true }).fill(value);
+  for (const [label, value] of [["1. rok", "25"], ["2. rok", "-20"], ["3. rok", "20"]]) {
+    const input = page.getByRole("textbox", { name: label, exact: true });
+    // Use the same per-key events as a learner re-entering an unchanged answer.
+    await input.fill("");
+    await input.pressSequentially(value);
+    assert.equal(await input.inputValue(), value, `${label}: the retry keeps the retyped answer`);
+  }
   await button("Zkontrolovat odpověď").click();
   await heading("Správně");
   await next("Celé období");
