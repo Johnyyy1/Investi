@@ -94,9 +94,13 @@ try {
   // The first render records the grant; the Practice Capital read of that same render can still precede it.
   assert.equal((await demo.request.get(`${baseURL}/learn`)).status(), 200);
   const demoSettings = await (await demo.request.get(`${baseURL}/settings`)).text();
-  assert.equal(prop(demoSettings, "earnedCapital"), "500000", "demo grant counted once");
+  // Expected from the demo's own stored receipts plus its single grant, so the check follows the reward policy.
+  const [grant] = await sql`select count(*)::int as n, coalesce(sum(practice_capital_minor), 0)::text as minor from progression_unlock where user_id = ${ids.at(-1)}`;
+  const [receipts] = await sql`select coalesce(sum(practice_capital_minor), 0)::text as minor from lesson_award where user_id = ${ids.at(-1)}`;
+  assert.equal(grant.n, 1);
+  assert.ok(BigInt(grant.minor) > 0n, "demo access grant carries Practice Capital");
+  assert.equal(prop(demoSettings, "earnedCapital"), String(BigInt(receipts.minor) + BigInt(grant.minor)), "demo grant counted once");
   assert.ok(!demoSettings.includes(ada.email) && !demoSettings.includes(bob.email));
-  assert.equal((await sql`select count(*)::int as n from progression_unlock where user_id = ${ids.at(-1)}`)[0].n, 1);
 
   console.log("PASS: concurrent multi-user hard loads, exact per-user Practice Capital, fresh data after mutation, soft navigation, sign-out, account switch, demo isolation.");
 } finally {

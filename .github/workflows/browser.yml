@@ -5,9 +5,14 @@ on:
     # Nightly, 02:30 UTC.
     - cron: "30 2 * * *"
   workflow_dispatch:
-  # Changes to this workflow prove themselves on their own PR.
+  # Changes to this workflow or to the suites prove themselves on their own PR.
   pull_request:
-    paths: [.github/workflows/browser.yml]
+    paths:
+      - .github/workflows/browser.yml
+      - .github/actions/prepare-app/**
+      - .github/scripts/**
+      - scripts/validate-*.mjs
+      - scripts/*-browser-fixtures.mts
 
 permissions:
   contents: read
@@ -20,19 +25,17 @@ env:
   NEXT_TELEMETRY_DISABLED: "1"
   MARKET_DATA_PROVIDER: deterministic
   FX_DATA_PROVIDER: deterministic
-  DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_ci
+  POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432
   BETTER_AUTH_SECRET: ci-only-placeholder-secret-not-used-anywhere-0123456789
-  BETTER_AUTH_URL: http://localhost:3104
   # ubuntu-latest ships Google Chrome, the channel the suites launch by default.
   BROWSER_CHANNEL: chrome
-  APP_URL: http://localhost:3104
   SCREENSHOTS: ${{ github.workspace }}/browser-screenshots
   # No Resend key in CI: the server writes every e-mail here and the account-recovery suite reads it back.
   EMAIL_OUTBOX_DIR: ${{ github.workspace }}/email-outbox
 
 jobs:
   browser:
-    name: Playwright suites against next start
+    name: Core suites against next start
     runs-on: ubuntu-latest
     timeout-minutes: 45
     services:
@@ -41,95 +44,379 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: investi_ci
+          POSTGRES_DB: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U postgres -d investi_ci"
+          --health-cmd "pg_isready -U postgres"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_ci
+      BETTER_AUTH_URL: http://localhost:3104
+      APP_URL: http://localhost:3104
+      # Deterministic clocks for the market-data edge states, on the same database.
+      UNAVAILABLE_URL: http://localhost:3105
+      CLOSED_URL: http://localhost:3106
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: ./.github/actions/prepare-app
         with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci
-      - run: npm run db:migrate
-      - run: npm run db:seed
-      - run: npm run build
+          databases: investi_ci
       - name: Start production server
+        run: .github/scripts/start-server.sh 3104
+      - name: Start servers with a stale-quote and a closed-market clock
         run: |
-          nohup npx next start -p 3104 > next-start.log 2>&1 &
-          for attempt in $(seq 1 60); do
-            curl -sf -o /dev/null "$APP_URL/" && exit 0
-            sleep 1
-          done
-          cat next-start.log
-          exit 1
+          DETERMINISTIC_MARKET_NOW=2026-03-20T15:00:00.000Z BETTER_AUTH_URL=$UNAVAILABLE_URL .github/scripts/start-server.sh 3105
+          DETERMINISTIC_MARKET_NOW=2026-01-17T12:00:00.000Z BETTER_AUTH_URL=$CLOSED_URL .github/scripts/start-server.sh 3106
       - name: Product shell
         if: ${{ !cancelled() }}
-        run: npm run test:product
+        run: .github/scripts/clear-rate-limits.sh && npm run test:product
         env:
           PRODUCT_TEST_URL: ${{ env.APP_URL }}
           PRODUCT_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/product
+      - name: Learn page
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:studovna
+        env:
+          STUDOVNA_TEST_URL: ${{ env.APP_URL }}
+          STUDOVNA_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/studovna
       - name: Foundations
         if: ${{ !cancelled() }}
-        run: npm run test:foundations-browser
+        run: .github/scripts/clear-rate-limits.sh && npm run test:foundations-browser
         env:
           FOUNDATIONS_TEST_URL: ${{ env.APP_URL }}
           FOUNDATIONS_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/foundations
+      - name: Returns
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:returns-browser
+        env:
+          RETURNS_TEST_URL: ${{ env.APP_URL }}
+      - name: Log returns
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:log-returns-browser
+        env:
+          RETURNS_TEST_URL: ${{ env.APP_URL }}
+          RETURNS_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/log-returns
+      - name: Volatility
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:volatility-browser
+        env:
+          VOLATILITY_TEST_URL: ${{ env.APP_URL }}
+          VOLATILITY_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/volatility
+      - name: Correlation and Diversification
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:correlation-browser
+        env:
+          CORRELATION_TEST_URL: ${{ env.APP_URL }}
+          CORRELATION_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/correlation
       - name: Portfolio Lab
         if: ${{ !cancelled() }}
-        run: npm run test:portfolio-browser
+        run: .github/scripts/clear-rate-limits.sh && npm run test:portfolio-browser
         env:
           PORTFOLIO_TEST_URL: ${{ env.APP_URL }}
           PORTFOLIO_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/portfolio
+      - name: Portfolio Lab, closed and stale market
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:portfolio-browser-closed
+        env:
+          PORTFOLIO_CLOSED_TEST_URL: ${{ env.CLOSED_URL }}
+          PORTFOLIO_CLOSED_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/portfolio-closed
+      - name: Instrument detail, unavailable data
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:instrument-browser-unavailable
+        env:
+          INSTRUMENT_UNAVAILABLE_TEST_URL: ${{ env.UNAVAILABLE_URL }}
+          INSTRUMENT_UNAVAILABLE_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/instrument-unavailable
       - name: Instrument comparison
         if: ${{ !cancelled() }}
-        run: npm run test:compare-browser
+        run: .github/scripts/clear-rate-limits.sh && npm run test:compare-browser
         env:
           COMPARE_TEST_URL: ${{ env.APP_URL }}
           COMPARE_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/compare
       - name: Progression
         if: ${{ !cancelled() }}
-        run: npm run test:progression-browser
+        run: .github/scripts/clear-rate-limits.sh && npm run test:progression-browser
         env:
           PORTFOLIO_TEST_URL: ${{ env.APP_URL }}
           PROGRESSION_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/progression
       - name: Backtesting
         if: ${{ !cancelled() }}
-        run: npm run test:backtesting-browser
+        run: .github/scripts/clear-rate-limits.sh && npm run test:backtesting-browser
         env:
           BACKTEST_TEST_URL: ${{ env.APP_URL }}
           BACKTEST_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/backtesting
       - name: Not-found pages
         if: ${{ !cancelled() }}
-        run: npm run test:not-found-browser
+        run: .github/scripts/clear-rate-limits.sh && npm run test:not-found-browser
         env:
           NOT_FOUND_TEST_URL: ${{ env.APP_URL }}
           NOT_FOUND_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/not-found
       - name: Marketing
         if: ${{ !cancelled() }}
-        run: npm run test:marketing-browser
+        run: .github/scripts/clear-rate-limits.sh && npm run test:marketing-browser
         env:
           MARKETING_TEST_URL: ${{ env.APP_URL }}
           MARKETING_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/marketing
+      - name: Legal pages
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:legal-browser
+        env:
+          LEGAL_TEST_URL: ${{ env.APP_URL }}
+      - name: Facts registry is development-only
+        if: ${{ !cancelled() }}
+        run: npm run test:facts-browser
+        env:
+          FACTS_TEST_URL: ${{ env.APP_URL }}
+          FACTS_EXPECT_PRODUCTION: "1"
       - name: Account recovery
         if: ${{ !cancelled() }}
-        run: npm run test:account-recovery-browser
+        run: .github/scripts/clear-rate-limits.sh && npm run test:account-recovery-browser
         env:
           RECOVERY_TEST_URL: ${{ env.APP_URL }}
           RECOVERY_OUTBOX_DIR: ${{ env.EMAIL_OUTBOX_DIR }}
           RECOVERY_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/account-recovery
-      - name: Upload screenshots and server log
+      - name: Demo and guest session lifetimes
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:demo-session
+        env:
+          DEMO_SESSION_TEST_URL: ${{ env.APP_URL }}
+      - name: Request isolation
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:request-isolation
+        env:
+          REQUEST_ISOLATION_TEST_URL: ${{ env.APP_URL }}
+      - name: Navigation feedback
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:navigation-feedback
+        env:
+          NAVIGATION_TEST_URL: ${{ env.APP_URL }}
+      - name: Upload screenshots and server logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:
-          name: browser-suites-${{ github.run_id }}
+          name: browser-${{ github.job }}-${{ github.run_id }}
           path: |
             browser-screenshots/
-            next-start.log
+            next-*.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  accounts:
+    name: Sign-in, onboarding, personalization and settings
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # The suites refuse any database but these two disposable ones.
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_6a3a_qa
+      AUTH_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_6a4_qa
+      PERSONALIZATION_QA_DISPOSABLE: "1"
+      BETTER_AUTH_URL: http://localhost:3110
+      APP_URL: http://localhost:3110
+      # Placeholder OAuth apps: the suites intercept every provider request, so nothing leaves the runner.
+      SOCIAL_URL: http://localhost:3111
+      AUTH_URL: http://localhost:3120
+      AUTH_DISABLED_URL: http://localhost:3121
+      QA_GOOGLE_CLIENT_ID: investi-qa-google-id
+      QA_GOOGLE_CLIENT_SECRET: investi-qa-google-secret
+      QA_FACEBOOK_CLIENT_ID: investi-qa-facebook-id
+      QA_FACEBOOK_CLIENT_SECRET: investi-qa-facebook-secret
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/prepare-app
+        with:
+          databases: investi_6a3a_qa investi_6a4_qa
+      - name: Start servers without and with sign-in providers
+        run: |
+          .github/scripts/start-server.sh 3110
+          social() { GOOGLE_CLIENT_ID=$QA_GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET=$QA_GOOGLE_CLIENT_SECRET FACEBOOK_CLIENT_ID=$QA_FACEBOOK_CLIENT_ID FACEBOOK_CLIENT_SECRET=$QA_FACEBOOK_CLIENT_SECRET "$@"; }
+          BETTER_AUTH_URL=$SOCIAL_URL social .github/scripts/start-server.sh 3111
+          DATABASE_URL=$AUTH_DATABASE_URL BETTER_AUTH_URL=$AUTH_URL social .github/scripts/start-server.sh 3120
+          DATABASE_URL=$AUTH_DATABASE_URL BETTER_AUTH_URL=$AUTH_DISABLED_URL .github/scripts/start-server.sh 3121
+      - name: Sign-in and sign-up
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:auth-browser
+        env:
+          DATABASE_URL: ${{ env.AUTH_DATABASE_URL }}
+          AUTH_TEST_URL: ${{ env.AUTH_URL }}
+          AUTH_DISABLED_TEST_URL: ${{ env.AUTH_DISABLED_URL }}
+          AUTH_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/auth
+      - name: Personalization of existing accounts
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:personalization-compatibility
+        env:
+          PERSONALIZATION_TEST_URL: ${{ env.APP_URL }}
+      - name: Personalization
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:personalization-browser
+        env:
+          PERSONALIZATION_TEST_URL: ${{ env.APP_URL }}
+          PERSONALIZATION_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/personalization
+      - name: Onboarding
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:onboarding-redesign
+        env:
+          PERSONALIZATION_TEST_URL: ${{ env.APP_URL }}
+          PERSONALIZATION_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/onboarding
+      - name: Settings, account deletion and data export
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:settings
+        env:
+          SETTINGS_TEST_URL: ${{ env.APP_URL }}
+          SETTINGS_ENABLED_TEST_URL: ${{ env.SOCIAL_URL }}
+          SETTINGS_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/settings
+      - name: Upload screenshots and server logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-${{ github.job }}-${{ github.run_id }}
+          path: |
+            browser-screenshots/
+            next-*.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  dedicated-databases:
+    name: Progress, IPS and lesson outputs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Default for setup and the build; each server and suite names its own database below.
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_progress_qa
+      BETTER_AUTH_URL: http://localhost:3130
+      PROGRESS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_progress_qa
+      ARTIFACTS_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_artifacts_qa
+      PROGRESS_URL: http://localhost:3130
+      ARTIFACTS_URL: http://localhost:3131
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/prepare-app
+        with:
+          databases: investi_progress_qa investi_artifacts_qa
+      - name: Start one server per database
+        run: |
+          DATABASE_URL=$PROGRESS_DATABASE_URL BETTER_AUTH_URL=$PROGRESS_URL .github/scripts/start-server.sh 3130
+          DATABASE_URL=$ARTIFACTS_DATABASE_URL BETTER_AUTH_URL=$ARTIFACTS_URL .github/scripts/start-server.sh 3131
+      - name: Progress
+        if: ${{ !cancelled() }}
+        run: npm run test:progress-browser
+        env:
+          DATABASE_URL: ${{ env.PROGRESS_DATABASE_URL }}
+          PROGRESS_QA_DISPOSABLE: "1"
+          PROGRESS_TEST_URL: ${{ env.PROGRESS_URL }}
+          PROGRESS_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/progress
+      - name: Investment policy statement
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:ips-browser
+        env:
+          DATABASE_URL: ${{ env.ARTIFACTS_DATABASE_URL }}
+          BETTER_AUTH_URL: ${{ env.ARTIFACTS_URL }}
+          IPS_QA_DISPOSABLE: "1"
+          IPS_TEST_URL: ${{ env.ARTIFACTS_URL }}
+      - name: Lesson outputs in Settings
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:artifacts-browser
+        env:
+          DATABASE_URL: ${{ env.ARTIFACTS_DATABASE_URL }}
+          BETTER_AUTH_URL: ${{ env.ARTIFACTS_URL }}
+          ARTIFACTS_QA_DISPOSABLE: "1"
+          ARTIFACTS_TEST_URL: ${{ env.ARTIFACTS_URL }}
+      - name: Upload screenshots and server logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-${{ github.job }}-${{ github.run_id }}
+          path: |
+            browser-screenshots/
+            test-results/
+            next-*.log
+          retention-days: 7
+          if-no-files-found: ignore
+
+  development-runtime:
+    name: Development-only routes against next dev
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/investi_artifacts_qa
+      BETTER_AUTH_URL: http://localhost:3150
+      APP_URL: http://localhost:3150
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/prepare-app
+        with:
+          databases: investi_artifacts_qa
+          build: "false"
+      # First: it adds a temporary editor page and runs its own `next dev`, and only one may run per project.
+      - name: Lesson output editor
+        run: .github/scripts/clear-rate-limits.sh && npm run test:artifacts-browser
+        env:
+          ARTIFACTS_QA_DISPOSABLE: "1"
+      - name: Start development server
+        if: ${{ !cancelled() }}
+        run: .github/scripts/start-server.sh 3150 dev /dev/design-system
+      - name: Design system
+        if: ${{ !cancelled() }}
+        run: npm run test:design-system-browser
+        env:
+          DESIGN_SYSTEM_BASE_URL: ${{ env.APP_URL }}
+      - name: Facts registry
+        if: ${{ !cancelled() }}
+        run: npm run test:facts-browser
+        env:
+          FACTS_TEST_URL: ${{ env.APP_URL }}
+          FACTS_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/facts
+      - name: Upload screenshots and server logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-${{ github.job }}-${{ github.run_id }}
+          path: |
+            browser-screenshots/
+            test-results/
+            next-*.log
           retention-days: 7
           if-no-files-found: ignore

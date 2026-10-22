@@ -56,7 +56,7 @@ export default function Editor() {
     }
     assert.ok(ready, serverLog);
   }
-  browser = await chromium.launch({ headless: true });
+  browser = await chromium.launch({ headless: true, ...(process.env.BROWSER_CHANNEL ? { channel: process.env.BROWSER_CHANNEL } : {}) });
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
   const page = await context.newPage();
   page.on('pageerror', error => errors.push(error.message));
@@ -74,7 +74,7 @@ export default function Editor() {
     assert.equal(await save.isEnabled(), true);
     // A failed request keeps the draft and can retry using the same request key.
     await page.route(`**/${basename(fixture)}`, route => route.request().method() === 'POST' ? route.abort() : route.continue());
-    await save.click(); await page.getByRole('alert').waitFor();
+    await save.click(); await page.getByRole('alert').filter({ hasText: 'Připojení se nepodařilo.' }).waitFor();
     assert.equal(await page.getByLabel('Cíl', { exact: true }).inputValue(), 'Dlouhodobý plán');
     await page.unroute(`**/${basename(fixture)}`);
     await save.click(); await page.getByRole('status').filter({ hasText: 'Verze 1' }).waitFor();

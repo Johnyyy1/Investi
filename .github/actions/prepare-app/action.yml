@@ -1,0 +1,34 @@
+name: Prepare app for browser suites
+description: Installs dependencies, migrates and seeds each disposable database, and optionally builds the app.
+
+inputs:
+  databases:
+    description: Space-separated database names on the Postgres service; missing ones are created first.
+    required: true
+  build:
+    description: Run `npm run build` (suites against `next dev` skip it).
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+    - run: npm ci
+      shell: bash
+    - name: Migrate and seed ${{ inputs.databases }}
+      shell: bash
+      env:
+        DATABASES: ${{ inputs.databases }}
+      run: |
+        for database in $DATABASES; do
+          psql "$POSTGRES_URL/postgres" -tAc "select 1 from pg_database where datname = '$database'" | grep -q 1 \
+            || psql "$POSTGRES_URL/postgres" -qc "create database $database"
+          DATABASE_URL="$POSTGRES_URL/$database" npm run db:migrate
+          DATABASE_URL="$POSTGRES_URL/$database" npm run db:seed
+        done
+    - if: ${{ inputs.build == 'true' }}
+      run: npm run build
+      shell: bash

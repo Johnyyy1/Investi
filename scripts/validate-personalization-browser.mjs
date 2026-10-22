@@ -26,7 +26,8 @@ async function account() {
   const email = `personalization-browser-${randomUUID()}@example.com`;
   const signup = () => context.request.post(`${baseURL}/api/auth/sign-up/email`, { headers: { origin: baseURL }, data: { name: "Jana", email, password: randomUUID() } });
   let response = await signup();
-  if (response.status() === 429) { await new Promise((resolve) => setTimeout(resolve, 11000)); response = await signup(); }
+  // The suite signs up more accounts than the per-IP sign-up window allows; wait out the window it reports.
+  if (response.status() === 429) { await new Promise((resolve) => setTimeout(resolve, (Number(response.headers()["x-retry-after"]) + 1) * 1000)); response = await signup(); }
   assert.ok(response.ok(), `signup returned ${response.status()}`);
   const [{ id }] = await sql`select id from "user" where email = ${email}`;
   ids.push(id);
@@ -40,7 +41,8 @@ async function matrix(page, name) {
     await page.screenshot({ path: `${output}/${name}-${width}.png`, fullPage: true, animations: "disabled" });
   }
   await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${name} overflow at 320/200%`);
+  // Names the innermost elements that stick out, so a failure shows what overflows.
+  assert.deepEqual(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth ? [...document.body.querySelectorAll("*")].filter((element) => element.getBoundingClientRect().right > innerWidth + 1 && ![...element.children].some((child) => child.getBoundingClientRect().right > innerWidth + 1)).slice(0, 5).map((element) => `${element.tagName.toLowerCase()} "${element.textContent.trim().slice(0, 40)}" ends at ${Math.round(element.getBoundingClientRect().right)}px`) : []), [], `${name} overflow at 320/200%`);
   const clipped = await page.locator('button, input, label, h1, h2, [role="radiogroup"]').evaluateAll((elements) => elements.filter((element) => element.clientWidth && element.scrollWidth > element.clientWidth + 2).map((element) => element.textContent));
   assert.deepEqual(clipped, [], `${name} clipped essential text`);
   if (["01-goal", "02-interests", "03-experience"].includes(name)) {
@@ -269,7 +271,7 @@ try {
   await e.page.goto(`${baseURL}/learn`);
   await e.page.getByText("Výnosy jsou základem pro porovnávání výkonnosti ETF.").waitFor();
   assert.deepEqual(await snapshot(e.id), before);
-  for (const mode of ["first-return", "all-returns"]) {
+  for (const mode of ["first-return", "all-published"]) {
     execFileSync("node_modules/.bin/tsx", ["--tsconfig", "scripts/tsconfig.persistence.json", "scripts/personalization-browser-fixtures.mts"], { env: { ...process.env, PERSONALIZATION_QA_USER_ID: e.id, PERSONALIZATION_QA_LESSONS: mode }, stdio: "pipe" });
     await e.page.reload();
     const recommended = e.page.getByRole("region", { name: "Doporučeno pro tebe" });

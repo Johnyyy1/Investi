@@ -20,10 +20,14 @@ try {
   await page.getByRole("status").filter({ hasText: "primary button pressed." }).first().waitFor();
 
   // One visual system (#47): the primary action, UI font and heading font come from styles/tokens.css.
+  // The resting color: move the pointer off the clicked button and let its hover transition finish.
+  await page.mouse.move(0, 0);
   const system = await page.evaluate(async () => {
     await document.fonts.ready;
     const style = (element) => getComputedStyle(element);
-    const primary = style([...document.querySelectorAll("button")].find((button) => button.textContent === "Primary"));
+    const button = [...document.querySelectorAll("button")].find((candidate) => candidate.textContent === "Primary");
+    await Promise.all(button.getAnimations().map((animation) => animation.finished));
+    const primary = style(button);
     return {
       primary: [primary.backgroundColor, primary.color, primary.borderTopLeftRadius, primary.minHeight],
       body: style(document.querySelector("main p")).fontFamily.split(",")[0].replaceAll('"', ""),
