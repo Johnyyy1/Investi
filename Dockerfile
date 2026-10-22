@@ -1,5 +1,6 @@
 # Local development image only (see README "Docker"): runs `next dev` as root.
 # Do not use it as a production image.
+# Keep the Node.js major in sync with .nvmrc (checked by src/lib/node-version.test.ts).
 FROM node:24-bookworm-slim
 
 WORKDIR /app

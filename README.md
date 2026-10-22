@@ -20,9 +20,10 @@ Learn investing by doing. The authenticated product is organized around three de
 
 ## Local setup and deployment order
 
-1. Run `npm ci`, copy `.env.example` to an ignored `.env`, and set a real `BETTER_AUTH_SECRET`. See [environment settings](docs/environment.md) for required, optional, infrastructure, and test variables.
-2. Start PostgreSQL and update `DATABASE_URL`.
-3. Apply committed migrations before starting the new application code, then seed the curriculum:
+1. Use Node.js 24 (`nvm use` reads `.nvmrc`). `.nvmrc` is the single version source: CI reads it through `setup-node`, Vercel follows the matching `engines.node` in `package.json`, and `src/lib/node-version.test.ts` keeps the Dockerfile, `engines` and `@types/node` on the same major.
+2. Run `npm ci`, copy `.env.example` to an ignored `.env`, and set a real `BETTER_AUTH_SECRET`. See [environment settings](docs/environment.md) for required, optional, infrastructure, and test variables.
+3. Start PostgreSQL and update `DATABASE_URL`.
+4. Apply committed migrations before starting the new application code, then seed the curriculum:
 
    ```bash
    npm run db:migrate
@@ -31,7 +32,7 @@ Learn investing by doing. The authenticated product is organized around three de
 
    On Vercel, production deploys run `vercel-build` (`scripts/vercel-build.mjs`), which applies pending migrations and then the curriculum seed before `next build`, so a lesson added to the catalog is completable without a manual step. The seed fails the deploy if any catalog lesson is still missing from the `lesson` table afterwards. Preview deploys skip both so unmerged branches never change the shared database.
 
-4. Start the app:
+5. Start the app:
 
    ```bash
    npm run dev
