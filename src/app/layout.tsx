@@ -1,3 +1,4 @@
+import { VerificationNotice } from "@/components/auth/verification-notice";
 import type { Metadata, Viewport } from "next";
 import { connection } from "next/server";
 import { fontVariables } from "@/styles/fonts";
@@ -27,5 +28,5 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // The CSP nonce is per request, so no page may be prerendered with nonce-less scripts.
   await connection();
-  return <html lang="cs" className={fontVariables}><body><div className="investi-theme min-h-screen">{children}</div></body></html>;
+  return <html lang="cs" className={fontVariables}><body><div className="investi-theme min-h-screen"><VerificationNotice />{children}</div></body></html>;
 }

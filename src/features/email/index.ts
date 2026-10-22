@@ -4,7 +4,7 @@ import { after } from "next/server";
 import { env } from "@/lib/env";
 import { EmailDeliveryError, selectEmailTransport, type EmailMessage } from "./transport";
 
-export { passwordResetEmail, verificationEmail, EMAIL_VERIFICATION_TOKEN_SECONDS, PASSWORD_RESET_TOKEN_SECONDS } from "./templates";
+export { passwordChangedEmail, passwordResetEmail, verificationEmail, EMAIL_VERIFICATION_TOKEN_SECONDS, PASSWORD_RESET_TOKEN_SECONDS } from "./templates";
 
 const transport = selectEmailTransport({
   transport: env.EMAIL_TRANSPORT,
@@ -15,12 +15,13 @@ const transport = selectEmailTransport({
   development: process.env.NODE_ENV === "development",
 });
 
-async function deliver(message: EmailMessage) {
+export async function sendEmail(message: EmailMessage) {
   try {
     await transport.send(message);
   } catch (error) {
     // The recipient stays out of logs; the learner can request another link.
     console.error("[investi:email]", error instanceof EmailDeliveryError ? error.message : `E-mail "${message.kind}" could not be sent.`);
+    throw new EmailDeliveryError(transport.name, message.kind);
   }
 }
 
@@ -29,10 +30,10 @@ async function deliver(message: EmailMessage) {
  * unknown address. Outside a request (scripts) the send simply runs on.
  */
 export function sendEmailAfterResponse(message: EmailMessage) {
-  const delivery = deliver(message);
+  const deliver = () => sendEmail(message).catch(() => undefined);
   try {
-    after(delivery);
+    after(deliver);
   } catch {
-    void delivery;
+    void deliver();
   }
 }

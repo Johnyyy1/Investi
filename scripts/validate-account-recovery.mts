@@ -135,6 +135,8 @@ try {
   const reusedLanding = new URL((await call(resetLink.href)).headers.get("location")!, baseURL);
   assert.equal(reusedLanding.searchParams.get("error"), "INVALID_TOKEN", "a used link lands on the expired-link screen");
 
+  assert.deepEqual((await newMail(1)).map(({ kind, to }) => ({ kind, to })), [{ kind: "password-changed", to: learner }]);
+
   // 5. An expired token is refused, both from the e-mail link and on submit.
   await call("/request-password-reset", { body: { email: learner, redirectTo: "/reset-password" } });
   const expiredLink = new URL(linkIn((await newMail(1))[0]));
@@ -153,6 +155,8 @@ try {
   assert.equal((await call("/reset-password", { body: { newPassword: "second-password-2", token: unverifiedToken } })).status, 200);
   assert.equal((await db.query.user.findFirst({ where: eq(user.id, unverifiedId) }))?.emailVerified, true);
 
+  assert.equal((await newMail(1))[0].kind, "password-changed");
+
   // 7. Password change needs the current password and can sign out every other session.
   const changer = email("changer");
   const { id: changerId, cookie: changerCookie } = await signUp(changer, "first-password-1");
@@ -170,6 +174,8 @@ try {
   assert.ok(await (await call("/get-session", { cookie: renewedCookie })).json(), "this device stays signed in");
   assert.equal((await db.select().from(session).where(eq(session.userId, changerId))).length, 1);
   assert.equal((await signIn(changer, "second-password-2")).status, 200);
+
+  assert.deepEqual((await newMail(1)).map(({ kind, to }) => ({ kind, to })), [{ kind: "password-changed", to: changer }]);
 
   // 8. Current-password guesses are limited per user, whichever IPs they come from.
   const guesser = email("guesser");

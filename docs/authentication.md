@@ -58,3 +58,31 @@ Only allowlisted Czech messages are rendered. Raw provider messages, `error_desc
 Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run build` and `git diff --check`. `npm run test:auth-browser` (`scripts/validate-auth.mjs`) exercises a fresh local production runtime using disposable local users and **fake** provider credentials; it stops provider navigation before contacting Google/Meta. It checks actual Better Auth authorization URLs and callback cancellation, not a live provider login. See the script's environment requirements. Real consent/token exchange requires manual testing with development credentials.
 
 Implementation was checked against the installed package source, including `oauth2/link-account.mjs`, `api/routes/callback.mjs` and the Google/Facebook adapters. Reference: [Better Auth accounts](https://better-auth.com/docs/concepts/users-accounts), [Google](https://better-auth.com/docs/authentication/google), [Facebook](https://better-auth.com/docs/authentication/facebook).
+
+
+### Existing-flow UX (#114, phase 2)
+
+Forgot-password confirmation names the sender and subject, offers a 60-second client resend countdown,
+and retains the same response for all addresses. Server buckets remain authoritative. A 429 uses
+`Retry-After` (seconds or HTTP date) to show whole minutes. Address hints move between sign-in, reset
+request and the final sign-in through tab-scoped `sessionStorage`, with graceful fallback if storage is
+blocked; no address enters navigation URLs.
+
+Reset and verification pages, and their token-bearing Better Auth redirect endpoints, send
+`Referrer-Policy: no-referrer`. Hydration removes a token query parameter with `history.replaceState`
+while preserving the framework history state. The reset form keeps its token only in memory; reloading
+a stripped URL requires reopening the mail link. Password reset and Settings password change use one
+new-password field with a keyboard-accessible show/hide control.
+
+Explicit verification resend checks the authenticated session and waits for the transport. A failure
+returns a fixed error and Settings shows Czech recovery copy. Signup and unauthenticated sends still
+run after the response. The local outbox recognizes a `.force-failure` marker in its directory for QA;
+remove it to resume delivery. Production on Vercel cannot select the outbox. Never expose this switch
+through an HTTP endpoint or upload the outbox.
+
+Account creation (including guest save) emits one quiet verification acknowledgment at its destination.
+An unverified saved account has a text link to verification in the account menu; verification is still
+optional for learning. Successful reset/change sends a token-free security notification with Prague time
+and a recovery link, after the response. Delivery failure cannot roll back the password change.
+Unknown Better Auth errors always use the caller's Czech fallback. HIBP remains optional and is not
+enabled; no new external password-check service or privacy-policy commitment is introduced here.

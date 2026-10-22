@@ -36,6 +36,9 @@ describe("UI terminology", () => {
     const offenders = files("src").flatMap((path) => readFileSync(path, "utf8").split("\n").flatMap((line, index) => {
       if (isComment(line)) return [];
       const hits = retiredTerms.flatMap(([pattern, use]) => {
+        // #114 explicitly specifies the transactional sender and subjects as investi. Keep that
+        // narrow mail/recovery copy contract while the rest of the product retains its current name.
+        if (use === "Investník" && (path === "src/features/email/templates.ts" || path === "src/components/auth/forgot-password-form.tsx")) return [];
         const match = line.match(pattern)?.[0];
         return match ? [`„${match}“ → ${use}`] : [];
       });

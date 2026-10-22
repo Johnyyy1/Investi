@@ -24,7 +24,7 @@ function activeNavigationId(pathname: string) {
   return "";
 }
 
-export function AppShell({ children, userName, isDemo = false, isGuest = false, needsTimeZone = false, portfolioLabLocked = false }: { children: React.ReactNode; userName: string; isDemo?: boolean; isGuest?: boolean; needsTimeZone?: boolean; portfolioLabLocked?: boolean }) {
+export function AppShell({ children, userName, isDemo = false, isGuest = false, needsTimeZone = false, portfolioLabLocked = false, needsEmailVerification = false }: { children: React.ReactNode; userName: string; isDemo?: boolean; isGuest?: boolean; needsTimeZone?: boolean; portfolioLabLocked?: boolean; needsEmailVerification?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -75,6 +75,7 @@ export function AppShell({ children, userName, isDemo = false, isGuest = false, 
               <div className="flex flex-wrap items-center gap-3"><span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-control bg-primary-soft font-bold text-primary-hover">{initial}</span><div className="min-w-24 flex-1"><p className="truncate text-small font-bold text-foreground">{isGuest ? "Host" : userName}</p><p className="mt-0.5 break-words text-microcopy leading-tight text-secondary">{isDemo ? "Soukromý cvičný profil" : isGuest ? "Pokrok je zatím jen v tomhle prohlížeči" : "Student Investníku"}</p></div></div>
               {isDemo ? <Badge tone="primary" className="mt-3">Dostupný 24 hodin</Badge> : null}
               {isGuest ? <Link href="/onboarding/save" className={cn(buttonVariants({ size: "compact" }), "mt-3 w-full")}>Uložit pokrok</Link> : null}
+              {needsEmailVerification && <Link href="/settings?section=security" className="mt-2 flex min-h-11 items-center text-small font-semibold text-primary underline underline-offset-4">Ověř e-mail</Link>}
             </div>
             <div className="border-t border-border pt-2">
               <Link href="/settings" className="flex min-h-12 items-center gap-3 rounded-control px-3 text-small font-semibold text-foreground transition-colors duration-[var(--motion-micro)] hover:bg-surface-muted"><Settings aria-hidden="true" className="size-[18px] text-secondary" />Nastavení</Link>

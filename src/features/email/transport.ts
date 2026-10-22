@@ -1,11 +1,11 @@
 import { emailEnvironmentSchema } from "./config";
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 /** A rendered transactional e-mail; `kind` names the template for logs and QA, never the recipient. */
 export interface EmailMessage {
-  readonly kind: "password-reset" | "email-verification";
+  readonly kind: "password-reset" | "email-verification" | "password-changed";
   readonly to: string;
   readonly subject: string;
   readonly text: string;
@@ -73,6 +73,9 @@ export function createOutboxTransport(directory: string): EmailTransport {
   return {
     name: "outbox",
     async send(message) {
+      // Outbox-only QA switch. No route can toggle this, and hosted Production cannot select outbox.
+      const fail = await access(join(directory, ".force-failure")).then(() => true, () => false);
+      if (fail) throw new EmailDeliveryError("outbox", message.kind);
       await mkdir(directory, { recursive: true });
       await writeFile(join(directory, `${Date.now()}-${randomUUID()}.json`), JSON.stringify({ ...message, sentAt: new Date().toISOString() }));
     },
