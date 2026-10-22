@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 /** A rendered transactional e-mail; `kind` names the template for logs and QA, never the recipient. */
 export interface EmailMessage {
-  readonly kind: "password-reset" | "email-verification" | "password-changed";
+  readonly kind: "password-reset" | "email-verification" | "password-changed" | "email-change-confirmation" | "email-changed" | "social-linked";
   readonly to: string;
   readonly subject: string;
   readonly text: string;

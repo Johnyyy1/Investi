@@ -1,11 +1,12 @@
 import "server-only";
 
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { verifyJWT } from "better-auth/crypto";
 import { betterAuth } from "better-auth/minimal";
 import { APIError, createAuthMiddleware, getIP, getSessionFromCtx } from "better-auth/api";
 import { anonymous } from "better-auth/plugins/anonymous";
 import { eq } from "drizzle-orm";
-import { accountDeletionRefusal } from "@/features/account/deletion";
+import { isFreshForAccountDeletion, accountDeletionRefusal } from "@/features/account/deletion";
 import { hasPasswordCredential } from "@/features/account/repository";
 import { ensureDemoSeed } from "@/features/demo/repository";
 import { claimGuestLearning, deleteDemoIdentity } from "@/features/guest/repository";
@@ -17,8 +18,8 @@ import * as schema from "@/db/schema";
 import { env } from "@/lib/env";
 import { createSocialAuthConfig } from "@/lib/auth-providers";
 import { rateLimiter } from "@/features/rate-limit";
-import { ACCOUNT_DELETION_USER_RULE, authIpRules, CHANGE_PASSWORD_USER_RULE, DEMO_CREATION_IP_RULE, EMAIL_LINK_ACCOUNT_RULE, NO_TRUSTED_IP_SUBJECT, normalizeAccountSubject, SIGN_IN_ACCOUNT_RULE, type RateLimitBucket } from "@/features/rate-limit/policy";
-import { EMAIL_VERIFICATION_TOKEN_SECONDS, passwordResetEmail, PASSWORD_RESET_TOKEN_SECONDS, passwordChangedEmail, sendEmail, sendEmailAfterResponse, verificationEmail } from "@/features/email";
+import { ACCOUNT_DELETION_USER_RULE, authIpRules, CHANGE_PASSWORD_USER_RULE, CHANGE_EMAIL_USER_RULE, DEMO_CREATION_IP_RULE, EMAIL_LINK_ACCOUNT_RULE, NO_TRUSTED_IP_SUBJECT, normalizeAccountSubject, SIGN_IN_ACCOUNT_RULE, type RateLimitBucket } from "@/features/rate-limit/policy";
+import { accountSecurityEmail, emailChangeConfirmation, EMAIL_VERIFICATION_TOKEN_SECONDS, passwordResetEmail, PASSWORD_RESET_TOKEN_SECONDS, passwordChangedEmail, sendEmail, sendEmailAfterResponse, verificationEmail } from "@/features/email";
 
 const socialAuth = createSocialAuthConfig(env);
 export const authProviderAvailability = socialAuth.availability;
@@ -53,6 +54,14 @@ const authAttemptLimits = createAuthMiddleware(async (ctx) => {
   if (ctx.path === "/delete-user") {
     const bucket = await guardAccountDeletion(ctx);
     if (bucket) buckets.push(bucket);
+  } else if (ctx.path === "/change-email") {
+    const current = await getSessionFromCtx(ctx);
+    if (current) {
+      if (current.user.isAnonymous || !isFreshForAccountDeletion(new Date(current.session.createdAt))) throw new APIError("FORBIDDEN", { code: "SESSION_NOT_FRESH", message: "Fresh session required." });
+      buckets.push({ scope: "auth:change-email", subject: current.user.id, rule: CHANGE_EMAIL_USER_RULE });
+      const target = normalizeAccountSubject((ctx.body as { newEmail?: unknown } | undefined)?.newEmail);
+      for (const address of new Set([current.user.email, target].filter((value): value is string => Boolean(value)))) buckets.push({ scope: "auth:email-change-address", subject: address, rule: EMAIL_LINK_ACCOUNT_RULE });
+    }
   } else if (ctx.path === "/sign-in/email") {
     const account = normalizeAccountSubject((ctx.body as { email?: unknown } | undefined)?.email);
     if (account) buckets.push({ scope: "auth:sign-in-account", subject: account, rule: SIGN_IN_ACCOUNT_RULE });
@@ -114,6 +123,14 @@ export const auth = betterAuth({
     // Deleting the user row cascades every learner-owned row; shared curriculum and market data stay.
     // guardAccountDeletion adds the password and fresh-sign-in requirements.
     deleteUser: { enabled: true },
+    changeEmail: {
+      enabled: true,
+      updateEmailWithoutVerification: false,
+      sendChangeEmailConfirmation: async ({ user, url }) => {
+        try { await sendEmail(emailChangeConfirmation({ to: user.email, url })); }
+        catch { throw new APIError("INTERNAL_SERVER_ERROR", { code: "EMAIL_DELIVERY_FAILED", message: "Email delivery failed." }); }
+      },
+    },
   },
   socialProviders: socialAuth.socialProviders,
   // Preserve Better Auth's verified-email linking safeguards; no trusted-provider override.
@@ -136,6 +153,20 @@ export const auth = betterAuth({
     user: { create: { before: async (user, ctx) => {
       if (!user.isAnonymous) return { data: user };
       return { data: { ...user, anonymousKind: ctx?.headers?.get(GUEST_KIND_HEADER) === "guest" ? "guest" : "demo" } };
+    } }, update: { after: async (updated, ctx) => {
+      // Better Auth has already authenticated this verification JWT and committed the email update.
+      // Verify again before selecting the old notification recipient, including logged-out link visits.
+      if (ctx?.path !== "/verify-email" || typeof ctx.query?.token !== "string") return;
+      const payload = await verifyJWT<{ email?: string; updateTo?: string; requestType?: string }>(ctx.query.token, env.BETTER_AUTH_SECRET).catch(() => null);
+      if (payload?.requestType !== "change-email-verification" || !payload.email || payload.updateTo !== updated.email || payload.email === updated.email) return;
+      sendEmailAfterResponse(accountSecurityEmail({ to: payload.email, origin: env.BETTER_AUTH_URL, kind: "email-changed" }));
+    } } },
+    account: { create: { after: async (linked) => {
+      if (linked.providerId !== "google" && linked.providerId !== "facebook") return;
+      const owner = await db.query.user.findFirst({ where: eq(schema.user.id, linked.userId) });
+      if (!owner || owner.isAnonymous) return;
+      const accounts = await db.query.account.findMany({ where: eq(schema.account.userId, linked.userId), columns: { id: true } });
+      if (accounts.length > 1) sendEmailAfterResponse(accountSecurityEmail({ to: owner.email, origin: env.BETTER_AUTH_URL, kind: "social-linked", provider: linked.providerId }));
     } } },
     session: { create: { before: async (session) => {
       const owner = await db.query.user.findFirst({ where: eq(schema.user.id, session.userId) });

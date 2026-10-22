@@ -42,6 +42,7 @@ export const authIpRules = {
   "/send-verification-email": { window: MINUTE, max: 5 },
   // The 24-character reset token cannot be guessed; this only caps scripted attempts.
   "/reset-password": { window: MINUTE, max: 10 },
+  "/change-email": { window: MINUTE, max: 5 },
   "/change-password": { window: MINUTE, max: 5 },
 } as const satisfies Record<string, RateLimitRule>;
 
@@ -55,6 +56,8 @@ export const ACCOUNT_DELETION_USER_RULE: RateLimitRule = { window: 15 * MINUTE, 
 export const EMAIL_LINK_ACCOUNT_RULE: RateLimitRule = { window: HOUR, max: 5 };
 /** Current-password guesses through Settings › change password, per signed-in user. */
 export const CHANGE_PASSWORD_USER_RULE: RateLimitRule = { window: 15 * MINUTE, max: 5 };
+/** Sensitive address changes, independent of IP. */
+export const CHANGE_EMAIL_USER_RULE: RateLimitRule = { window: 15 * MINUTE, max: 5 };
 /** Full personal-data exports per user; each one reads every row the user owns. */
 export const ACCOUNT_EXPORT_USER_RULE: RateLimitRule = { window: HOUR, max: 10 };
 
