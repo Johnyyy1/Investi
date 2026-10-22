@@ -22,6 +22,14 @@ import { observePortfolioExecution, type PortfolioExecutionObservation } from ".
 
 const BASE_CURRENCY: Currency = "CZK";
 
+/**
+ * Charges the market-data budget for the instruments a call is about to observe; throws to refuse.
+ * It runs after a duplicate idempotency key has been answered from the ledger, so a retry of a
+ * completed call is free, and before the first provider lookup, so a refused call observes nothing.
+ */
+export type MarketDataCharge = (lookups: number) => Promise<unknown>;
+const uncharged: MarketDataCharge = async () => {};
+
 export async function readBrokerFeeProfile(query: Pick<typeof db, "select">, userId: string) {
   const [saved] = await query.select({ id: learningProfile.brokerFeeProfileId }).from(learningProfile).where(eq(learningProfile.userId, userId));
   return brokerFeeProfile(saved?.id);
@@ -168,7 +176,7 @@ export async function executeTrade(userId: string, input: {
   side: "BUY" | "SELL";
   clientIdempotencyKey: string;
   expectedFeeProfileId?: string;
-}) {
+}, chargeMarketData: MarketDataCharge = uncharged) {
   const existing = await activePortfolio(db, userId);
   if (existing) {
     const [duplicate] = await db.select().from(portfolioTrade).where(and(
@@ -177,6 +185,7 @@ export async function executeTrade(userId: string, input: {
     ));
     if (duplicate) return { trade: duplicate, duplicate: true };
   }
+  await chargeMarketData(1);
   const observation = await observePortfolioExecution(
     portfolioMarketData,
     input.instrumentId,
@@ -331,11 +340,12 @@ export interface AllocationReview {
 
 /** Plans the mix against fresh observations without writing anything. Execution repeats
  * the observation and the plan under the learner lock, so this is an estimate. */
-export async function reviewAllocation(userId: string, input: AllocationInput): Promise<AllocationReview> {
+export async function reviewAllocation(userId: string, input: AllocationInput, chargeMarketData: MarketDataCharge = uncharged): Promise<AllocationReview> {
   const allocation = validateAllocation(input);
   const rows = await loadPortfolioRows(userId);
   const folded = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades.map(asLedgerTrade));
   const instrumentIds = [...new Set([...allocation.lines.map(({ instrumentId }) => instrumentId), ...folded.holdings.map(({ instrumentId }) => instrumentId)])];
+  await chargeMarketData(instrumentIds.length);
   const observations = await observeForAllocation(instrumentIds);
   assertAllocatable(allocation, observations);
   const plan = planAllocation({ cashMinor: folded.cashMinor, holdings: folded.holdings, observations: planningInputs(observations), allocation, feeProfile: await readBrokerFeeProfile(db, userId) });
@@ -348,7 +358,7 @@ export async function reviewAllocation(userId: string, input: AllocationInput): 
  * re-read under the lock and the plan can never overspend or oversell. The client only
  * sends instrument ids, integer weights and an idempotency key.
  */
-export async function executeAllocation(userId: string, input: AllocationInput & { clientIdempotencyKey: string }) {
+export async function executeAllocation(userId: string, input: AllocationInput & { clientIdempotencyKey: string }, chargeMarketData: MarketDataCharge = uncharged) {
   const allocation = validateAllocation(input);
   const existing = await activePortfolio(db, userId);
   if (existing) {
@@ -360,10 +370,12 @@ export async function executeAllocation(userId: string, input: AllocationInput &
   }
   const rows = await loadPortfolioRows(userId);
   const preview = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades.map(asLedgerTrade));
-  const observations = await observeForAllocation([...new Set([
+  const instrumentIds = [...new Set([
     ...allocation.lines.map(({ instrumentId }) => instrumentId),
     ...preview.holdings.map(({ instrumentId }) => instrumentId),
-  ])]);
+  ])];
+  await chargeMarketData(instrumentIds.length);
+  const observations = await observeForAllocation(instrumentIds);
   assertAllocatable(allocation, observations);
 
   return db.transaction(async (tx) => {

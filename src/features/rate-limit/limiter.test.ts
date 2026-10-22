@@ -13,9 +13,9 @@ class MemoryStore implements RateLimitStore {
   readonly rows = new Map<string, { count: number; expiresAt: number }>();
   async increment(counters: readonly RateLimitCounter[], now: number): Promise<RateLimitCount[]> {
     const unique = [...new Map(counters.map((counter) => [counter.key, counter])).values()];
-    return unique.map(({ key, windowSeconds }) => {
+    return unique.map(({ key, windowSeconds, cost }) => {
       const row = this.rows.get(key);
-      const next = !row || row.expiresAt <= now ? { count: 1, expiresAt: now + windowSeconds * 1_000 } : { count: row.count + 1, expiresAt: row.expiresAt };
+      const next = !row || row.expiresAt <= now ? { count: cost, expiresAt: now + windowSeconds * 1_000 } : { count: row.count + cost, expiresAt: row.expiresAt };
       this.rows.set(key, next);
       return { key, ...next };
     });
@@ -73,6 +73,16 @@ describe("RateLimiter", () => {
     expect(onDenied).toHaveBeenCalledWith({ scope: "test:scope", retryAfterSeconds: 60 });
   });
 
+  it("adds a bucket's cost as that many hits and logs only the request that crosses the limit", async () => {
+    const { limiter, onDenied } = setup();
+    const weighted = (cost: number): RateLimitBucket => ({ ...bucket(10), cost });
+    expect((await limiter.consume([weighted(4)])).allowed).toBe(true);
+    expect((await limiter.consume([weighted(6)])).allowed).toBe(true);
+    expect((await limiter.consume([weighted(3)])).allowed).toBe(false);
+    expect((await limiter.consume([weighted(1)])).allowed).toBe(false);
+    expect(onDenied).toHaveBeenCalledTimes(1);
+  });
+
   it("never stores a raw subject in the key", async () => {
     const { limiter, store } = setup();
     await limiter.consume([bucket(1, 60, "learner@example.com", "auth:sign-in-account")]);
@@ -127,6 +137,16 @@ describe("rate-limit policy", () => {
         { scope: MARKET_DATA_DAILY_SCOPE, subject: "user-7", rule: MARKET_DATA_DAILY_RULE },
       ]);
     }
+  });
+
+  it("charges the daily budget per instrument lookup and the minute bucket per request", () => {
+    for (const family of ["trade", "allocation", "allocation-quotes"] as const) {
+      expect(marketDataBuckets("user-7", family, 14)).toEqual([
+        { scope: `market:${family}`, subject: "user-7", rule: marketDataMinuteRules[family] },
+        { scope: MARKET_DATA_DAILY_SCOPE, subject: "user-7", rule: MARKET_DATA_DAILY_RULE, cost: 14 },
+      ]);
+    }
+    for (const lookups of [0, -1, 1.5]) expect(() => marketDataBuckets("user-7", "trade", lookups)).toThrow();
   });
 
   it("normalizes account subjects and ignores non-strings", () => {

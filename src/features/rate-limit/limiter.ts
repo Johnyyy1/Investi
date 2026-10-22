@@ -5,6 +5,8 @@ import { retryAfterSeconds, splitBetterAuthKey, type RateLimitBucket, type RateL
 export interface RateLimitCounter {
   readonly key: string;
   readonly windowSeconds: number;
+  /** Hits to add, a positive whole number. */
+  readonly cost: number;
 }
 
 export interface RateLimitCount {
@@ -14,7 +16,7 @@ export interface RateLimitCount {
   readonly expiresAt: number;
 }
 
-/** Atomically adds one hit to every counter (restarting expired windows) and returns the new counts. */
+/** Atomically adds each counter's cost (restarting expired windows) and returns the new counts. */
 export interface RateLimitStore {
   increment(counters: readonly RateLimitCounter[], now: number): Promise<RateLimitCount[]>;
 }
@@ -73,16 +75,16 @@ export class RateLimiter {
   async consume(buckets: readonly RateLimitBucket[]): Promise<RateLimitDecision> {
     if (buckets.length === 0) return { allowed: true, retryAfterSeconds: null, deniedScope: null };
     const now = this.clock();
-    const keyed = buckets.map((bucket) => ({ ...bucket, key: this.keyFor(bucket.scope, bucket.subject) }));
-    const counts = new Map((await this.store.increment(keyed.map(({ key, rule }) => ({ key, windowSeconds: rule.window })), now)).map((count) => [count.key, count]));
+    const keyed = buckets.map((bucket) => ({ ...bucket, cost: bucket.cost ?? 1, key: this.keyFor(bucket.scope, bucket.subject) }));
+    const counts = new Map((await this.store.increment(keyed.map(({ key, rule, cost }) => ({ key, windowSeconds: rule.window, cost })), now)).map((count) => [count.key, count]));
     let denied: { scope: string; retryAfterSeconds: number } | null = null;
     for (const bucket of keyed) {
       const count = counts.get(bucket.key);
       if (!count) throw new Error("The rate-limit store did not return a counter.");
       if (count.count <= bucket.rule.max) continue;
       const wait = retryAfterSeconds(count.expiresAt, now);
-      // Log only the first rejection of each window so a hammering client cannot flood the logs.
-      if (count.count === bucket.rule.max + 1) this.onDenied({ scope: bucket.scope, retryAfterSeconds: wait });
+      // Log only the request that first crosses the limit in each window, so a hammering client cannot flood the logs.
+      if (count.count - bucket.cost <= bucket.rule.max) this.onDenied({ scope: bucket.scope, retryAfterSeconds: wait });
       if (!denied || wait > denied.retryAfterSeconds) denied = { scope: bucket.scope, retryAfterSeconds: wait };
     }
     return denied
