@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { FigureDataLabel } from "@/components/learning/figure-data-label";
 import { ArrowRight } from "lucide-react";
 import { FinanceInput } from "@/components/learning/finance-input";
 import { LearningChart } from "@/components/learning/learning-chart";
@@ -51,11 +52,11 @@ export function SourceLabel({ snapshot }: { snapshot: Pick<LessonHistorySnapshot
   const asOf = formatDay(points[points.length - 1].date);
   return isRealHistory(snapshot)
     ? <div className="mt-1 text-small text-secondary">
-      <p className="font-semibold text-foreground">Historická data · {sourceNames[provenance.provider] ?? provenance.provider} · stav k {asOf}</p>
+      <FigureDataLabel data={{ kind: "historical", source: sourceNames[provenance.provider] ?? provenance.provider, asOf }} />
       <p>Ceny očištěné o splity · jen cena, bez dividend · {currency} · načteno {formatDate(provenance.retrievedAt, { timeZone: "UTC" })}{provenance.completeness === "partial" ? " · zdroj hlásí neúplnou řadu" : ""}</p>
     </div>
     : <div className="mt-1 text-small text-secondary">
-      <p className="font-semibold text-foreground">Ukázková data · pevná data pro výuku, ne skutečný vývoj trhu</p>
+      <FigureDataLabel data={{ kind: "sample" }} />
       <p>Jen cena, bez dividend · {currency}</p>
     </div>;
 }
