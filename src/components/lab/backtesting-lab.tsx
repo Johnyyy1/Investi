@@ -13,6 +13,9 @@ import { Select } from "@/components/ui/form-controls";
 import { runHistoryBacktestAction } from "@/features/backtesting/actions";
 import { benchmarkName, type BacktestHistoryView, type CostSettings, type HistoryBacktestResult } from "@/features/backtesting/catalog";
 import { costImpact, parseCostRate, parseFixedFee } from "@/features/backtesting/costs";
+import { ATTEMPTS_KEY, OVERFITTING_NOTICE_AT, readAttempts, recordAttempt, type AttemptHistory } from "@/features/backtesting/attempts";
+import { emptyExperimentDraft, ExperimentFields, ExperimentResults, parseExperimentDraft } from "./backtest-experiments";
+import type { ExperimentSettings } from "@/features/backtesting/spec";
 import type { BacktestCosts } from "@/features/backtesting/spec";
 import type { RebalanceRule } from "@/features/backtesting/spec";
 import { FinancialInputError } from "@/features/finance/returns";
@@ -42,6 +45,10 @@ function draftCosts(settings: CostSettings | null): BacktestCosts | null {
   try { return settings && { rateBps: parseCostRate(settings.rate), fixedFee: parseFixedFee(settings.fixedFee) }; } catch { return null; }
 }
 
+function draftExperiments(draft: Parameters<typeof parseExperimentDraft>[0]): ExperimentSettings {
+  try { return parseExperimentDraft(draft); } catch { return {}; }
+}
+
 function DataNotes({ copy }: { copy: BacktestSourceCopy }) {
   return <dl className={styles.dataRows}>{copy.notes.map((note) => <div key={note.term}><dt>{note.term}</dt><dd>{note.detail}</dd></div>)}</dl>;
 }
@@ -54,6 +61,7 @@ function DataCard({ copy }: { copy: BacktestSourceCopy }) {
 
 function Metrics({ result, onMethodology }: { result: BacktestResult; onMethodology: () => void }) {
   const { metrics: a, benchmark: b } = result;
+  const education = isHistory(result) ? result.education : undefined;
   const ratio = (key: "totalReturn" | "cagr" | "maxDrawdown" | "volatility") => ({ value: formatPercentage(a[key]), benchmark: formatPercentage(b[key]), difference: formatPercentagePoints(a[key] - b[key]) });
   const glossary = (id: MetricId, note?: React.ReactNode) => {
     const lesson = metricLessonLink(id);
@@ -61,8 +69,14 @@ function Metrics({ result, onMethodology }: { result: BacktestResult; onMethodol
   };
   const rows: { label: string; anchor?: string; detail: React.ReactNode; value: string; benchmark: string; difference: string }[] = [
     { label: "Konečná hodnota", detail: "Poslední bod grafu po zvoleném období.", value: money(result, a.finalValue), benchmark: money(result, b.finalValue), difference: formatBacktestMoneyDifference(a.finalValue - b.finalValue, result.currency) },
-    { ...glossary("cumulative-return"), ...ratio("totalReturn") },
-    { ...glossary("annualised-return"), ...ratio("cagr") },
+    ...(education ? [
+      { ...glossary("time-weighted-return"), label: "TWR za období", detail: `Časově vážený výnos (time-weighted return). ${metricExplanation("time-weighted-return", "backtest")}`, ...ratio("totalReturn") },
+      { label: "TWR ročně", detail: "Geometricky anualizovaný TWR, nikoli růst zůstatku po vkladech.", ...ratio("cagr") },
+      { ...glossary("money-weighted-return"), label: "MWR ročně", detail: `Peněžně vážený výnos (money-weighted return). ${metricExplanation("money-weighted-return", "backtest")}`, value: education.strategy.mwr === null ? "Nedostupné" : formatPercentage(education.strategy.mwr), benchmark: education.benchmark.mwr === null ? "Nedostupné" : formatPercentage(education.benchmark.mwr), difference: education.strategy.mwr === null || education.benchmark.mwr === null ? "Nedostupné" : formatPercentagePoints(education.strategy.mwr - education.benchmark.mwr) },
+    ] : [
+      { ...glossary("cumulative-return"), ...ratio("totalReturn") },
+      { ...glossary("annualised-return"), ...ratio("cagr") },
+    ]),
     { ...glossary("max-drawdown"), ...ratio("maxDrawdown") },
     { ...glossary("volatility"), ...ratio("volatility") },
     { ...glossary("sharpe-ratio", <> Bezriziková sazba je {formatPercentage(a.riskFreeRate)}. <a href="#backtest-methodology" className={styles.inlineLink} onClick={onMethodology}>Jak se počítá</a></>), value: formatSharpeRatio(a.sharpeRatio), benchmark: formatSharpeRatio(b.sharpeRatio), difference: formatSharpeDifference(a.sharpeRatio, b.sharpeRatio) },
@@ -84,6 +98,7 @@ function Metrics({ result, onMethodology }: { result: BacktestResult; onMethodol
 
 function explanation(result: BacktestResult) {
   if (isHistory(result)) {
+    if (result.education) return "Obě cesty používají stejný plán příspěvků, čerpání, rozložení rozpočtu a nákladovosti fondu. Výběry se platí nejdřív z hotovosti, případně poměrným prodejem s poplatky. Nové peníze se rozdělí podle pravidla strategie; stávající pozice se bez nastaveného rebalancování neprodávají.";
     const symbol = result.source.symbol;
     const other = result.source.benchmark.symbol;
     const benchmark = other === symbol
@@ -99,6 +114,7 @@ function explanation(result: BacktestResult) {
 }
 
 function costLesson(result: HistoryBacktestResult, impact: number) {
+  if (result.education) return "Příspěvky, postupné nákupy a prodeje pro čerpání mohou vytvářet další obchody i u benchmarku. Tabulka odděluje transakční poplatky od nákladovosti fondu; porovnání bez nákladů odstraňuje oba druhy nákladů.";
   const { strategy: a } = result.trading;
   const paid = money(result, a.costs);
   const compounding = a.costs === 0 ? "" : -impact > a.costs
@@ -118,16 +134,16 @@ function CostSummary({ result }: { result: HistoryBacktestResult }) {
   const rows: { label: string; detail?: string; testId: string; value: string; benchmark: string }[] = [
     { label: "Obchody", detail: "Každý nákup nebo prodej jednoho instrumentu.", testId: "trades", value: String(tradesA.trades), benchmark: String(tradesB.trades) },
     { label: "Obrat", detail: "Hodnota všech nákupů a prodejů dohromady (turnover).", testId: "turnover", value: money(result, tradesA.turnover), benchmark: money(result, tradesB.turnover) },
-    { label: "Zaplacené náklady", testId: "paid", value: money(result, tradesA.costs), benchmark: money(result, tradesB.costs) },
+    { label: result.education ? "Náklady obchodů" : "Zaplacené náklady", testId: "paid", value: money(result, tradesA.costs), benchmark: money(result, tradesB.costs) },
     { label: "Dopad na konečnou hodnotu", testId: "final-value", value: formatBacktestMoneyDifference(a.finalValue, result.currency), benchmark: formatBacktestMoneyDifference(b.finalValue, result.currency) },
-    { label: "Dopad na celkový výnos", testId: "total-return", value: formatPercentagePoints(a.totalReturn), benchmark: formatPercentagePoints(b.totalReturn) },
-    { label: "Dopad na CAGR", detail: "Kolik procentních bodů ročně náklady ubraly.", testId: "cagr", value: formatPercentagePoints(a.cagr), benchmark: formatPercentagePoints(b.cagr) },
+    { label: result.education ? "Dopad na TWR" : "Dopad na celkový výnos", testId: "total-return", value: formatPercentagePoints(a.totalReturn), benchmark: formatPercentagePoints(b.totalReturn) },
+    { label: result.education ? "Dopad na TWR ročně" : "Dopad na CAGR", detail: "Kolik procentních bodů ročně náklady ubraly.", testId: "cagr", value: formatPercentagePoints(a.cagr), benchmark: formatPercentagePoints(b.cagr) },
     { label: "Dopad na Sharpeho poměr", testId: "sharpe", value: formatSharpeDifference(result.metrics.sharpeRatio, result.withoutCosts.metrics.sharpeRatio), benchmark: formatSharpeDifference(result.benchmark.sharpeRatio, result.withoutCosts.benchmark.sharpeRatio) },
   ];
   return <section className={styles.metrics} aria-labelledby="costs-heading">
     <h2 id="costs-heading">Co stály náklady</h2>
     <p className={styles.costHeadline} data-testid="cost-headline">Náklady tě u strategie A stály {money(result, -a.finalValue)} ({formatPercentagePoints(-a.cagr, { signed: false })} ročně).</p>
-    <p>{formatCostRate(result.costs.rateBps)} z hodnoty každého obchodu{fee}. Dopad je výsledek s náklady minus výsledek bez nich, na stejných cenách. Bez nákladů by A skončila na {money(result, result.withoutCosts.metrics.finalValue)}.</p>
+    <p>{result.config.experiments?.annualFundCostBps ? `Dodatečná roční nákladovost fondu ${formatCostRate(result.config.experiments.annualFundCostBps)} z investované části. ` : ""}{formatCostRate(result.costs.rateBps)} z hodnoty každého obchodu{fee}. Dopad je výsledek s náklady minus výsledek bez nich, na stejných cenách. Bez nákladů by A skončila na {money(result, result.withoutCosts.metrics.finalValue)}.</p>
     <dl className={styles.metricRows}>{rows.map((row) => <div key={row.label} className={`${styles.metricRow} ${styles.costRow}`}>
       <dt><strong>{row.label}</strong>{row.detail && <span>{row.detail}</span>}</dt>
       <dd><span className={styles.metricSeries}><Badge>A</Badge> {result.strategy.name}</span><strong data-testid={`cost-${row.testId}`}>{row.value}</strong></dd>
@@ -153,7 +169,7 @@ function PredictionResult({ result, copy }: { result: BacktestResult; copy: Back
       <dl className={styles.outcomes}>
         <div><dt>Na konci výš</dt><dd>{equal ? "Stejné hodnoty" : `${higher} · o ${money(result, Math.abs(result.metrics.finalValue - result.benchmark.finalValue))}`}</dd></div>
         <div><dt>Menší propad cestou</dt><dd>{smaller}</dd></div>
-        <div><dt>Vloženo na začátku</dt><dd>{money(result, result.amount)} do každé cesty. Žádné další vklady.</dd></div>
+        <div><dt>Vloženo na začátku</dt><dd>{money(result, result.amount)} do každé cesty. {isHistory(result) && result.education ? "Další toky jsou rozepsané výše." : "Žádné další vklady."}</dd></div>
       </dl>
       <div className={styles.explanation}>
         <h3>Proč se výsledky liší</h3>
@@ -192,6 +208,14 @@ function historyOptions(history: BacktestHistoryView, benchmarkId?: string): Sou
 }
 
 export function BacktestingLab({ history = null }: { history?: BacktestHistoryView | null }) {
+  const [experimentDraft, setExperimentDraft] = useState(emptyExperimentDraft);
+  const [lastExperimentDraft, setLastExperimentDraft] = useState(JSON.stringify(emptyExperimentDraft));
+  const [goal, setGoal] = useState("strategy");
+  const [attempts, setAttempts] = useState<AttemptHistory>({});
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => { try { setAttempts(readAttempts(sessionStorage.getItem(ATTEMPTS_KEY))); } catch { /* Storage is optional. */ } });
+    return () => cancelAnimationFrame(frame);
+  }, []);
   const [source, setSource] = useState<BacktestSourceKind>("sample");
   const [strategy, setStrategy] = useState("mixed");
   const [benchmark, setBenchmark] = useState(history?.benchmarks[0].instrumentId ?? "");
@@ -221,18 +245,18 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
   const selectedKind = source === "history" ? history?.strategies.find((item) => item.id === selected.id)?.kind : undefined;
   const selectedBenchmark = history?.benchmarks.find((item) => item.instrumentId === benchmark) ?? history?.benchmarks[0];
   const costSettings: CostSettings | null = costsOn ? { rate: costRate, fixedFee } : null;
-  const copy = source === "history" && history ? historySourceCopy(history, { benchmark: selectedBenchmark, costs: draftCosts(costSettings) }) : sampleSourceCopy;
+  const copy = source === "history" && history ? historySourceCopy(history, { benchmark: selectedBenchmark, costs: draftCosts(costSettings), experiments: draftExperiments(experimentDraft) }) : sampleSourceCopy;
   const shown = result && viewWithCosts(result, costView);
   const resultCopy = result ? copyFor(result, costView) : copy;
   const currency = source === "history" && history ? history.currency : "CZK";
-  const dirty = Boolean(result && (source !== sourceOf(result) || selected.id !== result.config.strategy || start !== result.config.start || end !== result.config.end || amount !== result.config.amount || (isHistory(result) && (selectedBenchmark?.instrumentId !== result.config.benchmark || !sameCosts(costSettings, result.config.costs) || (selectedKind === "fixed-weights" && rebalance !== result.config.rebalance)))));
+  const dirty = Boolean(result && (source !== sourceOf(result) || selected.id !== result.config.strategy || start !== result.config.start || end !== result.config.end || amount !== result.config.amount || (isHistory(result) && (selectedBenchmark?.instrumentId !== result.config.benchmark || !sameCosts(costSettings, result.config.costs) || JSON.stringify(experimentDraft) !== lastExperimentDraft || (selectedKind === "fixed-weights" && rebalance !== result.config.rebalance)))));
   const steps = [...(history ? ["source"] : []), "approaches", "period", "amount", ...(source === "history" && history ? ["costs"] : []), "prediction"];
   const step = (id: string) => steps.indexOf(id) + 1;
   const periodId = options.periods.find((period) => period.start === start && period.end === end)?.id ?? "custom";
 
   /** Copy for a result in a view: with its costs, or none in the view without them. */
   function copyFor(item: BacktestResult, view: CostView = "with") {
-    return isHistory(item) && history ? historySourceCopy(history, { years: { start: item.config.start, end: item.config.end }, source: item.source, costs: item.withoutCosts && view === "with" ? item.costs : null }) : sampleSourceCopy;
+    return isHistory(item) && history ? historySourceCopy(history, { years: { start: item.config.start, end: item.config.end }, source: item.source, costs: item.withoutCosts && view === "with" ? item.costs : null, experiments: { ...item.config.experiments, annualFundCostBps: view === "with" ? item.config.experiments?.annualFundCostBps : 0 } }) : sampleSourceCopy;
   }
 
   function chooseSource(next: BacktestSourceKind) {
@@ -245,7 +269,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
     setError(undefined);
   }
 
-  async function calculate(periods: readonly { start: number; end: number }[], config: { strategy: string; benchmark: string; amount: string; rebalance: RebalanceRule; costs: CostSettings | null }, kind: BacktestSourceKind): Promise<BacktestResult[]> {
+  async function calculate(periods: readonly { start: number; end: number }[], config: { strategy: string; benchmark: string; amount: string; rebalance: RebalanceRule; costs: CostSettings | null; experiments?: ExperimentSettings }, kind: BacktestSourceKind): Promise<BacktestResult[]> {
     if (kind === "sample") return periods.map((period) => buildBacktestResult({ strategy: config.strategy, start: period.start, end: period.end, amount: config.amount }));
     const response = await runHistoryBacktestAction({ ...config, periods });
     if (!response.ok) throw new FinancialInputError(response.message);
@@ -259,7 +283,9 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
     // Yield to paint the actual running state; no artificial network delay.
     await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     try {
-      const [next] = await calculate([{ start, end }], { strategy: selected.id, benchmark: selectedBenchmark?.instrumentId ?? "", amount, rebalance, costs: costSettings }, source);
+      const [next] = await calculate([{ start, end }], { strategy: selected.id, benchmark: selectedBenchmark?.instrumentId ?? "", amount, rebalance, costs: costSettings, experiments: source === "history" ? parseExperimentDraft(experimentDraft) : undefined }, source);
+      remember([next]);
+      setLastExperimentDraft(JSON.stringify(experimentDraft));
       setResult({ ...next, prediction });
       setRuns((count) => count + 1);
       setCostView("with");
@@ -268,6 +294,16 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
     } catch (cause) {
       setError(cause instanceof FinancialInputError ? cause.message : "Backtest se nepodařilo spočítat. Zkontroluj nastavení a zkus to znovu.");
     } finally { inFlight.current = false; setRunning(false); }
+  }
+  function remember(results: BacktestResult[]) {
+    let next = attempts;
+    try { next = readAttempts(sessionStorage.getItem(ATTEMPTS_KEY)); } catch { /* Keep the in-memory history. */ }
+    for (const item of results) {
+      const settings = isHistory(item) ? item.config.experiments ?? {} : {};
+      next = recordAttempt(next, goal, { source: item.source.kind, strategy: item.config.strategy, start: item.config.start, end: item.config.end, amount: item.amount, benchmark: isHistory(item) ? item.config.benchmark : "stocks", rebalance: isHistory(item) ? item.config.rebalance : "monthly", costs: isHistory(item) ? item.costs : null, ...settings });
+    }
+    setAttempts(next);
+    try { sessionStorage.setItem(ATTEMPTS_KEY, JSON.stringify(next)); } catch { /* Counter still works in memory. */ }
   }
   function edit() {
     setEditing(true);
@@ -279,7 +315,8 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
     const presets = kind === "history" && history ? history.periods : backtestPeriods;
     setComparing(true);
     try {
-      const results = await calculate(presets, { strategy: result.config.strategy, benchmark: isHistory(result) ? result.config.benchmark : "", amount: result.config.amount, rebalance: isHistory(result) ? result.config.rebalance : "annual", costs: isHistory(result) ? result.config.costs : null }, kind);
+      const results = await calculate(presets, { strategy: result.config.strategy, benchmark: isHistory(result) ? result.config.benchmark : "", amount: result.config.amount, rebalance: isHistory(result) ? result.config.rebalance : "annual", costs: isHistory(result) ? result.config.costs : null, experiments: isHistory(result) ? { ...result.config.experiments, outOfSampleStartMonth: undefined } : undefined }, kind);
+      remember(results);
       setComparison({ results: results.map((item) => ({ ...item, prediction: result.prediction })), names: presets.map((period) => period.name) });
       requestAnimationFrame(() => comparisonHeading.current?.focus());
     } catch (cause) {
@@ -295,6 +332,11 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
       <p>Porovnej dvě cesty stejným obdobím. Uvidíš, kde skončily i jak kolísaly. Pak totéž zkusíš v jiném období.</p>
       <div className={styles.groundRules}><span data-testid="backtest-source-label"><FlaskConical size={16} aria-hidden="true" /> {resultCopy.label}</span><span>Cvičný kapitál ani portfolio se nemění.</span></div>
     </header>
+    <div className={styles.formSection}>
+      <label htmlFor="experiment-goal" className={styles.label}>Cíl pokusu</label><Select id="experiment-goal" value={goal} disabled={running || comparing} onChange={(event) => setGoal(event.target.value)}><option value="strategy">Porovnat pravidla strategie</option><option value="costs">Prozkoumat vliv nákladů</option><option value="timing">Porovnat načasování vkladů</option><option value="withdrawals">Vyzkoušet čerpání</option></Select>
+      <p role="status" className={styles.hint} data-testid="attempt-counter">Různé specifikace pro tento cíl v relaci: {attempts[goal]?.length ?? 0}. Stejný pokus se znovu nepočítá.</p>
+      {(attempts[goal]?.length ?? 0) >= OVERFITTING_NOTICE_AT && <p className={styles.notice} data-testid="overfitting-notice">Po pěti různých specifikacích připomínáme riziko přeučení. Výběr nejlepšího minulého výsledku může zachytit náhodu. Před dalším pokusem si zapiš pravidlo a ověř ho na datech, která nesloužila k jeho ladění. Počet pokusů sám neprokazuje chybu.</p>}
+    </div>
     {result && <div className={styles.resultHead}>
       <div><h2 ref={heading} tabIndex={-1}>{result.strategy.name}</h2><p>{result.period} · {result.months} měsíců · Start {money(result, result.amount)}</p></div>
       <Button variant="secondary" onClick={() => editing ? setEditing(false) : edit()} aria-expanded={editing} aria-controls="backtest-configuration"><SlidersHorizontal size={16} aria-hidden="true" />{editing ? "Zavřít nastavení" : "Změnit nastavení"}</Button>
@@ -329,6 +371,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
               <input type="radio" name="period" checked={periodId === period.id} onChange={() => { setStart(period.start); setEnd(period.end); }} />
               <span><strong>{period.name}</strong><small>{period.start === period.end ? `1–12/${period.start}` : `${period.start}–${period.end}`} · {(period.end - period.start + 1) * 12} měsíců</small></span>
             </label>)}</fieldset>
+            {source === "history" && history && history.firstYear > 2008 && <p className={styles.hint}>Krize 2008–2009 není v této řadě dostupná. Ukázkové roky 2020 a 2022 nereprodukují skutečné krize.</p>}
             <div className={styles.dates}><div><label htmlFor="start-year" className={styles.label}>Od ledna</label><Select id="start-year" value={start} onChange={(event) => setStart(Number(event.target.value))}>{options.years.map((year) => <option key={year}>{year}</option>)}</Select></div><div><label htmlFor="end-year" className={styles.label}>Do prosince</label><Select id="end-year" value={end} onChange={(event) => setEnd(Number(event.target.value))}>{options.years.map((year) => <option key={year}>{year}</option>)}</Select></div></div>
           </section>
           <section className={styles.formSection} aria-labelledby="amount-heading">
@@ -347,6 +390,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
               <FinanceInput id="cost-fee" label="Fixní poplatek za obchod" suffix={currency} value={fixedFee} onValueChange={setFixedFee} hint={`V ${currency}. Bez fixního poplatku nech 0.`} />
             </div>}
           </section>}
+          {source === "history" && <ExperimentFields draft={experimentDraft} onChange={setExperimentDraft} currency={currency} years={options.years.filter((year) => year >= start && year <= end)} />}
           <section className={styles.formSection} aria-labelledby="prediction-heading">
             <h2 id="prediction-heading" className={styles.step}>{step("prediction")} · Tvůj tip předem</h2>
             <h3 className={styles.predictionQuestion}>Která cesta skončí výš?</h3>
@@ -367,11 +411,12 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
     </div>
     {result && shown && <section className={styles.results} aria-label="Výsledek backtestu" aria-busy={running || comparing}>
       {isHistory(result) && result.withoutCosts && <fieldset className={styles.costView}><legend>Zobrazit výsledek</legend>
-        {([["with", "S náklady", `${formatCostRate(result.costs.rateBps)} z obchodu${result.costs.fixedFee > 0 ? ` + ${money(result, result.costs.fixedFee)}` : ""}`], ["without", "Bez nákladů", "Stejné ceny, obchody zdarma"]] as const).map(([value, label, detail]) => <label key={value} className={styles.period}><input type="radio" name="cost-view" value={value} checked={costView === value} onChange={() => setCostView(value)} /><span><strong>{label}</strong><small>{detail}</small></span></label>)}
+        {([["with", "S náklady", `${formatCostRate(result.costs.rateBps)} z obchodu${result.costs.fixedFee > 0 ? ` + ${money(result, result.costs.fixedFee)}` : ""}${result.config.experiments?.annualFundCostBps ? ` + fond ${formatCostRate(result.config.experiments.annualFundCostBps)} ročně` : ""}`], ["without", "Bez nákladů", "Stejné ceny, bez modelových nákladů"]] as const).map(([value, label, detail]) => <label key={value} className={styles.period}><input type="radio" name="cost-view" value={value} checked={costView === value} onChange={() => setCostView(value)} /><span><strong>{label}</strong><small>{detail}</small></span></label>)}
       </fieldset>}
       <BacktestChart data={shown.points} strategyLabel={shown.strategy.name} benchmarkLabel={shown.benchmarkName} currency={shown.currency} source={resultCopy.chart} initial={shown.amount} />
       <Metrics result={shown} onMethodology={() => { if (methodology.current) methodology.current.open = true; }} />
       {isHistory(result) && <CostSummary result={result} />}
+      {isHistory(shown) && <ExperimentResults result={shown} />}
       <PredictionResult result={shown} copy={resultCopy} />
       <div className={styles.retryBar}><Button className={styles.primary} onClick={() => void compare()} disabled={running} loading={comparing}><RotateCcw size={18} aria-hidden="true" />{comparing ? "Počítám období…" : "Zkusit jiné období"}</Button><Link href="/learn/foundations/your-first-portfolio" className={styles.textLink}><BookOpen size={16} aria-hidden="true" />Zpět k lekci o portfoliu</Link></div>
       {comparison && <section className={styles.comparison} aria-labelledby="comparison-heading">
@@ -385,10 +430,10 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
         </article>)}</div>
         <p className={styles.hint}>Každý graf má vlastní svislou škálu. Srovnávej i hodnoty a propady, ne jen tvar křivek. Žádné období není předpověď.</p>
       </section>}
-      <BacktestSimulation key={`${runs}-${costView}`} values={shown.points.map((point) => point.value)} basis={`${shown.strategy.name} · ${shown.period}${isHistory(result) && result.withoutCosts ? costView === "with" ? " · s náklady obchodů" : " · bez nákladů obchodů" : ""}`} sourceTag={resultCopy.chart.tag} currency={shown.currency} amount={shown.amount} />
+      <BacktestSimulation key={`${runs}-${costView}`} values={isHistory(shown) && shown.education ? shown.education.strategy.returnIndex : shown.points.map((point) => point.value)} basis={`${shown.strategy.name} · ${shown.period}${isHistory(result) && result.withoutCosts ? costView === "with" ? " · s náklady obchodů" : " · bez nákladů obchodů" : ""}`} sourceTag={resultCopy.chart.tag} currency={shown.currency} amount={shown.amount} />
       <details className={styles.quiz}><summary>Ověř si porozumění <ChevronDown size={18} aria-hidden="true" /></summary><section aria-labelledby="lab-question"><h2 id="lab-question">Která metrika ukazuje největší pokles od předchozího maxima?</h2><fieldset className={styles.quizOptions}><legend className="sr-only">Vyber metriku</legend>{["CAGR", "Největší propad", "Volatilita"].map((value) => <AnswerOption key={value} name="backtest-question" value={value} checked={answer === value} disabled={checked} onChange={setAnswer}>{value}</AnswerOption>)}</fieldset><Button variant="secondary" disabled={!answer || checked} onClick={() => setChecked(true)}>Zkontrolovat odpověď</Button>{checked && <p role="status" className={styles.feedback}>{answer === "Největší propad" ? "Správně." : "Zaměř se na největší propad."} Sleduje největší pokles od vrcholu ke dnu. CAGR popisuje začátek a konec; volatilita popisuje kolísání.</p>}</section></details>
     </section>}
-    <details ref={methodology} id="backtest-methodology" className={styles.methodology}><summary><Info size={16} aria-hidden="true" />Data a předpoklady výpočtu<ChevronDown size={16} aria-hidden="true" /></summary><div><DataNotes copy={resultCopy} />{resultCopy.method.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}<p>Celkový výnos je konečná hodnota ÷ počáteční částka − 1 za celé období, bez přepočtu na rok. CAGR je totéž přepočtené na rok: používá počet měsíčních intervalů dělený 12. Volatilita je výběrová směrodatná odchylka (n − 1) měsíčních výnosů násobená √12. Největší propad (max. drawdown) je kladná velikost ztráty; zahrnuje počáteční investici a hodnoty na konci měsíce. Nezachytí větší propady uvnitř měsíce.</p><p>Sharpeho poměr (Sharpe ratio) = průměrný měsíční nadvýnos × 12 ÷ (výběrová směrodatná odchylka nadvýnosů × √12). Nadvýnos je měsíční výnos minus měsíční bezriziková sazba. Použitá sazba je {formatPercentage(result?.metrics.riskFreeRate ?? BACKTEST_RISK_FREE_RATE)} ročně: stejně jako hotovost v backtestu nic nevydělává. Není to tržní sazba; s kladnou sazbou by vyšel nižší. Bez kolísání nebo s méně než 12 měsíci je Sharpeho poměr nedostupný. Nad krátkým obdobím je nestabilní: pár měsíců ho může výrazně posunout.</p><p>Výnosy se aplikují v pořadí, bez znalosti budoucích měsíců. Chybějící, duplicitní, neseřazená nebo neplatná pozorování se odmítají. Výpočet období nezkracuje a data nedoplňuje. Zaokrouhluje se až při zobrazení.</p></div></details>
+    <details ref={methodology} id="backtest-methodology" className={styles.methodology}><summary><Info size={16} aria-hidden="true" />Data a předpoklady výpočtu<ChevronDown size={16} aria-hidden="true" /></summary><div><DataNotes copy={resultCopy} />{resultCopy.method.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}<p>{result && isHistory(result) && result.education ? "Při peněžních tocích se celkový a roční výnos počítají z měsíčních výnosů očištěných o vklady a skutečné výběry (TWR). MWR je roční IRR při stejných měsíčních intervalech. Výnosový index ponechává po úplném vyčerpání bez tržního pohybu stejnou hodnotu. " : "Bez vnějších toků je celkový výnos konečná hodnota ÷ počáteční částka − 1. CAGR přepočítává tento výnos na rok. "}Roční přepočet používá počet měsíčních intervalů dělený 12. Volatilita je výběrová směrodatná odchylka (n − 1) měsíčních výnosů násobená √12. Největší propad (max. drawdown) je kladná velikost ztráty; zahrnuje počáteční investici a hodnoty na konci měsíce. Nezachytí větší propady uvnitř měsíce.</p><p>Sharpeho poměr (Sharpe ratio) = průměrný měsíční nadvýnos × 12 ÷ (výběrová směrodatná odchylka nadvýnosů × √12). Nadvýnos je měsíční výnos minus měsíční bezriziková sazba. Použitá sazba je {formatPercentage(result?.metrics.riskFreeRate ?? BACKTEST_RISK_FREE_RATE)} ročně: stejně jako hotovost v backtestu nic nevydělává. Není to tržní sazba; s kladnou sazbou by vyšel nižší. Bez kolísání nebo s méně než 12 měsíci je Sharpeho poměr nedostupný. Nad krátkým obdobím je nestabilní: pár měsíců ho může výrazně posunout.</p><p>Výnosy se aplikují v pořadí, bez znalosti budoucích měsíců. Chybějící, duplicitní, neseřazená nebo neplatná pozorování se odmítají. Výpočet období nezkracuje a data nedoplňuje. Zaokrouhluje se až při zobrazení.</p></div></details>
     <footer className={styles.footer}><strong><Wordmark /></strong><p>Výukový nástroj, ne investiční doporučení. Ukázkový ani minulý výsledek nezaručuje budoucí výnosy.</p><Link href="/lab" className={styles.textLink}>Zpět do Labu<ArrowRight size={16} aria-hidden="true" /></Link></footer>
   </main>;
 }

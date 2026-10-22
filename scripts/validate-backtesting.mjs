@@ -36,10 +36,15 @@ async function settle() {
   await page.evaluate(async () => { await document.fonts.ready; await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
 }
 async function layouts(state) {
-  for (const width of [1440, 1024, 768, 390, 320]) {
+  for (const width of [1440, 1024, 768, 390, 375, 320]) {
     await page.setViewportSize({ width, height: 900 }); await settle();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${state}: ${width}px overflow`);
     assert.equal(await page.locator("h1:visible").count(), 1);
+    if (state === "experiment-setup") {
+      const columns = await page.locator('[class*="experimentFields"]').evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").length);
+      assert.ok(columns <= 2, "experiment controls have at most two columns");
+      if (width <= 390) assert.equal(columns, 1, "mobile experiment controls use one readable column");
+    }
     const nav = page.getByRole("navigation", { name: width < 1024 ? "Mobilní navigace" : "Hlavní navigace" });
     assert.equal(await nav.getByRole("link").count(), 3, "existing navigation preserved");
     assert.equal(await nav.locator('[aria-current="page"]').getAttribute("href"), "/lab");
@@ -327,9 +332,60 @@ try {
   assert.equal((await final().textContent()).replace(/\s/g, ""), "13412$", "switching costs off restores the run without them");
   assert.equal(await page.getByRole("group", { name: "Zobrazit výsledek" }).count(), 0);
 
+  // Educational experiments keep cash flows separate from performance and preserve holdout state.
+  await button("Změnit nastavení").click();
+  await page.getByLabel("Cíl pokusu", { exact: true }).selectOption("timing");
+  const experimentSummary = page.getByText("Vklady, čerpání a ověření strategie", { exact: true });
+  await experimentSummary.focus();
+  await experimentSummary.press("Enter");
+  const monthlyContribution = page.getByRole("textbox", { name: "Měsíční příspěvek v backtestu", exact: true });
+  const fundCost = page.getByRole("textbox", { name: "Roční nákladovost fondu", exact: true });
+  await monthlyContribution.fill("100");
+  await page.getByLabel("Rozložení počáteční částky", { exact: true }).selectOption("12");
+  await fundCost.fill("0,25");
+  await page.getByRole("textbox", { name: "Měsíční výběr", exact: true }).fill("25");
+  await page.getByLabel("Out-of-sample od ledna", { exact: true }).selectOption("2021");
+  await layouts("experiment-setup");
+  await button("Spustit backtest").click();
+  await page.getByRole("heading", { name: "Vklady nejsou výnos", exact: true }).waitFor();
+  assert.equal(await text("flow-contributed"), "22000$");
+  assert.equal(await text("flow-withdrawn"), "3000$");
+  assert.equal(await text("flow-unfundedWithdrawals"), "0$");
+  assert.equal(await page.getByTestId("metric-cagr").count(), 0, "no naive CAGR with flows");
+  assert.ok(await page.getByTestId("metric-twr-za-období").count());
+  assert.ok(await page.getByTestId("metric-mwr-ročně").count());
+  assert.match(await page.getByTestId("split-inSample").textContent(), /2016-01 – 2020-12 · 60 měsíců/);
+  assert.match(await page.getByTestId("split-outOfSample").textContent(), /2021-01 – 2025-12 · 60 měsíců/);
+  assert.match(await page.getByTestId("attempt-counter").textContent(), /relaci: 1/);
+  const netWithCosts = await text("metric-konečná-hodnota");
+  await view(/^Bez nákladů/).check();
+  assert.notEqual(await text("metric-konečná-hodnota"), netWithCosts);
+  assert.equal(await text("flow-fundCosts"), "0$");
+  await view(/^S náklady/).check();
+  await layouts("experiments");
+  await button("Změnit nastavení").click();
+  await button("Spustit backtest").click();
+  await page.getByRole("heading", { name: "Vklady nejsou výnos", exact: true }).waitFor();
+  assert.match(await page.getByTestId("attempt-counter").textContent(), /relaci: 1/, "an identical rerun is not a new attempt");
+  for (const value of ["101", "102", "103", "104"]) {
+    await button("Změnit nastavení").click();
+    await monthlyContribution.fill(value);
+    await button("Spustit backtest").click();
+    await page.waitForFunction((expected) => document.querySelector('[data-testid="flow-contributed"]')?.textContent.replace(/\s/g, "") === `${expected}$`, 10000 + 120 * Number(value));
+    await page.getByRole("button", { name: "Změnit nastavení", exact: true }).waitFor();
+  }
+  await page.getByTestId("overfitting-notice").waitFor();
+  assert.match(await page.getByTestId("attempt-counter").textContent(), /relaci: 5/);
+  await page.reload();
+  await page.getByLabel("Cíl pokusu", { exact: true }).selectOption("timing");
+  await page.getByTestId("overfitting-notice").waitFor();
+  assert.match(await page.getByTestId("attempt-counter").textContent(), /relaci: 5/, "tab session survives reload");
+  await page.getByLabel("Cíl pokusu", { exact: true }).selectOption("withdrawals");
+  assert.match(await page.getByTestId("attempt-counter").textContent(), /relaci: 0/, "a different objective has its own counter");
+
   assert.deepEqual(await financialState(), before, "backtests leave capital receipts, trades and generations unchanged");
   assert.deepEqual(errors, [], "no browser runtime errors");
-  console.log(`PASS: setup, loading, predictions, exact fixture, all monthly points, chart keyboard tooltip/table, invalid reruns, snapshots, comparisons, all strategies, decimal inputs, price-history runs (sample label, buy-and-hold benchmark choice and A − B differences, rebalancing, trend filter, refused input, period comparison, transaction costs on/off and the with/without-costs view), simulation step (framing, focus, ordered percentiles, in-chart labels, same seed same result, redraw, contributions, refused input, table, too-short history, cost view reset), responsive widths/200% text, reduced motion, untouched portfolio. Screenshots: ${output}`);
+  console.log(`PASS: educational contributions/withdrawals/fund costs, TWR/MWR, continuous holdout, per-goal attempt counter/retry/reload, overfitting notice; setup, loading, predictions, exact fixture, all monthly points, chart keyboard tooltip/table, invalid reruns, snapshots, comparisons, all strategies, decimal inputs, price-history runs (sample label, buy-and-hold benchmark choice and A − B differences, rebalancing, trend filter, refused input, period comparison, transaction costs on/off and the with/without-costs view), simulation step (framing, focus, ordered percentiles, in-chart labels, same seed same result, redraw, contributions, refused input, table, too-short history, cost view reset), responsive widths/200% text, reduced motion, untouched portfolio. Screenshots: ${output}`);
 } finally {
   await browser.close(); if (userId) await sql`delete from "user" where id = ${userId}`; await sql.end();
 }

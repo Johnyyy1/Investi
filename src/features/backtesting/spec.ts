@@ -37,6 +37,20 @@ export type BacktestCosts = z.infer<typeof backtestCostsSchema>;
 export const NO_COSTS: BacktestCosts = { rateBps: 0, fixedFee: 0 };
 export const hasCosts = (costs: BacktestCosts) => costs.rateBps > 0 || costs.fixedFee > 0;
 
+/** Optional experiment inputs; omission and zeros preserve the original simulation. */
+export const experimentFields = {
+  contributions: z.object({ monthlyAmount: z.number().finite().min(0).max(1e12), startMonth: monthSchema.optional(), endMonth: monthSchema.optional() }).optional(),
+  lumpSumSplit: z.object({ months: z.number().int().min(1).max(120) }).optional(),
+  annualFundCostBps: z.number().int().min(0).max(2_000).optional(),
+  withdrawals: z.union([
+    z.object({ monthlyAmount: z.number().finite().min(0).max(1e12) }).strict(),
+    z.object({ annualRate: z.number().finite().min(0).max(1) }).strict(),
+  ]).optional(),
+  outOfSampleStartMonth: monthSchema.optional(),
+};
+export const experimentSettingsSchema = z.object(experimentFields);
+export type ExperimentSettings = z.infer<typeof experimentSettingsSchema>;
+
 const ruleSchema = z.discriminatedUnion("kind", [
   /** Fixed target weights; between rebalances the sleeves drift with their prices. */
   z.object({ kind: z.literal("fixed-weights"), rebalance: z.enum(rebalanceRules) }),
@@ -52,6 +66,7 @@ const ruleSchema = z.discriminatedUnion("kind", [
  * catalog; nothing in it is a price, a value or a result.
  */
 export const backtestSpecSchema = z.object({
+  ...experimentFields,
   holdings: z.array(holdingSchema).min(1).max(4),
   /** Remainder held as cash, which earns nothing. */
   cashWeightBps: z.number().int().min(0).max(FULL_WEIGHT_BPS),
@@ -68,6 +83,14 @@ export const backtestSpecSchema = z.object({
   /** Paid on the initial purchase and on every rebalance or switch. */
   costs: backtestCostsSchema,
 }).superRefine((spec, context) => {
+  const count = monthRange(spec.startMonth, spec.endMonth).length;
+  const issue = (path: string, message: string) => context.addIssue({ code: "custom", path: [path], message });
+  if ((spec.lumpSumSplit?.months ?? 1) > count) issue("lumpSumSplit", "Rozložení částky nesmí být delší než backtest.");
+  if (spec.contributions) {
+    const first = spec.contributions.startMonth ?? spec.startMonth, last = spec.contributions.endMonth ?? spec.endMonth;
+    if (first < spec.startMonth || last > spec.endMonth || first > last) issue("contributions", "Období příspěvků musí ležet uvnitř backtestu.");
+  }
+  if (spec.outOfSampleStartMonth && (monthRange(spec.startMonth, addMonths(spec.outOfSampleStartMonth, -1)).length < 2 || monthRange(spec.outOfSampleStartMonth, spec.endMonth).length < 2)) issue("outOfSampleStartMonth", "Každá část rozděleného období potřebuje alespoň dva měsíce.");
   const total = spec.holdings.reduce((sum, holding) => sum + holding.weightBps, spec.cashWeightBps);
   if (total !== FULL_WEIGHT_BPS) context.addIssue({ code: "custom", path: ["holdings"], message: "Weights must sum to 100 %." });
   if (new Set(spec.holdings.map((holding) => holding.instrumentId)).size !== spec.holdings.length) context.addIssue({ code: "custom", path: ["holdings"], message: "Each instrument may appear once." });
@@ -83,6 +106,7 @@ export type BacktestRule = BacktestSpec["rule"];
  * trades, so it pays costs only on that purchase. The adjustment is any market-data mode so that a mismatch is refused, not impossible.
  */
 export const buyAndHoldBenchmarkSchema = z.object({
+  ...experimentFields,
   kind: z.literal("buy-and-hold"),
   instrumentId: z.string().min(1).max(80),
   startMonth: monthSchema,
@@ -102,6 +126,9 @@ export type BuyAndHoldBenchmark = z.infer<typeof buyAndHoldBenchmarkSchema>;
  */
 export const backtestComparisonSchema = z.object({ strategy: backtestSpecSchema, benchmark: buyAndHoldBenchmarkSchema }).superRefine(({ strategy, benchmark }, context) => {
   const issue = (field: keyof BuyAndHoldBenchmark, message: string) => context.addIssue({ code: "custom", path: ["benchmark", field], message });
+  for (const key of Object.keys(experimentFields) as (keyof ExperimentSettings)[]) {
+    if (JSON.stringify(strategy[key]) !== JSON.stringify(benchmark[key])) issue(key, "Benchmark musí mít stejné peněžní toky, náklady fondu a rozdělení období.");
+  }
   if (benchmark.startMonth !== strategy.startMonth || benchmark.endMonth !== strategy.endMonth) issue("startMonth", "The benchmark must cover the same period as the strategy.");
   if (benchmark.initialAmount !== strategy.initialAmount) issue("initialAmount", "The benchmark must start with the same amount as the strategy.");
   if (benchmark.currency !== strategy.currency) issue("currency", "The benchmark must be in the same currency as the strategy.");
@@ -112,7 +139,7 @@ export const backtestComparisonSchema = z.object({ strategy: backtestSpecSchema,
 /** The benchmark that buys and holds `instrumentId` over the strategy's own period, amount, currency, semantics and costs. */
 export function buyAndHoldFor(strategy: BacktestSpec, instrumentId: string): BuyAndHoldBenchmark {
   const { startMonth, endMonth, initialAmount, frequency, currency, adjustment, costs } = strategy;
-  return { kind: "buy-and-hold", instrumentId, startMonth, endMonth, initialAmount, frequency, currency, adjustment, costs: { ...costs } };
+  return { ...experimentSettingsSchema.parse(strategy), kind: "buy-and-hold", instrumentId, startMonth, endMonth, initialAmount, frequency, currency, adjustment, costs: { ...costs } };
 }
 
 /** History that is missing, incomplete or inconsistent. It is reported, never filled. */

@@ -37,6 +37,7 @@
 .period small { font-size: .75rem; color: var(--color-muted); }
 .page input[type="radio"] { appearance: auto; width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--color-primary); cursor: pointer; }
 .dates { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); gap: 16px; margin-top: 16px; }
+.experimentFields { grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
 .amountRow { display: grid; gap: 12px; align-items: end; }
 .page .predictionQuestion { font-size: 1.5rem; line-height: 1.2; margin-bottom: 10px; }
 .predictions { display: grid; gap: 10px; margin-top: 16px; min-width: 0; }

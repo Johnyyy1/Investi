@@ -1,5 +1,5 @@
 import { benchmarkName, type BacktestHistoryView, type BacktestInstrument, type HistorySource } from "@/features/backtesting/catalog";
-import type { BacktestCosts, RebalanceRule } from "@/features/backtesting/spec";
+import type { BacktestCosts, ExperimentSettings, RebalanceRule } from "@/features/backtesting/spec";
 import { formatDate } from "@/lib/formatters";
 import type { BacktestChartSource } from "./backtest-chart";
 import { formatBacktestMoney, formatCostRate } from "./backtest-model";
@@ -58,13 +58,14 @@ type HistoryCopyOptions = {
   benchmark?: BacktestInstrument;
   /** Costs per trade the numbers include; none by default. */
   costs?: BacktestCosts | null;
+  experiments?: ExperimentSettings;
 };
 
 /**
  * Labels follow provenance, not the mode: only non-deterministic history is „Historická data“.
  * The deterministic run uses the same pipeline on an invented series and stays „Ukázková data“.
  */
-export function historySourceCopy(view: BacktestHistoryView, { years = { start: view.firstYear, end: view.lastYear }, source, benchmark = view.benchmarks[0], costs = null }: HistoryCopyOptions = {}): BacktestSourceCopy {
+export function historySourceCopy(view: BacktestHistoryView, { years = { start: view.firstYear, end: view.lastYear }, source, benchmark = view.benchmarks[0], costs = null, experiments = {} }: HistoryCopyOptions = {}): BacktestSourceCopy {
   const sample = view.sample || source?.sample === true;
   const { symbol } = view;
   const b = source?.benchmark ?? benchmark;
@@ -75,32 +76,34 @@ export function historySourceCopy(view: BacktestHistoryView, { years = { start: 
   const span = `${years.start}–${years.end}`;
   const loaded = source && !sample ? ` · ${view.sourceName}, načteno ${formatDate(source.retrievedAt, { timeZone: "UTC" })}` : "";
   const perTrade = costs && `${formatCostRate(costs.rateBps)} z hodnoty obchodu${costs.fixedFee > 0 ? ` + ${formatBacktestMoney(costs.fixedFee, currency)} za obchod` : ""}`;
+  const extended = Boolean(experiments.contributions || experiments.withdrawals || experiments.lumpSumSplit || experiments.annualFundCostBps);
   return {
     label: sample ? `Ukázková data · ukázková řada ${symbol} · ${span}` : `Historická data · ${view.sourceName} · ${span}`,
     chart: {
       tag: sample ? "Ukázková data" : "Historická data",
       note: sample ? `Vymyšlen${own ? "á řada" : "é řady"}, měsíční uzávěrky. Nic z grafu nepředpovídá budoucí výnosy.` : `Minulé měsíční uzávěrky ${symbols}. Nic z grafu nepředpovídá budoucí výnosy.`,
-      details: `${currency} · jen cena, bez dividend · ${perTrade ? `náklady ${perTrade}, bez daní` : "bez poplatků a daní"} · přímé spojnice měsíčních uzávěrek${loaded}`,
+      details: `${extended ? "Zadané peněžní toky a dodatečné modelové náklady fondu · " : ""}${currency} · jen cena, bez dividend · ${perTrade ? `náklady ${perTrade}, bez daní` : extended ? "bez transakčních poplatků a daní" : "bez poplatků a daní"} · přímé spojnice měsíčních uzávěrek${loaded}`,
     },
     notes: [
       { term: "Zdroj", detail: sample ? `${view.instrumentName}${own ? "" : ` a ${b.name}`}. Vymyšlené denní ceny Investníku, ne skutečné tržní ceny.` : `${view.sourceName} · denní závěrečné ceny ${symbol} (${view.instrumentName})${own ? "" : ` a ${b.symbol} (${b.name})`}.` },
-      { term: "Benchmark", detail: `${benchmarkName(b.symbol)}: celá částka jednou koupí ${b.symbol} na začátku a drží ho. Žádné rebalancování ani obchody. Stejné období, částka, měna i výnos jen z ceny jako u strategie.` },
+      { term: "Benchmark", detail: extended ? `${benchmarkName(b.symbol)} používá stejný rozpočet, příspěvky, čerpání a modelové náklady fondu jako A. Nové peníze kupují benchmark; na konci zůstávají v hotovosti.` : `${benchmarkName(b.symbol)}: celá částka jednou koupí ${b.symbol} na začátku a drží ho. Žádné rebalancování ani obchody. Stejné období, částka, měna i výnos jen z ceny jako u strategie.` },
       { term: "Dostupné období", detail: `Leden ${view.firstYear} – prosinec ${view.lastYear} · měsíční uzávěrky` },
       { term: "Výnos", detail: "Cenový výnos bez dividend. Ceny jsou očištěné jen o splity, takže celkový výnos s dividendami by byl vyšší." },
       { term: "Měsíční data", detail: "Poslední závěrečná cena každého měsíce. Chybí-li měsíc, backtest se nespustí. Nic nedoplňujeme." },
       { term: "Měna", detail: `${currency}, měna kotace ${symbols}. Bez převodu na koruny, takže v tom není ani vliv kurzu.` },
-      { term: "Náklady obchodů", detail: perTrade ? `${perTrade}. Strategie je platí při nákupu na začátku a při každém rebalancování nebo přepnutí, benchmark jen při nákupu.` : "Nezapočítané. Zapni je v nastavení a porovnej výsledek s náklady a bez nich." },
-      { term: "Co v tom není", detail: `Dividendy, úrok z hotovosti, ${perTrade ? "" : "poplatky, "}daně, spready, inflace ani další vklady.` },
+      { term: "Náklady obchodů", detail: extended ? `${perTrade ?? "Bez transakčních poplatků"}. Příspěvky, postupné nákupy a čerpání mohou vytvářet další obchody u obou cest.` : perTrade ? `${perTrade}. Strategie je platí při nákupu na začátku a při každém rebalancování nebo přepnutí, benchmark jen při nákupu.` : "Nezapočítané. Zapni je v nastavení a porovnej výsledek s náklady a bez nich." },
+      { term: "Co v tom není", detail: extended ? "Dividendy, úrok z hotovosti, daně, spready, inflace ani FX. Nákladovost je zadaný dodatečný model, ne ověřené TER instrumentu." : `Dividendy, úrok z hotovosti, ${perTrade ? "" : "poplatky, "}daně, spready, inflace ani další vklady.` },
     ],
     method: [
       sample
         ? `${own ? `Řada ${symbol} je vymyšlená` : `Řady ${symbols} jsou vymyšlené`}. Počítá se ale stejně jako skutečné ceny: denní ceny → měsíční uzávěrky → simulace.`
         : `Ceny ${symbols} načítá server ze zdroje ${view.sourceName}. Jsou to minulé závěrečné ceny, ne živé kotace. Hodnoty z prohlížeče se do výpočtu nedostanou.`,
+      ...(extended ? ["Příspěvky a skutečné výběry jsou na konci měsíce po cenovém pohybu; závěrečný příspěvek zůstává v hotovosti. Rozložený rozpočet je součástí kapitálu od začátku, první díl se investuje ihned, další na koncích měsíců. Výběr čerpá hotovost a poté poměrným prodejem pozice. Není-li dost peněz, vykáže nepokrytou částku. Roční míra čerpání je pevné procento původního rozpočtu dělené 12. Modelová roční nákladovost se z investovaných pozic odečítá faktorem (1 − sazba)^(1/12); hotovost se nezpoplatňuje. Je to dodatečný model; ceny ETF už mohou obsahovat skutečné náklady fondu."] : []),
       "Hotovost nenese úrok. Mix s pevnými vahami se mezi rebalancováními posouvá podle cen. Trendový filtr se na konci měsíce rozhoduje jen podle uzávěrek do toho dne: porovná uzávěrku s průměrem posledních 10 měsíčních uzávěrek. Budoucí ceny nezná.",
       "Náklady obchodů, když je zapneš: každý nákup nebo prodej jednoho instrumentu stojí poplatek z objemu × hodnota obchodu plus fixní poplatek. Platí se z portfolia v okamžiku obchodu, takže potom drží přesně cílové váhy toho, co zbylo. Hodnota na konci měsíce je před obchody v tu uzávěrku, proto se náklady projeví v dalším měsíci. Na konci se nic neprodává, i to by stálo poplatek. Stejné uzávěrky se spočítají ještě jednou bez nákladů. Dopad je rozdíl výsledku s náklady a bez nich; u CAGR v procentních bodech ročně.",
     ],
     periodHint: sample ? "Stejný pokus může v jiném období dopadnout jinak. Řada je vymyšlená." : `Stejný pokus může v jiném období dopadnout jinak. Roky odpovídají skutečným cenám ${symbols}.`,
-    amountHint: `Jen pro tenhle pokus, v ${currency}, měně kotace ${symbol}. Stejnou částku vložíme do obou cest na začátku. Žádné další vklady.`,
+    amountHint: extended ? `Rozpočet pro obě cesty v ${currency}. Další toky a modelové náklady nastavíš níže.` : `Jen pro tenhle pokus, v ${currency}, měně kotace ${symbol}. Stejnou částku vložíme do obou cest na začátku. Žádné další vklady.`,
     runHint: `Počítá se z cenové historie ${symbols}. Nic se nekupuje.`,
     scope: sample ? `Výsledek popisuje jen vymyšlen${own ? "ou řadu" : "é řady"}.` : `Výsledek popisuje jen minulé ceny ${symbols} ve zvoleném období, bez dividend.`,
   };
