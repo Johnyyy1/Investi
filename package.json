@@ -73,6 +73,8 @@
     "bench:navigation": "node scripts/benchmark-navigation.mjs",
     "test:market-data-cache": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-market-data-cache.mts",
     "test:rate-limit": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-rate-limit.mts",
+    "email:validate": "tsx scripts/check-email-config.mts",
+    "email:check": "tsx scripts/check-email.mts",
     "test:account-recovery": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-account-recovery.mts",
     "test:account-recovery-browser": "node scripts/validate-account-recovery-browser.mjs",
     "test:prepared-statements": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-prepared-statements.mts",
@@ -106,6 +108,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@next/env": "16.4.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24",
     "@types/react": "^19",

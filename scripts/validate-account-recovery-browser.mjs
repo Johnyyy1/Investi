@@ -1,4 +1,4 @@
-// Fresh local production server only, started with RESEND_API_KEY empty and EMAIL_OUTBOX_DIR=$RECOVERY_OUTBOX_DIR,
+// Fresh local production server only, started with EMAIL_TRANSPORT=outbox, RESEND_API_KEY empty and EMAIL_OUTBOX_DIR=$RECOVERY_OUTBOX_DIR,
 // so every e-mail lands in that directory instead of Resend. DATABASE_URL must be a disposable local database.
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";

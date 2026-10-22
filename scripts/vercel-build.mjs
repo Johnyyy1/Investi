@@ -11,6 +11,9 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+// Reject invalid mail config before any deployment-side database work, even with SKIP_ENV_VALIDATION.
+run("npm", ["run", "email:validate"]);
+
 // Reject invalid educational facts before any deployment-side database work.
 run("npm", ["run", "check:facts"]);
 
