@@ -3,6 +3,7 @@ import { availableLessons } from "@/features/learning/catalog";
 import { lessonSteps } from "@/features/progress/transition";
 import { isQuestion, type QuestionBlock } from "./question-evaluation";
 import publishedLessons from "./published-lessons-v1.json";
+import { correctAnswers } from "./answer-keys";
 
 // This is a historical compatibility fixture, not a snapshot to regenerate after a content edit.
 // See docs/education/published-lesson-compatibility.md before changing a published contract.
@@ -10,7 +11,9 @@ function grading(question: QuestionBlock) {
   const { id } = question;
   if (question.type === "multipleChoiceQuestion") return { id, type: question.type, options: question.options.map((option) => option.id), correctOptionId: question.correctOptionId };
   if (question.type === "numericQuestion") return { id, type: question.type, answer: question.answer, tolerance: question.tolerance };
-  return { id, type: question.type, answers: question.answers.map(({ id, answer, tolerance }) => ({ id, answer, tolerance })) };
+  if (question.type === "multiNumericQuestion") return { id, type: question.type, answers: question.answers.map(({ id, answer, tolerance }) => ({ id, answer, tolerance })) };
+  // Step kinds added after v1 have no published contract yet; their answer key is the contract.
+  return { id, type: question.type, answerKey: correctAnswers(question) };
 }
 
 type Contract = { id: string; moduleId: string; moduleSlug: string; slug: string; steps: { blocks: string[]; grading: ReturnType<typeof grading>[] }[] };

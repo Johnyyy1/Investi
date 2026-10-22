@@ -107,5 +107,8 @@ describe("lesson fact tokens and publication gate", () => {
     expect(() => checkPublishedFacts(factRegistry, [draft], [{ id: draft.id, status: "planned" }], today)).not.toThrow();
     expect(() => checkPublishedFacts(factRegistry, [draft], [{ id: draft.id, status: "available" }], today)).toThrow(/Unverified/);
     expect(() => checkPublishedFacts(factRegistry, [], [{ id: "missing", status: "available" }], today)).toThrow(/no authored/);
+    const notice = { ...lesson(""), id: "notice", blocks: [{ id: "facts", type: "factNotice" as const, factKeys: ["dan.casovy_test_cp" as const] }] };
+    expect(() => checkPublishedFacts(factRegistry, [notice], [{ id: notice.id, status: "planned" }], today)).not.toThrow();
+    expect(() => checkPublishedFacts(factRegistry, [notice], [{ id: notice.id, status: "available" }], today)).toThrow(/Unverified/);
   });
 });

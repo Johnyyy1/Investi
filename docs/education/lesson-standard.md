@@ -24,7 +24,7 @@ Nová běžná lekce míří na **10–15 minut včetně interakcí**. Odhad ov�
 
 ## 2. Stavba podle cíle
 
-Následující části jsou stavebnice. Nemusí mít každá vlastní krok ani se objevit v každé lekci. Jeden krok rozvíjí jednu myšlenku nebo jedno rozhodnutí; vysvětlení má obvykle několik krátkých vět. Dlouhý článek rozdělený tlačítkem Pokračovat není interaktivní lekce.
+Následující části jsou stavebnice. Konkrétní typy kroků, jejich data, návrhy (PNG) a živý náhled popisuje [katalog typů kroků](lesson-steps.md). Lekci skládej jen z nich a nekresli vlastní UI. Části nemusí mít každá vlastní krok ani se objevit v každé lekci. Jeden krok rozvíjí jednu myšlenku nebo jedno rozhodnutí; vysvětlení má obvykle několik krátkých vět. Dlouhý článek rozdělený tlačítkem Pokračovat není interaktivní lekce.
 
 | Část | Co má člověk udělat | Vhodný blok |
 | --- | --- | --- |
@@ -32,11 +32,15 @@ Následující části jsou stavebnice. Nemusí mít každá vlastní krok ani s
 | Koncept | Pojmenovat princip potřebný k rozhodnutí. | `explanation`, `conceptCallout`, `formula` |
 | Číselný příklad | Projít vstupy → výpočet → jednotky → význam a omezení. | `workedExample` |
 | Ukázka | Změnit jeden vstup, předpovědět a odhalit důsledek. | existující `interactiveFigure` |
-| Procvičení s oporou | Doplnit část řešení s nápovědou. | `numericQuestion` nebo `multiNumericQuestion` |
+| Procvičení s oporou | Doplnit část řešení s nápovědou. | `fadedExample`, `numericQuestion` nebo `multiNumericQuestion` |
 | Samostatné rozhodnutí | Vyřešit nový případ bez opsání předchozí odpovědi a zdůvodnit volbu. | otázka + výzva k vlastnímu vysvětlení |
-| Časté chyby | Rozpoznat konkrétní chybnou úvahu a její důsledek. | zpětná vazba, `conceptCallout` |
+| Časté chyby | Rozpoznat konkrétní chybnou úvahu a její důsledek. | `options[].explanation`/`misconception`, `findError`, `conceptCallout` |
+| Práce s dokumentem | Najít údaje ve fiktivním výpisu, ceníku nebo KID. | `documentTap` |
+| Rozhodnutí s kompromisem | Vyzkoušet volby za personu a vidět důsledky. | `personaDecision` |
+| Datovaná fakta | Vidět daňová/regulatorní čísla s datem a upozorněním. | `factNotice` |
 | Ověření porozumění | Vybavit si princip v pozměněné situaci, bez řešení na stejném kroku. | krok `kind: "mastery"` s otázkou |
-| Napojení na Lab | Najít známý údaj nebo prověřit plán; obchod nemusí být správným dalším krokem. | `labBridge` |
+| Napojení na Lab | Najít známý údaj nebo prověřit plán; obchod nemusí být správným dalším krokem. | `labBridge`, `labMission` |
+| Vlastní plán | Převést pravidlo na 2–4 věty a porovnat s rubrikou. | `writtenReflection` |
 | Shrnutí | Říct si vlastními slovy pravidlo, jeho mez a osobní pojistku. | `lessonSummary`, `takeaway`, `checkpoint` bez hodnocené otázky |
 
 Používej postup **řešený příklad → částečně řešený příklad → samostatná úloha → vybavení principu → krátké vlastní vysvětlení**. Číselná lekce má vysvětlit, jak výsledek mění rozhodnutí, co předpokládá a kdy může mást. Praktická lekce může místo vzorce pracovat s fiktivním ceníkem, dokumentem s klíčovými informacemi (KID), výpisem či kontrolním seznamem.
@@ -59,7 +63,7 @@ Otázka musí mít dostatek vstupů, jednotky, období a pravidlo zaokrouhlení.
 
 ## 4. Fakta, tokeny a redakční stav
 
-Daňové, regulatorní, makroekonomické a výzkumné údaje patří do datovaného registru podle [#132](https://github.com/Johnyyy1/Investi/issues/132). Lekce je má vkládat přes tokeny, například `{{dan.casovy_test_cp}}`, nikoli kopírovat sazby a limity do prózy nebo do správných odpovědí. Každý klíč potřebuje hodnotu a jednotku, jurisdikci, právní základ, platnost od–do / zdaňovací období, primární zdroj URL, datum a stav ověření, vlastníka a příští revizi. U výzkumu přidej vzorek, období a omezení přenosu na Investník.
+Daňové, regulatorní, makroekonomické a výzkumné údaje patří do datovaného registru podle [#132](https://github.com/Johnyyy1/Investi/issues/132). Registr je v [registry.ts](../../src/features/facts/registry.ts); lekce jeho hodnoty zobrazuje blokem `factNotice` nebo tokeny v textu. Lekce je má vkládat přes tokeny, například `{{dan.casovy_test_cp}}`, nikoli kopírovat sazby a limity do prózy nebo do správných odpovědí. Každý klíč potřebuje hodnotu a jednotku, jurisdikci, právní základ, platnost od–do / zdaňovací období, primární zdroj URL, datum a stav ověření, vlastníka a příští revizi. U výzkumu přidej vzorek, období a omezení přenosu na Investník.
 
 Registr a serverový renderer z #132 popisuje [průvodce datovanými fakty](facts.md). Kontrola všech publikovaných lekcí běží v CI a před buildem: neznámý, neověřený nebo redakčně blokovaný token nesmí být publikován. Historická lekce určuje datum pravidla přes `factContext.asOf`; daňová lekce se označí `factContext.kind: "tax"`. Nevyřešené závislosti ponech jako nepublikovaný návrh mimo `authoredLessons`; neobcházej je číslem napsaným natvrdo. Vymyšlené vstupy jasně označeného modelového příkladu token nepotřebují. Odborné schválení a evidence revizí zůstávají v [#133](https://github.com/Johnyyy1/Investi/issues/133). Kontroly kompatibility z #119 popisují [pravidla publikovaných lekcí](published-lesson-compatibility.md).
 
@@ -73,9 +77,9 @@ Kanonické typy jsou [AuthoredLesson, LessonBlock a StepDefinition](../../src/fe
 
 - Nové stabilní ID má tvar **`<modul>-<tema>`**, ASCII kebab-case, např. `costs-comparing-fees`; modul znamená stabilní identitní prefix, nikoli zobrazovací kód `2.2`. Existující ID nikdy nepřejmenovávej podle této konvence. ID musí být unikátní v celém kurikulu; ID bloků, možností a polí musí být unikátní v příslušném rozsahu.
 - Po publikaci neměň `lesson.id`, úložné `module_id`, `moduleSlug`, `slug` ani URL. Zobrazovací umístění měň v `lessonPlacements`; politika v4 určuje nové odměny podle registrované úrovně, proto změnu jejího dopadu na budoucí odměny posuzuj výslovně. Historické účtenky se nepřepočítávají. Nová témata dostávají vlastní identitu, nekopírují identitu jiné lekce.
-- **Nejvýše jedna hodnocená otázka na krok. Poslední krok žádnou hodnocenou otázku nemá.** Platí pro `multipleChoiceQuestion`, `numericQuestion` i `multiNumericQuestion`. Více souvisejících polí v jednom `multiNumericQuestion` je jedna otázka; dvě nezávislé úlohy rozděl do kroků. Textové vlastní vysvětlení není dnes automaticky hodnocený blok a není perzistentní odpověď.
+- **Nejvýše jedna hodnocená otázka na krok. Poslední krok žádnou hodnocenou otázku nemá.** Platí pro `multipleChoiceQuestion`, `numericQuestion`, `multiNumericQuestion`, `fadedExample`, `documentTap` i `findError`. Více souvisejících polí v jednom `multiNumericQuestion` je jedna otázka; dvě nezávislé úlohy rozděl do kroků. Textové vlastní vysvětlení není dnes automaticky hodnocený blok a není perzistentní odpověď.
 - Každý odkaz z kroku musí směřovat na existující blok. Nenechávej otázky mimo průchod, nevkládej tutéž otázku do více kroků. Výběrová otázka má právě jednu správnou existující možnost. Číselná odpověď má konečnou hodnotu, nezápornou toleranci a jednotku.
-- Použij existující typ bloku a podporované `interactiveFigure.figure`. Nový renderer, ukládání výstupů, hodnocení nebo pole manifestu jsou implementační změna se samostatnou validací. Nevymýšlej vlastnosti, které runtime nečte.
+- Použij existující typ bloku z [katalogu](lesson-steps.md) a podporované `interactiveFigure.figure`. Nový renderer, ukládání výstupů, hodnocení nebo pole manifestu jsou implementační změna se samostatnou validací. Nevymýšlej vlastnosti, které runtime nečte. Psaný výstup (`writtenReflection`) ani text v `labMission` se zatím neukládají.
 - `labBridge.metric` je volitelné existující `MetricId`; přidá odkaz na metriku. Odkazuj pouze na dostupnou funkci a popiš její skutečné konvence. Není nutné nutit člověka k nákupu; plánovanou funkci nepopisuj jako hotovou.
 
 Server v [transition.ts](../../src/features/progress/transition.ts) kontroluje správnou odpověď při přechodu vpřed. Dokončení vyžaduje poslední uložený krok, ne nový kvíz. Odpovědi a vstupy explorerů jsou dnes pomíjivé; ukládá se kurzor a dokončení. Zachovej smyčku odpověď → zpětná vazba → uložené pokračování → dokončení → jednorázová odměna → další krok.

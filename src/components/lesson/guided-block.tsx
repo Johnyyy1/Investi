@@ -21,6 +21,10 @@ import { CommonFactorExplorer, CorrelationExplorer, CrisisCorrelationExplorer } 
 import { HistoricalCorrelationExercise } from "./historical-correlation-exercise";
 import { ConcentrationExplorer, ExposureExplorer, LookThroughExplorer, PortfolioCorrelationExplorer } from "./diversification-explorers";
 import { DiversificationScenario } from "./diversification-scenario";
+import { FactNotice } from "./step-kinds/fact-notice";
+import { LabMission } from "./step-kinds/lab-mission";
+import { PersonaDecision } from "./step-kinds/persona-decision";
+import { WrittenReflection } from "./step-kinds/written-reflection";
 
 const eyebrow = "text-[11px] font-semibold tracking-[0.9px] uppercase md:text-xs md:tracking-[1px]";
 const blockTitle = "text-[19px]/6 font-semibold tracking-[-0.3px] md:text-[21px]/[26px]";
@@ -63,6 +67,10 @@ export function GuidedBlock({ block, history, riskHistory }: { block: LessonBloc
       </div>
       <div className="p-4 pb-[18px] md:p-7">{block.figure === "growth-comparison" ? <GrowthComparison /> : block.figure === "ownership-explorer" ? <ShareExplorer kind="ownership" /> : block.figure === "market-cap-explorer" ? <ShareExplorer kind="market-cap" /> : block.figure === "stock-position-explorer" ? <StockPositionExplorer /> : block.figure === "index-etf-visual" ? <IndexEtfVisual /> : block.figure === "etf-holdings-visual" ? <EtfHoldingsVisual /> : block.figure === "bond-cashflow-explorer" ? <BondCashflowExplorer /> : block.figure === "asset-comparison" ? <AssetComparison /> : block.figure === "market-quote-explorer" ? <MarketQuoteExplorer /> : block.figure === "liquidity-comparison" ? <LiquidityComparison /> : block.figure === "risk-scenario-explorer" ? <RiskScenarioExplorer /> : block.figure === "drawdown-explorer" ? <DrawdownExplorer /> : block.figure === "diversification-preview" ? <DiversificationPreview /> : block.figure === "time-horizon-explorer" ? <TimeHorizonExplorer /> : block.figure === "portfolio-builder" ? <PortfolioBuilder /> : block.figure === "diversification-impact" ? <DiversificationImpact /> : block.figure === "portfolio-horizon-scenario" ? <PortfolioHorizonScenario /> : block.figure === "risk-capacity-scenario" ? <RiskCapacityScenario /> : block.figure === "return-calculator" ? <ReturnCalculator /> : block.figure === "price-series-explorer" ? <PriceSeriesExplorer /> : block.figure === "historical-period-returns" ? <HistoricalReturnsExercise mode="period" history={history} /> : block.figure === "historical-cumulative-returns" ? <HistoricalReturnsExercise mode="cumulative" history={history} /> : block.figure === "compounding-explorer" ? <CompoundingExplorer /> : block.figure === "recovery-explorer" ? <RecoveryExplorer /> : block.figure === "volatility-paths" ? <VolatilityPaths /> : block.figure === "standard-deviation-explorer" ? <StandardDeviationExplorer /> : block.figure === "annualisation-explorer" ? <AnnualisationExplorer /> : block.figure === "max-drawdown-explorer" ? <MaxDrawdownExplorer /> : block.figure === "historical-volatility" ? <HistoricalRiskExercise mode="volatility" history={riskHistory} /> : block.figure === "historical-drawdown" ? <HistoricalRiskExercise mode="max-drawdown" history={riskHistory} /> : block.figure === "correlation-explorer" ? <CorrelationExplorer /> : block.figure === "common-factor-explorer" ? <CommonFactorExplorer /> : block.figure === "crisis-correlation-explorer" ? <CrisisCorrelationExplorer /> : block.figure === "historical-correlation" ? <HistoricalCorrelationExercise history={riskHistory} /> : block.figure === "concentration-explorer" ? <ConcentrationExplorer /> : block.figure === "exposure-explorer" ? <ExposureExplorer /> : block.figure === "look-through-explorer" ? <LookThroughExplorer /> : block.figure === "portfolio-correlation-explorer" ? <PortfolioCorrelationExplorer /> : block.figure === "diversification-scenario" ? <DiversificationScenario /> : null}</div>
     </section>;
+    case "personaDecision": return <PersonaDecision block={block} />;
+    case "labMission": return <LabMission block={block} />;
+    case "factNotice": return <FactNotice id={block.id} factKeys={block.factKeys} />;
+    case "writtenReflection": return <WrittenReflection block={block} />;
     default: return null; // Questions own their Check → feedback → Continue interaction.
   }
 }

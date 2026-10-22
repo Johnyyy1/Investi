@@ -9,6 +9,13 @@ export function prepareLessonFacts(lesson: AuthoredLesson, registry: readonly Fa
   const today = calendarDate(options.today);
   const asOf = calendarDate(lesson.factContext?.asOf ?? today);
   const used = new Map<string, FactVersion>();
+  function publishable(fact: FactVersion, key: string) {
+    if (options.published && (fact.verificationStatus === "unverified" || fact.publicationBlockedBy)) throw new Error(`Unverified or blocked fact in published lesson ${lesson.id}: ${key}`);
+    if (fact.verifiedAt && fact.verifiedAt > today) throw new Error(`Future verification in ${lesson.id}: ${key}`);
+    return fact;
+  }
+  // A factNotice block renders today's versions of its keys itself; it obeys the same publication rule as tokens.
+  for (const block of lesson.blocks) if (block.type === "factNotice") for (const key of block.factKeys) publishable(resolveFact(key, today, registry), key);
   function visit(value: unknown, field = ""): unknown {
     if (typeof value === "string") {
       // TeX groups legitimately contain adjacent braces. Only a namespaced token
@@ -21,9 +28,7 @@ export function prepareLessonFacts(lesson: AuthoredLesson, registry: readonly Fa
       const remainder = value.replace(pattern, "");
       if (remainder.includes("{{") || remainder.includes("}}")) throw new Error(`Malformed fact token in ${lesson.id}.${field}`);
       return value.replace(pattern, (_, key: string) => {
-        const fact = resolveFact(key, asOf, registry);
-        if (options.published && (fact.verificationStatus === "unverified" || fact.publicationBlockedBy)) throw new Error(`Unverified or blocked fact in published lesson ${lesson.id}: ${key}`);
-        if (fact.verifiedAt && fact.verifiedAt > today) throw new Error(`Future verification in ${lesson.id}: ${key}`);
+        const fact = publishable(resolveFact(key, asOf, registry), key);
         used.set(key, fact);
         return formatFactValue(fact.value);
       });

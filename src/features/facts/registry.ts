@@ -1,3 +1,4 @@
+import { factToday, resolveFact } from "./resolve";
 import type { FactVersion } from "./types";
 
 const checkedAt = "2026-10-21";
@@ -11,7 +12,7 @@ const capitalIncome = { title: "Finanční správa: kapitálové příjmy", url:
 /** Defaults describe this edition's coverage, not the original commencement of every law.
  * Unverified rows keep candidate values for editors only; verifiedAt is honestly absent.
  */
-function fact(input: Pick<FactVersion, "key" | "label" | "value" | "legalBasis" | "sources" | "notes"> & Partial<FactVersion>): FactVersion {
+function fact<Key extends string>(input: Pick<FactVersion, "label" | "value" | "legalBasis" | "sources" | "notes"> & Partial<FactVersion> & { key: Key }): FactVersion & { key: Key } {
   const verified = input.verificationStatus && input.verificationStatus !== "unverified";
   return {
     version: "2026-10-21", jurisdiction: "CZ", validFrom: "2026-01-01", validTo: "2026-12-31",
@@ -23,7 +24,7 @@ function fact(input: Pick<FactVersion, "key" | "label" | "value" | "legalBasis" 
 }
 
 /** 27 stable keys from CONTENT-01. Add dated versions; never replace history with a current rule. */
-export const factRegistry: readonly FactVersion[] = [
+export const factRegistry = [
   fact({ key: "dan.casovy_test_cp", label: "Časový test cenných papírů", value: { amount: 3, unit: "roky" }, legalBasis: `${zdp}, § 4; přesný odkaz vyžaduje ověření`, sources: [{ title: "Pohoda: zdanění příjmů z prodeje cenných papírů (podklad)", url: "https://portal.pohoda.cz/zakon-a-pravo/finance-a-dane/zdaneni-prijmu-z-prodeje-cennych-papiru/" }], publicationBlockedBy: followUp, notes: "Kandidát z podkladu. Ověřit písmena zákona, den nabytí/prodeje, výročí a párování tranší v #134. Nejde o pravidlo pro krypto." }),
   fact({ key: "dan.limit_100k", label: "Hodnotový test cenných papírů", value: { amount: 100000, unit: "Kč" }, legalBasis: `${zdp}, § 4`, sources: [fs2026], verificationStatus: "primary", publicationBlockedBy: followUp, notes: "FS potvrzuje výši limitu. Výklad úhrnu včetně časově osvobozených prodejů zůstává sporný (#134); publikace tohoto klíče je proto blokována. Jde o příjmy z prodeje, nikoli zisk." }),
   fact({ key: "dan.strop_40m", version: "2025", label: "Strop osvobození cenných papírů v roce 2025", value: { amount: 40000000, unit: "Kč" }, validFrom: "2025-01-01", validTo: "2025-12-31", period: "2025", taxPeriod: "2025", legalBasis: `${zdp}, § 4, před novelou č. 360/2025 Sb.`, sources: [fs2026], verificationStatus: "primary", notes: "Historická verze pro cenné papíry při splnění časového testu. Pro rok 2026 nepoužívat; podrobnosti přechodných ustanovení vyžadují odbornou revizi." }),
@@ -52,4 +53,24 @@ export const factRegistry: readonly FactVersion[] = [
   fact({ key: "krypto.dane", label: "Daně kryptoaktiv", value: { amount: "Samostatný režim osvobození a jeho výjimky", unit: "" }, legalBasis: `${zdp}, ustanovení o kryptoaktivech`, sources: [{ title: "Finanční správa: osvobození převodu kryptoaktiv", url: "https://financnisprava.gov.cz/cs/dane/dane/dan-z-prijmu/dotazy-a-odpovedi/dan-z-prijmu-fyzickych-osob/osvobozeni-prijmu-z-uplatneho-prevodu-kryptoaktiv" }], publicationBlockedBy: followUp, notes: "Nepřebírat změnu stropu cenných papírů do krypta. Ověřit účinnost, limity, elektronické peněžní tokeny a DAC8 v #134; tento záznam nepublikuje číselný výpočet." }),
   fact({ key: "spiva.2025", label: "SPIVA USA — aktivní velké akciové fondy, 2025", value: { amount: 79, unit: "%" }, jurisdiction: "US", validFrom: "2026-03-03", validTo: undefined, period: "Kalendářní rok 2025", legalBasis: "Výzkumná zpráva S&P Dow Jones Indices, nikoli právní pravidlo", sources: [{ title: "S&P DJI: SPIVA U.S. Year-End 2025", url: "https://www.spglobal.com/spdji/en/spiva/article/spiva-us-year-end-2025/" }], verificationStatus: "primary", owner: "Redakce — výzkum", nextReviewAt: "2027-04-21", notes: "Podíl aktivních fondů dané kategorie, které zaostaly za S&P 500; nejde o podíl všech investorů ani pravděpodobnost budoucího neúspěchu.", research: { sample: "Aktivně spravované americké large-cap akciové fondy ve SPIVA", period: "2025", limitations: "USA, jedna kategorie a jeden rok. Není důkazem efektu vzdělávání ani výsledků českého jednotlivce." } }),
   fact({ key: "morningstar.gap", label: "Morningstar — mezera mezi výnosem investorů a fondů", value: { amount: 1.2, unit: "p. b. ročně" }, jurisdiction: "US", period: "Deset let do konce roku 2024; Mind the Gap 2025", legalBasis: "Výzkum Morningstar, nikoli právní pravidlo", sources: [{ title: "Morningstar: Volatility Bedevils Fund Investors", url: "https://www.morningstar.com/financial-advisors/volatility-bedevils-fund-investors" }], owner: "Redakce — výzkum", notes: "Podklad uvádí primární ověření, ale zdroj nyní vrací 403. Záznam zůstává neověřený; nepoužívat jako potvrzenou diagnózu chování.", research: { sample: "Americké podílové fondy a ETF ve studii Morningstar (úplný vzorek k ověření)", period: "2015–2024", limitations: "Agregátní vztah peněžních toků a výnosů není kauzální účinek vzdělávání; nelze jej automaticky přenést na učební aplikaci ani jednotlivce." } }),
-];
+] as const;
+
+export type FactKey = (typeof factRegistry)[number]["key"];
+
+/** The version of a fact that applies on `asOf` (today in Prague by default). */
+export function getFact(key: FactKey, asOf = factToday()): FactVersion {
+  return resolveFact(key, asOf, factRegistry);
+}
+
+/** Unverified or editorially blocked: a `factNotice` shows it calmly as waiting for verification, never as settled. */
+export function isFactPending(fact: FactVersion) {
+  return fact.verificationStatus === "unverified" || Boolean(fact.publicationBlockedBy);
+}
+
+/** "Stav k" of a `factNotice`: the oldest successful verification (or, while a fact waits, its last check) and whether any fact still waits. */
+export function factsState(keys: readonly FactKey[], asOf = factToday()) {
+  const facts = keys.map((key) => getFact(key, asOf));
+  if (!facts.length) return undefined;
+  const checkedAsOf = facts.map((fact) => fact.verifiedAt ?? fact.checkedAt).sort()[0];
+  return { facts, asOf: checkedAsOf, pending: facts.some(isFactPending), sources: [...new Map(facts.flatMap((fact) => fact.sources).map((source) => [source.url, source])).values()] };
+}
