@@ -338,7 +338,7 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
       {(attempts[goal]?.length ?? 0) >= OVERFITTING_NOTICE_AT && <p className={styles.notice} data-testid="overfitting-notice">Po pěti různých specifikacích připomínáme riziko přeučení. Výběr nejlepšího minulého výsledku může zachytit náhodu. Před dalším pokusem si zapiš pravidlo a ověř ho na datech, která nesloužila k jeho ladění. Počet pokusů sám neprokazuje chybu.</p>}
     </div>
     {result && <div className={styles.resultHead}>
-      <div><h2 ref={heading} tabIndex={-1}>{result.strategy.name}</h2><p>{result.period} · {result.months} měsíců · Start {money(result, result.amount)}</p></div>
+      <div><h2 ref={heading} tabIndex={-1}>{result.strategy.name}</h2><p data-testid="backtest-result-period">{result.period} · {result.months} měsíců · Start {money(result, result.amount)}</p></div>
       <Button variant="secondary" onClick={() => editing ? setEditing(false) : edit()} aria-expanded={editing} aria-controls="backtest-configuration"><SlidersHorizontal size={16} aria-hidden="true" />{editing ? "Zavřít nastavení" : "Změnit nastavení"}</Button>
     </div>}
     {dirty && <p role="status" className={styles.notice}>Vstupy se změnily. Spusť backtest znovu a aktualizuj výsledek. Níže je stále výsledek předchozího nastavení.</p>}
