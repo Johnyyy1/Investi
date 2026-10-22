@@ -51,7 +51,7 @@ try {
   assert.equal(await page.locator(".investi-theme").count(), 1, "Learn uses the shared theme");
   // Returns now sits in display module 3.1 within the initially collapsed portfolio level.
   // Exercise the actual map navigation and keep checking the historical lesson route.
-  const portfolioLevel = page.getByTestId("journey-modules").locator('[data-level="L3"]');
+  const portfolioLevel = page.locator("[data-investi-studovna]:visible").getByTestId("journey-modules").locator('[data-level="L3"]');
   assert.equal(await portfolioLevel.evaluate((element) => element.open), false, "non-current level starts collapsed");
   await portfolioLevel.locator(":scope > summary").click();
   const lessonLink = portfolioLevel.locator(`[data-display-module="3.1"] a[href="${route}"]`);
