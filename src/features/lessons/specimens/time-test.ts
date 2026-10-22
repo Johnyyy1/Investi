@@ -102,7 +102,7 @@ export const timeTestSpecimens = {
       { badge: "GLOB", label: "Nákup 1. 9. 2026 · 4 ks", status: "za 1 048 dní", progress: 0.045, start: "1. 9. 2026", end: "osvobození od 2. 9. 2029" },
     ], generalRule: "Každý nákup má vlastní tři roky. Osvobození proto přichází po tranších, od nejstarší. Kdo prodává po částech, může nejdřív prodat tranše, které test už splnily.", selfExplanationPrompt: "Proč by se ti vyplatilo počkat?" },
   },
-  factNotice: { id: "spec-facts", type: "factNotice", factKeys: ["cz.tax.securities.time_test", "cz.tax.securities.value_test"] },
+  factNotice: { id: "spec-facts", type: "factNotice", factKeys: ["dan.casovy_test_cp", "dan.limit_100k"] },
   writtenReflection: {
     id: "spec-reflection", type: "writtenReflection", prompt: "Napiš, kdy plánuješ prodávat a jak zohledníš časový test.",
     rubric: [

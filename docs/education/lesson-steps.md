@@ -73,7 +73,7 @@ Nehodnotí se. `persona.facts` ukazují data i dopočítané lhůty vedle sebe, 
 
 ### L · `factNotice` — daňový a regulatorní blok
 
-`factKeys` odkazují do [registru faktů](../../src/features/facts/registry.ts). Čísla nikdy nepiš natvrdo do textu ani do bloku. Blok vypíše hodnoty, původ a upozornění „Vzdělávací obsah, ne daňové poradenství“. Fakt ve stavu `pending` ukáže klidně, šedě a s hodinami. Lekce s `factNotice` dostane na prvním kroku štítek „Stav k …“, který se odvozuje od nejstaršího ověření. Nový fakt přidej do registru se zdrojem, datem, vlastníkem a příští revizí; bez ověření primárním zdrojem zůstává `pending`.
+`factKeys` odkazují do [registru faktů](../../src/features/facts/registry.ts). Čísla nikdy nepiš natvrdo do textu ani do bloku. Blok vypíše hodnoty, původ a upozornění „Vzdělávací obsah, ne daňové poradenství“. Blok vybírá verzi faktu platnou v den zobrazení. Neověřený (`unverified`) nebo redakčně blokovaný (`publicationBlockedBy`) fakt ukáže klidně, šedě a s hodinami; publikovaná lekce ho ale obsahovat nesmí, stejně jako u tokenů to hlídá `npm run check:facts`. Lekce s `factNotice` dostane na prvním kroku štítek „Stav k …“, který se odvozuje od nejstaršího ověření. Nový fakt přidej do registru podle [průvodce datovanými fakty](facts.md); bez ověření primárním zdrojem zůstává `unverified`.
 
 ![L · blok](../design/lesson-steps/l-tax-notice-390-header-and-block.png)
 
