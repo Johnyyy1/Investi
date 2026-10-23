@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { factRegistry } from "./registry";
 import { calendarDate, factReviewState, factToday, formatFactValue, resolveFact, validateFactRegistry } from "./resolve";
 import { prepareLessonFacts } from "./lesson-facts";
+import { readFileSync } from "node:fs";
 import { checkPublishedFacts } from "./check-published";
+import { contentReviews } from "./content-reviews";
 import { authoredLessons } from "@/features/lessons/registry";
 import { curriculumLessons } from "@/features/learning/catalog";
 import type { AuthoredLesson } from "@/features/lessons/types";
@@ -110,5 +112,24 @@ describe("lesson fact tokens and publication gate", () => {
     const notice = { ...lesson(""), id: "notice", blocks: [{ id: "facts", type: "factNotice" as const, factKeys: ["dan.casovy_test_cp" as const] }] };
     expect(() => checkPublishedFacts(factRegistry, [notice], [{ id: notice.id, status: "planned" }], today)).not.toThrow();
     expect(() => checkPublishedFacts(factRegistry, [notice], [{ id: notice.id, status: "available" }], today)).toThrow(/Unverified/);
+  });
+  it("blocks a published tax or regulatory lesson without an approval of its current fact versions", () => {
+    const tax = { ...lesson(), factContext: { kind: "tax" as const } };
+    const published = [{ id: tax.id, status: "available" }];
+    const approval = { lessonId: tax.id, role: "Daňový poradce", reviewedAt: "2026-10-20", decision: "approved" as const, facts: [`test.limit@${verified.version}`] };
+    expect(() => checkPublishedFacts(registry, [tax], [{ id: tax.id, status: "planned" }], today, [])).not.toThrow();
+    expect(() => checkPublishedFacts(registry, [tax], published, today, [])).toThrow(/no expert review/);
+    expect(() => checkPublishedFacts(registry, [{ ...tax, factContext: { kind: "regulatory" } }], published, today, [])).toThrow(/no expert review/);
+    expect(() => checkPublishedFacts(registry, [{ ...tax, factContext: { kind: "research" } }], published, today, [])).not.toThrow();
+    expect(() => checkPublishedFacts(registry, [tax], published, today, [approval])).not.toThrow();
+    // A later request for changes, a changed fact version or an extra fact reopens the review.
+    expect(() => checkPublishedFacts(registry, [tax], published, today, [approval, { ...approval, reviewedAt: "2026-10-21", decision: "changes-requested" }])).toThrow(/no expert review/);
+    expect(() => checkPublishedFacts([{ ...verified, version: "2027" }, second], [tax], published, today, [approval])).toThrow(/needs update/);
+    expect(() => checkPublishedFacts(registry, [{ ...tax, blocks: [{ id: "intro", type: "paragraph", content: "{{test.limit}} a {{test.rate}}" }] }], published, today, [approval])).toThrow(/needs update/);
+    expect(() => checkPublishedFacts(registry, [tax], published, today, [{ ...approval, reviewedAt: "2026-10-22" }])).toThrow(/Future/);
+  });
+  it("logs every expert review record in docs/education/reviews.md", () => {
+    const log = readFileSync("docs/education/reviews.md", "utf8");
+    for (const review of contentReviews) expect(log).toContain(`${review.lessonId} · ${review.reviewedAt}`);
   });
 });

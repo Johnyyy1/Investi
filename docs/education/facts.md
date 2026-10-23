@@ -38,7 +38,7 @@ Neznámý nebo chybně zapsaný token selže i v konceptu. Publikovaná lekce na
 
 Den po `nextReviewAt` se objeví redakční příznak. Od **60. kalendářního dne prodlení včetně** se v lekci zobrazí „Údaj může být zastaralý“ s názvy dotčených faktů. To je explicitní redakční politika této implementace, nikoli výzkumem potvrzený práh. Čerstvost se vyhodnocuje při zobrazení i pro historický scénář; původní interval použitelnosti přitom zůstává zachovaný.
 
-Leden: daňová pravidla a kurzy; sezóna přiznání: lhůty; měsíčně: makrodata; pololetně: produkty a výzkum; ad hoc: legislativní změny. Role vlastníků jsou v registru, při odborné revizi je nutno přiřadit skutečného recenzenta podle #133. Tato změna nevytváří naplánované úlohy ani upozornění. Při změně hodnoty uzavři interval předchozí verze a přidej novou se zdrojem a skutečným datem ověření. Nedoplňuj neznámou hodnotu nulou.
+Leden: daňová pravidla a kurzy; sezóna přiznání: lhůty; měsíčně: makrodata; pololetně: produkty a výzkum; ad hoc: legislativní změny. Role vlastníků, kalendář a evidence odborných revizí jsou v [redakčním workflow](editorial-workflow.md) (#133). Tato změna nevytváří naplánované úlohy ani upozornění. Při změně hodnoty uzavři interval předchozí verze a přidej novou se zdrojem a skutečným datem ověření. Nedoplňuj neznámou hodnotu nulou.
 
 Ověření: `npm run check:facts`, `npm test -- src/features/facts src/components/lesson/lesson-fact-notice.test.tsx src/app/dev/facts/page.test.tsx`. Pro čerstvý vývojový server na portu 3132 spusť `npm run test:facts-browser`; `FACTS_TEST_URL` mění adresu, `FACTS_EXPECT_PRODUCTION=1` ověřuje pouze produkční 404. Pro screenshoty lze nastavit `FACTS_SCREENSHOT_DIR`.
 

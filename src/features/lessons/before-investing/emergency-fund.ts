@@ -2,7 +2,7 @@ import type { AuthoredLesson } from "../types";
 import { beforeInvestingLessons } from "./manifest";
 const lesson = beforeInvestingLessons[1];
 
-/** Editorial draft: publication awaits the expert review required by #150/#133. */
+/** Editorial draft: publication needs an expert review record (docs/education/editorial-workflow.md). */
 export const emergencyFundLesson: AuthoredLesson = {
   id: lesson.id, moduleSlug: "before-investing", slug: lesson.slug, title: lesson.title,
   eyebrow: "Než začneš investovat", position: 3, estimatedMinutes: lesson.estimatedMinutes,
