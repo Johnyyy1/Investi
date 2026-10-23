@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { authoredLessons, emergencyFundLesson } from "./registry";
+import { authoredLessons, draftLessons } from "./registry";
 import { isQuestion } from "./question-evaluation";
 import { availableLessons, isFocusedLesson } from "../learning/catalog";
 import { getGuidedSteps, getStepDefinitions, moduleSteps } from "./steps";
@@ -26,9 +26,9 @@ describe("shared guided lessons", () => {
     expect(() => getStepDefinitions("returns-log")).toThrow();
     expect(() => getStepDefinitions("constructor")).toThrow();
   });
-  it("defines steps for the published lessons and the explicitly registered editorial draft, each in one module", () => {
+  it("defines steps for the published lessons and the explicitly registered editorial drafts, each in one module", () => {
     const ids = moduleSteps.flatMap((steps) => Object.keys(steps));
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids.sort()).toEqual([...availableLessons.map((lesson) => lesson.id), emergencyFundLesson.id].sort());
+    expect(ids.sort()).toEqual([...availableLessons, ...draftLessons].map((lesson) => lesson.id).sort());
   });
 });

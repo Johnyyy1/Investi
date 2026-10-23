@@ -2,7 +2,7 @@
 
 `src/features/lessons/figure-catalog.ts` is the maintained inventory of figure IDs, data classification, model locations and owners. `curriculum` means the curriculum maintainer role responsible for the educational assumptions and model tests. The catalog defines `LessonFigureId`; a new ID must also implement the exhaustive lazy renderer map in `src/components/lesson/lazy-blocks.tsx`. Stable IDs and persisted lesson answers do not change.
 
-This platform supports incremental delivery with the lessons. The private `budget-builder` ships with [lesson 0.1.1](budget-0.1.1.md); the unpublished [emergency-fund lesson](emergency-fund-0.1.3.md) adds a private `emergency-fund-calculator` with server-resolved dated inflation/tax inputs. The [goals lesson](lesson-reviews/goals-and-horizon.md) adds `goal-map`, a consent-based learner artifact editor rather than an invented-data calculator. Pension, DCF and leverage calculators remain planned.
+This platform supports incremental delivery with the lessons. The private `budget-builder` ships with [lesson 0.1.1](budget-0.1.1.md); the unpublished [emergency-fund lesson](emergency-fund-0.1.3.md) adds a private `emergency-fund-calculator` with server-resolved dated inflation/tax inputs. The [goals lesson](lesson-reviews/goals-and-horizon.md) adds `goal-map`, a consent-based learner artifact editor rather than an invented-data calculator. The unpublished [pension and DIP lesson](pension-and-dip-0.1.5.md) adds a private `state-support-calculator` (shared with 2.4.8) whose rules model is pinned to the fact registry by tests. DCF and leverage calculators remain planned.
 
 ## Adding a figure
 

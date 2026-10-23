@@ -452,6 +452,12 @@ jobs:
         env:
           EMERGENCY_FUND_TEST_URL: ${{ env.APP_URL }}
           EMERGENCY_FUND_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/emergency-fund
+      - name: Pension and DIP editorial preview
+        if: ${{ !cancelled() }}
+        run: npm run test:pension-and-dip-browser
+        env:
+          PENSION_DIP_TEST_URL: ${{ env.APP_URL }}
+          PENSION_DIP_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/pension-and-dip
       - name: Facts registry
         if: ${{ !cancelled() }}
         run: npm run test:facts-browser

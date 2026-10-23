@@ -5,6 +5,7 @@
 type FigureDefinition = { owner: "curriculum"; data: "model" | "provider" | "learner"; model: string };
 export const lessonFigureCatalog = {
   "goal-map": { owner: "curriculum", data: "learner", model: "src/features/lessons/before-investing/goals-model.ts" },
+  "state-support-calculator": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/pension-model.ts" },
   "emergency-fund-calculator": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/emergency-fund-model.ts" },
   "debt-vs-invest-calculator": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/debt-model.ts" },
   "budget-builder": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/model.ts" },
