@@ -87,6 +87,8 @@
     "test:artifacts-browser": "node scripts/validate-artifacts-browser.mjs",
     "test:ips-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-ips.mts",
     "test:ips-browser": "node scripts/validate-ips-browser.mjs",
+    "test:training-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-training.mts",
+    "test:training-browser": "node scripts/validate-training-browser.mjs",
     "test:lesson-exercises-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-lesson-exercises.mts",
     "test:lesson-exercises-browser": "node scripts/validate-lesson-exercises-browser.mjs",
     "analytics:funnel": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/report-funnel.mts",
