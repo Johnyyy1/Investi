@@ -30,7 +30,7 @@ try {
   [{ id: userId }] = await sql`select id from "user" where email=${email}`;
   await page.goto(`${baseURL}/onboarding`);
   await finishOnboarding(page);
-  await page.locator('details[data-level="L0"] > summary').click();
+  await page.locator('details[data-level="L0"] > summary:visible').click();
   await page.getByRole("link", { name: /0.1.4.*Cíle a investiční horizont/ }).click();
   const next = () => page.getByRole("button", { name: "Pokračovat", exact: true });
   async function check() {

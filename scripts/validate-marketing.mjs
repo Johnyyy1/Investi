@@ -244,10 +244,19 @@ try {
   await page.waitForURL("**/learn");
   const owner = await recordSession(context);
   for (const path of ["/lab/portfolio", "/lab/backtesting", "/progress", "/learn/returns/log-returns"]) {
+    // The lesson starts through a hydrated Server Action; its heading can appear before that write finishes.
+    const started = path.startsWith("/learn/") ? page.waitForResponse(response =>
+      new URL(response.url()).pathname === path && Boolean(response.request().headers()["next-action"])) : null;
     await page.goto(`${baseURL}${path}`);
     assert.equal(new URL(page.url()).pathname, path);
     assert.equal(await page.locator("h1").count(), 1);
     assert.equal(await page.locator('[class*="pen-landing"]').count(), 0);
+    if (started) {
+      assert.equal((await started).ok(), true, "lesson-start action succeeds before the baseline snapshot");
+      const progress = await sql`select status, last_position from lesson_progress where user_id=${owner} and lesson_id='returns-log-returns'`;
+      assert.equal(progress.length, 1);
+      assert.deepEqual(progress[0], { status: "in_progress", last_position: 0 });
+    }
   }
   const before = await snapshot(owner);
   await page.goto(baseURL);
