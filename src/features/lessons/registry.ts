@@ -25,6 +25,8 @@ import { diversificationScenarioLesson } from "./diversification/diversification
 
 import { budgetLesson } from "./before-investing/budget";
 
+export { emergencyFundLesson } from "./before-investing/emergency-fund";
+
 export const authoredLessons = [budgetLesson, ...foundationsContent, whatIsAReturnLesson, simpleReturnsLesson, compoundingAndCumulativeReturnsLesson, comparingInvestmentsLesson, logReturnsLesson, returnsCheckpointLesson, whatIsVolatilityLesson, standardDeviationLesson, annualisingVolatilityLesson, maxDrawdownLesson, volatilityCheckpointLesson, whatIsCorrelationLesson, notCausationLesson, correlationInCrisesLesson, correlationRealDataLesson, concentrationLesson, sectorsAndCountriesLesson, etfLookThroughLesson, correlationAndRiskLesson, diversificationScenarioLesson] as const;
 
 export function getAuthoredLesson(moduleSlug: string, lessonSlug: string) {

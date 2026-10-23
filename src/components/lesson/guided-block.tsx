@@ -58,7 +58,7 @@ export function GuidedBlock({ block, history, riskHistory, lessonId, guest, onOu
         <h3 id={`${block.id}-title`} className="text-xl/[1.3] font-semibold tracking-[-0.3px] [overflow-wrap:anywhere] md:text-[1.375rem]/[1.273]">{block.title}</h3>
         <p className="text-sm/[1.5] text-secondary [overflow-wrap:anywhere] md:text-[0.9375rem]/[1.533]">{block.description}</p>
       </div>
-      <div className="p-4 pb-[18px] md:p-7"><LessonFigure figure={block.figure} history={history} riskHistory={riskHistory} /></div>
+      <div className={cn("py-4 pb-[18px] md:p-7", block.figure === "emergency-fund-calculator" ? "px-2" : "px-4")}><LessonFigure figure={block.figure} emergencyFundFacts={block.emergencyFundFacts} history={history} riskHistory={riskHistory} /></div>
     </section>;
     case "personaDecision": return <PersonaDecision block={block} />;
     case "labMission": return <LabMission block={block} />;

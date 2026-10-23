@@ -12,7 +12,7 @@ import type { RiskHistoryEntry } from "@/features/lessons/real-history/risk-wind
  * so new lessons and figures do not grow every lesson's JavaScript. Server rendering is unchanged.
  */
 type FigureKind = Extract<LessonBlock, { type: "interactiveFigure" }>["figure"];
-type FigureData = { history?: readonly LessonHistoryEntry[]; riskHistory?: readonly RiskHistoryEntry[] };
+type FigureData = { emergencyFundFacts?: import("@/features/lessons/before-investing/emergency-fund-model").EmergencyFundFacts; history?: readonly LessonHistoryEntry[]; riskHistory?: readonly RiskHistoryEntry[] };
 
 function Placeholder() {
   return <div role="status" className="min-h-40 animate-pulse rounded-control bg-surface-sunken motion-reduce:animate-none"><span className="sr-only">Načítám…</span></div>;
@@ -57,6 +57,7 @@ const DiversificationImpact = lazyComponent(foundations, (module) => module.Dive
 const PortfolioHorizonScenario = lazyComponent(foundations, (module) => module.PortfolioHorizonScenario);
 const RiskCapacityScenario = lazyComponent(foundations, (module) => module.RiskCapacityScenario);
 const PortfolioBuilder = lazyComponent(() => import("./portfolio-builder"), (module) => module.PortfolioBuilder);
+const EmergencyFundCalculator = lazyComponent(() => import("./emergency-fund-calculator"), (module) => module.EmergencyFundCalculator);
 const BudgetBuilder = lazyComponent(() => import("./budget-builder"), (module) => module.BudgetBuilder);
 const ReturnCalculator = lazyComponent(() => import("./return-calculator"), (module) => module.ReturnCalculator);
 const PriceSeriesExplorer = lazyComponent(() => import("./price-series-explorer"), (module) => module.PriceSeriesExplorer);
@@ -99,6 +100,7 @@ const figures: Record<FigureKind, { preload: () => Promise<unknown>; render: (da
   "portfolio-horizon-scenario": { preload: PortfolioHorizonScenario.preload, render: () => <PortfolioHorizonScenario /> },
   "risk-capacity-scenario": { preload: RiskCapacityScenario.preload, render: () => <RiskCapacityScenario /> },
   "portfolio-builder": { preload: PortfolioBuilder.preload, render: () => <PortfolioBuilder /> },
+  "emergency-fund-calculator": { preload: EmergencyFundCalculator.preload, render: ({ emergencyFundFacts }) => <EmergencyFundCalculator facts={emergencyFundFacts} /> },
   "budget-builder": { preload: BudgetBuilder.preload, render: () => <BudgetBuilder /> },
   "return-calculator": { preload: ReturnCalculator.preload, render: () => <ReturnCalculator /> },
   "price-series-explorer": { preload: PriceSeriesExplorer.preload, render: () => <PriceSeriesExplorer /> },

@@ -85,6 +85,7 @@ export type DisplayModuleCode = (typeof displayModules)[number]["code"];
 
 /** What a lesson trains. Mastery states (#122) will hang on these IDs. */
 export const skills = {
+  "emergency-fund": "Rezerva, dostupnost a kupní síla",
   "monthly-budget": "Měsíční rozpočet a nepravidelné výdaje",
   "savings-rate": "Míra úspor",
   "saving-vs-investing": "Spoření a investování",
@@ -130,8 +131,9 @@ export type LessonPlacement = {
 const place = (lessonId: string, displayModule: DisplayModuleCode, order: number, required: Requirement, prerequisites: readonly string[], lessonSkills: readonly SkillId[]): LessonPlacement =>
   ({ lessonId, displayModule, displayCode: `${displayModule}.${order}`, order, prerequisites, skills: lessonSkills, required });
 
-/** Where each published lesson sits in Curriculum 2.0. New lessons are added here and in their storage manifest. */
+/** Where each authored lesson, including editorial drafts, sits in Curriculum 2.0. New lessons are added here and in their storage manifest. */
 export const lessonPlacements: readonly LessonPlacement[] = [
+  place("before-investing-emergency-fund", "0.1", 3, "recommended", ["before-investing-budget"], ["emergency-fund", "inflation"]),
   place("before-investing-budget", "0.1", 1, "recommended", [], ["monthly-budget", "savings-rate"]),
   place("foundations-why-invest", "1.1", 1, "required", [], ["saving-vs-investing", "inflation"]),
   place("foundations-stocks", "1.1", 2, "required", ["foundations-why-invest"], ["stock-ownership", "position-value"]),
