@@ -58,6 +58,7 @@ const PortfolioHorizonScenario = lazyComponent(foundations, (module) => module.P
 const RiskCapacityScenario = lazyComponent(foundations, (module) => module.RiskCapacityScenario);
 const PortfolioBuilder = lazyComponent(() => import("./portfolio-builder"), (module) => module.PortfolioBuilder);
 const EmergencyFundCalculator = lazyComponent(() => import("./emergency-fund-calculator"), (module) => module.EmergencyFundCalculator);
+const StateSupportCalculator = lazyComponent(() => import("./state-support-calculator"), (module) => module.StateSupportCalculator);
 const DebtVsInvestCalculator = lazyComponent(() => import("./debt-vs-invest-calculator"), (module) => module.DebtVsInvestCalculator);
 const BudgetBuilder = lazyComponent(() => import("./budget-builder"), (module) => module.BudgetBuilder);
 const GoalMap = lazyComponent(() => import("./goal-map"), (module) => module.GoalMap);
@@ -104,6 +105,7 @@ const figures: Record<FigureKind, { preload: () => Promise<unknown>; render: (da
   "risk-capacity-scenario": { preload: RiskCapacityScenario.preload, render: () => <RiskCapacityScenario /> },
   "portfolio-builder": { preload: PortfolioBuilder.preload, render: () => <PortfolioBuilder /> },
   "emergency-fund-calculator": { preload: EmergencyFundCalculator.preload, render: ({ emergencyFundFacts }) => <EmergencyFundCalculator facts={emergencyFundFacts} /> },
+  "state-support-calculator": { preload: StateSupportCalculator.preload, render: () => <StateSupportCalculator /> },
   "debt-vs-invest-calculator": { preload: DebtVsInvestCalculator.preload, render: () => <DebtVsInvestCalculator /> },
   "budget-builder": { preload: BudgetBuilder.preload, render: () => <BudgetBuilder /> },
   "return-calculator": { preload: ReturnCalculator.preload, render: () => <ReturnCalculator /> },

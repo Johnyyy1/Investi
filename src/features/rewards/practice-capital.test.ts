@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { availableLessons, curriculumLessons } from "@/features/learning/catalog";
 import { FOUNDATIONS_MODULE_ID } from "@/features/lessons/foundations/manifest";
+import { draftLessons } from "@/features/lessons/registry";
 import { curriculumLevels, displayModules, getLessonPlacement } from "@/features/learning/curriculum";
 import {
   LEGACY_LESSON_PRACTICE_CAPITAL_MINOR,
@@ -53,13 +54,13 @@ describe("Practice Capital reward policy v4", () => {
   });
 
   it("requires a curriculum placement before a planned lesson can receive a reward", () => {
-    for (const lesson of curriculumLessons.filter((entry) => entry.status === "planned" && !["before-investing-emergency-fund", "before-investing-scams"].includes(entry.id))) {
+    for (const lesson of curriculumLessons.filter((entry) => entry.status === "planned" && !draftLessons.some((draft) => draft.id === entry.id))) {
       expect(() => lessonReward(lesson.id)).toThrow(/curriculum placement/i);
     }
   });
 
   it("keeps the explicitly placed L0 editorial drafts XP-only under the existing policy", () => {
-    for (const id of ["before-investing-emergency-fund", "before-investing-scams"]) expect(lessonReward(id)).toEqual({ practiceCapitalMinor: 0n, rewardPolicyVersion: 4 });
+    for (const draft of draftLessons) expect(lessonReward(draft.id)).toEqual({ practiceCapitalMinor: 0n, rewardPolicyVersion: 4 });
   });
 
   it("refuses to price a lesson outside the curriculum", () => {

@@ -11,7 +11,7 @@ import { LessonFactNotice } from "./lesson-fact-notice";
 import { cn } from "@/lib/utils";
 
 /** Development-only editorial walk. No learner mutations, completion, awards or draft persistence. */
-export function EditorialLessonPreview({ title, steps, notice }: { title: string; steps: readonly GuidedStep[]; notice?: Notice }) {
+export function LessonDraftPreview({ title, steps, notice }: { title: string; steps: readonly GuidedStep[]; notice?: Notice }) {
   const [position, setPosition] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [verdict, setVerdict] = useState<boolean>();
