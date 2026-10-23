@@ -17,7 +17,7 @@ const ids = [];
 const required = [
   { id: "foundations-why-invest", slug: "why-invest", finalPosition: 2 },
   { id: "foundations-stocks", slug: "stocks", finalPosition: 7 },
-  { id: "foundations-etfs-indexes", slug: "etfs-and-indexes", finalPosition: 6 },
+  { id: "foundations-etfs-indexes", slug: "etfs-and-indexes", finalPosition: 7 },
   { id: "foundations-bonds-cash", slug: "bonds-and-cash", finalPosition: 6 },
   { id: "foundations-markets", slug: "how-markets-work", finalPosition: 7 },
   { id: "foundations-risk-reward", slug: "risk-vs-reward", finalPosition: 6 },
