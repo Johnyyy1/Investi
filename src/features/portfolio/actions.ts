@@ -15,7 +15,7 @@ import { portfolioMarketData } from "./environment";
 import { allocationExecutionSchema, allocationInputSchema, idempotencySchema, instrumentIdSchema, tradeInputSchema } from "./input";
 import { BROKER_FEE_PROFILES } from "./costs";
 import { executeAllocation, executeTrade, resetActivePortfolio, reviewAllocation, reviewTrade, setBrokerFeeProfile } from "./repository";
-import { loadAllocationQuotes, loadInstrumentPreview, loadPortfolioView } from "./service";
+import { loadAllocationQuotes, loadInstrumentPreview, loadPortfolioView, loadTradeDecisionCards } from "./service";
 
 function messageFor(error: unknown, context: "trade" | "preview" = "trade") {
   const message = tradeMessageFor(error);
@@ -107,7 +107,10 @@ export async function reviewPortfolioTradeAction(input: unknown) {
     const current = await authenticatedUser();
     const parsed = z.object({ instrumentId: instrumentIdSchema, quantity: z.string().min(1).max(40), side: z.enum(["BUY", "SELL"]) }).strict().parse(input);
     await enforceMarketDataBudget(current.id, "instrument-preview");
-    return { ok: true as const, cost: await reviewTrade(current.id, parsed) };
+    // A card never blocks the action, so its failure leaves the review without one.
+    const [cost, cards] = await Promise.all([reviewTrade(current.id, parsed),
+      loadTradeDecisionCards(current.id, { instrumentId: parsed.instrumentId, side: parsed.side }).catch((error: unknown) => { logUnexpectedError("portfolio", "decision cards", error); return null; })]);
+    return { ok: true as const, cost, cards };
   } catch (error) {
     return { ok: false as const, message: failure("review trade", error, "preview") };
   }

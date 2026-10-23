@@ -3,14 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 const mocks = vi.hoisted(() => ({
   user: vi.fn(), requireUnlock: vi.fn(), search: vi.fn(), execute: vi.fn(), reset: vi.fn(),
   preview: vi.fn(), view: vi.fn(), revalidate: vi.fn(), executeAllocation: vi.fn(), reviewAllocation: vi.fn(), quotes: vi.fn(),
-  budget: vi.fn(), reviewTrade: vi.fn(), setProfile: vi.fn(),
+  budget: vi.fn(), reviewTrade: vi.fn(), setProfile: vi.fn(), cards: vi.fn(),
 }));
 vi.mock("@/features/rate-limit", () => ({ enforceMarketDataBudget: mocks.budget }));
 vi.mock("@/lib/session", () => ({ getCurrentUser: mocks.user }));
 vi.mock("@/features/progression/repository", () => ({ requirePortfolioLabUnlock: mocks.requireUnlock }));
 vi.mock("./environment", () => ({ portfolioMarketData: { service: { searchInstruments: mocks.search } } }));
 vi.mock("./repository", () => ({ executeTrade: mocks.execute, resetActivePortfolio: mocks.reset, executeAllocation: mocks.executeAllocation, reviewAllocation: mocks.reviewAllocation, reviewTrade: mocks.reviewTrade, setBrokerFeeProfile: mocks.setProfile }));
-vi.mock("./service", () => ({ loadInstrumentPreview: mocks.preview, loadPortfolioView: mocks.view, loadAllocationQuotes: mocks.quotes }));
+vi.mock("./service", () => ({ loadInstrumentPreview: mocks.preview, loadPortfolioView: mocks.view, loadAllocationQuotes: mocks.quotes, loadTradeDecisionCards: mocks.cards }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidate }));
 
 import { RequestRateLimitedError } from "@/features/rate-limit/limiter";
@@ -187,7 +187,9 @@ describe("cost authority boundary", () => {
   });
   it("resolves review and saved profile only for the authenticated learner", async () => {
     mocks.reviewTrade.mockResolvedValue({ feeBaseMinor: "1000" });
-    expect(await reviewPortfolioTradeAction({ instrumentId: "US-XNAS:AAPL", quantity: "0.25", side: "SELL" })).toEqual({ ok: true, cost: { feeBaseMinor: "1000" } });
+    mocks.cards.mockResolvedValue({ kinds: ["disposition"], safeguards: [] });
+    expect(await reviewPortfolioTradeAction({ instrumentId: "US-XNAS:AAPL", quantity: "0.25", side: "SELL" })).toEqual({ ok: true, cost: { feeBaseMinor: "1000" }, cards: { kinds: ["disposition"], safeguards: [] } });
+    expect(mocks.cards).toHaveBeenCalledWith("owner", { instrumentId: "US-XNAS:AAPL", side: "SELL" });
     expect(mocks.reviewTrade).toHaveBeenCalledWith("owner", { instrumentId: "US-XNAS:AAPL", quantity: "0.25", side: "SELL" });
     mocks.setProfile.mockResolvedValue("investi-low-fx-v1");
     expect(await setBrokerFeeProfileAction({ profileId: "investi-low-fx-v1" })).toEqual({ ok: true, feeProfileId: "investi-low-fx-v1" });
@@ -218,6 +220,13 @@ describe("Portfolio Lab failure logging", () => {
       ["[portfolio] reset portfolio failed", { error: { name: "Error", message: "connection terminated" } }],
       ["[portfolio] search instruments failed", { error: { name: "MarketDataError", code: "ProviderUnavailable", message: "Provider timed out.", context: { provider: "fmp" } } }],
     ]);
+  });
+
+  it("keeps the trade review when decision cards fail to load", async () => {
+    mocks.reviewTrade.mockResolvedValue({ feeBaseMinor: "1000" });
+    mocks.cards.mockRejectedValue(new Error("connection terminated"));
+    expect(await reviewPortfolioTradeAction({ instrumentId: "US-XNAS:AAPL", quantity: "1", side: "BUY" })).toEqual({ ok: true, cost: { feeBaseMinor: "1000" }, cards: null });
+    expect(log).toHaveBeenCalledTimes(1);
   });
 
   it("does not log refusals the learner can act on", async () => {

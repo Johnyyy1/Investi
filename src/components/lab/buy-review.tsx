@@ -1,8 +1,10 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
+import { DecisionCard } from "@/components/lab/decision-card";
 import { Button } from "@/components/ui/button";
 import type { TradeReviewView } from "@/features/portfolio/costs";
+import type { DecisionCardKind, Safeguard } from "@/features/portfolio/decision-cards";
 import { fxRateLabel, portfolioDataSourceLabel } from "@/features/portfolio/presentation";
 import type { InstrumentPreview } from "@/features/portfolio/service";
 import { formatPercentage } from "@/lib/formatters";
@@ -23,11 +25,12 @@ function assetTypeLabel(value: string) {
   return "Instrument";
 }
 
-export function BuyReview({ preview, quantity, cost, side, availableCash, onBack }: { preview: InstrumentPreview; quantity: string; cost: TradeReviewView; side: "BUY" | "SELL"; availableCash: string; onBack: () => void }) {
+export function BuyReview({ preview, quantity, cost, side, availableCash, card, onDisableCard, onBack }: { preview: InstrumentPreview; quantity: string; cost: TradeReviewView; side: "BUY" | "SELL"; availableCash: string; card?: { kind: DecisionCardKind; safeguards: Safeguard[] } | null; onDisableCard?: () => void; onBack: () => void }) {
   return <section aria-labelledby="buy-review-title">
     <Button variant="ghost" size="compact" className="mb-5" onClick={onBack}><ArrowLeft aria-hidden="true" className="size-4" />Upravit pokyn</Button>
     <h3 id="buy-review-title" tabIndex={-1} className="text-section-title font-bold">{side === "BUY" ? "Zkontroluj investici" : "Zkontroluj prodej"}</h3>
     <p className="mt-2 text-body text-secondary">Náklady snižují hotovost i výsledek investice.</p>
+    {card && onDisableCard ? <DecisionCard kind={card.kind} safeguards={card.safeguards} onDisable={onDisableCard} className="mt-5" /> : null}
     <div className="mt-6 overflow-hidden rounded-surface border border-border">
       <div className="bg-surface-muted px-5 py-4"><p className="break-words font-bold">{preview.instrument.name}</p><p className="break-words text-small text-secondary">{preview.instrument.symbol} · {assetTypeLabel(preview.instrument.assetType)} · {portfolioDataSourceLabel(preview.marketDataMode)}</p></div>
       <dl className="divide-y divide-border px-5 text-small">

@@ -13,7 +13,9 @@ import { Select } from "@/components/ui/form-controls";
 import { runHistoryBacktestAction } from "@/features/backtesting/actions";
 import { benchmarkName, type BacktestHistoryView, type CostSettings, type HistoryBacktestResult } from "@/features/backtesting/catalog";
 import { costImpact, parseCostRate, parseFixedFee } from "@/features/backtesting/costs";
-import { ATTEMPTS_KEY, OVERFITTING_NOTICE_AT, readAttempts, recordAttempt, type AttemptHistory } from "@/features/backtesting/attempts";
+import { ATTEMPTS_KEY, readAttempts, recordAttempt, type AttemptHistory } from "@/features/backtesting/attempts";
+import { backtestDecisionCards, type DecisionCardKind } from "@/features/portfolio/decision-cards";
+import { DecisionCard, loadDecisionCardPreferences, saveDecisionCardPreferences } from "./decision-card";
 import { emptyExperimentDraft, ExperimentFields, ExperimentResults, parseExperimentDraft } from "./backtest-experiments";
 import type { ExperimentSettings } from "@/features/backtesting/spec";
 import type { BacktestCosts } from "@/features/backtesting/spec";
@@ -212,8 +214,12 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
   const [lastExperimentDraft, setLastExperimentDraft] = useState(JSON.stringify(emptyExperimentDraft));
   const [goal, setGoal] = useState("strategy");
   const [attempts, setAttempts] = useState<AttemptHistory>({});
+  const [disabledCards, setDisabledCards] = useState<DecisionCardKind[]>([]);
   useEffect(() => {
-    const frame = requestAnimationFrame(() => { try { setAttempts(readAttempts(sessionStorage.getItem(ATTEMPTS_KEY))); } catch { /* Storage is optional. */ } });
+    const frame = requestAnimationFrame(() => {
+      setDisabledCards(loadDecisionCardPreferences().disabled);
+      try { setAttempts(readAttempts(sessionStorage.getItem(ATTEMPTS_KEY))); } catch { /* Storage is optional. */ }
+    });
     return () => cancelAnimationFrame(frame);
   }, []);
   const [source, setSource] = useState<BacktestSourceKind>("sample");
@@ -335,7 +341,12 @@ export function BacktestingLab({ history = null }: { history?: BacktestHistoryVi
     <div className={styles.formSection}>
       <label htmlFor="experiment-goal" className={styles.label}>Cíl pokusu</label><Select id="experiment-goal" value={goal} disabled={running || comparing} onChange={(event) => setGoal(event.target.value)}><option value="strategy">Porovnat pravidla strategie</option><option value="costs">Prozkoumat vliv nákladů</option><option value="timing">Porovnat načasování vkladů</option><option value="withdrawals">Vyzkoušet čerpání</option></Select>
       <p role="status" className={styles.hint} data-testid="attempt-counter">Různé specifikace pro tento cíl v relaci: {attempts[goal]?.length ?? 0}. Stejný pokus se znovu nepočítá.</p>
-      {(attempts[goal]?.length ?? 0) >= OVERFITTING_NOTICE_AT && <p className={styles.notice} data-testid="overfitting-notice">Po pěti různých specifikacích připomínáme riziko přeučení. Výběr nejlepšího minulého výsledku může zachytit náhodu. Před dalším pokusem si zapiš pravidlo a ověř ho na datech, která nesloužila k jeho ladění. Počet pokusů sám neprokazuje chybu.</p>}
+      {/* A standing reminder tied to the session counter, so it has no cooldown. */}
+      {backtestDecisionCards(attempts[goal]?.length ?? 0).filter((kind) => !disabledCards.includes(kind)).map((kind) => <DecisionCard key={kind} kind={kind} className="mb-5" onDisable={() => {
+        const preferences = loadDecisionCardPreferences();
+        saveDecisionCardPreferences({ ...preferences, disabled: [...preferences.disabled, kind] });
+        setDisabledCards([...preferences.disabled, kind]);
+      }} />)}
     </div>
     {result && <div className={styles.resultHead}>
       <div><h2 ref={heading} tabIndex={-1}>{result.strategy.name}</h2><p data-testid="backtest-result-period">{result.period} · {result.months} měsíců · Start {money(result, result.amount)}</p></div>
