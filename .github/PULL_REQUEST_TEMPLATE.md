@@ -23,3 +23,7 @@ When a lesson is added or changed, verify:
 - [ ] Screenshots of each step at 390 px and 1440 px are attached and match the PNGs in docs/design/lesson-steps.
 - [ ] Graded steps: one per step, last block of the step, none on the final step; answers recomputed from inputs in tests.
 - [ ] Tax/regulatory numbers come from the fact registry (`factNotice`), with the educational-content notice.
+- [ ] Czech copy follows docs/terminology.md; amounts in Kč; no product recommendation, return promise or pressure to trade.
+- [ ] Examples and charts are labelled (model example / sample data / dated observation) with source, period and limitations; dated values use fact tokens, not hard-coded numbers.
+- [ ] Keyboard, visible focus, labels, non-colour feedback, text alternative for charts; 320 px and 200% text without horizontal overflow.
+- [ ] A `factContext.kind` "tax" or "regulatory" lesson being published or changed has a new expert review record in src/features/facts/content-reviews.ts and docs/education/reviews.md (docs/education/editorial-workflow.md).

@@ -108,3 +108,9 @@ Kontrola z 22. 10. 2026:
 - Žádná DB migrace ani změna persistence; DB/integrace/konkurence nebyly spouštěny, protože se jejich chování nemění. Žádná revize daňovým poradcem nebyla provedena.
 
 Práce proběhla v izolovaném worktree z `origin/main`; rozpracované změny v původním checkoutu byly zachovány. Commit a odkaz na PR jsou v závěrečné zprávě a historii Gitu, aby dokument neobsahoval vlastní neplatný hash.
+
+## Evidence odborných revizí lekcí
+
+Záznamy odborné revize daňových a regulatorních lekcí podle [redakčního workflow](editorial-workflow.md) (#133). Strojově čitelný záznam je v [content-reviews.ts](../../src/features/facts/content-reviews.ts); každý má zde řádek ve tvaru `lessonId · datum · role · rozhodnutí · verze faktů · PR` se shrnutím připomínek. Záznamy se nepřepisují.
+
+Zatím žádný záznam. Žádná daňová ani regulatorní lekce není publikována; [Rezerva: kolik a kde](../../src/features/lessons/before-investing/emergency-fund.ts) čeká jako koncept na odbornou revizi.
