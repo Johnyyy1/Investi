@@ -9,7 +9,6 @@ import type { MarketDataCacheFamily, SharedMarketDataCacheEntry, SharedMarketDat
 /** Bump whenever a cached contract shape changes so rows written by older deployments are ignored. */
 export const MARKET_DATA_CACHE_FORMAT_VERSION = 1;
 export const MARKET_DATA_CACHE_MAX_KEY_LENGTH = 512;
-const PURGE_INTERVAL_MILLISECONDS = 15 * 60 * 1_000;
 
 type Database = Pick<typeof applicationDatabase, "select" | "insert" | "delete">;
 
@@ -29,13 +28,11 @@ function isLosslessJson(value: unknown) {
 
 /**
  * Postgres-backed shared layer: one row per (family, key) with an explicit expiry. Reads filter on
- * the caller's clock so an expired row is never served; writes upsert; expired rows are deleted on
- * writes at most every 15 minutes per process. Errors propagate to TieredMarketDataCache, which
+ * the caller's clock so an expired row is never served; writes upsert; the daily cron deletes expired
+ * rows. Errors propagate to TieredMarketDataCache, which
  * treats them as a miss.
  */
 export class PostgresMarketDataCacheStore implements SharedMarketDataCacheStore {
-  private lastPurge = Number.NEGATIVE_INFINITY;
-
   constructor(private readonly db: Database) {}
 
   async get(family: MarketDataCacheFamily, key: string, now: number): Promise<SharedMarketDataCacheEntry | undefined> {
@@ -74,10 +71,6 @@ export class PostgresMarketDataCacheStore implements SharedMarketDataCacheStore 
           expiresAt: sql`excluded.expires_at`,
         },
       });
-    if (now - this.lastPurge >= PURGE_INTERVAL_MILLISECONDS) {
-      this.lastPurge = now;
-      await this.purgeExpired(now);
-    }
   }
 
   async purgeExpired(now: number) {

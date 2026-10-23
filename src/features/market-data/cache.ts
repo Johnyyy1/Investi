@@ -1,5 +1,6 @@
 import "server-only";
 
+import { after } from "next/server";
 import { perfCount } from "@/lib/perf";
 import type {
   CorporateActionSeries,
@@ -222,7 +223,8 @@ const ttlByFamily = (ttls: MarketDataCacheTtls): Record<MarketDataCacheFamily, n
 /**
  * Normalized-data cache with a bounded process-local layer and an optional shared layer.
  * A local miss falls through to the shared store; a shared hit is copied locally with its remaining
- * lifetime only. Shared-store failures degrade to a miss and never fail the market-data request.
+ * lifetime only. Shared writes finish after the response; shared-store failures degrade to a miss and
+ * never fail the market-data request.
  * MarketDataService coalesces in-flight loads and recalculates quote usability on every read.
  */
 export class TieredMarketDataCache implements MarketDataCache {
@@ -230,6 +232,7 @@ export class TieredMarketDataCache implements MarketDataCache {
   private readonly ttls: Record<MarketDataCacheFamily, number>;
   private readonly local: { [F in MarketDataCacheFamily]: TtlStore<unknown> };
   private readonly shared?: SharedMarketDataCacheStore;
+  private readonly pendingSharedWrites = new Set<Promise<void>>();
 
   constructor(options: TieredMarketDataCacheOptions = {}) {
     this.clock = options.clock ?? Date.now;
@@ -254,6 +257,11 @@ export class TieredMarketDataCache implements MarketDataCache {
   /** Number of process-local entries per family; exposed for tests and diagnostics. */
   localSize(family: MarketDataCacheFamily) {
     return this.local[family].size;
+  }
+
+  /** Waits for the shared-layer writes started so far; requests never wait for them. */
+  async flushSharedWrites() {
+    await Promise.all(this.pendingSharedWrites);
   }
 
   async getSearch(key: string) { return this.read<readonly InstrumentSearchResult[]>("search", key); }
@@ -295,11 +303,16 @@ export class TieredMarketDataCache implements MarketDataCache {
     const now = this.clock();
     const expiresAt = now + this.ttls[family];
     this.local[family].set(key, value, expiresAt);
-    if (!this.shared || !sharedMarketDataCacheFamilies.has(family)) return;
+    const shared = this.shared;
+    if (!shared || !sharedMarketDataCacheFamilies.has(family)) return;
+    // The shared layer is not authoritative: a lost write only means a later miss, so the response does not wait for it.
+    const write = (async () => shared.set(family, key, value, expiresAt, now))().catch(() => sharedFailure("write", family));
+    this.pendingSharedWrites.add(write);
+    void write.finally(() => this.pendingSharedWrites.delete(write));
     try {
-      await this.shared.set(family, key, value, expiresAt, now);
+      after(write);
     } catch {
-      sharedFailure("write", family);
+      // Outside a request (scripts, tests) the write simply runs on.
     }
   }
 }

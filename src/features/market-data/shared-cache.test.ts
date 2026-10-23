@@ -129,6 +129,36 @@ describe("tiered market-data cache", () => {
     await expect(new TieredMarketDataCache({ clock: () => now, shared }).getQuote("key")).resolves.toBeUndefined();
   });
 
+  it("reads the shared store once per missed key, also for concurrent requests", async () => {
+    const shared = new FakeSharedStore();
+    const clock = () => new Date(FIXTURE_RETRIEVED_AT);
+    const provider = new DeterministicMarketDataProvider(clock);
+    const metadata = vi.spyOn(provider, "getInstrumentMetadata");
+    const service = new MarketDataService(provider, { cache: new TieredMarketDataCache({ clock: () => clock().getTime(), shared }), clock });
+    await Promise.all([service.getInstrumentMetadata(AAPL), service.getInstrumentMetadata(AAPL)]);
+    expect(shared.reads).toBe(1);
+    expect(metadata).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns a quote without waiting for the shared write", async () => {
+    const shared = new FakeSharedStore();
+    let finishWrites!: () => void;
+    const writesBlocked = new Promise<void>((resolve) => { finishWrites = resolve; });
+    const slow: SharedMarketDataCacheStore = {
+      get: (family, key, now) => shared.get(family, key, now),
+      set: async (family, key, value, expiresAt) => { await writesBlocked; await shared.set(family, key, value, expiresAt); },
+    };
+    const clock = () => new Date(FIXTURE_RETRIEVED_AT);
+    const cache = new TieredMarketDataCache({ clock: () => clock().getTime(), shared: slow });
+    const service = new MarketDataService(new DeterministicMarketDataProvider(clock), { cache, clock });
+    await expect(service.getQuote(AAPL)).resolves.toMatchObject({ instrumentId: AAPL });
+    expect(shared.rows.size).toBe(0);
+
+    finishWrites();
+    await cache.flushSharedWrites();
+    expect(shared.families()).toEqual(["instrument", "quote"]);
+  });
+
   it("keeps free-text search out of the shared store", async () => {
     const shared = new FakeSharedStore();
     const cache = new TieredMarketDataCache({ clock: () => 0, shared });
