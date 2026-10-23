@@ -22,6 +22,7 @@ function rows(): AccountExportRows {
     trainingSessions: [{ id: "s1", userId: "u1", scenarioId: "model-crisis-v1", startedAt: at, ipsArtifactId: "artifact1", feeProfileId: "investi-standard-v1", initialCapitalMinor: 10000000n, requestId: "r2",
       plan: { ipsVersion: 1, contributionMinor: "250025", targetInvestedBps: 8000, rebalancing: { mode: "contributions" }, drawdownAction: "keep_plan" }, series: { points: [{ date: "2000-01-31", price: "100" }], source: { kind: "model" } } }],
     trainingActions: [{ sessionId: "s1", sequence: 0, month: 0, kind: "buy", amountMinor: 13333n, quantity: null, createdAt: at, clientIdempotencyKey: "k1" }],
+    skillAttempts: [{ skillId: "position-value", itemId: "foundations-stocks/mastery-position", correct: true, context: "checkpoint", attemptedAt: at }],
     lines: [{ allocationId: "a1", position: 0, instrumentId: "i1", instrumentSymbol: "VWCE", instrumentName: "World ETF", instrumentAssetType: "etf", quoteCurrency: "EUR", weightBasisPoints: 9000 }],
   };
 }
@@ -39,6 +40,7 @@ describe("account export", () => {
     expect(parsed.portfolios[0].trades[0]).toMatchObject({ quantity: "0.33333333", fxRateToBase: "23.456789012345", cashDeltaBaseMinor: "-977" });
     expect(parsed.productMeasurement).toEqual({ earlyReturnAt: at.toISOString() });
     expect(parsed.trainingSessions[0]).toMatchObject({ id: "s1", initialCapitalMinor: "10000000", actions: [{ sequence: 0, kind: "buy", amountMinor: "13333", quantity: null }] });
+    expect(parsed.skillAttempts).toEqual([{ skillId: "position-value", itemId: "foundations-stocks/mastery-position", correct: true, context: "checkpoint", attemptedAt: at.toISOString() }]);
     expect(parsed.sessions[0]).toEqual({ createdAt: at.toISOString(), updatedAt: at.toISOString(), expiresAt: at.toISOString(), ipAddress: "198.51.100.7", userAgent: "Firefox" });
   });
 

@@ -17,6 +17,8 @@ import styles from "./progress-overview.module.css";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/brand/wordmark";
+import { skills as skillTitles } from "@/features/learning/curriculum";
+import { checkpointModules, masteryLabels, moduleSkills, type MasteryLevel } from "@/features/mastery/domain";
 
 type Summary = ProgressSummary & {
   user?: { name?: string | null } | null;
@@ -103,6 +105,16 @@ function PortfolioCard({ unlock, portfolio, model, timeZone }: { unlock: Unlock 
   </section>;
 }
 
+/** Derived from saved answers on every load; a state may drop after a wrong review, completed lessons stay completed. */
+function SkillsCard({ levels }: { levels: Readonly<Record<string, MasteryLevel>> }) {
+  return checkpointModules.map((entry) => <section key={entry.code} className={styles.lab} aria-labelledby={`skills-${entry.code}`}>
+    <p className={styles.eyebrow}>Dovednosti · {entry.code}</p>
+    <div className={styles.labHead}><h2 id={`skills-${entry.code}`}>{entry.title}</h2><p>Zvládnuté potvrdí smíšený checkpoint, Ovládnuté opakování nejdřív po týdnu.</p></div>
+    <dl className={styles.facts}>{moduleSkills(entry.code).map((skillId) => <div key={skillId}><dt>{skillTitles[skillId]}</dt><dd>{masteryLabels[levels[skillId] ?? 0]}</dd></div>)}</dl>
+    <Link className={styles.textLink} href={`/learn/checkpoint/${entry.code}`}>Smíšený checkpoint · {formatCount(moduleSkills(entry.code).length, ["otázka", "otázky", "otázek"])}<ArrowRight size={15} aria-hidden="true" /></Link>
+  </section>);
+}
+
 function Milestone({ milestone, next }: { milestone: NonNullable<Model["milestone"]>; next: Summary["next"] }) {
   const { outcome, nextChapter, chapter } = milestone;
   return <section className={styles.milestone} aria-labelledby="milestone-title">
@@ -126,7 +138,7 @@ function Milestone({ milestone, next }: { milestone: NonNullable<Model["mileston
   </section>;
 }
 
-export function ProgressOverview({ summary, unlock, portfolio, capital }: { summary: Summary; unlock: Unlock | null; portfolio: PortfolioLedgerSummary | null | undefined; capital: PracticeCapitalLedger }) {
+export function ProgressOverview({ summary, unlock, portfolio, capital, skillLevels }: { summary: Summary; unlock: Unlock | null; portfolio: PortfolioLedgerSummary | null | undefined; capital: PracticeCapitalLedger; skillLevels?: Readonly<Record<string, MasteryLevel>> | null }) {
   const model = progressModel(summary);
   const { milestone, current } = model;
   const complete = summary.allComplete;
@@ -201,6 +213,7 @@ export function ProgressOverview({ summary, unlock, portfolio, capital }: { summ
         <div className={styles.side}>
           <CapitalCard capital={capital} unlock={unlock} timeZone={timeZone} />
           <PortfolioCard unlock={unlock} portfolio={portfolio} model={model} timeZone={timeZone} />
+          {skillLevels && <SkillsCard levels={skillLevels} />}
         </div>
       </div>
 

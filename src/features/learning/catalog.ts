@@ -30,7 +30,7 @@ export function lessonLink(lessonId: string): { href: string; label: string } | 
 }
 /** Lesson routes render without the app shell. Manifest data only, so the shell never loads lesson content. */
 export function isFocusedLesson(pathname: string) {
-  return availableLessons.some((lesson) => pathname === `/learn/${lesson.moduleSlug}/${lesson.slug}`);
+  return pathname.startsWith("/learn/checkpoint/") || availableLessons.some((lesson) => pathname === `/learn/${lesson.moduleSlug}/${lesson.slug}`);
 }
 export function getModuleLessons(slug: string) { return curriculumLessons.filter((lesson) => lesson.moduleSlug === slug); }
 export function getModulePath(slug: string, states: { lessonId: string; status: string }[]) {

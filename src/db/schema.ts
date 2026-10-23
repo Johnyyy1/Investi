@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 import { experienceValues, goalValues, interestValues } from "../features/onboarding/domain";
 import type { TrainingPlan } from "../features/training/domain";
 import type { TrainingSeries } from "../features/training/scenarios";
+import { attemptContexts } from "../features/mastery/contexts";
 import {
   boolean,
   bigint,
@@ -393,6 +394,26 @@ export const trainingAction = pgTable("training_action", {
     or (${table.kind} = 'sell' and ${table.quantity} > 0 and ${table.amountMinor} is null)
     or (${table.kind} = 'advance' and ${table.amountMinor} is null and ${table.quantity} is null)`),
   check("training_action_sequence_check", sql`${table.sequence} >= 0 and ${table.month} >= 0`),
+]);
+
+export const skillAttemptContext = pgEnum("skill_attempt_context", attemptContexts);
+
+/**
+ * Skill mastery evidence (#122). Append-only: the mastery state is derived from these rows, never stored.
+ * The server evaluates `correct` itself; `request_id` makes a retried submission land once.
+ */
+export const skillAttempt = pgTable("skill_attempt", {
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  requestId: text("request_id").notNull(),
+  skillId: text("skill_id").notNull(),
+  /** `${lessonId}/${blockId}` from the curriculum item bank. */
+  itemId: text("item_id").notNull(),
+  correct: boolean("correct").notNull(),
+  context: skillAttemptContext("context").notNull(),
+  attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.requestId] }),
+  index("skill_attempt_user_skill_idx").on(table.userId, table.skillId, table.attemptedAt),
 ]);
 
 /**
