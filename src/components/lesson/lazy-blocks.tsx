@@ -12,7 +12,7 @@ import type { RiskHistoryEntry } from "@/features/lessons/real-history/risk-wind
  * so new lessons and figures do not grow every lesson's JavaScript. Server rendering is unchanged.
  */
 type FigureKind = Extract<LessonBlock, { type: "interactiveFigure" }>["figure"];
-type FigureData = { emergencyFundFacts?: import("@/features/lessons/before-investing/emergency-fund-model").EmergencyFundFacts; history?: readonly LessonHistoryEntry[]; riskHistory?: readonly RiskHistoryEntry[] };
+type FigureData = { onOutputReady?: (blockId: string, ready: boolean) => void; guest?: boolean; emergencyFundFacts?: import("@/features/lessons/before-investing/emergency-fund-model").EmergencyFundFacts; history?: readonly LessonHistoryEntry[]; riskHistory?: readonly RiskHistoryEntry[] };
 
 function Placeholder() {
   return <div role="status" className="min-h-40 animate-pulse rounded-control bg-surface-sunken motion-reduce:animate-none"><span className="sr-only">Načítám…</span></div>;
@@ -59,6 +59,7 @@ const RiskCapacityScenario = lazyComponent(foundations, (module) => module.RiskC
 const PortfolioBuilder = lazyComponent(() => import("./portfolio-builder"), (module) => module.PortfolioBuilder);
 const EmergencyFundCalculator = lazyComponent(() => import("./emergency-fund-calculator"), (module) => module.EmergencyFundCalculator);
 const BudgetBuilder = lazyComponent(() => import("./budget-builder"), (module) => module.BudgetBuilder);
+const GoalMap = lazyComponent(() => import("./goal-map"), (module) => module.GoalMap);
 const ReturnCalculator = lazyComponent(() => import("./return-calculator"), (module) => module.ReturnCalculator);
 const PriceSeriesExplorer = lazyComponent(() => import("./price-series-explorer"), (module) => module.PriceSeriesExplorer);
 const HistoricalReturnsExercise = lazyComponent(() => import("./historical-returns-exercise"), (module) => module.HistoricalReturnsExercise);
@@ -82,6 +83,7 @@ export const LessonFormula = lazyComponent(() => import("./lesson-formula"), (mo
 
 /** Every figure kind with its preload and how to render it. The record keeps the list exhaustive. */
 const figures: Record<FigureKind, { preload: () => Promise<unknown>; render: (data: FigureData) => ReactNode }> = {
+  "goal-map": { preload: GoalMap.preload, render: ({ guest, onOutputReady }) => <GoalMap guest={guest} onReady={onOutputReady} /> },
   "growth-comparison": { preload: GrowthComparison.preload, render: () => <GrowthComparison /> },
   "ownership-explorer": { preload: ShareExplorer.preload, render: () => <ShareExplorer kind="ownership" /> },
   "market-cap-explorer": { preload: ShareExplorer.preload, render: () => <ShareExplorer kind="market-cap" /> },

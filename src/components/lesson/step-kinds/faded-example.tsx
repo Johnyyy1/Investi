@@ -35,13 +35,13 @@ export function FadedExample({ block, answers, verdict, mastery, onAnswer, feedb
           const stacked = step.value.length > 14;
           return <li key={step.label} className={cn("rounded-md bg-surface-sunken px-3 py-2.5", stacked ? "flex flex-col gap-0.5" : "flex items-center justify-between gap-3")}>
             <span className="text-sm/5 text-secondary">{index + 1} · {step.label}</span>
-            <span className={cn("font-semibold tabular-nums text-foreground", stacked ? "text-base/[21px]" : "text-right text-[17px]/[22px]")}>{step.value}</span>
+            <span className={cn("min-w-0 font-semibold tabular-nums text-foreground [overflow-wrap:anywhere]", stacked ? "text-base/[1.3125]" : "text-right text-[17px]/[22px]")}>{step.value}</span>
           </li>;
         })}
         <li className={cn("flex flex-col gap-3 rounded-control border p-3", !checked ? "border-primary/40 bg-surface" : verdict ? "border-primary bg-primary-soft" : "border-danger bg-surface")}>
-          <div className="flex items-start justify-between gap-3">
+          <div className={cn("flex min-w-0 items-start gap-3", chosen && chosen.length > 24 ? "flex-col" : "justify-between")}>
             <p id={`${block.id}-blank`} className="text-sm/5 font-semibold text-foreground">{position} · {blank.label}</p>
-            {checked && chosen ? <span className={cn("shrink-0 text-sm font-semibold", verdict ? "text-primary" : "text-danger")}>{chosen}</span> : null}
+            {checked && chosen ? <span className={cn("min-w-0 text-sm font-semibold [overflow-wrap:anywhere]", verdict ? "text-primary" : "text-danger")}>{chosen}</span> : null}
           </div>
           {blank.input === "choice" ? <fieldset disabled={checked} aria-labelledby={`${block.id}-blank`} className={cn("grid gap-2", blank.options.length === 2 ? "grid-cols-2" : "grid-cols-1")}>
             {blank.options.map((option) => <AnswerChoice key={option.id} name={block.id} value={option.id} checked={answers.answer === option.id} state={choiceState(option.id)} onChange={(value) => onAnswer("answer", value)}>{option.label}</AnswerChoice>)}

@@ -258,5 +258,6 @@
     {"blocks":["recall"],"grading":[{"id":"recall","type":"multipleChoiceQuestion","options":["all","net","cut"],"correctOptionId":"net"}]},
     {"blocks":["reflection"],"grading":[]},
     {"blocks":["summary","safeguard","next-topic"],"grading":[]}
-  ]}
+  ]},
+  {"id":"before-investing-goals","moduleId":"module-before-investing","moduleSlug":"before-investing","slug":"goals-and-horizon","steps":[{"blocks":["opening","prediction"],"grading":[{"id":"prediction","type":"multipleChoiceQuestion","options":["goals","one","age"],"correctOptionId":"goals"}]},{"blocks":["horizon","risk"],"grading":[]},{"blocks":["bands","sorting"],"grading":[{"id":"sorting","type":"categorizeQuestion","answerKey":{"holiday":"short","car":"short","home":"medium","retirement":"long"}}]},{"blocks":["faded"],"grading":[{"id":"faded","type":"fadedExample","answerKey":{"answer":"deadline"}}]},{"blocks":["car"],"grading":[{"id":"car","type":"multipleChoiceQuestion","options":["etf","saving","bitcoin"],"correctOptionId":"saving"}]},{"blocks":["glide","lucie"],"grading":[{"id":"lucie","type":"multipleChoiceQuestion","options":["reduce","increase","age"],"correctOptionId":"reduce"}]},{"blocks":["pockets"],"grading":[]},{"blocks":["recall"],"grading":[{"id":"recall","type":"multipleChoiceQuestion","options":["time","age","past"],"correctOptionId":"time"}]},{"blocks":["reflection"],"grading":[]},{"blocks":["map"],"grading":[]},{"blocks":["lab","summary","safeguard"],"grading":[]}]}
 ]

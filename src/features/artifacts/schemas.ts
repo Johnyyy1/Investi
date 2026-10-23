@@ -16,6 +16,11 @@ const goal = z.strictObject({
   horizonMonths: horizon,
   priority: z.enum(["essential", "important", "optional"]),
 });
+// Additive goal-map fields; old revisions and IPS goals keep their original shape.
+const mappedGoal = goal.extend({
+  amountMinor: minorUnits.optional(),
+  targetYear: z.number().int().min(2000).max(2200).optional(),
+});
 const checklistItem = z.strictObject({ label: shortText, checked: z.boolean() });
 
 /** Payload contracts v1. Readiness stores categories and a next step, never budget/debt amounts. */
@@ -26,7 +31,10 @@ export const artifactPayloadSchemas = {
       ratings: z.array(z.strictObject({ criterionId: shortText.max(100), level: z.number().int().min(1).max(4) })).min(1).max(10)
         .refine((ratings) => new Set(ratings.map((rating) => rating.criterionId)).size === ratings.length) }),
   ]),
-  goal_map: z.strictObject({ goals: z.array(goal).min(1).max(10) }),
+  goal_map: z.union([
+    z.strictObject({ goals: z.array(mappedGoal).min(1).max(10), noSpecificGoal: z.literal(false).optional() }),
+    z.strictObject({ goals: z.array(mappedGoal).length(0), noSpecificGoal: z.literal(true) }),
+  ]),
   financial_checkup: z.strictObject({
     budget: z.enum(["reviewed", "needs_review", "prefer_not_to_say"]),
     expensiveDebt: z.enum(["none", "plan_needed", "prefer_not_to_say"]),

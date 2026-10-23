@@ -22,7 +22,7 @@ describe("lesson figure authoring contract", () => {
   });
   it("leaves provider-backed labels to the selected snapshot rather than declaring them historical", () => {
     for (const [id, entry] of Object.entries(lessonFigureCatalog)) {
-      expect(entry.data).toBe(id.startsWith("historical-") ? "provider" : "model");
+      expect(entry.data).toBe(id === "goal-map" ? "learner" : id.startsWith("historical-") ? "provider" : "model");
     }
   });
 });
