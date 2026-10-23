@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { foundationsContent, foundationsSteps } from "./content";
 import { foundationsLessons } from "./manifest";
 import { getGuidedSteps } from "../steps";
+import { validateCompletion, validateMove } from "@/features/progress/transition";
 
 describe("Foundations learning experience integrity", () => {
   it("keeps the seven stable published lesson IDs and the target sequence", () => {
@@ -26,6 +27,27 @@ describe("Foundations learning experience integrity", () => {
     expect(lesson.blocks.filter((block) => block.type === "multipleChoiceQuestion")).toHaveLength(1);
     expect(lesson.blocks.filter((block) => block.type === "lessonSummary")).toHaveLength(1);
     expect(foundationsSteps[lesson.id]).toHaveLength(3);
+    expect(lesson).toMatchObject({ moduleSlug: "investing-foundations", slug: "why-invest", estimatedMinutes: 5 });
+    expect(steps.map((step) => step.blocks.map((block) => block.id))).toEqual([
+      ["saving", "investing", "inflation"], ["envelope", "envelope-question"], ["summary"],
+    ]);
+    expect(lesson.blocks.find((block) => block.id === "envelope")).toMatchObject({ content: expect.stringMatching(/^Modelový příklad:.*10 000 Kč/) });
+    expect(lesson.blocks.find((block) => block.id === "summary")).toMatchObject({ content: expect.stringContaining("Než začneš investovat, měj rezervu a žádný drahý dluh.") });
+  });
+
+  it("preserves the envelope answer IDs and server-validated continuation", () => {
+    const id = "foundations-why-invest";
+    expect(foundationsContent[0].blocks.find((block) => block.id === "envelope-question")).toMatchObject({
+      correctOptionId: "1", options: [{ id: "0" }, { id: "1" }, { id: "2" }],
+    });
+    expect(() => validateMove(id, 0, 1)).not.toThrow();
+    expect(() => validateMove(id, 1, 2)).toThrow(/correctly/);
+    for (const answer of ["0", "2"]) {
+      expect(() => validateMove(id, 1, 2, { answer })).toThrow(/correctly/);
+    }
+    expect(() => validateMove(id, 1, 2, { answer: "1" })).not.toThrow();
+    expect(() => validateCompletion(id, { status: "in_progress", lastPosition: 1 })).toThrow();
+    expect(() => validateCompletion(id, { status: "in_progress", lastPosition: 2 })).not.toThrow();
   });
 
   it.each(foundationsContent.slice(1).map((lesson) => [lesson.id, lesson] as const))("gives %s two mastery checks, a Lab bridge, and a summary", (id, lesson) => {

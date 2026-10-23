@@ -30,6 +30,23 @@ The Foundations curriculum requires all seven completions and 420 internal XP fo
 
 ## Validation and future checkpoint
 
+### Introductory mini-lesson (1.1.1, issue #155)
+
+`foundations-why-invest` stays at `/learn/investing-foundations/why-invest`, in storage module `module-investing-foundations`, with three steps, the same block/answer IDs and a five-minute estimate. Its level-1 placement, prerequisites, guest entry, saved cursors, completion and rewards are unchanged. The envelope is explicitly a model example; the summary adds the general safeguard that a reserve and repayment of expensive debt come before investing. No personal readiness assessment is implied.
+
+The reserve lesson 0.1.3 (`before-investing-emergency-fund`) is still planned, so the summary does not link to it or claim it is published. Add that connection when the lesson is available. The optional current inflation figure is omitted: the model needs no dated statistic.
+
+Daily-review content handoff for [#123](https://github.com/Johnyyy1/Investnik/issues/123) (the scheduling engine is not implemented):
+
+- Source lesson: `foundations-why-invest`; skill: `inflation`.
+- Prompt: „Co inflace dělá s penězi v obálce?“
+- Expected recall: „Částka zůstává stejná, ale kupní síla klesá: za stejné peníze si koupíš méně.“
+- Misconceptions: the number of banknotes increases; the unchanged nominal amount buys the same goods despite rising prices.
+
+This handoff adds no graded step or runtime field and awards no XP, capital or streak credit. Its integration and scheduling belong to #123.
+
+### Module validation
+
 Use `npm run test:foundations-browser` against a fresh local app/database with deterministic providers. The suite completes the beginner journey, retries incorrect answers, verifies persisted cursor/review and unlock invariance, exercises keyboard/focus behavior, six widths (320–1440px), and enlarged text. Domain/registry/transition tests run in `npm test`; financial persistence/concurrency checks have separate package scripts.
 
 The planned checkpoint should retrieve existing concepts using mixed ownership/lending, index/ETF, bid/ask, concentration, weights, horizon, and risk tasks. It should reuse the runner and idempotent completion action, add no score-backed credential or separate assessment state, and introduce no portfolio optimization. It remains future work.
