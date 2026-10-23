@@ -1,5 +1,15 @@
 import type { StepDefinition } from "../types";
 export const beforeInvestingSteps: Readonly<Record<string, readonly StepDefinition[]>> = {
+  "before-investing-checkup": [
+    { title: "Tvůj finanční základ", blocks: ["opening", "checkup"], requiredArtifact: { kind: "financial_checkup" } },
+    { title: "Míra úspor", kind: "mastery", blocks: ["budget"] },
+    { title: "Dluh a nejistý výnos", kind: "mastery", blocks: ["debt"] },
+    { title: "Kupní síla rezervy", kind: "mastery", blocks: ["real-return"] },
+    { title: "Horizont peněz", kind: "mastery", blocks: ["horizon"] },
+    { title: "Podezřelá nabídka", kind: "mastery", blocks: ["fraud"] },
+    { title: "Tvoje pojistka", blocks: ["reflection"] },
+    { title: "Pořadí kroků, ne známka", blocks: ["result", "summary"] },
+  ],
   "before-investing-retirement-products": [
     { title: "Kolik Evě přidá stát?", blocks: ["opening", "prediction"] },
     { title: "Státní příspěvek k DPS", blocks: ["dps", "dps-example", "contribution"] },

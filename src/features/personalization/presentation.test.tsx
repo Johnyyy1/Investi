@@ -12,7 +12,7 @@ import { goalLabels, presentRecommendation, reasonLabels } from "./presentation"
 
 describe("personalization presentation", () => {
   it("presents every reason code in Czech without persisting copy", () => {
-    expect(Object.keys(reasonLabels)).toHaveLength(15);
+    expect(Object.keys(reasonLabels)).toHaveLength(16);
     for (const [code, copy] of Object.entries(reasonLabels)) { expect(copy.length).toBeGreaterThan(20); expect(copy).not.toContain(code); }
     expect(reasonLabels.RETURNS_FOR_ETF_PATH).toContain("ETF");
     expect(reasonLabels.RETURNS_FOR_QUANT_PATH).toContain("daty");

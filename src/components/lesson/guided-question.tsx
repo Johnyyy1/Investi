@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { feedbackFor, parseNumericAnswer, parseSelection, type QuestionBlock } from "@/features/lessons/question-evaluation";
 import { isExercise } from "@/features/lessons/exercise-evaluation";
 import { GuidedExercise } from "./guided-exercise";
@@ -16,7 +17,7 @@ export function GuidedQuestion({ block, answers, verdict, mastery, onAnswer }: {
   const checked = verdict !== undefined;
   const result = checked ? feedbackFor(block, answers, verdict) : undefined;
   const feedback = <QuestionFeedback id={`${block.id}-feedback`} verdict={verdict} misconception={result?.misconception}
-    detail={checked && !verdict && block.type === "documentTap" ? documentSummary(block, parseSelection(answers.selected)) : undefined}>{result?.explanation}</QuestionFeedback>;
+    detail={checked && !verdict && block.type === "documentTap" ? documentSummary(block, parseSelection(answers.selected)) : undefined}>{result?.explanation}{verdict === false && "reviewHref" in block && block.reviewHref && <> <Link className="inline-flex min-h-11 items-center text-primary underline underline-offset-4" href={block.reviewHref}>Zopakovat související téma</Link></>}</QuestionFeedback>;
   if (block.type === "fadedExample") return <FadedExample block={block} answers={answers} verdict={verdict} mastery={mastery} onAnswer={onAnswer} feedback={feedback} />;
   if (block.type === "documentTap") return <DocumentTap block={block} answers={answers} verdict={verdict} mastery={mastery} onAnswer={onAnswer} feedback={feedback} />;
   if (block.type === "findError") return <FindError block={block} answers={answers} verdict={verdict} mastery={mastery} onAnswer={onAnswer} feedback={feedback} />;

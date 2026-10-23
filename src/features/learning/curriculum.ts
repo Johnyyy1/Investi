@@ -85,6 +85,7 @@ export type DisplayModuleCode = (typeof displayModules)[number]["code"];
 
 /** What a lesson trains. Mastery states (#122) hang on these IDs. */
 export const skills = {
+  "fraud-prevention": "Ověření protistrany a varovné signály",
   "debt-priorities": "Cena dluhu a pořadí splácení",
   "goals-and-horizon": "Cíle, horizont a pevnost termínu",
   "retirement-products": "Státní podpora spoření na stáří",
@@ -136,6 +137,8 @@ const place = (lessonId: string, displayModule: DisplayModuleCode, order: number
 
 /** Where each authored lesson, including editorial drafts, sits in Curriculum 2.0. New lessons are added here and in their storage manifest. */
 export const lessonPlacements: readonly LessonPlacement[] = [
+  // Reserve/pension remain unpublished; recommendation prerequisites include only available lessons.
+  place("before-investing-checkup", "0.1", 7, "recommended", ["before-investing-budget", "before-investing-debt", "before-investing-goals"], ["savings-rate", "debt-priorities", "inflation", "goals-and-horizon", "fraud-prevention"]),
   place("before-investing-retirement-products", "0.1", 5, "recommended", ["before-investing-goals"], ["retirement-products"]),
   place("before-investing-debt", "0.1", 2, "recommended", ["before-investing-budget"], ["debt-priorities"]),
   place("before-investing-goals", "0.1", 4, "recommended", ["before-investing-budget"], ["goals-and-horizon"]),
@@ -185,6 +188,11 @@ const item = (lessonId: string, blockId: string, skillId: SkillId): SkillItem =>
  * least two lessons gets a mixed checkpoint. Other questions stay ordinary lesson practice.
  */
 export const skillItems: readonly SkillItem[] = [
+  item("before-investing-checkup", "budget", "savings-rate"),
+  item("before-investing-checkup", "debt", "debt-priorities"),
+  item("before-investing-checkup", "real-return", "inflation"),
+  item("before-investing-checkup", "horizon", "goals-and-horizon"),
+  item("before-investing-checkup", "fraud", "fraud-prevention"),
   item("foundations-why-invest", "envelope-question", "inflation"),
   item("foundations-stocks", "mastery-position", "position-value"),
   item("foundations-stocks", "mastery-intrinsic", "stock-ownership"),
