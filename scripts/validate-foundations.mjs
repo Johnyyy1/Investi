@@ -203,6 +203,7 @@ try {
   await answerNumber(page, -20);
   await answerNumber(page, 96);
   await page.getByRole("heading", { name: "Přenášej nový základ dál", exact: true }).waitFor();
+  await page.getByText(/Čísla jsou před poplatky, daněmi a inflací/).filter({ visible: true }).waitFor();
   await completeLesson(page, 360);
 
   await nextLesson(page, "Portfolio je celý soubor majetku");
