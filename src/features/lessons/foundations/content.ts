@@ -21,12 +21,12 @@ const whyInvest: AuthoredStep[] = [
     concept("inflation", "Ještě jedna věc", "Když všechno zdraží, koupíš za stejné peníze méně. Tomu se říká inflace."),
   ] },
   { title: "Peníze v obálce", blocks: [
-    paragraph("envelope", "Máš 10 000 Kč v obálce. Během roku všechno trochu zdraží."),
+    paragraph("envelope", "Modelový příklad: máš 10 000 Kč v obálce. Během roku všechno trochu zdraží."),
     question("envelope-question", "Co to znamená pro tvých 10 000 Kč?", ["Nic. Pořád je to 10 000 Kč, koupím za ně stejně.", "Koupím si za ně o něco méně.", "Peněz v obálce přibude."], 1,
       "Přesně. Číslo stejné, hodnota menší. Tomu se říká inflace. Investování je jeden ze způsobů, jak se jí bránit. Jistotu ale nedává.",
       "Skoro. Číslo na obálce se nezmění, to máš pravdu. Jenže když věci zdraží, koupíš si za stejných 10 000 Kč míň."),
   ] },
-  { title: "Lekce hotová", blocks: [summary("Spoření drží peníze po ruce, ale inflace jim bere kupní sílu. Investování může růst i klesat a jistotu nedává. Tohle je hlavní důvod, proč lidé vůbec investují. Ne aby zbohatli přes noc.")] },
+  { title: "Lekce hotová", blocks: [summary("Spoření drží peníze po ruce, ale inflace jim bere kupní sílu. Investování může růst i klesat a jistotu nedává. Tohle je hlavní důvod, proč lidé vůbec investují. Ne aby zbohatli přes noc. Než začneš investovat, měj rezervu a žádný drahý dluh.")] },
 ];
 
 const stocks: AuthoredStep[] = [

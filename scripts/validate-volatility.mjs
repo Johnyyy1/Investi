@@ -130,7 +130,10 @@ try {
   await heading("Zkus to ještě jednou");
   await button("Zkusit znovu").click();
   // Wait for the cleared answers, or refilling the unchanged "1" fires no change event and is lost.
-  await button("Zkontrolovat odpověď").waitFor();
+  await page.waitForFunction(() => {
+    const fields = [...document.querySelectorAll("main input")];
+    return fields.length === 2 && fields.every((field) => !field.disabled && field.value === "");
+  });
   await page.getByRole("textbox", { name: "Průměrný výnos", exact: true }).fill("1");
   await page.getByRole("textbox", { name: "Směrodatná odchylka", exact: true }).fill("1,83");
   await button("Zkontrolovat odpověď").click();

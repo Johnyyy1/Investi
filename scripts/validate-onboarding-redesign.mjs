@@ -72,6 +72,18 @@ async function layouts(page, name, capture = true) {
   await page.setViewportSize({ width: 1440, height: 900 });
 }
 async function next(page) { await page.getByRole('button', { name: 'Pokračovat', exact: true }).click(); }
+async function miniLessonLayouts(page, step) {
+  for (const width of [1440, 1024, 768, 390, 375, 320]) {
+    await page.setViewportSize({ width, height: 900 }); await settle(page);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${step}: overflow at ${width}`);
+    if ([1440, 390].includes(width)) await page.screenshot({ path: `${output}/mini-lesson-${step}-${width}.png`, fullPage: true, animations: 'disabled' });
+  }
+  await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; }); await settle(page);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${step}: overflow at 320/200%`);
+  assert.deepEqual(await page.locator('main button, main label, main p').evaluateAll((elements) => elements.filter((element) => element.clientWidth && element.scrollWidth > element.clientWidth + 2).map((element) => element.textContent)), [], `${step}: clipped text at 200%`);
+  await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
+  await page.setViewportSize({ width: 1440, height: 900 });
+}
 async function preferences(page, { goal = 'LONG_TERM_ETF', minutes = '5', capture = false } = {}) {
   await page.getByRole('heading', { name: 'Co se chceš naučit?', exact: true }).waitFor();
   assert.ok(await page.getByRole('button', { name: 'Pokračovat', exact: true }).isDisabled());
@@ -127,7 +139,10 @@ try {
   assert.equal((await sql`select count(*)::int as n from lesson_award where user_id=${guestId}`)[0].n, 0, 'a guest is never seeded with demo data');
   assert.equal((await profile(guestId)).diagnostic_result.level, 'strong_foundations');
   await guest.goto(`${baseURL}/learn/investing-foundations/why-invest`);
+  await miniLessonLayouts(guest, 'concept');
   await guest.getByRole('button', { name: 'Pokračovat', exact: true }).click();
+  await guest.getByText(/^Modelový příklad: máš 10 000 Kč/).waitFor();
+  await miniLessonLayouts(guest, 'envelope');
   await guest.getByRole('radio', { name: 'Nic. Pořád je to 10 000 Kč, koupím za ně stejně.', exact: true }).check();
   await guest.getByRole('button', { name: 'Zkontrolovat odpověď', exact: true }).click();
   await guest.getByText(/Skoro\. Číslo na obálce se nezmění/).waitFor();
@@ -136,6 +151,9 @@ try {
   await guest.getByRole('button', { name: 'Zkontrolovat odpověď', exact: true }).click();
   await guest.getByText(/Přesně\. Číslo stejné, hodnota menší/).waitFor();
   await guest.getByRole('button', { name: 'Pokračovat', exact: true }).click();
+  await guest.getByText(/Než začneš investovat, měj rezervu a žádný drahý dluh\./).waitFor();
+  await miniLessonLayouts(guest, 'summary');
+  assert.equal(await guest.locator('a[href="/learn/before-investing/emergency-fund"]').count(), 0, 'no link to the unpublished reserve lesson');
   await guest.getByRole('button', { name: 'Dokončit lekci', exact: true }).click();
   await guest.getByRole('heading', { name: 'Lekce dokončena', exact: true }).waitFor();
   const guestReceipt = (await sql`select * from lesson_award where user_id=${guestId}`)[0];
