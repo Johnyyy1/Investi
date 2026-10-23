@@ -675,8 +675,31 @@ JS transferred by Chrome on a hard load (Playwright, fresh context, KB compresse
 
 What remains in the initial 322 KB: `react-dom` 70 KB, Next runtime 44 KB, Motion 40 KB and a 31 KB chunk that contains zod; the rest is under 25 KB each. Not investigated here.
 
-## Phase 9: function region (issue #401, in progress)
+## Phase 9: function region (measured 2026-10-24, issue #401)
 
 Production renders ran in Vercel's default `iad1` (Washington; `x-vercel-id: fra1::iad1::…` on every dynamic route, checked 2026-10-23) while the Neon pooler endpoint is in `eu-central-1` (Frankfurt). A production `/learn` render on 2026-10-23 showed warm parameterized queries at a near-constant 186–200 ms, about 2 round-trips of ~95 ms under `prepare: false`, and reads on new connections at ~995 ms (a new pooler connection costs ~8.7 RTT, measured with `SELECT 1` only).
 
-`vercel.json` now pins functions to `fra1`, next to the database. Expected: one parameterized query in single-digit milliseconds instead of ~190 ms. To check on a preview with `INVESTI_PERF_DEBUG=1`: `x-vercel-id` reads `fra1::fra1::…`, and `[investi:perf]` shows the per-query times and `market.provider.*` latency (FMP is likely farther away from Frankfurt). Before/after numbers are added here once measured.
+`vercel.json` now pins functions to `fra1` (#407, merged 2026-10-24). Production then returned `x-vercel-id: fra1::fra1::…`. Neon's region was confirmed as `eu-central-1` in the Neon Console.
+
+### Production, `INVESTI_PERF_DEBUG=1`, one signed-in account with two holdings (ms)
+
+| Segment | Before (`iad1`, 2026-10-23) | After (`fra1`, 2026-10-24) |
+| --- | --- | --- |
+| `page:/learn`, warm, no quote refetch | 1 588 – 5 106 | 2.9 – 8.6 (n=7) |
+| `layout:(app)`, warm | 568 – 2 830 | 2.3 – 5.7 (n=6) |
+| one warm parameterized query | 186 – 200 | 3.6 – 13.5 |
+| `auth.getSession` on a new connection | 1 820 | 62 – 194 |
+| `page:/learn` with 2 quote refetches | 5 106 | 959, 1 025 |
+| `page:/lab/portfolio`, quotes from the shared cache | – | 226 (getSession 123 of it) |
+| `page:/lab` | – | 22, 92 |
+| `market.provider.quote` (FMP), per call | ~74 (2 calls, 148.7 total) | 520 – 892 (4 calls) |
+| `market.provider.fx` (ČNB) | – | 58 (1 call) |
+
+Small samples from one session, not percentiles; #405 covers P50/P95.
+
+### What it means
+
+- Database time is no longer the bottleneck: the whole SQL path of a warm `/learn` render fits in a few milliseconds, so the RTT model above (≈ 11 sequential round-trips) now costs ~10–20 ms instead of ~1 s.
+- **The new dominant cost is an FMP quote refetch from Frankfurt.** Every quote call from `fra1` took 520–892 ms (4 of 4), about 7–12× the `iad1` figure. A quote is refetched when its 30 s shared-cache entry has expired, so it hits most visits that come more than 30 s after the previous one. `/learn` waits for it because the portfolio card is on its critical path (#402); the cache path itself is #403. Both renders above were measured while US markets were closed, when a refetched quote cannot have changed.
+- A new database connection in `fra1` cost 62–194 ms (`auth.getSession` on cold requests), more than the 8.7 RTT model predicts at ~1–2 ms RTT. Function cold start or TLS setup on a fresh instance are candidates; not separated yet (#405).
+- Unauthenticated TTFB from Czechia, 5 warm samples: `/` 249–363 → 159–193 ms, `/sign-in` ~275 → 140–174 ms, the `/learn` sign-in redirect 253–303 → 146–236 ms.
