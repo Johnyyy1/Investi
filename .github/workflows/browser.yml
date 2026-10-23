@@ -95,6 +95,12 @@ jobs:
         env:
           FOUNDATIONS_TEST_URL: ${{ env.APP_URL }}
           FOUNDATIONS_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/foundations
+      - name: Budget lesson
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:budget-browser
+        env:
+          BUDGET_TEST_URL: ${{ env.APP_URL }}
+          BUDGET_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/budget
       - name: Returns
         if: ${{ !cancelled() }}
         run: .github/scripts/clear-rate-limits.sh && npm run test:returns-browser

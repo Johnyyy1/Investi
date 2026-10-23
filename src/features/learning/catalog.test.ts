@@ -13,7 +13,7 @@ describe("module catalog", () => {
   });
 
   it("publishes every module, from Foundations to Diversification", () => {
-    expect(moduleCatalog.map((module) => [module.slug, module.status])).toEqual([["investing-foundations", "available"], ["returns", "available"], ["volatility", "available"], ["correlation", "available"], ["diversification", "available"]]);
+    expect(moduleCatalog.map((module) => [module.slug, module.status])).toEqual([["investing-foundations", "available"], ["returns", "available"], ["volatility", "available"], ["correlation", "available"], ["diversification", "available"], ["before-investing", "available"]]);
   });
 
   it("builds Lab lesson links from the curriculum and never links an unpublished lesson", () => {

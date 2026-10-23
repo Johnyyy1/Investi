@@ -140,7 +140,7 @@ describe("lesson drop-off", () => {
   it("orders published lessons by Curriculum 2.0 display order with their titles", () => {
     const order = curriculumLessonOrder();
     expect(order).toHaveLength(lessonPlacements.length);
-    expect(order[0]).toEqual({ lessonId: "foundations-why-invest", displayCode: "1.1.1", title: "Spoření vs. investování" });
+    expect(order[0]).toEqual({ lessonId: "before-investing-budget", displayCode: "0.1.1", title: "Kolik ti zbývá: rozpočet a míra úspor" });
     const codes = order.map((lesson) => lesson.displayCode);
     expect(codes.indexOf("B.1.8")).toBeLessThan(codes.indexOf("3.1.1"));
     expect(codes.at(-1)).toBe("6.2.5");

@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { FigureDataLabel } from "./figure-data-label";
 import { FinanceSlider } from "./finance-slider";
+import { FinanceInput } from "./finance-input";
 import { CalculatorResult } from "./calculator-result";
 import { RecoveryExplorer } from "../lesson/recovery-explorer";
 
@@ -32,6 +33,10 @@ describe("calculator primitives", () => {
       expect(html).toContain(`value="${value}"`);
       expect(html).not.toContain('value="NaN"');
     }
+  });
+  it("keeps currency affixes intact when the surrounding lesson permits word wrapping", () => {
+    const html = renderToStaticMarkup(<FinanceInput label="Příjem" value="38000" onValueChange={() => undefined} suffix="Kč" />);
+    expect(html).toContain('class="shrink-0 whitespace-nowrap text-small text-secondary">Kč</span>');
   });
   it("uses a named, atomic live result region", () => {
     const html = renderToStaticMarkup(<CalculatorResult>25 %</CalculatorResult>);

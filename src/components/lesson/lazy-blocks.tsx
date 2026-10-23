@@ -57,6 +57,7 @@ const DiversificationImpact = lazyComponent(foundations, (module) => module.Dive
 const PortfolioHorizonScenario = lazyComponent(foundations, (module) => module.PortfolioHorizonScenario);
 const RiskCapacityScenario = lazyComponent(foundations, (module) => module.RiskCapacityScenario);
 const PortfolioBuilder = lazyComponent(() => import("./portfolio-builder"), (module) => module.PortfolioBuilder);
+const BudgetBuilder = lazyComponent(() => import("./budget-builder"), (module) => module.BudgetBuilder);
 const ReturnCalculator = lazyComponent(() => import("./return-calculator"), (module) => module.ReturnCalculator);
 const PriceSeriesExplorer = lazyComponent(() => import("./price-series-explorer"), (module) => module.PriceSeriesExplorer);
 const HistoricalReturnsExercise = lazyComponent(() => import("./historical-returns-exercise"), (module) => module.HistoricalReturnsExercise);
@@ -98,6 +99,7 @@ const figures: Record<FigureKind, { preload: () => Promise<unknown>; render: (da
   "portfolio-horizon-scenario": { preload: PortfolioHorizonScenario.preload, render: () => <PortfolioHorizonScenario /> },
   "risk-capacity-scenario": { preload: RiskCapacityScenario.preload, render: () => <RiskCapacityScenario /> },
   "portfolio-builder": { preload: PortfolioBuilder.preload, render: () => <PortfolioBuilder /> },
+  "budget-builder": { preload: BudgetBuilder.preload, render: () => <BudgetBuilder /> },
   "return-calculator": { preload: ReturnCalculator.preload, render: () => <ReturnCalculator /> },
   "price-series-explorer": { preload: PriceSeriesExplorer.preload, render: () => <PriceSeriesExplorer /> },
   "historical-period-returns": { preload: HistoricalReturnsExercise.preload, render: ({ history }) => <HistoricalReturnsExercise mode="period" history={history} /> },

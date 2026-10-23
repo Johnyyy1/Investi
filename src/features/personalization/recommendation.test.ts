@@ -47,7 +47,11 @@ describe("deterministic recommendations", () => {
     expect(recommendLearning({ progress: doneUpTo("investing-foundations", "returns").filter((state) => state.lessonId !== "returns-checkpoint") })).toMatchObject({ nextLessonId: "returns-checkpoint" });
     expect(recommendLearning({ progress: doneUpTo("investing-foundations", "returns", "volatility") })).toMatchObject({ nextLessonId: "correlation-what-is-correlation", reasonCode: "CORRELATION_AFTER_VOLATILITY" });
     expect(recommendLearning({ progress: doneUpTo("investing-foundations", "returns", "volatility", "correlation") })).toMatchObject({ nextLessonId: "diversification-concentration", reasonCode: "DIVERSIFICATION_AFTER_CORRELATION" });
-    expect(recommendLearning({ progress: doneUpTo("investing-foundations", "returns", "volatility", "correlation", "diversification") })).toMatchObject({ nextLessonId: null, reasonCode: "CURRICULUM_COMPLETE" });
+    expect(recommendLearning({ progress: doneUpTo("investing-foundations", "returns", "volatility", "correlation", "diversification", "before-investing") })).toMatchObject({ nextLessonId: null, reasonCode: "CURRICULUM_COMPLETE" });
+  });
+  it("offers the new budget lesson without relocking or restarting completed content", () => {
+    const legacyDone = availableLessons.filter((lesson) => lesson.id !== "before-investing-budget").map((lesson) => ({ lessonId: lesson.id, status: "completed" }));
+    expect(recommendLearning({ progress: legacyDone })).toMatchObject({ nextLessonId: "before-investing-budget", reasonCode: "BUDGET_READINESS" });
   });
   it("skips completed recommendations and never returns planned content", () => {
     expect(recommendLearning({ progress: [...foundationsDone, { lessonId: "returns-what-is-a-return", status: "completed" }] }).nextLessonId).toBe("returns-simple-returns");

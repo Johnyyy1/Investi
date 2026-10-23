@@ -15,9 +15,9 @@ export function FinanceInput({ label, mode = "number", value, onValueChange, pre
   return <div className={cn("min-w-0", className)}>
     <label htmlFor={inputId} className="mb-2 block text-small font-bold">{label}</label>
     <div className={cn(controlClassName, "flex items-center gap-2 focus-within:border-primary-hover focus-within:outline-3 focus-within:outline-offset-3 focus-within:outline-primary-hover", error && "border-danger-ink")}>
-      {prefix ? <span className="text-small text-secondary">{prefix}</span> : null}
+      {prefix ? <span className="shrink-0 whitespace-nowrap text-small text-secondary">{prefix}</span> : null}
       <input {...props} id={inputId} type="text" inputMode="decimal" value={value} onChange={(event) => onValueChange(event.target.value)} aria-invalid={props["aria-invalid"] ?? Boolean(error)} aria-describedby={[props["aria-describedby"], error || hint ? descriptionId : undefined].filter(Boolean).join(" ") || undefined} className="min-h-12 w-full min-w-0 bg-transparent text-body tabular-nums focus-visible:outline-none disabled:text-secondary" />
-      {suffix || mode === "percentage" ? <span className="text-small text-secondary">{suffix ?? "%"}</span> : null}
+      {suffix || mode === "percentage" ? <span className="shrink-0 whitespace-nowrap text-small text-secondary">{suffix ?? "%"}</span> : null}
     </div>
     {error || hint ? <p id={descriptionId} className={cn("mt-2 text-small", error ? "text-danger-ink" : "text-secondary")}>{error ?? hint}</p> : null}
   </div>;

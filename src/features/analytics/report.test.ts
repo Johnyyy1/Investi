@@ -23,7 +23,7 @@ describe("funnel report", () => {
     expect(report.funnels[0].learners.total).toBe(1);
     expect(report.funnels[1].learners).toEqual({ total: 2, accounts: 1, guests: 1 });
     expect(report.weeklyCohorts).toHaveLength(3);
-    expect(report.lessonDropOff[0]).toMatchObject({ lessonId: "foundations-why-invest", started: 1, completed: 1 });
+    expect(report.lessonDropOff.find((lesson) => lesson.lessonId === "foundations-why-invest")).toMatchObject({ lessonId: "foundations-why-invest", started: 1, completed: 1 });
   });
 
   it("never contains a learner key, in either output format", () => {

@@ -4,6 +4,7 @@
  */
 type FigureDefinition = { owner: "curriculum"; data: "model" | "provider"; model: string };
 export const lessonFigureCatalog = {
+  "budget-builder": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/model.ts" },
   "return-calculator": { owner: "curriculum", data: "model", model: "src/features/finance/returns.ts" },
   "price-series-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/returns.ts" },
   "historical-period-returns": { owner: "curriculum", data: "provider", model: "src/features/lessons/real-history/" },

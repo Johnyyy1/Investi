@@ -1,3 +1,4 @@
+import { BEFORE_INVESTING_MODULE_ID, beforeInvestingLessons } from "../lessons/before-investing/manifest";
 import { FOUNDATIONS_MODULE_ID, foundationsLessons } from "../lessons/foundations/manifest";
 import { RETURNS_MODULE_ID, returnsLessons } from "../lessons/returns/manifest";
 import { VOLATILITY_MODULE_ID, volatilityLessons } from "../lessons/volatility/manifest";
@@ -22,6 +23,7 @@ export const storageModules = [
   { id: VOLATILITY_MODULE_ID, slug: "volatility", title: "Volatilita", description: "Měření rozsahu a nejistoty výnosů.", status: "available", lessons: volatilityLessons },
   { id: CORRELATION_MODULE_ID, slug: "correlation", title: "Korelace", description: "Jak se aktiva pohybují společně — a kdy ne.", status: "available", lessons: correlationLessons },
   { id: DIVERSIFICATION_MODULE_ID, slug: "diversification", title: "Diverzifikace", description: "Sestavování portfolií, která promyšleně rozkládají riziko.", status: "available", lessons: diversificationLessons },
+  { id: BEFORE_INVESTING_MODULE_ID, slug: "before-investing", title: "Než začneš investovat", description: "Začni rozpočtem: příjmy, výdaje a realistická částka k odkládání.", status: "available", lessons: beforeInvestingLessons },
 ] as const;
 
 export type MilestoneId = "A" | "B" | "C" | "D";
@@ -83,6 +85,8 @@ export type DisplayModuleCode = (typeof displayModules)[number]["code"];
 
 /** What a lesson trains. Mastery states (#122) will hang on these IDs. */
 export const skills = {
+  "monthly-budget": "Měsíční rozpočet a nepravidelné výdaje",
+  "savings-rate": "Míra úspor",
   "saving-vs-investing": "Spoření a investování",
   inflation: "Inflace a kupní síla",
   "stock-ownership": "Akcie a vlastnictví firmy",
@@ -128,6 +132,7 @@ const place = (lessonId: string, displayModule: DisplayModuleCode, order: number
 
 /** Where each published lesson sits in Curriculum 2.0. New lessons are added here and in their storage manifest. */
 export const lessonPlacements: readonly LessonPlacement[] = [
+  place("before-investing-budget", "0.1", 1, "recommended", [], ["monthly-budget", "savings-rate"]),
   place("foundations-why-invest", "1.1", 1, "required", [], ["saving-vs-investing", "inflation"]),
   place("foundations-stocks", "1.1", 2, "required", ["foundations-why-invest"], ["stock-ownership", "position-value"]),
   place("foundations-etfs-indexes", "1.1", 3, "required", ["foundations-stocks"], ["index-vs-fund"]),
