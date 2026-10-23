@@ -64,7 +64,7 @@ async function layouts(state, capture = true) {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${state}: 200% text overflow`);
   const clipped = await learn().locator("h1,h2,h3,a,button,label").evaluateAll((elements) => elements.filter((element) => element.clientWidth && element.scrollWidth > element.clientWidth + 2).map((element) => element.textContent));
   assert.deepEqual(clipped, [], `${state}: enlarged essential text clips`);
-  const chapterGeometry = await page.locator("[data-testid=journey-modules]:visible details > summary").evaluateAll((summaries) => summaries.map((summary) => { const title = summary.querySelector("h3").getBoundingClientRect(); const number = summary.firstElementChild.getBoundingClientRect(); return { belowNumber: title.top >= number.bottom, width: title.width }; }));
+  const chapterGeometry = await learn().getByTestId("journey-modules").locator("details > summary").evaluateAll((summaries) => summaries.map((summary) => { const title = summary.querySelector("h3").getBoundingClientRect(); const number = summary.firstElementChild.getBoundingClientRect(); return { belowNumber: title.top >= number.bottom, width: title.width }; }));
   assert.ok(chapterGeometry.every((chapter) => chapter.belowNumber && chapter.width > 200), "enlarged chapter names reflow onto full-width rows");
   await page.screenshot({ path: `${output}/${state}-320-text-200.png`, fullPage: true, animations: "disabled" });
   await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
@@ -77,10 +77,19 @@ try {
   const session = await (await context.request.get(`${baseURL}/api/auth/get-session`)).json(); userId = session.user.id;
   await page.goto(`${baseURL}/onboarding`); await finishOnboarding(page);
   await page.getByRole("button", { name: "Teď ne", exact: true }).click();
+  // Next can retain an earlier route in a hidden tree. Keep a duplicate to exercise locator scoping.
+  await learn().evaluate((element) => {
+    const retained = element.cloneNode(true);
+    retained.hidden = true;
+    retained.style.display = "none";
+    retained.dataset.retainedLearnFixture = "";
+    document.body.append(retained);
+  });
   await layouts("new");
   const published = await sql`select l.slug,m.slug as module_slug from lesson l join learning_module m on m.id=l.module_id where l.is_published=true`;
   const expectedPaths = published.map((lesson) => `/learn/${lesson.module_slug}/${lesson.slug}`).sort();
   assert.deepEqual(await learn().getByTestId("journey-modules").locator("ol a").evaluateAll((links) => links.map((link) => link.getAttribute("href")).sort()), expectedPaths, "display placement preserves original lesson routes");
+  await page.locator("[data-retained-learn-fixture]").evaluate((element) => element.remove());
   for (const slug of new Set(published.map((lesson) => lesson.module_slug))) {
     assert.equal((await context.request.get(`${baseURL}/learn/${slug}`)).status(), 200, `legacy module overview ${slug}`);
   }
