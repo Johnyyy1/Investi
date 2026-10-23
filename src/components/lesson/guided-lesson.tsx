@@ -11,6 +11,7 @@ import type { AuthoredLesson } from "@/features/lessons/types";
 import type { LessonHistoryEntry } from "@/features/lessons/real-history/snapshot";
 import type { RiskHistoryEntry } from "@/features/lessons/real-history/risk-window";
 import { completeLessonAction, markLessonStartedAction, saveLessonPositionAction } from "@/features/progress/actions";
+import { recordSkillAttemptAction } from "@/features/mastery/actions";
 import type { CompletionRewardPresentation, LearningMomentum } from "@/features/progress/contracts";
 import { formatPracticeCapitalMinor, type SerializedPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { LearningStats } from "@/components/gamification/learning-stats";
@@ -32,7 +33,7 @@ const primaryClassName = "min-w-0 flex-1 whitespace-normal px-3 min-[420px]:px-6
 /** What the lesson screen needs besides its steps; the authored blocks arrive only inside `steps`. */
 type GuidedLessonSummary = Pick<AuthoredLesson, "id" | "moduleSlug" | "title" | "position" | "estimatedMinutes">;
 
-export function GuidedLesson({ lesson, moduleTitle, steps, factKeys, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref, guest = false, history, riskHistory, factNotice }: {
+export function GuidedLesson({ lesson, moduleTitle, steps, factKeys, initialStatus, initialPosition, initialCompletedLessons, initialLearningMomentum, initialEarnedPracticeCapitalMinor, nextHref, guest = false, history, riskHistory, factNotice, skillItems = {} }: {
   lesson: GuidedLessonSummary; moduleTitle: string;
   /** This lesson's guided steps, resolved on the server so no other lesson's content reaches the browser. */
   steps: readonly GuidedStep[];
@@ -46,6 +47,8 @@ export function GuidedLesson({ lesson, moduleTitle, steps, factKeys, initialStat
   history?: readonly LessonHistoryEntry[];
   /** Frozen daily closes for the Volatility lessons' historical figures. */
   riskHistory?: readonly RiskHistoryEntry[];
+  /** Block ID → item-bank ID for this lesson's questions that count as skill evidence (#122). */
+  skillItems?: Readonly<Record<string, string>>;
 }) {
   const router = useRouter();
   const moduleHref = `/learn/${lesson.moduleSlug}`;
@@ -127,6 +130,12 @@ export function GuidedLesson({ lesson, moduleTitle, steps, factKeys, initialStat
     } catch { setError("Dokončení se nepodařilo uložit. Zkus to znovu."); }
     finally { busyRef.current = false; setPending(false); }
   }
+  function check(block: NonNullable<typeof question>) {
+    setVerdict(evaluation);
+    const itemId = skillItems[block.id];
+    // shortcut: a failed lesson attempt is not retried; it only delays Zkoušeno/Známé, and the checkpoint retries its own saves.
+    if (itemId) void recordSkillAttemptAction({ requestId: crypto.randomUUID(), itemId, answers, mode: "lesson" }).catch(() => undefined);
+  }
   function retry() {
     setAnswers({}); setVerdict(undefined);
     requestAnimationFrame(() => questionRef.current?.querySelector<HTMLInputElement>("input, select")?.focus());
@@ -141,7 +150,7 @@ export function GuidedLesson({ lesson, moduleTitle, steps, factKeys, initialStat
   const isLast = position === steps.length - 1;
   const missingSubmission = step.blocks.some((block) => ((block.type === "labMission" && block.missionId && !review) || block.type === "rubricSelfAssessment" || (block.type === "interactiveFigure" && block.figure === "goal-map")) && !outputReady[block.id]);
   const primary = question && verdict === undefined
-    ? { label: "Zkontrolovat odpověď", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: evaluation === undefined, onClick: () => setVerdict(evaluation) }
+    ? { label: "Zkontrolovat odpověď", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: evaluation === undefined, onClick: () => check(question) }
     : question && verdict === false
       ? { label: "Zkusit znovu", icon: <RotateCcw aria-hidden="true" className="size-[18px]" />, disabled: false, onClick: retry }
       : { label: question || !isLast ? "Pokračovat" : review ? "Dokončit opakování" : "Dokončit lekci", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: missingSubmission, onClick: (event: MouseEvent) => question ? move(position + 1, answers, event) : isLast ? void complete() : move(position + 1, undefined, event) };

@@ -1,5 +1,8 @@
 import "dotenv/config";
 import assert from "node:assert/strict";
+import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -12,8 +15,28 @@ assert.equal(url.pathname, "/investi_missions_qa");
 assert.equal(process.env.MISSIONS_QA_DISPOSABLE, "1");
 assert.equal(process.env.MARKET_DATA_PROVIDER, "deterministic");
 const sql = postgres(url.toString(), { prepare: false, onnotice: () => {} });
-await migrate(drizzle(sql), { migrationsFolder: "drizzle" });
-await migrate(drizzle(sql), { migrationsFolder: "drizzle" });
+// Prove an earlier checkout's locally applied 0019 mission table survives the new main chain.
+const baseline = await mkdtemp(join(tmpdir(), "investi-mission-baseline-"));
+const upgradeOwner = `mission_upgrade_${randomUUID()}`;
+try {
+  const journal = JSON.parse(await readFile("drizzle/meta/_journal.json", "utf8"));
+  journal.entries = journal.entries.filter((entry: { idx: number }) => entry.idx < 21);
+  await mkdir(join(baseline, "meta"));
+  await writeFile(join(baseline, "meta/_journal.json"), JSON.stringify(journal));
+  await Promise.all(journal.entries.map((entry: { tag: string }) => copyFile(`drizzle/${entry.tag}.sql`, join(baseline, `${entry.tag}.sql`))));
+  await migrate(drizzle(sql), { migrationsFolder: baseline });
+  const [existing] = await sql`select to_regclass('public.mission_attempt') as name`;
+  if (!existing.name) await sql.unsafe(await readFile("scripts/fixtures/missions-0019-preview.sql", "utf8"));
+  await sql`insert into "user"(id,name,email,created_at,updated_at) values(${upgradeOwner},'Upgrade QA',${`${upgradeOwner}@example.com`},now(),now())`;
+  await sql`insert into mission_attempt(id,user_id,mission_id,request_id,evidence,completed) values(${randomUUID()},${upgradeOwner},'allocation-training-v1','old-request','{"source":"earlier-checkout"}'::jsonb,true)`;
+  const before = await sql`select * from mission_attempt where user_id=${upgradeOwner}`;
+  await migrate(drizzle(sql), { migrationsFolder: "drizzle" });
+  await migrate(drizzle(sql), { migrationsFolder: "drizzle" });
+  assert.deepEqual(await sql`select * from mission_attempt where user_id=${upgradeOwner}`, before);
+} finally {
+  await rm(baseline, { recursive: true, force: true });
+  await sql`delete from "user" where id=${upgradeOwner}`;
+}
 const { db } = await import("../src/db");
 const { seedCurriculum } = await import("../src/db/curriculum");
 await seedCurriculum(db);

@@ -83,7 +83,7 @@ export const displayModules = [
 ] as const satisfies readonly DisplayModule[];
 export type DisplayModuleCode = (typeof displayModules)[number]["code"];
 
-/** What a lesson trains. Mastery states (#122) will hang on these IDs. */
+/** What a lesson trains. Mastery states (#122) hang on these IDs. */
 export const skills = {
   "goals-and-horizon": "Cíle, horizont a pevnost termínu",
   "emergency-fund": "Rezerva, dostupnost a kupní síla",
@@ -170,6 +170,30 @@ export const lessonPlacements: readonly LessonPlacement[] = [
 
   place("returns-log-returns", "6.1", 1, "optional-track", ["returns-compounding"], ["log-returns"]),
   place("correlation-real-data", "6.2", 5, "optional-track", ["correlation-what-is-correlation"], ["correlation", "correlation-vs-causation", "correlation-regimes"]),
+];
+
+/** A graded question that evidences one skill. `id` is the stable persistence key, `${lessonId}/${blockId}`. */
+export type SkillItem = { id: string; lessonId: string; blockId: string; skillId: SkillId };
+const item = (lessonId: string, blockId: string, skillId: SkillId): SkillItem => ({ id: `${lessonId}/${blockId}`, lessonId, blockId, skillId });
+
+/**
+ * Item bank (#122): the questions whose attempts count towards mastery. A display module with items from at
+ * least two lessons gets a mixed checkpoint. Other questions stay ordinary lesson practice.
+ */
+export const skillItems: readonly SkillItem[] = [
+  item("foundations-why-invest", "envelope-question", "inflation"),
+  item("foundations-stocks", "mastery-position", "position-value"),
+  item("foundations-stocks", "mastery-intrinsic", "stock-ownership"),
+  item("foundations-etfs-indexes", "mastery-vehicle", "index-vs-fund"),
+  item("foundations-etfs-indexes", "mastery-weights", "index-vs-fund"),
+  item("foundations-bonds-cash", "mastery-lending", "bonds-and-cash"),
+  item("foundations-bonds-cash", "mastery-rates", "bonds-and-cash"),
+  item("foundations-markets", "mastery-sell", "bid-ask-spread"),
+  item("foundations-markets", "mastery-order", "bid-ask-spread"),
+  item("foundations-risk-reward", "mastery-negative", "simple-return"),
+  item("foundations-risk-reward", "mastery-compound", "compounding"),
+  item("foundations-portfolio", "mastery-stock-weight", "portfolio-weights"),
+  item("foundations-portfolio", "mastery-diversification", "diversification"),
 ];
 
 export function getLessonPlacement(lessonId: string) {

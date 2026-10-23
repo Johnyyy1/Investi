@@ -1,5 +1,5 @@
 {
-  "id": "999a8a30-4e38-4e3d-82ed-db0dad13fc47",
+  "id": "c0a44fdc-2f64-4c7c-bc72-2e74dccdb5e4",
   "prevId": "5ac0c768-b854-4760-87d0-1faf3ccd12f6",
   "version": "7",
   "dialect": "postgresql",
@@ -987,131 +987,6 @@
       },
       "isRLSEnabled": false
     },
-    "public.mission_attempt": {
-      "name": "mission_attempt",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "mission_id": {
-          "name": "mission_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "request_id": {
-          "name": "request_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "evidence": {
-          "name": "evidence",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "completed": {
-          "name": "completed",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "mission_attempt_request_idx": {
-          "name": "mission_attempt_request_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "mission_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "request_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "mission_attempt_completion_idx": {
-          "name": "mission_attempt_completion_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "mission_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "completed",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "mission_attempt_user_id_user_id_fk": {
-          "name": "mission_attempt_user_id_user_id_fk",
-          "tableFrom": "mission_attempt",
-          "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.portfolio": {
       "name": "portfolio",
       "schema": "",
@@ -2081,6 +1956,268 @@
       },
       "policies": {},
       "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.training_action": {
+      "name": "training_action",
+      "schema": "",
+      "columns": {
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "month": {
+          "name": "month",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amount_minor": {
+          "name": "amount_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "quantity": {
+          "name": "quantity",
+          "type": "numeric(24, 8)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_idempotency_key": {
+          "name": "client_idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "training_action_idempotency_idx": {
+          "name": "training_action_idempotency_idx",
+          "columns": [
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "client_idempotency_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "training_action_session_id_training_session_id_fk": {
+          "name": "training_action_session_id_training_session_id_fk",
+          "tableFrom": "training_action",
+          "tableTo": "training_session",
+          "columnsFrom": [
+            "session_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "training_action_session_id_sequence_pk": {
+          "name": "training_action_session_id_sequence_pk",
+          "columns": [
+            "session_id",
+            "sequence"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "training_action_kind_check": {
+          "name": "training_action_kind_check",
+          "value": "(\"training_action\".\"kind\" = 'buy' and \"training_action\".\"amount_minor\" > 0 and \"training_action\".\"quantity\" is null)\n    or (\"training_action\".\"kind\" = 'sell' and \"training_action\".\"quantity\" > 0 and \"training_action\".\"amount_minor\" is null)\n    or (\"training_action\".\"kind\" = 'advance' and \"training_action\".\"amount_minor\" is null and \"training_action\".\"quantity\" is null)"
+        },
+        "training_action_sequence_check": {
+          "name": "training_action_sequence_check",
+          "value": "\"training_action\".\"sequence\" >= 0 and \"training_action\".\"month\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.training_session": {
+      "name": "training_session",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scenario_id": {
+          "name": "scenario_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ips_artifact_id": {
+          "name": "ips_artifact_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "plan": {
+          "name": "plan",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "series": {
+          "name": "series",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fee_profile_id": {
+          "name": "fee_profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "initial_capital_minor": {
+          "name": "initial_capital_minor",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "training_session_user_started_idx": {
+          "name": "training_session_user_started_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "training_session_user_request_idx": {
+          "name": "training_session_user_request_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "training_session_user_id_user_id_fk": {
+          "name": "training_session_user_id_user_id_fk",
+          "tableFrom": "training_session",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "training_session_ips_artifact_id_learner_artifact_id_fk": {
+          "name": "training_session_ips_artifact_id_learner_artifact_id_fk",
+          "tableFrom": "training_session",
+          "tableTo": "learner_artifact",
+          "columnsFrom": [
+            "ips_artifact_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "training_session_initial_capital_check": {
+          "name": "training_session_initial_capital_check",
+          "value": "\"training_session\".\"initial_capital_minor\" > 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.user": {

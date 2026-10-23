@@ -127,3 +127,14 @@ Holding weights in the Lab are shares of the whole portfolio value including cas
 ## IPS target intent
 
 [Investiční plán (IPS)](ips.md) can append a target-only mix after explicit confirmation, without executing any trades. Its `ips:<artifact UUID>:<request UUID>` key records the source version; `appliedValueMinor` is zero because no capital was applied. It shares target validation and the learner lock, verifies owned current plan/generation and server instrument metadata, and preserves cash, ledger, capital and returns. The ordinary allocation execution flow remains unchanged.
+
+## Tax view and trade record (LAB-02 / #137)
+
+`features/portfolio/tax-lots.ts` derives an educational tax view from the active generation's ordered immutable ledger. Nothing is stored; there is no schema change.
+
+- **Tranches.** Each buy opens a tranche with its all-in cost (execution notional + commission). Sells consume tranches **FIFO**. This is a stated simulation assumption: the pairing rule for a non-accounting individual is unverified (`dan.parovani_transi`, review item 04). A fully consumed tranche takes its exact remaining cost; partial consumption rounds once, half away from zero. The tax view never changes the Lab's weighted-average cost basis or investment P&L.
+- **Yearly proceeds.** Gross sale proceeds (execution notional before commission, i.e. income, not gain) per Europe/Prague calendar year, compared with `dan.limit_100k`. Time-exempt sales count too (review item 02). The limit is shown only while a verified version applies on the current date; another year's value is never reused. Only the active generation is counted.
+- **FX.** Koruna amounts use the Lab's execution FX, labeled as such. The tax conversion method (daily ČNB rate or the annual uniform rate) is not offered: the 2026 uniform rate is unverified (`dan.jednotny_kurz`, item 07) and the Lab has no ČNB series.
+- **Not implemented, blocked by #134:** the time-test exemption date and any "under 30 days to exemption" decision card (`dan.datum_casoveho_testu`, item 03 says no date predicate for #137), and the § 10 taxable-base estimate, which needs that classification. They wait for the tax adviser's answers.
+
+`GET /api/portfolio/export` downloads the signed-in learner's trades as a semicolon CSV (UTF-8 BOM, decimal comma) in the record format of lesson 2.4.9: date, trade number, instrument, name, side, quantity, price, currency, execution and reference FX, FX source and date, commission, conversion markup, CZK amount, cash flow, fictional tariff, FIFO tranches of a sale and the data kind. A first line states that it is an educational record, not a tax document, dated, with the pairing assumption. Provider text is guarded against spreadsheet formulas. The ledger has no ISIN or settlement date, so the record does not invent them.

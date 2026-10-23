@@ -21,6 +21,7 @@ describe("shared guided lessons", () => {
   });
   it("only removes navigation for implemented lessons", () => {
     for (const lesson of authoredLessons) expect(isFocusedLesson(`/learn/${lesson.moduleSlug}/${lesson.slug}`)).toBe(true);
+    expect(isFocusedLesson("/learn/checkpoint/1.1")).toBe(true);
     for (const route of ["/dashboard", "/learn", "/learn/returns", "/progress", "/learn/investing-foundations/foundations-checkpoint"]) expect(isFocusedLesson(route)).toBe(false);
     expect(() => getStepDefinitions("returns-log")).toThrow();
     expect(() => getStepDefinitions("constructor")).toThrow();

@@ -2,6 +2,9 @@ import type { DiagnosticResult } from "../features/personalization/diagnostic";
 import { artifactKinds, type ArtifactContent } from "../features/artifacts/schemas";
 import { sql } from "drizzle-orm";
 import { experienceValues, goalValues, interestValues } from "../features/onboarding/domain";
+import type { TrainingPlan } from "../features/training/domain";
+import type { TrainingSeries } from "../features/training/scenarios";
+import { attemptContexts } from "../features/mastery/contexts";
 import {
   boolean,
   bigint,
@@ -349,6 +352,68 @@ export const portfolioAllocationLine = pgTable("portfolio_allocation_line", {
   check("portfolio_allocation_line_weight_check", sql`${table.weightBasisPoints} between 1 and 10000`),
   check("portfolio_allocation_line_asset_type_check", sql`${table.instrumentAssetType} in ('equity', 'etf', 'bond')`),
   check("portfolio_allocation_line_currency_check", sql`${table.quoteCurrency} in ('CZK', 'USD', 'EUR')`),
+]);
+
+/**
+ * Crisis training in simulated time (#139). Fictional money, fully separate from Practice Capital and
+ * the persistent portfolio. Append-only: the state is replayed from the frozen series, the plan
+ * snapshot and the ordered actions; no balance or price from the client is stored.
+ */
+export const trainingSession = pgTable("training_session", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  scenarioId: text("scenario_id").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  /** The IPS revision the plan snapshot came from; the snapshot stays if the revision is deleted. */
+  ipsArtifactId: text("ips_artifact_id").references(() => learnerArtifact.id, { onDelete: "set null" }),
+  plan: jsonb("plan").$type<TrainingPlan>().notNull(),
+  series: jsonb("series").$type<TrainingSeries>().notNull(),
+  feeProfileId: text("fee_profile_id").notNull(),
+  initialCapitalMinor: bigint("initial_capital_minor", { mode: "bigint" }).notNull(),
+  requestId: text("request_id").notNull(),
+}, (table) => [
+  index("training_session_user_started_idx").on(table.userId, table.startedAt),
+  uniqueIndex("training_session_user_request_idx").on(table.userId, table.requestId),
+  check("training_session_initial_capital_check", sql`${table.initialCapitalMinor} > 0`),
+]);
+
+export const trainingAction = pgTable("training_action", {
+  sessionId: text("session_id").notNull().references(() => trainingSession.id, { onDelete: "cascade" }),
+  sequence: integer("sequence").notNull(),
+  /** The simulated month the action was taken in; the replay verifies it. */
+  month: integer("month").notNull(),
+  kind: text("kind").notNull(),
+  amountMinor: bigint("amount_minor", { mode: "bigint" }),
+  quantity: numeric("quantity", { precision: 24, scale: 8 }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+  clientIdempotencyKey: text("client_idempotency_key").notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.sessionId, table.sequence] }),
+  uniqueIndex("training_action_idempotency_idx").on(table.sessionId, table.clientIdempotencyKey),
+  check("training_action_kind_check", sql`(${table.kind} = 'buy' and ${table.amountMinor} > 0 and ${table.quantity} is null)
+    or (${table.kind} = 'sell' and ${table.quantity} > 0 and ${table.amountMinor} is null)
+    or (${table.kind} = 'advance' and ${table.amountMinor} is null and ${table.quantity} is null)`),
+  check("training_action_sequence_check", sql`${table.sequence} >= 0 and ${table.month} >= 0`),
+]);
+
+export const skillAttemptContext = pgEnum("skill_attempt_context", attemptContexts);
+
+/**
+ * Skill mastery evidence (#122). Append-only: the mastery state is derived from these rows, never stored.
+ * The server evaluates `correct` itself; `request_id` makes a retried submission land once.
+ */
+export const skillAttempt = pgTable("skill_attempt", {
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  requestId: text("request_id").notNull(),
+  skillId: text("skill_id").notNull(),
+  /** `${lessonId}/${blockId}` from the curriculum item bank. */
+  itemId: text("item_id").notNull(),
+  correct: boolean("correct").notNull(),
+  context: skillAttemptContext("context").notNull(),
+  attemptedAt: timestamp("attempted_at", { withTimezone: true }).notNull(),
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.requestId] }),
+  index("skill_attempt_user_skill_idx").on(table.userId, table.skillId, table.attemptedAt),
 ]);
 
 /**

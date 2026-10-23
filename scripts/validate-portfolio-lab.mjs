@@ -2,7 +2,7 @@ import { finishOnboarding } from "./onboarding-helper.mjs";
 import "dotenv/config";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import postgres from "postgres";
 import { chromium } from "playwright";
 
@@ -540,6 +540,18 @@ try {
   await coherent("attribution");
   await responsive(page, "overview-attribution", { ready: () => page.getByTestId("portfolio-value").waitFor() });
 
+  // Tax view (#137): dated educational estimate, FIFO assumption, this year's proceeds vs the limit and the CSV record.
+  await page.getByText(/^Daňový pohled · \d{4}$/).click();
+  const tax = page.getByTestId("portfolio-tax");
+  assert.match(clean(await tax.innerText()), /Vzdělávací odhad, ne daňové poradenství; stav k \d+\. \d+\. \d{4}\. Tranše párujeme metodou FIFO/);
+  assert.match(clean(await tax.getByTestId("tax-proceeds").innerText()), /Kč z limitu 100 000 Kč · prodeje: 1$/);
+  const [download] = await Promise.all([page.waitForEvent("download"), tax.getByRole("link", { name: "Stáhnout evidenci obchodů (CSV)" }).click()]);
+  const csv = await readFile(await download.path(), "utf8");
+  assert.match(csv, /Vzdělávací evidence, ne daňový doklad ani poradenství; stav k \d{4}-\d{2}-\d{2}\. Párování tranší FIFO je předpoklad/);
+  assert.match(csv, /;AAPL;[^;]+;Prodej;0,05;.*\(\d{4}-\d{2}-\d{2}\) × 0,05;/);
+  assert.match(csv, /;MSFT;Microsoft Corporation;Nákup;0,1;200;USD;23,1;/);
+  await responsive(page, "overview-tax", { reloadEachWidth: false, root: '[data-testid="portfolio-tax"]' });
+
   // A new reward is a contribution; sample history does not cover this real-time flow.
   const cashBeforeReward = minorFromCzk(await page.getByTestId("portfolio-cash").textContent());
   const [{ id: laterLessonId }] = await sql`select id from lesson where is_published = true and id <> ${lessonId} order by id limit 1`;
@@ -606,7 +618,7 @@ try {
   assert.equal((await sql`select count(*)::int as count from portfolio_allocation where portfolio_id = ${generations[0].id}`)[0].count, 0, "single orders never write a mix");
   await page.screenshot({ path: `${screenshotDir}/post-reset-1440.png`, fullPage: true });
   assert.deepEqual(errors, [], "Portfolio Lab has no browser errors");
-  console.log("PASS: locked, zero capital, first visit, instrument buy/sell, search → detail → buy, split in koruny, sector/country look-through, price/FX attribution, unavailable prices, reset, 44 px targets, responsive layouts and 200% text. Screenshots:", screenshotDir);
+  console.log("PASS: locked, zero capital, first visit, instrument buy/sell, search → detail → buy, split in koruny, sector/country look-through, price/FX attribution, tax view and CSV record, unavailable prices, reset, 44 px targets, responsive layouts and 200% text. Screenshots:", screenshotDir);
 } finally {
   await browser.close();
   if (userId) await sql`delete from "user" where id = ${userId}`;

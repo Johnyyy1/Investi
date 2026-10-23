@@ -138,8 +138,22 @@
     {
       "idx": 19,
       "version": "7",
-      "when": 1792759550269,
-      "tag": "0019_thin_avengers",
+      "when": 1792760664600,
+      "tag": "0019_training_session",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792765525828,
+      "tag": "0020_skill_attempt",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792772662120,
+      "tag": "0021_guided_missions",
       "breakpoints": true
     }
   ]

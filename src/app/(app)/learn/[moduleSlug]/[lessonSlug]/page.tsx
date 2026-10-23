@@ -15,6 +15,7 @@ import { getConfiguredMarketDataProviderName, getConfiguredMarketDataService } f
 import { prepareLessonFacts } from "@/features/facts/lesson-facts";
 import { factRegistry } from "@/features/facts/registry";
 import { factToday } from "@/features/facts/resolve";
+import { skillItems } from "@/features/learning/curriculum";
 
 type LessonPageProps = { params: Promise<{ moduleSlug: string; lessonSlug: string }> };
 export async function generateMetadata({ params }: LessonPageProps) {
@@ -40,5 +41,6 @@ export default async function LessonPage({ params }: LessonPageProps) {
   if (!summary.gamification) redirect("/sign-in");
   // Only this lesson's steps cross to the client; the registries of every lesson stay on the server.
   const steps = getGuidedSteps(lesson);
-  return <GuidedLesson key={lesson.id} lesson={{ id: lesson.id, moduleSlug: lesson.moduleSlug, title: lesson.title, position: lesson.position, estimatedMinutes: lesson.estimatedMinutes }} moduleTitle={getModuleBySlug(moduleSlug)!.title} steps={steps} factKeys={lessonFactKeys(lesson)} factNotice={notice} initialStatus={status} initialPosition={Math.min(progress?.lastPosition ?? 0, steps.length - 1)} initialCompletedLessons={completedLessons} initialLearningMomentum={toLearningMomentum(summary.gamification)} initialEarnedPracticeCapitalMinor={serializePracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)} nextHref={summary.allComplete ? "/lab" : `/learn/${summary.next.moduleSlug}/${summary.next.slug}`} guest={isGuestIdentity(user)} history={history} riskHistory={riskHistory} />;
+  return <GuidedLesson key={lesson.id} lesson={{ id: lesson.id, moduleSlug: lesson.moduleSlug, title: lesson.title, position: lesson.position, estimatedMinutes: lesson.estimatedMinutes }} moduleTitle={getModuleBySlug(moduleSlug)!.title} steps={steps} factKeys={lessonFactKeys(lesson)} factNotice={notice} initialStatus={status} initialPosition={Math.min(progress?.lastPosition ?? 0, steps.length - 1)} initialCompletedLessons={completedLessons} initialLearningMomentum={toLearningMomentum(summary.gamification)} initialEarnedPracticeCapitalMinor={serializePracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)} nextHref={summary.allComplete ? "/lab" : `/learn/${summary.next.moduleSlug}/${summary.next.slug}`} guest={isGuestIdentity(user)} history={history} riskHistory={riskHistory}
+    skillItems={Object.fromEntries(skillItems.filter((item) => item.lessonId === lesson.id).map((item) => [item.blockId, item.id]))} />;
 }

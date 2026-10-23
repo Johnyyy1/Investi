@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { missionAttempt, learningProfile, lessonAward, lessonProgress, portfolio, progressionUnlock, user } from "@/db/schema";
+import { missionAttempt, learningProfile, lessonAward, lessonProgress, portfolio, progressionUnlock, skillAttempt, user } from "@/db/schema";
 import { isDemoIdentity, isGuestIdentity } from "./identity";
 
 /**
@@ -15,7 +15,8 @@ import { isDemoIdentity, isGuestIdentity } from "./identity";
  *   when the guest finished that lesson.
  * - learning profile: copied only when the account has not finished onboarding.
  * - progression unlocks: one-time grants; the account's existing grant wins.
- * - isolated mission attempts: evidence and dates survive; colliding retry keys are namespaced.
+ * - skill attempts: append-only evidence, so every guest attempt is added with its original time.
+ * - isolated mission attempts: original evidence and dates survive, with conflicting retry keys namespaced.
  * Guests cannot open Portfolio Lab, so there are no portfolios or trades to move.
  */
 export async function claimGuestLearning(guestId: string, accountId: string) {
@@ -62,6 +63,11 @@ export async function claimGuestLearning(guestId: string, accountId: string) {
       select ${accountId}, unlock_id, practice_capital_minor, reason, unlocked_at
       from ${progressionUnlock} where user_id = ${guestId}
       on conflict (user_id, unlock_id) do nothing`);
+    await tx.execute(sql`
+      insert into ${skillAttempt} (user_id, request_id, skill_id, item_id, correct, context, attempted_at)
+      select ${accountId}, request_id, skill_id, item_id, correct, context, attempted_at
+      from ${skillAttempt} where user_id = ${guestId}
+      on conflict (user_id, request_id) do nothing`);
     // Transfer isolated exercise evidence before the guest's cascade; never overwrite account attempts.
     await tx.execute(sql`
       update ${missionAttempt} as moving set user_id = ${accountId}, request_id = case when exists (

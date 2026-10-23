@@ -69,6 +69,8 @@ try {
           await page.getByRole("heading", { name: "Zkus to ještě jednou", exact: true }).waitFor();
           await page.getByText(/V simulaci propad o 30 % snížil/).waitFor();
           await page.getByRole("button", { name: "Zkusit znovu", exact: true }).press("Enter");
+          // A key press on the still-disabled fieldset is lost, so wait for the retry to clear and re-enable the options.
+          await page.waitForFunction(() => [...document.querySelectorAll("main fieldset")].every((set) => !set.disabled) && !document.querySelector('main input[type="radio"]:checked'));
         }
         await page.locator(`input[type="radio"][value="${grading.correctOptionId ?? grading.answerKey.answer}"]`).press("Space");
       }

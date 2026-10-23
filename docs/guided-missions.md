@@ -27,7 +27,7 @@ Other tasks in #142, such as rebalancing by contribution and releasing cash in a
 
 ## Persistence and authority
 
-Migration `0019` adds `mission_attempt`, with ownership cascade, an idempotency key unique per owner/mission/request, and an index for successful evidence. Attempts are append-only. A retry with the same decision returns the same result; changing a decision under the same request ID is refused. Failed attempts remain auditable. Personal verification records at most one successful evidence row (`request_id = personal`).
+Migration `0021` adds `mission_attempt`, after main’s training (`0019`) and mastery (`0020`) migrations, with ownership cascade, an idempotency key unique per owner/mission/request, and an index for successful evidence. The original unmerged `0019_thin_avengers` SQL is retained as a test fixture. The new migration also accepts that table if a developer applied the earlier PR checkout locally, preserving its evidence. Attempts are append-only. A retry with the same decision returns the same result; changing a decision under the same request ID is refused. Failed attempts remain auditable. Personal verification records at most one successful evidence row (`request_id = personal`).
 
 The session supplies the owner. Verification, lesson cursor moves, completion, trades and resets serialize on the existing user-row lock. A forward move requires successful stored evidence for every mission on the step, and completion rechecks all mission steps. Direct completion and forged cursor/answer flags cannot substitute for evidence. A historical completed lesson remains read-only on review and never repeats a reward.
 
