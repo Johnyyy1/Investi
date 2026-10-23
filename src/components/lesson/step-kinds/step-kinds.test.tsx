@@ -10,6 +10,8 @@ import { GuidedQuestion } from "../guided-question";
 import { FactStatusChip } from "./fact-notice";
 import { labMissionTargets } from "./lab-mission";
 
+vi.mock("@/features/missions/actions", () => ({ missionStatusAction: vi.fn(), verifyMissionAction: vi.fn() }));
+
 vi.mock("@/features/artifacts/actions", () => ({ listArtifacts: vi.fn(), saveArtifact: vi.fn() }));
 
 const question = (block: Parameters<typeof GuidedQuestion>[0]["block"], answers: Record<string, string> = {}, verdict?: boolean) =>

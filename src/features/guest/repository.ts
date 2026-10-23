@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { learningProfile, lessonAward, lessonProgress, portfolio, progressionUnlock, user } from "@/db/schema";
+import { missionAttempt, learningProfile, lessonAward, lessonProgress, portfolio, progressionUnlock, user } from "@/db/schema";
 import { isDemoIdentity, isGuestIdentity } from "./identity";
 
 /**
@@ -15,6 +15,7 @@ import { isDemoIdentity, isGuestIdentity } from "./identity";
  *   when the guest finished that lesson.
  * - learning profile: copied only when the account has not finished onboarding.
  * - progression unlocks: one-time grants; the account's existing grant wins.
+ * - isolated mission attempts: evidence and dates survive; colliding retry keys are namespaced.
  * Guests cannot open Portfolio Lab, so there are no portfolios or trades to move.
  */
 export async function claimGuestLearning(guestId: string, accountId: string) {
@@ -61,6 +62,13 @@ export async function claimGuestLearning(guestId: string, accountId: string) {
       select ${accountId}, unlock_id, practice_capital_minor, reason, unlocked_at
       from ${progressionUnlock} where user_id = ${guestId}
       on conflict (user_id, unlock_id) do nothing`);
+    // Transfer isolated exercise evidence before the guest's cascade; never overwrite account attempts.
+    await tx.execute(sql`
+      update ${missionAttempt} as moving set user_id = ${accountId}, request_id = case when exists (
+        select 1 from ${missionAttempt} as existing where existing.user_id = ${accountId}
+          and existing.mission_id = moving.mission_id and existing.request_id = moving.request_id
+      ) then 'claim:' || ${guestId} || ':' || moving.request_id else moving.request_id end
+      where moving.user_id = ${guestId}`);
     // Cascades the guest's sessions and the rows copied above.
     await tx.delete(user).where(and(eq(user.id, guestId), eq(user.isAnonymous, true)));
     return { claimed: true as const };

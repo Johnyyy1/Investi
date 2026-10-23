@@ -139,7 +139,7 @@ export function GuidedLesson({ lesson, moduleTitle, steps, factKeys, initialStat
   const question = step.blocks.find(isQuestion);
   const evaluation = question ? evaluateQuestion(question, answers) : undefined;
   const isLast = position === steps.length - 1;
-  const missingSubmission = step.blocks.some((block) => (block.type === "rubricSelfAssessment" || (block.type === "interactiveFigure" && block.figure === "goal-map")) && !outputReady[block.id]);
+  const missingSubmission = step.blocks.some((block) => ((block.type === "labMission" && block.missionId && !review) || block.type === "rubricSelfAssessment" || (block.type === "interactiveFigure" && block.figure === "goal-map")) && !outputReady[block.id]);
   const primary = question && verdict === undefined
     ? { label: "Zkontrolovat odpověď", icon: <ArrowRight aria-hidden="true" className="size-[18px]" />, disabled: evaluation === undefined, onClick: () => setVerdict(evaluation) }
     : question && verdict === false

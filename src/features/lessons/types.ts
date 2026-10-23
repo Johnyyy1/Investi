@@ -60,8 +60,8 @@ export type LessonBlock =
   | (BaseBlock & { type: "findError"; title: string; introduction?: string; rows: (LabeledValue & { id: string; correction?: string })[]; errorRowId: string; fixes: ChoiceOption[]; correctFixId: string; correctExplanation: string; incorrectExplanation: string })
   /** Design J: a trade-off decision for a persona. Not graded: every option reveals its consequence. */
   | (BaseBlock & { type: "personaDecision"; persona: { name: string; age: number; need: string; facts: (LabeledValue & { detail?: string })[] }; note?: { title: string; content: string }; prompt: string; options: { id: string; label: string; consequence: { lead: string; content: string; rows: LabeledValue[] } }[]; disclaimer?: string })
-  /** Design K: optional mission in an existing Lab area, then an analysis. Without Lab data the analysis is labelled sample data. */
-  | (BaseBlock & { type: "labMission"; mission: { title: string; goal: string; minutes: number; steps: string[]; afterReturn: string; target: LabMissionTarget }; analysis: { title: string; summary: string; rows: { label: string; badge?: string; status: string; highlight?: boolean; progress?: number; start?: string; end?: string }[]; generalRule: string; selfExplanationPrompt: string } })
+  /** Design K: optional sample exercise; missionId opts into a registered server-verified requirement. Analysis remains sample data. */
+  | (BaseBlock & { type: "labMission"; missionId?: string; mission: { title: string; goal: string; minutes: number; steps: string[]; afterReturn: string; target: LabMissionTarget }; analysis: { title: string; summary: string; rows: { label: string; badge?: string; status: string; highlight?: boolean; progress?: number; start?: string; end?: string }[]; generalRule: string; selfExplanationPrompt: string } })
   /** Design L: dated facts used by the lesson, with the educational-content notice. Values come from the fact registry. */
   | (BaseBlock & { type: "factNotice"; factKeys: FactKey[] })
   /** Design M: 2–4 sentences, self-assessed against a rubric, then a sample answer. Never scored and not persisted yet. */

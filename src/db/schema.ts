@@ -408,3 +408,17 @@ export const analyticsEarlyReturn = pgTable("analytics_early_return", {
   userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
   returnedAt: timestamp("returned_at", { withTimezone: true }).notNull(),
 });
+
+/** Append-only mission decisions and server-derived verification evidence; never a portfolio ledger. */
+export const missionAttempt = pgTable("mission_attempt", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  missionId: text("mission_id").notNull(),
+  requestId: text("request_id").notNull(),
+  evidence: jsonb("evidence").notNull(),
+  completed: boolean("completed").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("mission_attempt_request_idx").on(table.userId, table.missionId, table.requestId),
+  index("mission_attempt_completion_idx").on(table.userId, table.missionId, table.completed),
+]);
