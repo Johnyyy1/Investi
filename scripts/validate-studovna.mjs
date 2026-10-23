@@ -32,7 +32,7 @@ async function layouts(state, capture = true) {
     const map = page.getByTestId("journey-modules");
     assert.equal(await map.locator("[data-level]").count(), 9, "all levels including optional tracks");
     assert.equal(await map.locator("[data-display-module]").count(), 25, "registry display modules");
-    assert.equal(await map.locator("ol a").count(), 29, "every published lesson appears once");
+    assert.equal(await map.locator("ol a").count(), 30, "every published lesson appears once");
     assert.equal(await map.locator("[data-level][open]").count(), state === "complete" ? 0 : 1, "only continuation level starts expanded at every viewport");
     assert.equal(await page.locator("h1:visible").count(), 1);
     assert.equal(await page.locator("#main-content").count(), 1);

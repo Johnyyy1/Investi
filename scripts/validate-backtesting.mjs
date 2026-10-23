@@ -119,6 +119,8 @@ try {
   assert.equal(await simulation().getByText(/pravděpodobnost zisku/i).count(), 0, "no probability-of-profit metric");
   await button("Spustit simulaci").click();
   await page.getByTestId("simulation-result").waitFor();
+  // The result mounts before the next animation frame transfers keyboard focus.
+  await page.waitForFunction(() => document.querySelector('[data-testid="simulation-result"] h3') === document.activeElement);
   assert.equal(await page.getByRole("heading", { name: /^Za 10 let · start 100\s000\sKč$/ }).evaluate((element) => element === document.activeElement), true, "focus moves to the simulation result");
   assert.equal(await text("simulation-contributed"), "100000Kč");
   await assertOrderedRange();
