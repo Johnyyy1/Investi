@@ -1,5 +1,19 @@
 import type { StepDefinition } from "../types";
 export const beforeInvestingSteps: Readonly<Record<string, readonly StepDefinition[]>> = {
+  "before-investing-retirement-products": [
+    { title: "Kolik Evě přidá stát?", blocks: ["opening", "prediction"] },
+    { title: "Státní příspěvek k DPS", blocks: ["dps", "dps-example", "contribution"] },
+    { title: "Strop příspěvku", blocks: ["cap"] },
+    { title: "Daňový odpočet", blocks: ["deduction", "deduction-example"] },
+    { title: "Spočítej odpočet a úsporu", blocks: ["deduction-question"] },
+    { title: "DIP a společný limit", blocks: ["dip", "shared"] },
+    { title: "Příspěvek zaměstnavatele", blocks: ["employer"] },
+    { title: "Cena výhod: vázanost", blocks: ["lockup", "lockup-question"] },
+    { title: "Vyzkoušej státní podporu", blocks: ["calculator", "eva"] },
+    { title: "Vybav si rozdíl", kind: "mastery", blocks: ["recall"] },
+    { title: "Vysvětli pravidlo a zvol pojistku", blocks: ["reflection"] },
+    { title: "Co si odneseš", blocks: ["sources", "summary", "safeguard"] },
+  ],
   "before-investing-goals": [
     { title: "Mají všechny peníze stejný úkol?", blocks: ["opening", "prediction"] },
     { title: "Horizont a pevnost cíle", blocks: ["horizon", "risk"] },

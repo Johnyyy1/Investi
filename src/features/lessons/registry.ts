@@ -26,7 +26,12 @@ import { diversificationScenarioLesson } from "./diversification/diversification
 import { budgetLesson } from "./before-investing/budget";
 import { goalsAndHorizonLesson } from "./before-investing/goals-and-horizon";
 
-export { emergencyFundLesson } from "./before-investing/emergency-fund";
+import { emergencyFundLesson } from "./before-investing/emergency-fund";
+import { pensionAndDipLesson } from "./before-investing/pension-and-dip";
+
+export { emergencyFundLesson, pensionAndDipLesson };
+/** Placed, unpublished lessons awaiting expert review; never served at their public URL. */
+export const draftLessons = [emergencyFundLesson, pensionAndDipLesson] as const;
 
 export const authoredLessons = [budgetLesson, goalsAndHorizonLesson, ...foundationsContent, whatIsAReturnLesson, simpleReturnsLesson, compoundingAndCumulativeReturnsLesson, comparingInvestmentsLesson, logReturnsLesson, returnsCheckpointLesson, whatIsVolatilityLesson, standardDeviationLesson, annualisingVolatilityLesson, maxDrawdownLesson, volatilityCheckpointLesson, whatIsCorrelationLesson, notCausationLesson, correlationInCrisesLesson, correlationRealDataLesson, concentrationLesson, sectorsAndCountriesLesson, etfLookThroughLesson, correlationAndRiskLesson, diversificationScenarioLesson] as const;
 
