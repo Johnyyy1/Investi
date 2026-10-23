@@ -1,3 +1,4 @@
+import type { EmergencyFundFacts } from "./before-investing/emergency-fund-model";
 import type { LessonFigureId } from "./figure-catalog";
 import type { MetricId } from "@/features/learning/metric-glossary";
 import type { ArtifactRequirement } from "@/features/artifacts/schemas";
@@ -49,7 +50,7 @@ export type LessonBlock =
   | (BaseBlock & { type: "formula"; expression: string; latex?: string; variables: { symbol: string; description: string }[] })
   | (BaseBlock & { type: "workedExample"; title: string; introduction?: string; steps: { label: string; value: string; emphasis?: boolean }[]; conclusion: string })
   | (BaseBlock & { type: "conceptCallout"; title: string; content: string })
-  | (BaseBlock & { type: "interactiveFigure"; figure: LessonFigureId; title: string; description: string })
+  | (BaseBlock & { type: "interactiveFigure"; figure: LessonFigureId; title: string; description: string; emergencyFundFacts?: EmergencyFundFacts })
   | (BaseBlock & { type: "multipleChoiceQuestion"; prompt: string; options: ChoiceOption[]; correctOptionId: string; correctExplanation: string; incorrectExplanation: string })
   /** Design F: worked example whose last row the learner completes. Graded like a question. */
   | (BaseBlock & { type: "fadedExample"; title: string; introduction?: string; steps: LabeledValue[]; blank: FadedBlank; misconception?: string; correctExplanation: string; incorrectExplanation: string })

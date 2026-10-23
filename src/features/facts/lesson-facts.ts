@@ -38,6 +38,16 @@ export function prepareLessonFacts(lesson: AuthoredLesson, registry: readonly Fa
     return value;
   }
   const resolved = visit(lesson) as AuthoredLesson;
+  // Numeric calculator inputs obey the same scope, verification and freshness rules as prose.
+  for (const block of resolved.blocks) if (block.type === "interactiveFigure" && block.figure === "emergency-fund-calculator") {
+    const rate = (key: string) => {
+      const fact = publishable(resolveFact(key, asOf, registry), key);
+      if (fact.verificationStatus === "unverified" || fact.publicationBlockedBy || !fact.verifiedAt || typeof fact.value.amount !== "number" || fact.value.unit !== "%") throw new Error(`Calculator needs a verified numeric percentage: ${key}`);
+      used.set(key, fact);
+      return { rate: fact.value.amount / 100, label: fact.label, period: fact.period, verifiedAt: fact.verifiedAt, stale: factReviewState(fact, today).stale, source: fact.sources[0] };
+    };
+    block.emergencyFundFacts = { inflation: rate("makro.inflace"), tax: rate("dan.urok_srazka") };
+  }
   const facts = [...used.values()];
   const verified = facts.flatMap((fact) => fact.verifiedAt ? [fact.verifiedAt] : []).sort();
   if (options.published && lesson.factContext?.kind === "tax" && !facts.length) throw new Error(`Tax lesson ${lesson.id} needs dated fact references`);

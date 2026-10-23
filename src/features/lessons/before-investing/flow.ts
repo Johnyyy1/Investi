@@ -1,5 +1,19 @@
 import type { StepDefinition } from "../types";
 export const beforeInvestingSteps: Readonly<Record<string, readonly StepDefinition[]>> = {
+  "before-investing-emergency-fund": [
+    { title: "Když vypadne příjem", blocks: ["situation", "prediction"] },
+    { title: "Kolik měsíců pokrýt", blocks: ["size", "range"] },
+    { title: "Zohledni stabilitu příjmu", blocks: ["persona"] },
+    { title: "Kde má rezerva čekat", blocks: ["where", "location"] },
+    { title: "Vklad a investice mají jinou ochranu", blocks: ["insurance"] },
+    { title: "Kolik si za peníze koupíš", blocks: ["real", "formula", "worked-real"] },
+    { title: "Spočítej reálný výnos", blocks: ["real-question"] },
+    { title: "Daň a podmínky účtu", blocks: ["tax", "repo"] },
+    { title: "Vyzkoušej rezervu", blocks: ["calculator"] },
+    { title: "Vybav si účel rezervy", kind: "mastery", blocks: ["recall"] },
+    { title: "Zvol vlastní pojistku", blocks: ["reflection"] },
+    { title: "Co si odneseš", blocks: ["sources", "summary", "safeguard"] },
+  ],
   "before-investing-budget": [
     { title: "Kolik může Petra investovat?", blocks: ["opening", "prediction"] },
     { title: "Sečti příjmy a výdaje", blocks: ["cash-flow", "example", "rate-formula"] },

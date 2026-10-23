@@ -416,6 +416,12 @@ jobs:
         run: npm run test:design-system-browser
         env:
           DESIGN_SYSTEM_BASE_URL: ${{ env.APP_URL }}
+      - name: Emergency fund editorial preview
+        if: ${{ !cancelled() }}
+        run: npm run test:emergency-fund-browser
+        env:
+          EMERGENCY_FUND_TEST_URL: ${{ env.APP_URL }}
+          EMERGENCY_FUND_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/emergency-fund
       - name: Facts registry
         if: ${{ !cancelled() }}
         run: npm run test:facts-browser

@@ -53,9 +53,13 @@ describe("Practice Capital reward policy v4", () => {
   });
 
   it("requires a curriculum placement before a planned lesson can receive a reward", () => {
-    for (const lesson of curriculumLessons.filter((entry) => entry.status === "planned")) {
+    for (const lesson of curriculumLessons.filter((entry) => entry.status === "planned" && entry.id !== "before-investing-emergency-fund")) {
       expect(() => lessonReward(lesson.id)).toThrow(/curriculum placement/i);
     }
+  });
+
+  it("keeps the explicitly placed L0 editorial draft XP-only under the existing policy", () => {
+    expect(lessonReward("before-investing-emergency-fund")).toEqual({ practiceCapitalMinor: 0n, rewardPolicyVersion: 4 });
   });
 
   it("refuses to price a lesson outside the curriculum", () => {
