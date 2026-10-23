@@ -5,11 +5,14 @@ import { randomUUID } from "node:crypto";
 import { cache } from "react";
 
 /**
- * Opt-in server timing for the app routes. Off unless INVESTI_PERF_DEBUG=1, in which case every
- * helper below is a pass-through. Output is one JSON line per segment on stdout; it holds only
- * static labels, durations, counts and table names, never parameters, cookies, user ids or emails.
+ * Opt-in server timing for the app routes. INVESTI_PERF_DEBUG=1 logs every request;
+ * INVESTI_PERF_SAMPLE_RATE (0–1) logs that share of requests plus the first request of each
+ * instance. Off otherwise, and unsampled requests take the same pass-through path. Output is one
+ * JSON line per segment on stdout; it holds only static labels, durations, counts, table names and
+ * the function region, never parameters, cookies, user ids or emails.
  */
-export const perfEnabled = process.env.INVESTI_PERF_DEBUG === "1";
+const sampleRate = process.env.INVESTI_PERF_DEBUG === "1" ? 1 : Math.min(1, Math.max(0, Number(process.env.INVESTI_PERF_SAMPLE_RATE) || 0));
+export const perfEnabled = sampleRate > 0;
 
 export type PerfKind = "auth" | "db" | "external" | "compute";
 
@@ -18,14 +21,23 @@ interface PerfSegment {
   name: string;
   requestId: string;
   startedAt: number;
+  instanceCold: boolean;
   ops: PerfOp[];
   counters: Map<string, number>;
   queries: Map<string, number>;
+  connectionsOpened: number;
 }
 
 const storage = new AsyncLocalStorage<PerfSegment>();
-/** React.cache scopes this to one RSC render, so layout and page lines of one request share an id. */
-const requestId = cache(() => randomUUID().slice(0, 8));
+let instanceRequests = 0;
+/**
+ * React.cache scopes this to one RSC render, so layout and page lines of one request share an id
+ * and one sampling decision. The instance's first request is always kept: cold starts are rare.
+ */
+const perfRequest = cache(() => {
+  const instanceCold = instanceRequests++ === 0;
+  return { id: randomUUID().slice(0, 8), instanceCold, sampled: instanceCold || Math.random() < sampleRate };
+});
 
 const round = (value: number) => Math.round(value * 100) / 100;
 
@@ -44,6 +56,10 @@ function summarize(segment: PerfSegment, totalMs: number) {
   return {
     segment: segment.name,
     request: segment.requestId,
+    region: process.env.VERCEL_REGION ?? null,
+    // First request this server instance rendered, and how long its process has been alive.
+    instanceCold: segment.instanceCold,
+    uptimeS: round(process.uptime()),
     totalMs: round(totalMs),
     // Sum of op durations by kind. Ops overlap and nest, so these are NOT additive with totalMs.
     kindTotalsMs: kindTotals,
@@ -52,6 +68,7 @@ function summarize(segment: PerfSegment, totalMs: number) {
     repeatedOps: [...byLabel].filter(([, entry]) => entry.calls > 1).map(([label, entry]) => ({ label, calls: entry.calls })),
     counters: Object.fromEntries(segment.counters),
     dbQueryCount: queryCount,
+    dbConnectionsOpened: segment.connectionsOpened,
     // Same SQL shape (verb + tables) issued more than once in one segment.
     repeatedQueryShapes: [...segment.queries].filter(([, count]) => count > 1).map(([shape, count]) => ({ shape, count })),
     timeline: segment.ops.map((op) => ({ label: op.label, startMs: round(op.startMs), endMs: round(op.startMs + op.ms) })),
@@ -61,7 +78,9 @@ function summarize(segment: PerfSegment, totalMs: number) {
 /** Wraps one route segment (layout or page). All perfMeasure/recordQuery calls inside are attributed to it. */
 export async function perfSegment<T>(name: string, run: () => Promise<T>): Promise<T> {
   if (!perfEnabled) return run();
-  const segment: PerfSegment = { name, requestId: requestId(), startedAt: performance.now(), ops: [], counters: new Map(), queries: new Map() };
+  const request = perfRequest();
+  if (!request.sampled) return run();
+  const segment: PerfSegment = { name, requestId: request.id, startedAt: performance.now(), instanceCold: request.instanceCold, ops: [], counters: new Map(), queries: new Map(), connectionsOpened: 0 };
   try {
     return await storage.run(segment, run);
   } finally {
@@ -93,4 +112,10 @@ export function recordQuery(sql: string) {
   const tables = [...new Set([...sql.matchAll(/\b(?:from|into|update|join)\s+"(\w+)"/gi)].map((match) => match[1]))];
   const shape = `${verb} ${tables.join(",")}`.trim();
   segment.queries.set(shape, (segment.queries.get(shape) ?? 0) + 1);
+}
+
+/** postgres.js password hook: it runs once per authentication, so once per newly opened connection. */
+export function recordConnection() {
+  const segment = perfEnabled ? storage.getStore() : undefined;
+  if (segment) segment.connectionsOpened += 1;
 }

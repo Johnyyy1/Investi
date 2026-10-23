@@ -216,14 +216,16 @@ Impact figures for #2–#4 are in milliseconds of injected latency, not producti
 
 ## Instrumentation
 
-`src/lib/perf.ts`, enabled only when the server process has `INVESTI_PERF_DEBUG=1` (read once at module load). When unset, every helper returns its callback untouched and the Drizzle logger is not attached; behaviour and UI are unchanged.
+`src/lib/perf.ts`, enabled when the server process has `INVESTI_PERF_DEBUG=1` (every request) or `INVESTI_PERF_SAMPLE_RATE` between 0 and 1 (that share of requests, plus the first request of each instance), read once at module load. When neither is set, every helper returns its callback untouched, the Drizzle logger is not attached and the database pool gets no password hook; behaviour and UI are unchanged. Unsampled requests take the same pass-through path.
 
 - `perfSegment(name, fn)` wraps a layout or page. On completion it prints one line: `[investi:perf] {…}` with `segment`, a per-request id (random, scoped by `React.cache`), `totalMs`, per-label ops (`calls`, `totalMs`, `maxMs`, `kind`: auth/db/external/compute), `repeatedOps`, `counters` (market-data cache hit / miss / coalesced by family), `dbQueryCount`, `repeatedQueryShapes`, and an op `timeline`. Durations use `performance.now()`.
+- Each line also carries `region` (`VERCEL_REGION`, `null` locally), `instanceCold` (the first request this server instance rendered; layout and page lines of that request share it), `uptimeS` (`process.uptime()`) and `dbConnectionsOpened`: connections the segment's queries opened. postgres.js calls a function password once per authentication, so `src/db/index.ts` passes one that counts and then returns the URL password. A connection opened by one segment's query counts there even if another request then uses it. The count is 0 for a server without password authentication.
 - `perfMeasure(label, kind, fn)` times an async operation inside the active segment. Applied to: session lookup, layout reads, `loadLearner`'s four reads, the unlock check (`progression.loadPortfolioLabUnlock`, its read `progression.readUnlockFacts`, and on the write path `lockUserRow` and `ensureUnlock` separately), `loadPortfolioRows`, `loadPortfolioView` and each holding valuation, and every market-data provider call (`MarketDataService.call`, i.e. cache misses only).
 - Query counts come from a Drizzle `logger` that receives the parameterised SQL text and keeps only `verb + table names`.
 - `BEGIN`/`COMMIT` issued by postgres.js are not logged by Drizzle, so `dbQueryCount` excludes them (+2 per transaction).
 - Nothing logged contains parameters, cookies, tokens, user ids or emails. Do not enable it in production by default; it prints one line per route render.
-- Unit tests: `src/lib/perf.test.ts` (disabled pass-through, aggregation, no parameters in output, failure path).
+- Unit tests: `src/lib/perf.test.ts` (disabled pass-through, aggregation, no parameters in output, failure path, sampling, cold flag, region, connection count).
+- `npm run perf:report -- <export...>` (`scripts/report-perf.mts`, logic in `src/lib/perf-report.ts`) reads log exports (plain text, JSON Lines or a JSON array whose string fields hold the lines), drops duplicate request/segment pairs and prints P50/P95/max `totalMs` (nearest rank) and the median `dbConnectionsOpened` per segment, split into cold, warm and unknown (lines from before #405). Keep exports out of the repository.
 
 ## Reproduce
 
@@ -703,3 +705,23 @@ Small samples from one session, not percentiles; #405 covers P50/P95.
 - **The new dominant cost is an FMP quote refetch from Frankfurt.** Every quote call from `fra1` took 520–892 ms (4 of 4), about 7–12× the `iad1` figure. A quote is refetched when its 30 s shared-cache entry has expired, so it hits most visits that come more than 30 s after the previous one. `/learn` waits for it because the portfolio card is on its critical path (#402); the cache path itself is #403. Both renders above were measured while US markets were closed, when a refetched quote cannot have changed.
 - A new database connection in `fra1` cost 62–194 ms (`auth.getSession` on cold requests), more than the 8.7 RTT model predicts at ~1–2 ms RTT. Function cold start or TLS setup on a fresh instance are candidates; not separated yet (#405).
 - Unauthenticated TTFB from Czechia, 5 warm samples: `/` 249–363 → 159–193 ms, `/sign-in` ~275 → 140–174 ms, the `/learn` sign-in redirect 253–303 → 146–236 ms.
+
+## Phase 10: sampled production timing (2026-10-24, issue #405)
+
+### What changed
+
+- `INVESTI_PERF_SAMPLE_RATE` turns on the existing `[investi:perf]` lines for a share of requests, so production can be measured without a line per render. `INVESTI_PERF_DEBUG=1` still logs everything.
+- Lines carry `region`, `instanceCold`, `uptimeS` and `dbConnectionsOpened` (see Instrumentation). The first request of every instance is always logged, because at a 5 % rate cold renders would otherwise be too rare to reach 20 samples.
+- `npm run perf:report` aggregates exported logs into the table the baseline below needs.
+
+### Checked locally (production build, `next start`, local Postgres 17, sample rate 0.0001)
+
+- Only the instance's first request printed lines; the five later requests were not sampled.
+- That first signed-in `/learn` render opened 6 connections in parallel: 2 in `layout:(app)` and 4 in `page:/learn`, one per concurrent query. This matches the lazy-open behaviour behind the cold-request cost in Phase 9.
+- The counter was also checked directly against postgres.js 3.4.9: 3 parallel queries on a new pool count 3, a later query on an open connection counts 0, and after the server terminated 2 connections the next 3 parallel queries counted 2. A percent-encoded password authenticated correctly.
+
+### Still open
+
+- **Production baseline** (P50/P95 for `/learn`, `/progress`, `/lab` and `/lab/portfolio`, at least 20 samples per route and instance state): set `INVESTI_PERF_SAMPLE_RATE` (for example `0.05`) on Production in Vercel and redeploy. Then export the runtime logs, run `npm run perf:report -- <export>` and add the table here. Not measured yet.
+- **Neon scale to zero** (Console → Compute) and **Fluid compute** (Vercel → Project → Settings → Functions): not checked; this run had no access to either console. A cold line with a long `auth.getSession` and `dbConnectionsOpened` > 0 points at connection setup. A long `auth.getSession` with small `uptimeS` and few connections points at the function cold start.
+- **Pool decision** (`idle_timeout` / `max_lifetime`, `attachDatabasePool`): unchanged until the baseline shows how often cold requests open connections, or whether warm requests also reopen them after an instance resumes.
