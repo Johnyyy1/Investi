@@ -165,7 +165,9 @@ try {
   await answerChoice(page, "Ne, největší váhy mohou stále ovládat výsledek");
   await answerChoice(page, "ETF může sledovat index, ale fond a ukazatel jsou dvě různé věci");
   await answerChoice(page, "Má na výsledek ETF větší vliv než pozice s vahou 5 %");
-  await page.getByRole("heading", { name: "Zkoumej obsah, ne jen název", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Jeden index, více fondů", exact: true }).waitFor();
+  await page.getByText(/americká ETF běžně nekoupí, protože k nim chybí KID/).filter({ visible: true }).waitFor();
+  await continueTo(page, "Zkoumej obsah, ne jen název");
   await completeLesson(page, 180);
 
   await nextLesson(page, "Hotovost má v portfoliu svůj úkol");
