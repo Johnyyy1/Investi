@@ -443,8 +443,22 @@ try {
   const etfOrder = page.getByRole("dialog", { name: "Investovat do VWCE" });
   await etfOrder.getByRole("heading", { name: "Zvol množství", exact: true }).waitFor();
   await etfOrder.getByLabel("Množství", { exact: true }).fill("0.2");
+  await sql`insert into learner_artifact (id,user_id,kind,version,payload,request_id) values (${randomUUID()},${userId},'safeguards',1,${sql.json({ rules: [{ trigger: "Nákup mimo plán", action: "Zapíšu si důvod a počkám do dalšího dne." }] })},${randomUUID()})`;
   await etfOrder.getByRole("button", { name: "Zkontrolovat pokyn", exact: true }).click();
-  await etfOrder.getByRole("button", { name: "Potvrdit nákup VWCE", exact: true }).click();
+  // Decision-time card: the plan names only AAPL. The card informs, links a published lesson and never blocks.
+  const planCard = etfOrder.getByRole("note", { name: "Tento nákup není ve tvém plánu" });
+  await planCard.waitFor();
+  assert.match(clean(await planCard.innerText()), /Nákup mimo plán: Zapíšu si důvod/, "the card shows the learner's saved safeguards");
+  assert.equal(await planCard.getByRole("link", { name: "Lekce: Cíle a investiční horizont" }).getAttribute("href"), "/learn/before-investing/goals-and-horizon");
+  assert.equal(await etfOrder.getByRole("note").count(), 1, "at most one card per action");
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+  assert.deepEqual(await planCard.evaluate((card) => [...card.querySelectorAll("*")].filter((element) => element.getBoundingClientRect().right > innerWidth + 1).map((element) => element.textContent?.trim().slice(0, 80))), [], "the card supports 200% text");
+  await planCard.screenshot({ path: `${screenshotDir}/decision-card-320-200-percent.png` });
+  await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
+  await page.setViewportSize({ width: 1440, height: 950 });
+  await etfOrder.getByRole("button", { name: "Potvrdit nákup VWCE", exact: true }).focus();
+  await page.keyboard.press("Enter");
   await page.getByRole("status").filter({ hasText: "Nákup dokončen" }).getByRole("link", { name: /Zobrazit portfolio/ }).click();
   await page.waitForURL(/\/lab\/portfolio$/);
   await page.getByTestId("holding-VWCE").waitFor();

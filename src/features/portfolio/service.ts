@@ -5,7 +5,7 @@ import { listLearnerArtifacts } from "@/features/artifacts/repository";
 import { portfolioProcess, type ProcessFeedback } from "./process";
 import type { Currency } from "@/features/market-data/contracts";
 import { attributeHolding, foldQuoteCost, impliedPurchaseFxUnits } from "./attribution";
-import { allocationBasisPoints, foldTrades, valuePortfolio, type HoldingValuation } from "./domain";
+import { allocationBasisPoints, foldTrades, valuePortfolio, type HoldingValuation, type TradeSide } from "./domain";
 import { decimalToPriceUnits, fxToDecimal, quantityToDecimal, roundDivide } from "./decimal";
 import { loadPortfolioPerformance } from "./performance-loader";
 import type { PortfolioPerformance } from "./performance";
@@ -23,7 +23,8 @@ import {
   type PortfolioInstrumentPreview,
   type ValuationUnavailableReason,
 } from "./market-data";
-import { getOrCreateActivePortfolio, loadLatestAllocation, loadLedgerRows, readBrokerFeeProfile, type AllocationLineRow } from "./repository";
+import { getOrCreateActivePortfolio, loadLatestAllocation, loadLedgerRows, loadPortfolioRows, readBrokerFeeProfile, type AllocationLineRow } from "./repository";
+import { tradeDecisionCards } from "./decision-cards";
 
 /** Sector or country split of the whole portfolio; "unvalued" while any quote or FX is missing. */
 export type PortfolioExposureView =
@@ -315,4 +316,23 @@ export type { AllocationQuote };
 
 export async function loadAllocationQuotes(instrumentIds: readonly string[]): Promise<AllocationQuote[]> {
   return Promise.all(instrumentIds.map((instrumentId) => observeAllocationQuote(portfolioMarketData, instrumentId, "CZK")));
+}
+
+/** Server-evaluated decision cards for a reviewed trade, with the learner's saved safeguards. */
+export async function loadTradeDecisionCards(userId: string, input: { instrumentId: string; side: TradeSide }) {
+  const [rows, plans, safeguards] = await Promise.all([
+    loadPortfolioRows(userId), listLearnerArtifacts(userId, "investment_plan"), listLearnerArtifacts(userId, "safeguards"),
+  ]);
+  const baseCurrency = rows.portfolio.baseCurrency as Currency;
+  const folded = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades);
+  // Only the disposition rule needs gains, so a buy reads no extra quotes.
+  const valuations = input.side === "SELL" ? await Promise.all(folded.holdings.map((holding) => observePortfolioHoldingValue(portfolioMarketData, holding, baseCurrency))) : [];
+  const rules = safeguards[0]?.kind === "safeguards" ? safeguards[0].payload.rules : [];
+  return {
+    kinds: tradeDecisionCards({
+      ...input, now: rows.readAt, trades: rows.trades, ips: plans[0]?.payload,
+      holdings: valuePortfolio(rows.earnedPracticeCapitalMinor, folded, valuations).holdings,
+    }),
+    safeguards: rules.map(({ trigger, action }) => ({ trigger, action })),
+  };
 }

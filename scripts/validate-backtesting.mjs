@@ -374,11 +374,11 @@ try {
     await page.waitForFunction((expected) => document.querySelector('[data-testid="flow-contributed"]')?.textContent.replace(/\s/g, "") === `${expected}$`, 10000 + 120 * Number(value));
     await page.getByRole("button", { name: "Změnit nastavení", exact: true }).waitFor();
   }
-  await page.getByTestId("overfitting-notice").waitFor();
+  await page.getByTestId("decision-card-overfitting").waitFor();
   assert.match(await page.getByTestId("attempt-counter").textContent(), /relaci: 5/);
   await page.reload();
   await page.getByLabel("Cíl pokusu", { exact: true }).selectOption("timing");
-  await page.getByTestId("overfitting-notice").waitFor();
+  await page.getByTestId("decision-card-overfitting").waitFor();
   assert.match(await page.getByTestId("attempt-counter").textContent(), /relaci: 5/, "tab session survives reload");
   await page.getByLabel("Cíl pokusu", { exact: true }).selectOption("withdrawals");
   assert.match(await page.getByTestId("attempt-counter").textContent(), /relaci: 0/, "a different objective has its own counter");
