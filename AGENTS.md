@@ -20,7 +20,7 @@ The product prepares people to start investing and maintain a plan: financial re
 
 This file defines how coding agents should work in this repository.
 
-The product direction adopted on 2026-10-21 is recorded in [docs/product-direction.md](docs/product-direction.md). Read it before changing curriculum, learning progression, Lab behavior, rewards, or product priorities. It defines the target direction; inspect code and [docs/product-reset.md](docs/product-reset.md) for current implementation and compatibility contracts. Older descriptions of a metrics-first course or portfolio-value-first hierarchy do not override this direction.
+The product direction adopted on 2026-10-21 is recorded in [docs/product-direction.md](docs/product-direction.md). Read it before changing curriculum, learning progression, Lab behavior, rewards, or product priorities. It defines the target direction; inspect code and [docs/product-reset.md](docs/product-reset.md) for current implementation and compatibility contracts. The strategy 2026–27 and S0–S3 gates in that document and [roadmap #362](https://github.com/Johnyyy1/Investnik/issues/362) supersede the old C2 Phase 1–6 implementation order. Older descriptions of a metrics-first course or portfolio-value-first hierarchy do not override this direction.
 
 1. Start every task by inspecting the repository
 
@@ -52,7 +52,7 @@ Do not switch branches unless explicitly requested.
 
 The primary product promise is milestone A: "Připraven/a začít". A learner can assess financial readiness, verify and compare brokers, understand total costs and Czech tax obligations, and write an investment policy statement (IPS) tested in a simulated crisis.
 
-Prioritize decisions that prevent costly mistakes: financial readiness, costs, taxes, planning, and behavior. Expand stock analysis, valuation, and quantitative methods after the practical path. Advanced tracks are optional; they are not prerequisites for becoming a capable passive investor.
+The target learner is a beginning independent investor who wants to start or has just started and wants to avoid major mistakes. This describes their situation, not their knowledge level. Prioritize financial readiness, costs, taxes, planning, and behavior. Expand advanced tracks only with demonstrated demand and an explicit founder decision; completing the practical path does not automatically authorize L4–L6 or optional-topic expansion.
 
 The core learning loop is:
 
@@ -113,16 +113,26 @@ Completed lessons count in their new location, but do not imply completion of ne
 
 Curriculum placement must not accidentally alter rewards or unlock prerequisites. Policy v4 resolves reward eligibility from the registered curriculum level, independently of the storage module. Preserve its eligibility semantics or change them through a deliberate versioned domain migration. Adding new level-1 lessons must not expand the frozen seven-lesson Lab prerequisite, relock existing learners, or repeat their unlock grant.
 
-Implementation order
+Strategy phases and gates
 
-1. Foundations for milestone A: lesson registry/remapping, dated fact registry, level 0, costs (2.2), taxes (2.4), broker/account (2.1), IPS template, and explainable process feedback with realistic Lab costs, conversion and tax-lot education.
-2. Behavior and maintenance: B1–B4/B9/B10, decision-time cards, MWR/TWR, ETF selection, allocation/rebalancing, spaced review/mastery, baseline measurement, and prospective Practice Capital changes.
-3. Complete milestone B: remaining behavior lessons, capstone, adaptive entry assessment, retention checks and evaluation of decision-time cards.
-4. Stock analysis, financial statements and contextual ratio limitations.
-5. Valuation, reverse DCF and a thesis journal with later review.
-6. Quantitative methods, backtest overfitting exercises and optional modules.
+| Phase | Target date | Evidence required to advance |
+| --- | --- | --- |
+| S0 — Foundations and measurement | 2026-11-30 | 3–5 broker/bank interviews establishing what they would pay for and by which metric |
+| S1 — Milestone A | 2027-02-28 | 1,000 registrations and ≥30% completing milestone A |
+| S2 — Partner pilot | 2027-06-30 | One paid pilot with measured account activation |
+| S3 — Scaling and Milestone B | 2027-10-31 | A repeat contract and data on conversion to an account |
 
-This is prioritization for scoped implementation tasks, not a live implementation checklist. Inspect completed work first, reuse the existing curriculum registry, learner artifacts and Portfolio Lab costs, and implement the remaining scope. Complete explicitly requested maintenance or fixes without using the roadmap to expand their scope.
+These are planning targets and evidence gates, not automatic date-based transitions. S0–S3 are business/delivery phases; A–D are learner milestones. Inspect completed work first and implement only the scoped remaining work. Reuse the curriculum registry, learner artifacts and Portfolio Lab costs.
+
+Issues labeled `later` are frozen: do not start or reopen them without an explicit founder decision. This includes stock analysis, valuation, quant, optional topics and CFA/PFP expansion. Completed dependencies, spare capacity, old roadmap ordering or an approved design do not authorize this work. Preserve existing advanced content, stable IDs, progress, receipts and access. Complete explicitly requested maintenance or fixes without expanding their scope.
+
+Every module ends in a usable learner artifact, such as a financial check-up, goals map, cost comparison, broker/ETF checklist, IPS or crisis-plan revision. Mixed checkpoints support this output; they do not replace it. Reuse versioned learner artifacts and preserve historical completion/reward contracts. Lab assesses explainable process criteria, not investment return; waiting or keeping the plan can be successful.
+
+Product boundaries and partner direction
+
+Provide education and support for the learner's own decision process. Never generate personalized recommendations of specific instruments or instructions to buy/sell them. The consumer version stays neutral: no affiliate rankings of brokers or ETFs, and no commercial relationship determining educational comparisons.
+
+The business direction is a free consumer core and licenses for brokers/banks using the same education engine. S2 targets co-branding, partner-selected paths, a deep-link back to the partner and an aggregate results dashboard ([#358](https://github.com/Johnyyy1/Investnik/issues/358), [#359](https://github.com/Johnyyy1/Investnik/issues/359)). Separate learner outcomes (milestones, mastery, IPS and crisis behavior) from partner outcomes (clicks and partner-supplied account/deposit/investment activation). Share aggregate anonymized results; no personal data without consent. Partner CTAs preserve the instrument-recommendation boundary. Full white-label, SSO/SAML, RBAC, SDK and mobile embed require concrete partner demand; this direction is not authorization to build them now.
 
 Success measures
 
@@ -426,7 +436,7 @@ Learning design target
 
 Teach in the order of real decisions. Use a worked example, a partially completed example, an independent task, retrieval questions, and a short self-explanation. Tie each new metric to a decision, its assumptions, and when it misleads.
 
-Modules end in mixed checkpoints; levels end in practical projects assessed with an explicit four-level rubric. Prefer tasks using fictional broker tariffs, KIDs, statements, ETF checklists, IPS templates, and Lab missions over calculation-only quizzes.
+Modules end in a usable learner artifact and mixed checkpoints; levels end in practical projects assessed with an explicit four-level rubric. Prefer tasks using fictional broker tariffs, KIDs, statements, ETF checklists, IPS templates, and Lab missions over calculation-only quizzes.
 
 The target progression is a prerequisite/skill graph with an adaptive entry assessment (including "Nevím"), a test-out route, and spaced mixed review. Preserve the dominant Continue action while recommending eligible next lessons and relevant review.
 
