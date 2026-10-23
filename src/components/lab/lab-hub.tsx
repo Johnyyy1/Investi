@@ -29,13 +29,12 @@ export function LabHub({ unlock, completedLessonIds, view }: { unlock: LabHubUnl
         <p className={styles.eyebrow}>Lab</p>
         <h1 id="lab-heading">Co se stane, <br className={styles.desktopBreak} />když…</h1>
         <p>Něco změň. Sleduj dopad. Pochop proč.</p>
+        <div className="mt-6"><Link href="/lab/plan" className="inline-flex min-h-12 items-center text-primary underline underline-offset-4">Můj investiční plán (IPS)</Link><p className="text-sm text-muted">Sepiš si cíle a pravidla ještě před prvním cvičným nákupem.</p>
+          <Link href="/lab/training" className="inline-flex min-h-12 items-center text-primary underline underline-offset-4">Krizový nácvik</Link><p className="text-sm text-muted">Vyzkoušej svůj plán v simulovaném propadu, s tréninkovými penězi.</p></div>
       </div>
       {view ? <Suspense fallback={<Guide pose="hourglass">Tady se nic nerozbije. Něco změň a uvidíš, co se stane.</Guide>}><LoadedGuide view={view} /></Suspense>
         : <Guide pose="hourglass">Backtesting můžeš zkusit hned. Portfolio Lab navazuje na Základy.</Guide>}
     </section>
-
-    <div className="mb-6"><Link href="/lab/plan" className="inline-flex min-h-12 items-center text-primary underline underline-offset-4">Můj investiční plán (IPS)</Link><p className="text-sm text-muted">Sepiš si cíle a pravidla ještě před prvním cvičným nákupem.</p>
-      <Link href="/lab/training" className="inline-flex min-h-12 items-center text-primary underline underline-offset-4">Krizový nácvik</Link><p className="text-sm text-muted">Vyzkoušej svůj plán v simulovaném propadu, s tréninkovými penězi.</p></div>
 
     <div className={styles.cards}>
       {view ? <Suspense fallback={<PortfolioSkeleton />}><LoadedPortfolioCard view={view} /></Suspense> : <LockedPortfolioCard unlock={unlock} completedLessonIds={completedLessonIds} />}

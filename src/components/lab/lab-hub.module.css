@@ -9,7 +9,7 @@
 .hero { display: grid; gap: 4px; }
 .intro { display: grid; gap: 12px; align-content: start; }
 .intro h1 { font-size: 2.5rem; line-height: 1.05; font-weight: 600; letter-spacing: -.035em; }
-.intro > p:last-child { color: var(--color-secondary); font-size: 1rem; line-height: 1.5; }
+.intro > p:last-of-type { color: var(--color-secondary); font-size: 1rem; line-height: 1.5; }
 .desktopBreak { display: none; }
 /* Positions follow the Pen guide stages: the figure is centred in a padded artboard, so the image
    overhangs the stage's right edge (clipped by .page) and stands on the card below. */
@@ -106,7 +106,7 @@
   .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: end; gap: 24px; }
   .intro { gap: 16px; padding-bottom: 40px; }
   .intro h1 { font-size: 3.5rem; }
-  .intro > p:last-child { font-size: 1.125rem; }
+  .intro > p:last-of-type { font-size: 1.125rem; }
   .desktopBreak { display: inline; }
   .guideStage { height: 250px; }
   .bubble { left: auto; right: 170px; width: min(280px, calc(100% - 170px)); padding: 16px 20px; font-size: .9375rem; line-height: 1.55; }
