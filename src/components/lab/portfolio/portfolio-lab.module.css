@@ -192,6 +192,10 @@ a.rowName:hover { color: var(--color-primary); text-decoration: underline; text-
 .activity li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 10px 0; border-top: 1px solid var(--color-divider); font-size: .8125rem; line-height: 1.4; }
 .activity li strong { font-weight: 600; }
 .activity li span:last-child { text-align: right; }
+.taxBody { padding-bottom: 8px; }
+.taxBody h3 { margin-top: 14px; font-family: var(--font-sans); font-size: .875rem; font-weight: 600; line-height: 1.4; }
+.taxBody > p + p, .taxBody h3 + p { margin-top: 4px; }
+.taxBody li > :last-child { grid-column: 1 / -1; }
 
 /* First visit (state 1) */
 .hero { position: relative; margin-top: 12px; }

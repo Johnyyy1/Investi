@@ -9,6 +9,7 @@ import { allocationBasisPoints, foldTrades, valuePortfolio, type HoldingValuatio
 import { decimalToPriceUnits, fxToDecimal, quantityToDecimal, roundDivide } from "./decimal";
 import { loadPortfolioPerformance } from "./performance-loader";
 import type { PortfolioPerformance } from "./performance";
+import { presentTaxView, type TaxView } from "./tax-lots";
 import { portfolioExposure, type ExposureDimension, type PortfolioExposure } from "./exposure";
 import { perfMeasure } from "@/lib/perf";
 import { portfolioMarketData } from "./environment";
@@ -109,6 +110,8 @@ export interface PortfolioView {
     fxRate: string | null;
     unavailableReason?: ValuationUnavailableReason;
   }>;
+  /** FIFO tranche map and yearly sale proceeds; separate from the weighted-average P&L. */
+  tax: TaxView;
   recentActivity: Array<{
     id: string;
     side: "BUY" | "SELL";
@@ -285,6 +288,7 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
         unavailableReason: holding.unavailableReason,
       };
     }),
+    tax: presentTaxView(rows.trades, rows.readAt),
     recentActivity: rows.trades.slice(-8).reverse().map((trade) => ({
       id: trade.id,
       side: trade.side,

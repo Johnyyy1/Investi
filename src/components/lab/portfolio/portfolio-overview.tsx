@@ -19,6 +19,7 @@ import { formatDecimal } from "@/lib/formatters";
 import { AllocationDonut } from "./allocation-donut";
 import { PerformanceSummary } from "./performance-summary";
 import { ProcessFeedback } from "./process-feedback";
+import { TaxPanel } from "./tax-view";
 import { InstrumentSearch } from "./instrument-search";
 import {
   contributionRows, contributionStory, currencyName, dataStatus, exposureFacts, exposureLabel, fxRate, groupOf, groupOrder, groups, groupSummaries, minor, money,
@@ -252,6 +253,7 @@ function Overview({ view, status }: { view: PortfolioView; status: DataStatus })
       <HoldingsCard view={view} />
       <AllocationCard view={view} rows={rows} />
       <Activity view={view} />
+      <Tax view={view} />
     </div>
     {contributions && story ? <div className={styles.processStory}><Story view={view} contributions={contributions} story={story} /></div> : null}
   </div>;
@@ -435,6 +437,10 @@ function Activity({ view }: { view: PortfolioView }) {
   </details>;
 }
 
+function Tax({ view }: { view: PortfolioView }) {
+  return view.recentActivity.length ? <TaxPanel tax={view.tax} /> : null;
+}
+
 function Missing({ view, status, refreshing, onRetry }: { view: PortfolioView; status: Extract<DataStatus, { kind: "unavailable" }>; refreshing: boolean; onRetry: () => void }) {
   const partial = status.missing < status.total;
   return <div className={styles.layout}>
@@ -472,6 +478,6 @@ function Missing({ view, status, refreshing, onRetry }: { view: PortfolioView; s
         <p className={styles.note}><ChartNoAxesColumn size={15} aria-hidden="true" />Hodnotu, změnu i rozložení ukážeme, až budou data. Odhadovat je nebudeme.</p>
       </section>
     </div>
-    <div className={styles.column}><Activity view={view} /></div>
+    <div className={styles.column}><Activity view={view} /><Tax view={view} /></div>
   </div>;
 }
