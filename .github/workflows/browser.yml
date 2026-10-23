@@ -461,6 +461,12 @@ jobs:
         env:
           EMERGENCY_FUND_TEST_URL: ${{ env.APP_URL }}
           EMERGENCY_FUND_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/emergency-fund
+      - name: Scams editorial preview
+        if: ${{ !cancelled() }}
+        run: npm run test:scams-browser
+        env:
+          SCAMS_TEST_URL: ${{ env.APP_URL }}
+          SCAMS_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/scams
       - name: Pension and DIP editorial preview
         if: ${{ !cancelled() }}
         run: npm run test:pension-and-dip-browser

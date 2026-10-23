@@ -86,6 +86,7 @@ export type DisplayModuleCode = (typeof displayModules)[number]["code"];
 /** What a lesson trains. Mastery states (#122) hang on these IDs. */
 export const skills = {
   "fraud-prevention": "Ověření protistrany a varovné signály",
+  "scam-prevention": "Varovné znaky, ověření poskytovatele a střety zájmů",
   "debt-priorities": "Cena dluhu a pořadí splácení",
   "goals-and-horizon": "Cíle, horizont a pevnost termínu",
   "retirement-products": "Státní podpora spoření na stáří",
@@ -139,6 +140,7 @@ const place = (lessonId: string, displayModule: DisplayModuleCode, order: number
 export const lessonPlacements: readonly LessonPlacement[] = [
   // Reserve/pension remain unpublished; recommendation prerequisites include only available lessons.
   place("before-investing-checkup", "0.1", 7, "recommended", ["before-investing-budget", "before-investing-debt", "before-investing-goals"], ["savings-rate", "debt-priorities", "inflation", "goals-and-horizon", "fraud-prevention"]),
+  place("before-investing-scams", "0.1", 6, "recommended", [], ["scam-prevention"]),
   place("before-investing-retirement-products", "0.1", 5, "recommended", ["before-investing-goals"], ["retirement-products"]),
   place("before-investing-debt", "0.1", 2, "recommended", ["before-investing-budget"], ["debt-priorities"]),
   place("before-investing-goals", "0.1", 4, "recommended", ["before-investing-budget"], ["goals-and-horizon"]),
