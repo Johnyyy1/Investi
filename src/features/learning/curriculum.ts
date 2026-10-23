@@ -23,7 +23,7 @@ export const storageModules = [
   { id: VOLATILITY_MODULE_ID, slug: "volatility", title: "Volatilita", description: "Měření rozsahu a nejistoty výnosů.", status: "available", lessons: volatilityLessons },
   { id: CORRELATION_MODULE_ID, slug: "correlation", title: "Korelace", description: "Jak se aktiva pohybují společně — a kdy ne.", status: "available", lessons: correlationLessons },
   { id: DIVERSIFICATION_MODULE_ID, slug: "diversification", title: "Diverzifikace", description: "Sestavování portfolií, která promyšleně rozkládají riziko.", status: "available", lessons: diversificationLessons },
-  { id: BEFORE_INVESTING_MODULE_ID, slug: "before-investing", title: "Než začneš investovat", description: "Začni rozpočtem: příjmy, výdaje a realistická částka k odkládání.", status: "available", lessons: beforeInvestingLessons },
+  { id: BEFORE_INVESTING_MODULE_ID, slug: "before-investing", title: "Než začneš investovat", description: "Prověř rozpočet a rozděl cíle podle termínu a pevnosti.", status: "available", lessons: beforeInvestingLessons },
 ] as const;
 
 export type MilestoneId = "A" | "B" | "C" | "D";
@@ -85,6 +85,7 @@ export type DisplayModuleCode = (typeof displayModules)[number]["code"];
 
 /** What a lesson trains. Mastery states (#122) will hang on these IDs. */
 export const skills = {
+  "goals-and-horizon": "Cíle, horizont a pevnost termínu",
   "emergency-fund": "Rezerva, dostupnost a kupní síla",
   "monthly-budget": "Měsíční rozpočet a nepravidelné výdaje",
   "savings-rate": "Míra úspor",
@@ -133,6 +134,7 @@ const place = (lessonId: string, displayModule: DisplayModuleCode, order: number
 
 /** Where each authored lesson, including editorial drafts, sits in Curriculum 2.0. New lessons are added here and in their storage manifest. */
 export const lessonPlacements: readonly LessonPlacement[] = [
+  place("before-investing-goals", "0.1", 4, "recommended", ["before-investing-budget"], ["goals-and-horizon"]),
   place("before-investing-emergency-fund", "0.1", 3, "recommended", ["before-investing-budget"], ["emergency-fund", "inflation"]),
   place("before-investing-budget", "0.1", 1, "recommended", [], ["monthly-budget", "savings-rate"]),
   place("foundations-why-invest", "1.1", 1, "required", [], ["saving-vs-investing", "inflation"]),

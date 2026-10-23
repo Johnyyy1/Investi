@@ -60,6 +60,8 @@
     "test:progression-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-progression-persistence.mts",
     "test:progression-browser": "node scripts/validate-progression-browser.mjs",
     "test:emergency-fund-browser": "node scripts/validate-emergency-fund.mjs",
+    "test:goals-browser": "node scripts/validate-goals.mjs",
+    "test:goals-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-goals-persistence.mts",
     "test:budget-browser": "node scripts/validate-budget.mjs",
     "test:foundations-browser": "node scripts/validate-foundations.mjs",
     "smoke:fmp": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/smoke-fmp-market-data.mts",

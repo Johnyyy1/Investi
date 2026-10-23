@@ -1,5 +1,18 @@
 import type { StepDefinition } from "../types";
 export const beforeInvestingSteps: Readonly<Record<string, readonly StepDefinition[]>> = {
+  "before-investing-goals": [
+    { title: "Mají všechny peníze stejný úkol?", blocks: ["opening", "prediction"] },
+    { title: "Horizont a pevnost cíle", blocks: ["horizon", "risk"] },
+    { title: "Rozděl Martinovy cíle", blocks: ["bands", "sorting"] },
+    { title: "Doplň mapu s oporou", blocks: ["faded"] },
+    { title: "Peníze na auto za 2 roky", blocks: ["car"] },
+    { title: "S termínem snižuj riziko", blocks: ["glide", "lucie"] },
+    { title: "Důchod jako zvláštní kapsa", blocks: ["pockets"] },
+    { title: "Vybav si princip", kind: "mastery", blocks: ["recall"] },
+    { title: "Zvol vlastní pojistku", blocks: ["reflection"] },
+    { title: "Vlastní mapa cílů", blocks: ["map"], requiredArtifact: { kind: "goal_map" } },
+    { title: "Co si odneseš", blocks: ["lab", "summary", "safeguard"] },
+  ],
   "before-investing-emergency-fund": [
     { title: "Když vypadne příjem", blocks: ["situation", "prediction"] },
     { title: "Kolik měsíců pokrýt", blocks: ["size", "range"] },

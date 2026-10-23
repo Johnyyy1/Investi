@@ -2,8 +2,9 @@
  * Owner is the curriculum maintainer role, responsible for model tests, labels and dated fact review.
  * Provider-backed figures label the selected snapshot at runtime, including sample/unavailable states.
  */
-type FigureDefinition = { owner: "curriculum"; data: "model" | "provider"; model: string };
+type FigureDefinition = { owner: "curriculum"; data: "model" | "provider" | "learner"; model: string };
 export const lessonFigureCatalog = {
+  "goal-map": { owner: "curriculum", data: "learner", model: "src/features/lessons/before-investing/goals-model.ts" },
   "emergency-fund-calculator": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/emergency-fund-model.ts" },
   "budget-builder": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/model.ts" },
   "return-calculator": { owner: "curriculum", data: "model", model: "src/features/finance/returns.ts" },

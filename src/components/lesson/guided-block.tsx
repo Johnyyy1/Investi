@@ -38,7 +38,7 @@ export function GuidedBlock({ block, history, riskHistory, lessonId, guest, onOu
         const stacked = step.emphasis || step.value.length > 14;
         return <div key={step.label} className={cn("rounded-md px-2.5 py-[9px]", step.emphasis ? "bg-primary-soft" : "bg-surface-sunken", stacked ? "flex flex-col gap-0.5" : "flex items-center justify-between gap-3")}>
           <dt className={cn("text-sm/5", step.emphasis ? "font-semibold text-primary" : "text-secondary")}>{step.label}</dt>
-          <dd className={cn("font-semibold tracking-[-0.2px] tabular-nums text-foreground", stacked ? "text-base/[21px]" : "text-right text-[17px]/[22px]")}>{step.value}</dd>
+          <dd className={cn("min-w-0 font-semibold tracking-[-0.2px] tabular-nums text-foreground [overflow-wrap:anywhere]", stacked ? "text-base/[1.3125]" : "text-right text-[17px]/[22px]")}>{step.value}</dd>
         </div>;
       })}</dl>
       <p className="border-l-2 border-primary-tint pl-3 text-[15px]/[23px] text-foreground">{block.conclusion}</p>
@@ -58,7 +58,7 @@ export function GuidedBlock({ block, history, riskHistory, lessonId, guest, onOu
         <h3 id={`${block.id}-title`} className="text-xl/[1.3] font-semibold tracking-[-0.3px] [overflow-wrap:anywhere] md:text-[1.375rem]/[1.273]">{block.title}</h3>
         <p className="text-sm/[1.5] text-secondary [overflow-wrap:anywhere] md:text-[0.9375rem]/[1.533]">{block.description}</p>
       </div>
-      <div className={cn("py-4 pb-[18px] md:p-7", block.figure === "emergency-fund-calculator" ? "px-2" : "px-4")}><LessonFigure figure={block.figure} emergencyFundFacts={block.emergencyFundFacts} history={history} riskHistory={riskHistory} /></div>
+      <div className={cn("py-4 pb-[18px] md:p-7", block.figure === "emergency-fund-calculator" ? "px-2" : "px-4")}><LessonFigure figure={block.figure} guest={guest} onOutputReady={onOutputReady} emergencyFundFacts={block.emergencyFundFacts} history={history} riskHistory={riskHistory} /></div>
     </section>;
     case "personaDecision": return <PersonaDecision block={block} />;
     case "labMission": return <LabMission block={block} />;

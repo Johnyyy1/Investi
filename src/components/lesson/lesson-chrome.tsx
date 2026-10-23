@@ -19,7 +19,7 @@ export function LessonTopBar({ eyebrow, title, minutes, segments, current, finis
         </Link>
         <div className="flex min-w-0 flex-1 flex-col gap-[3px] md:items-center md:text-center">
           <p className="hidden text-xs font-semibold tracking-[1px] text-muted uppercase md:block">{eyebrow}</p>
-          <h1 lang="cs" className="text-sm/[18px] font-semibold tracking-normal md:text-base/5 [overflow-wrap:normal]">{title}</h1>
+          <h1 lang="cs" className="text-sm/[1.286] font-semibold tracking-normal md:text-base/5 [overflow-wrap:anywhere]">{title}</h1>
         </div>
         <p className="flex shrink-0 items-center gap-1 text-[13px] text-muted md:w-[180px] md:justify-end md:gap-1.5 md:text-sm">
           <Clock3 aria-hidden="true" className="size-3.5" /><span className="sr-only">Délka lekce: </span>{minutes} min

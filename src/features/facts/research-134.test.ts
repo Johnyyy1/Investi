@@ -93,8 +93,14 @@ describe("CONTENT-03 research and publication safety", () => {
   });
 
   it("keeps the former pension threshold and unresolved tax instructions out of authored lessons", () => {
-    // At this edition all affected tax/pension lessons are still planned. This forces a review when authored.
-    const publishedText = JSON.stringify(authoredLessons);
+    // Tax/pension instruction remains gated; the new general signpost is checked separately.
+    // The goals lesson introduces product names, without teaching unverified tax rules.
+    const pockets = authoredLessons.find((lesson) => lesson.id === "before-investing-goals")?.blocks.find((block) => block.id === "pockets");
+    expect(pockets).toMatchObject({ type: "explanation" });
+    if (pockets?.type !== "explanation") throw new Error("Missing retirement signpost");
+    expect(pockets.content).toContain("zde neuvádíme daňové limity");
+    expect(pockets.content).not.toMatch(/Kč|%|§/);
+    const publishedText = JSON.stringify(authoredLessons.map((lesson) => ({ ...lesson, blocks: lesson.blocks.filter((block) => lesson.id !== "before-investing-goals" || block.id !== "pockets") })));
     expect(publishedText).not.toMatch(/penzijn|penzijk|W-8BEN|DAC8|FIFO|§\s*(4|38)/i);
     expect(getFact("dan.urok_srazka", today).label).toContain("nepodnikatelského");
     expect(getFact("dan.srazka_35", today).notes).toContain("nerezidenta");
