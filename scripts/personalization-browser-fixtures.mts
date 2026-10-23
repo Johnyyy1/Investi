@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 const url = new URL(process.env.DATABASE_URL ?? "");
 assert.ok(["localhost", "127.0.0.1", "[::1]"].includes(url.hostname));
@@ -15,12 +16,19 @@ const { returnsLessons } = await import("../src/features/lessons/returns/manifes
 const { availableLessons } = await import("../src/features/learning/catalog");
 const { lessonSteps } = await import("../src/features/progress/transition");
 const { completeLesson } = await import("../src/features/progress/repository");
+const { saveLearnerArtifact } = await import("../src/features/artifacts/repository");
+const { GOALS_LESSON_ID } = await import("../src/features/lessons/before-investing/goals-model");
 const { executeTrade } = await import("../src/features/portfolio/repository");
 const mode = process.env.PERSONALIZATION_QA_LESSONS ?? "foundations";
 assert.ok(["foundations", "first-return", "all-published"].includes(mode));
 // all-published completes every published lesson, the same catalog that decides when Learn shows the curriculum as complete.
 const lessons = mode === "all-published" ? availableLessons : (mode === "foundations" ? foundationsLessons : returnsLessons).filter((lesson) => lesson.status === "available");
 for (const lesson of mode === "first-return" ? lessons.slice(0, 1) : lessons) {
+  // The synthetic learner explicitly skips goal-setting; real completion still checks the stored output.
+  if (lesson.id === GOALS_LESSON_ID) await saveLearnerArtifact(id!, {
+    content: { kind: "goal_map", payload: { goals: [], noSpecificGoal: true } },
+    sourceLessonId: lesson.id, consent: true, requestId: randomUUID(),
+  });
   await sql`insert into lesson_progress (user_id, lesson_id, status, last_position, updated_at) values (${id!}, ${lesson.id}, 'in_progress', ${lessonSteps(lesson.id).length - 1}, now()) on conflict (user_id, lesson_id) do update set last_position = excluded.last_position`;
   await completeLesson(id!, lesson.id);
 }
