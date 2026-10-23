@@ -115,6 +115,10 @@ jobs:
         run: DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/investi_artifacts_qa npm run test:ips-persistence
         env:
           IPS_QA_DISPOSABLE: "1"
+      - name: Crisis training replay, idempotency and isolation
+        run: npm run test:training-persistence
+        env:
+          TRAINING_QA_DISPOSABLE: "1"
       - name: Product funnel migration, early returns and landing views
         run: |
           node --input-type=module -e 'import postgres from "postgres"; const sql = postgres(process.env.DATABASE_URL); await sql`CREATE DATABASE investi_funnel_qa`; await sql.end();'

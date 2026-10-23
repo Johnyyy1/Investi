@@ -29,7 +29,8 @@ const views = async (day: string) => Number((await sql`select views from analyti
 try {
   // 1. The migration is additive: rows written before it stay as they were, and a rerun changes nothing.
   const journal = JSON.parse(await readFile("drizzle/meta/_journal.json", "utf8"));
-  const prior = journal.entries.filter((entry: { tag: string }) => entry.tag !== "0018_product_funnel");
+  // Everything before 0018: later migrations applied first would make the migrator skip the older 0018.
+  const prior = journal.entries.slice(0, journal.entries.findIndex((entry: { tag: string }) => entry.tag === "0018_product_funnel"));
   await mkdir(join(temp, "meta"));
   await writeFile(join(temp, "meta/_journal.json"), JSON.stringify({ ...journal, entries: prior }));
   for (const entry of prior) await copyFile(`drizzle/${entry.tag}.sql`, join(temp, `${entry.tag}.sql`));

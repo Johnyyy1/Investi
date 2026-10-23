@@ -167,6 +167,13 @@ jobs:
         env:
           BACKTEST_TEST_URL: ${{ env.APP_URL }}
           BACKTEST_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/backtesting
+      - name: Crisis training
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:training-browser
+        env:
+          TRAINING_QA_DISPOSABLE: "1"
+          TRAINING_TEST_URL: ${{ env.APP_URL }}
+          TRAINING_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/training
       - name: Not-found pages
         if: ${{ !cancelled() }}
         run: .github/scripts/clear-rate-limits.sh && npm run test:not-found-browser
