@@ -1,6 +1,6 @@
 import type { AuthoredLesson } from "../types";
 import { beforeInvestingLessons } from "./manifest";
-const lesson = beforeInvestingLessons[1];
+const lesson = beforeInvestingLessons.find((lesson) => lesson.id === "before-investing-emergency-fund")!;
 
 /** Editorial draft: publication awaits the expert review required by #150/#133. */
 export const emergencyFundLesson: AuthoredLesson = {

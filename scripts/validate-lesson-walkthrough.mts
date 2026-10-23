@@ -114,6 +114,40 @@ try {
       }
       for (const block of step.blocks) {
         if (block.type === "rubricSelfAssessment") throw new Error(`No walkthrough driver for a saved rubric (${block.id})`);
+        if (block.type === "interactiveFigure" && block.figure === "debt-vs-invest-calculator") {
+          const result = page.getByRole("region", { name: "Výsledek porovnání dluhu a investice", exact: true });
+          const debt = page.getByLabel("RPSN dluhu", { exact: true });
+          const investment = page.getByLabel("Předpokládaný roční výnos investice", { exact: true });
+          assert.equal(await result.count(), 1);
+          await debt.fill("0,25");
+          await investment.fill("0,25");
+          assert.match(await result.innerText(), /Rozdíl: nejdřív splatit minus investovat\s+−?0 Kč/);
+          await debt.fill("bad");
+          assert.equal(await debt.getAttribute("aria-invalid"), "true");
+          assert.equal(await result.count(), 0, "invalid draft clears the result");
+          await debt.fill("24");
+          await investment.fill("-30");
+          await page.getByLabel("Doba porovnání", { exact: true }).fill("1,5");
+          assert.equal(await result.count(), 0, "fractional years are rejected");
+          await page.getByLabel("Doba porovnání", { exact: true }).fill("3");
+          const slider = page.getByRole("slider", { name: "RPSN dluhu · posuvník", exact: true });
+          await slider.focus();
+          await slider.press("ArrowRight");
+          assert.equal(await debt.inputValue(), "24.25");
+          assert.notEqual(await slider.evaluate((element) => getComputedStyle(element).outlineStyle), "none", "slider has visible keyboard focus");
+          await audit("debt calculator after editing", width);
+          for (const size of [1440, 390, 320]) {
+            await page.setViewportSize({ width: size, height: 900 });
+            await page.evaluate(async () => { window.scrollTo(0, 0); await document.fonts.ready; await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
+            await page.screenshot({ path: `${screenshots}/debt-calculator-${size}.png` });
+          }
+          const largeText = await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "debt calculator at 320px and 200% text");
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.screenshot({ path: `${screenshots}/debt-calculator-320-200.png` });
+          await largeText.evaluate((element) => element.parentNode?.removeChild(element));
+          await page.setViewportSize({ width, height: 900 });
+        }
         if (block.type === "interactiveFigure" && block.figure === "goal-map") {
           await page.getByRole("checkbox", { name: "Zatím nemám konkrétní cíl", exact: true }).check();
           await page.getByRole("checkbox", { name: /Souhlasím s uložením/ }).check();
@@ -136,6 +170,10 @@ try {
     const progress: { status: string } | undefined = (await sql<{ status: string }[]>`select status from lesson_progress where user_id = ${userId} and lesson_id = ${lesson.id}`)[0];
     assert.equal(progress?.status, "completed", where);
     assert.equal((await sql<{ count: number }[]>`select count(*)::int as count from lesson_award where user_id = ${userId} and lesson_id = ${lesson.id}`)[0].count, 1, `${where}: one receipt`);
+    if (lesson.id === "before-investing-debt") {
+      const [receipt]: { xp: number; practice_capital_minor: string }[] = await sql`select xp, practice_capital_minor::text from lesson_award where user_id = ${userId} and lesson_id = ${lesson.id}`;
+      assert.deepEqual({ ...receipt }, { xp: 60, practice_capital_minor: "0" }, "L0 debt uses existing XP-only policy");
+    }
     console.log(`✓ ${lesson.id} (${lesson.steps.length} steps at ${width}px)`);
   }
   assert.deepEqual(errors, [], "no browser or hydration errors");

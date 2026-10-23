@@ -30,9 +30,9 @@ export function PersonaDecision({ block }: { block: Block }) {
             <p className="text-sm/5 text-secondary">{persona.need}</p>
           </div>
         </div>
-        <dl className="flex flex-col gap-1.5">{persona.facts.map((fact) => <div key={fact.label} className="flex flex-col gap-0.5 rounded-md bg-surface-sunken px-3 py-2.5">
-          <div className="flex items-baseline justify-between gap-3"><dt className="text-sm/5 text-secondary">{fact.label}</dt><dd className="shrink-0 text-right text-[15px] font-semibold tabular-nums text-foreground">{fact.value}</dd></div>
-          {fact.detail ? <dd className="flex items-center gap-1.5 text-[13px]/[19px] text-muted"><Info aria-hidden="true" className="size-3.5 shrink-0" />{fact.detail}</dd> : null}
+        <dl className="flex flex-col gap-1.5">{persona.facts.map((fact) => <div key={fact.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] items-baseline gap-x-3 gap-y-0.5 rounded-md bg-surface-sunken px-3 py-2.5">
+          <dt className="text-sm/5 text-secondary">{fact.label}</dt><dd className="min-w-0 text-right text-[15px] font-semibold tabular-nums text-foreground [overflow-wrap:anywhere]">{fact.value}</dd>
+          {fact.detail ? <dd className="col-span-2 flex items-center gap-1.5 text-[13px]/[19px] text-muted"><Info aria-hidden="true" className="size-3.5 shrink-0" />{fact.detail}</dd> : null}
         </div>)}</dl>
       </section>
       {block.note ? <aside aria-label={block.note.title} className="flex flex-col gap-1 rounded-control bg-surface-muted px-4 py-3">
