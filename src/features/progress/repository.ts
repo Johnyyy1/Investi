@@ -6,6 +6,8 @@ import { type SaveLessonProgress, saveLessonProgressSchema } from "./schemas";
 import { lessonSteps, validateCompletion, validateMove } from "./transition";
 import { stepArtifactRequirements } from "@/features/lessons/output-contract";
 import { hasValidArtifact } from "@/features/artifacts/repository";
+import { requireMissions, stepMissionIds } from "@/features/missions/requirements";
+import { hasCompletedMission } from "@/features/missions/repository";
 import { requireArtifacts } from "@/features/artifacts/requirements";
 import { getGamification, learningDate, LESSON_XP } from "@/features/gamification/domain";
 import { getLearnerSummary } from "@/features/learning/learner-summary";
@@ -22,6 +24,7 @@ export async function saveLessonProgress(userId: string, input: SaveLessonProgre
     if (current?.status === "completed") return;
     validateMove(progress.lessonId, current?.lastPosition ?? 0, progress.lastPosition, answers);
     if (progress.lastPosition > (current?.lastPosition ?? 0)) {
+      await requireMissions(stepMissionIds(lessonSteps(progress.lessonId)[current?.lastPosition ?? 0]), progress.lessonId, (id) => hasCompletedMission(tx, userId, id));
       await requireArtifacts(stepArtifactRequirements(lessonSteps(progress.lessonId)[current?.lastPosition ?? 0]), progress.lessonId,
         (kind, source, blockId) => hasValidArtifact(tx, userId, kind, source, blockId));
     }
@@ -46,6 +49,7 @@ export async function completeLesson(userId: string, lessonId: string) {
     validateCompletion(lessonId, current);
     // Recheck every required output: a learner may have deleted it after crossing its step.
     // Lifetime completions and their original reward receipts remain valid on review.
+    if (current.status !== "completed") await requireMissions(lessonSteps(lessonId).flatMap(stepMissionIds), lessonId, (id) => hasCompletedMission(tx, userId, id));
     if (current.status !== "completed") await requireArtifacts(lessonSteps(lessonId).flatMap(stepArtifactRequirements), lessonId,
       (kind, source, blockId) => hasValidArtifact(tx, userId, kind, source, blockId));
     const [profile] = await tx.select().from(learningProfile).where(eq(learningProfile.userId, userId));

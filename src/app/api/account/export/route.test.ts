@@ -11,7 +11,7 @@ import { GET } from "./route";
 const call = () => GET(new Request("http://localhost/api/account/export", { headers: { cookie: "better-auth.session_token=x" } }));
 const at = new Date("2026-10-16T08:30:00.000Z");
 const owner = { id: "u1", name: "Klára", email: "klara@example.com", emailVerified: true, image: null, isAnonymous: false, anonymousKind: null, createdAt: at, updatedAt: at };
-const emptyRows = { owner, accounts: [], sessions: [], profile: null, progress: [], awards: [], unlocks: [], portfolios: [], artifacts: [], trades: [], allocations: [], lines: [], earlyReturn: null, trainingSessions: [], trainingActions: [], skillAttempts: [] };
+const emptyRows = { owner, accounts: [], sessions: [], profile: null, progress: [], awards: [], unlocks: [], portfolios: [], artifacts: [], missionAttempts: [], trades: [], allocations: [], lines: [], earlyReturn: null, trainingSessions: [], trainingActions: [], skillAttempts: [] };
 
 describe("GET /api/account/export", () => {
   beforeEach(() => {

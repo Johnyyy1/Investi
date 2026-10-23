@@ -96,7 +96,9 @@
     "analytics:funnel": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/report-funnel.mts",
     "test:product-analytics": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-product-analytics.mts",
     "test:lesson-calculators-browser": "node scripts/validate-lesson-calculators.mjs",
-    "test:lesson-walkthrough": "tsx scripts/validate-lesson-walkthrough.mts"
+    "test:lesson-walkthrough": "tsx scripts/validate-lesson-walkthrough.mts",
+    "test:missions-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-missions.mts",
+    "test:missions-browser": "node scripts/validate-missions-browser.mjs"
   },
   "dependencies": {
     "@better-auth/drizzle-adapter": "1.7.10",

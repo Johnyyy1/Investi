@@ -1,11 +1,16 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { ArrowLeft, ArrowUpRight, BookOpen, Clock3, CornerDownLeft, Database, Flag, Hourglass } from "lucide-react";
 import type { LabMissionTarget, LessonBlock } from "@/features/lessons/types";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { cardTitle, eyebrow, plainCard } from "./shared";
+
+import { getMission } from "@/features/missions/registry";
+import dynamic from "next/dynamic";
+
+const VerifiedMission = dynamic(() => import("./verified-mission").then((module) => module.VerifiedMission));
 
 type Block = Extract<LessonBlock, { type: "labMission" }>;
 
@@ -16,16 +21,18 @@ export const labMissionTargets: Record<LabMissionTarget, string> = {
 };
 
 /**
- * Design K: an optional mission in an existing Lab area, then an analysis next to the general rule.
- * The Lab opens in a new tab so the lesson keeps its step. Lab data does not flow back into lessons yet,
+ * Design K: sample analysis plus an optional server-verified requirement identified by missionId.
+ * The Lab opens in a new tab so the lesson keeps its step. Personal data never populates the sample analysis,
  * so the analysis is always labelled sample data; never present it as the learner's own portfolio.
  */
-export function LabMission({ block }: { block: Block }) {
+export function LabMission({ block, lessonId, onOutputReady }: { block: Block; lessonId?: string; onOutputReady?: (id: string, ready: boolean) => void }) {
+  const onReady = useCallback((ready: boolean) => onOutputReady?.(block.id, ready), [block.id, onOutputReady]);
   const [view, setView] = useState<"brief" | "analysis">("brief");
   const [opened, setOpened] = useState(false);
   const textareaId = useId();
   const { mission, analysis } = block;
   const lab = labMissionTargets[mission.target];
+  const verifiedMission = block.missionId && lessonId ? getMission(block.missionId, lessonId) : undefined;
   if (view === "brief") return <section aria-labelledby={`${block.id}-goal`} className={plainCard}>
     <div className="flex flex-col gap-4 p-[18px] md:px-7 md:py-6">
       <div className="flex items-center justify-between gap-3">
@@ -40,12 +47,13 @@ export function LabMission({ block }: { block: Block }) {
         <p className="flex items-center gap-1.5 text-sm font-semibold text-primary"><CornerDownLeft aria-hidden="true" className="size-4" />Po návratu</p>
         <p className="text-sm/[21px] text-secondary">{mission.afterReturn}</p>
       </aside>
+      {block.missionId && lessonId ? <VerifiedMission missionId={block.missionId} lessonId={lessonId} onReady={onReady} /> : null}
       <div className="flex flex-col items-stretch gap-1 pt-1">
-        <a href={mission.target} target="_blank" rel="noopener" onClick={() => setOpened(true)} className={buttonVariants({ variant: opened ? "secondary" : "primary" })}>
+        {!verifiedMission || verifiedMission.context === "personal" ? <a href={mission.target} target="_blank" rel="noopener" onClick={() => setOpened(true)} className={buttonVariants({ variant: opened ? "secondary" : "primary" })}>
           Otevřít {lab}<ArrowUpRight aria-hidden="true" className="size-[18px]" /><span className="sr-only"> (otevře se v nové kartě)</span>
-        </a>
+        </a> : null}
         <button type="button" onClick={() => setView("analysis")} className={cn(buttonVariants({ variant: opened ? "primary" : "ghost" }), "mt-1")}>
-          {opened ? "Jsem zpět, ukaž rozbor" : "Přeskočit, použiju ukázková data"}
+          {block.missionId ? "Ukázat modelový rozbor (misi tím nesplníš)" : opened ? "Jsem zpět, ukaž rozbor" : "Přeskočit, použiju ukázková data"}
         </button>
       </div>
     </div>

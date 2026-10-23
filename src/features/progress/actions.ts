@@ -9,6 +9,7 @@ import { availableLessons } from "@/features/learning/catalog";
 import { getStepDefinitions } from "@/features/lessons/steps";
 import { serializePracticeCapitalMinor } from "@/features/rewards/presentation";
 import { toLearningMomentum, type CompletionRewardPresentation } from "./contracts";
+import { MissionRequiredError } from "@/features/missions/requirements";
 import { ArtifactRequiredError } from "@/features/artifacts/requirements";
 import { logUnexpectedError } from "@/lib/server-errors";
 
@@ -16,7 +17,7 @@ const lessonIdSchema = z.string().refine((id) => availableLessons.some((lesson) 
 
 /** Invalid input and a missing required lesson output are refusals with their own message, not failures. */
 function logUnlessExpected(operation: string, error: unknown) {
-  if (!(error instanceof z.ZodError || error instanceof ArtifactRequiredError)) logUnexpectedError("progress", operation, error);
+  if (!(error instanceof z.ZodError || error instanceof ArtifactRequiredError || error instanceof MissionRequiredError)) logUnexpectedError("progress", operation, error);
 }
 
 export async function markLessonStartedAction(lessonId: string) {
@@ -59,7 +60,7 @@ export async function completeLessonAction(lessonId: string) {
     return { ok: true, completedLessons, reward: presentationReward };
   } catch (error) {
     logUnlessExpected("complete lesson", error);
-    return { ok: false, message: error instanceof ArtifactRequiredError ? error.message : "Dokončení se nepodařilo uložit. Zkus to znovu." };
+    return { ok: false, message: error instanceof ArtifactRequiredError || error instanceof MissionRequiredError ? error.message : "Dokončení se nepodařilo uložit. Zkus to znovu." };
   }
 }
 
@@ -80,6 +81,6 @@ export async function saveLessonPositionAction(lessonId: string, position: numbe
     return { ok: true };
   } catch (error) {
     logUnlessExpected("save lesson position", error);
-    return { ok: false, message: error instanceof ArtifactRequiredError ? error.message : "Tvé místo se nepodařilo uložit. Zkus to znovu." };
+    return { ok: false, message: error instanceof ArtifactRequiredError || error instanceof MissionRequiredError ? error.message : "Tvé místo se nepodařilo uložit. Zkus to znovu." };
   }
 }

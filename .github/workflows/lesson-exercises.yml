@@ -9,6 +9,8 @@ on:
       - 'src/features/learning/**'
       - 'src/features/facts/**'
       - 'src/features/progress/**'
+      - 'src/features/missions/**'
+      - 'scripts/validate-missions*'
       - 'src/features/artifacts/**'
       - 'src/db/**'
       - 'drizzle/**'
@@ -64,6 +66,19 @@ jobs:
       - run: npm run db:seed
       - run: npm run test:lesson-exercises-persistence
       - run: npm run test:lesson-exercises-browser
+      - name: Guided mission persistence and browser flow
+        run: |
+          node --input-type=module -e 'import postgres from "postgres"; const sql = postgres(process.env.DATABASE_URL); await sql`CREATE DATABASE investi_missions_qa`; await sql.end();'
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/investi_missions_qa npm run test:missions-persistence
+          DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/investi_missions_qa npm run test:missions-browser
+        env:
+          MISSIONS_QA_DISPOSABLE: '1'
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: guided-mission-screenshots-${{ github.run_id }}
+          path: test-results/missions/
+          retention-days: 7
       # Every published lesson, answered wrong then right, at 1440/390/320 px with axe (#147). The probe compiles the lesson route.
       - name: Walk every published lesson
         run: .github/scripts/start-server.sh 3131 dev /learn/returns/what-is-a-return && npm run test:lesson-walkthrough

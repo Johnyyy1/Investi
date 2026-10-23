@@ -67,7 +67,7 @@ Nehodnotí se. `persona.facts` ukazují data i dopočítané lhůty vedle sebe, 
 
 ### K · `labMission` — mise v Labu
 
-`mission.target` smí být jen existující oblast Labu (`/lab/portfolio`, `/lab/backtesting`, `/lab/compare`) a cíl mise musí jít v Labu dnes opravdu udělat. Lab se otevře v nové kartě, lekce zůstane na kroku. Data z Labu se do lekce zatím nevracejí, proto rozbor (`analysis`) vždy ukazuje **modelového investora** se štítkem „Ukázková data“. Návrh „Daňová mapa tranší“ je náčrt budoucí funkce: nepiš misi, jako by existovala.
+`mission.target` smí být jen existující oblast Labu (`/lab/portfolio`, `/lab/backtesting`, `/lab/compare`) a cíl mise musí jít v Labu dnes opravdu udělat. Lab se otevře v nové kartě, lekce zůstane na kroku. Volitelné `missionId` zapíná [serverem ověřovanou misi](../guided-missions.md): pokračování vyžaduje uložený výsledek definovaného pravidla; modelový rozbor ani otevření Labu nestačí. Bez `missionId` zůstává mise volitelná. Osobní data se do modelového rozboru nepřenášejí, proto rozbor (`analysis`) vždy ukazuje **modelového investora** se štítkem „Ukázková data“. Návrh „Daňová mapa tranší“ je náčrt budoucí funkce: nepiš misi, jako by existovala.
 
 ![K · zadání](../design/lesson-steps/k-lab-mission-390-brief.png)
 
@@ -86,7 +86,7 @@ Nehodnotí se. `persona.facts` ukazují data i dopočítané lhůty vedle sebe, 
 ## Co z návrhů ještě není v kódu
 
 - **N · Konec lekce a Denní opakování** (`n-*.png`): potřebují model stavu dovednosti a plánovač opakování (#122, #123). Dokud nejsou, zůstává současná závěrečná obrazovka. Nestav je jako součást lekce.
-- **Data z Labu v misi** (NQ-01, NQ-02) a **daňová mapa tranší v Labu**: finanční doménová práce mimo lekce.
+- **Osobní data v modelovém rozboru mise** (NQ-01, NQ-02) a **daňová mapa tranší v Labu**: rozbor zůstává modelový; `missionId` ověřuje pouze explicitní kritéria podle registru misí.
 - **Ukládání typu `writtenReflection`** (NQ-11) a **promítnutí rubriky do zvládnutí** (NQ-12). Pro samostatně uložený výstup s čtyřúrovňovým sebehodnocením použij `rubricSelfAssessment` níže.
 - **Tokeny faktů v textu** (`{{klíč}}`) a redakční workflow ověření (#132, #133). Registr je zatím minimální a jeho fakta čekají na ověření.
 

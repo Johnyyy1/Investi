@@ -61,7 +61,7 @@ export function GuidedBlock({ block, history, riskHistory, lessonId, guest, onOu
       <div className={cn("py-4 pb-[18px] md:p-7", block.figure === "emergency-fund-calculator" ? "px-2" : "px-4")}><LessonFigure figure={block.figure} guest={guest} onOutputReady={onOutputReady} emergencyFundFacts={block.emergencyFundFacts} history={history} riskHistory={riskHistory} /></div>
     </section>;
     case "personaDecision": return <PersonaDecision block={block} />;
-    case "labMission": return <LabMission block={block} />;
+    case "labMission": return <LabMission block={block} lessonId={lessonId} onOutputReady={onOutputReady} />;
     case "factNotice": return <FactNotice id={block.id} factKeys={block.factKeys} />;
     case "writtenReflection": return <WrittenReflection block={block} />;
     default: return null; // Questions own their Check → feedback → Continue interaction.
