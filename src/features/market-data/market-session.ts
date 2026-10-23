@@ -167,6 +167,21 @@ export function marketCalendarForInstrument(instrument: Instrument): MarketCalen
   return null;
 }
 
+/** The next regular U.S. session open (09:30 New York) strictly after `now`. */
+export function nextUsEquitiesSessionOpen(now: Date): Date {
+  const local = localDateTime(now);
+  let date = isUsEquitiesTradingDay(local.date) && local.minuteOfDay < OPEN_MINUTE ? local.date : addCalendarDays(local.date, 1);
+  for (let index = 0; index < 10 && !isUsEquitiesTradingDay(date); index += 1) date = addCalendarDays(date, 1);
+  const { year, month, day } = dateParts(date);
+  // 09:30 New York is 13:30 UTC under EDT and 14:30 UTC under EST.
+  for (const utcHour of [13, 14]) {
+    const candidate = new Date(Date.UTC(year, month - 1, day, utcHour, 30));
+    const candidateLocal = localDateTime(candidate);
+    if (candidateLocal.date === date && candidateLocal.minuteOfDay === OPEN_MINUTE) return candidate;
+  }
+  throw new RangeError("The next U.S. equities session open could not be resolved.");
+}
+
 export function getMarketSessionSnapshot(instrument: Instrument, now: Date): MarketSessionSnapshot {
   const calendar = marketCalendarForInstrument(instrument);
   if (!calendar) return { calendar: null, state: "unknown", localDate: null, latestCompletedSessionDate: null };

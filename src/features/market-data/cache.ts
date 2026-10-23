@@ -174,7 +174,8 @@ export interface MarketDataCache {
   getInstrument(key: string): Promise<Instrument | undefined>;
   setInstrument(key: string, value: Instrument): Promise<void>;
   getQuote(key: string): Promise<ProviderQuote | undefined>;
-  setQuote(key: string, value: ProviderQuote): Promise<void>;
+  /** `expiresAt` may extend the default quote lifetime, e.g. until the next session open. */
+  setQuote(key: string, value: ProviderQuote, expiresAt?: number): Promise<void>;
   getHistory(key: string): Promise<HistoricalSeries | undefined>;
   setHistory(key: string, value: HistoricalSeries): Promise<void>;
   getFx(key: string): Promise<FxRate | undefined>;
@@ -193,7 +194,7 @@ export class NoopMarketDataCache implements MarketDataCache {
   async getInstrument(key: string) { void key; return undefined; }
   async setInstrument(key: string, value: Instrument) { void key; void value; }
   async getQuote(key: string) { void key; return undefined; }
-  async setQuote(key: string, value: ProviderQuote) { void key; void value; }
+  async setQuote(key: string, value: ProviderQuote, expiresAt?: number) { void key; void value; void expiresAt; }
   async getHistory(key: string) { void key; return undefined; }
   async setHistory(key: string, value: HistoricalSeries) { void key; void value; }
   async getFx(key: string) { void key; return undefined; }
@@ -269,7 +270,7 @@ export class TieredMarketDataCache implements MarketDataCache {
   async getInstrument(key: string) { return this.read<Instrument>("instrument", key); }
   async setInstrument(key: string, value: Instrument) { await this.write("instrument", key, value); }
   async getQuote(key: string) { return this.read<ProviderQuote>("quote", key); }
-  async setQuote(key: string, value: ProviderQuote) { await this.write("quote", key, value); }
+  async setQuote(key: string, value: ProviderQuote, expiresAt?: number) { await this.write("quote", key, value, expiresAt); }
   async getHistory(key: string) { return this.read<HistoricalSeries>("history", key); }
   async setHistory(key: string, value: HistoricalSeries) { await this.write("history", key, value); }
   async getFx(key: string) { return this.read<FxRate>("fx", key); }
@@ -299,9 +300,10 @@ export class TieredMarketDataCache implements MarketDataCache {
     return entry.value as T;
   }
 
-  private async write(family: MarketDataCacheFamily, key: string, value: unknown) {
+  private async write(family: MarketDataCacheFamily, key: string, value: unknown, expiresAtOverride?: number) {
     const now = this.clock();
-    const expiresAt = now + this.ttls[family];
+    // The local layer still caps at its own TTL; a longer expiry is served from the shared layer.
+    const expiresAt = expiresAtOverride ?? now + this.ttls[family];
     this.local[family].set(key, value, expiresAt);
     const shared = this.shared;
     if (!shared || !sharedMarketDataCacheFamilies.has(family)) return;

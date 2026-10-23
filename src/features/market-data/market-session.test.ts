@@ -6,6 +6,7 @@ import {
   getMarketSessionSnapshot,
   isUsEquitiesTradingDay,
   marketCalendarForInstrument,
+  nextUsEquitiesSessionOpen,
   usEquitiesHolidays,
 } from "./market-session";
 
@@ -72,6 +73,20 @@ describe("U.S. equities market calendar", () => {
       localDate: "2026-07-06",
       latestCompletedSessionDate: "2026-07-02",
     });
+  });
+});
+
+describe("next U.S. equities session open", () => {
+  it.each([
+    ["Thursday evening (EDT)", "2026-10-22T22:10:00.000Z", "2026-10-23T13:30:00.000Z"],
+    ["Friday after the close skips the weekend", "2026-06-12T20:30:00.000Z", "2026-06-15T13:30:00.000Z"],
+    ["the same morning before the open", "2026-06-15T12:00:00.000Z", "2026-06-15T13:30:00.000Z"],
+    ["exactly at the open means the following session", "2026-06-15T13:30:00.000Z", "2026-06-16T13:30:00.000Z"],
+    ["Wednesday before Thanksgiving (EST) skips the holiday", "2026-11-25T22:00:00.000Z", "2026-11-27T14:30:00.000Z"],
+    ["Friday before Martin Luther King Jr. Day (EST)", "2026-01-16T21:30:00.000Z", "2026-01-20T14:30:00.000Z"],
+    ["Friday before the switch to EDT", "2026-03-06T21:30:00.000Z", "2026-03-09T13:30:00.000Z"],
+  ])("%s", (_label, now, expected) => {
+    expect(nextUsEquitiesSessionOpen(new Date(now)).toISOString()).toBe(expected);
   });
 });
 

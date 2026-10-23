@@ -8,13 +8,14 @@ import {
   type CorporateActionsRequest,
   type Currency,
   type HistoricalPriceRequest,
+  type Instrument,
   type InstrumentId,
   type PriceAdjustmentPolicy,
   type Quote,
   type UtcTimestamp,
 } from "./contracts";
 import { isMarketDataError, MarketDataError } from "./errors";
-import { evaluateQuoteUsability } from "./market-session";
+import { evaluateQuoteUsability, nextUsEquitiesSessionOpen } from "./market-session";
 import type { FxRateProvider, ProviderQuote, SecurityMarketDataProvider } from "./provider";
 import type { EquityFundamentalsProvider, EquityFundamentalsSnapshot } from "./equity-fundamentals";
 import type { EtfAnalyticsProvider, EtfAnalyticsSnapshot, EtfDataset, EtfDatasetName } from "./etf-analytics";
@@ -137,7 +138,7 @@ export class MarketDataService {
     const observation = await this.loadCached(
       `quote:${key}`,
       () => this.cache.getQuote(key),
-      (value) => this.cache.setQuote(key, value),
+      (value) => this.cache.setQuote(key, value, this.closedMarketQuoteExpiry(instrument, value.observedAt)),
       async () => {
         const value = await this.call("quote", this.provider, () => this.provider.getQuote(instrumentId));
         this.validateQuote(value);
@@ -158,6 +159,19 @@ export class MarketDataService {
       };
     } catch (error) {
       throw new MarketDataError("ProviderUnavailable", "The quote observation time is invalid.", { operation: "quote-usability" }, { cause: error });
+    }
+  }
+
+  /** A completed-session reference cannot change while the market is closed, so it is kept until the
+   * next open instead of being refetched every few seconds. Any other quote keeps the default TTL, and
+   * usability is still evaluated on every read, so execution always needs a fresh open-market quote. */
+  private closedMarketQuoteExpiry(instrument: Instrument, observedAt: UtcTimestamp): number | undefined {
+    const now = this.clock();
+    try {
+      const usability = evaluateQuoteUsability(instrument, observedAt, now, { freshForMilliseconds: this.freshFor, unavailableAfterMilliseconds: this.unavailableAfter });
+      return usability.status === "closed-market-reference" ? nextUsEquitiesSessionOpen(now).getTime() : undefined;
+    } catch {
+      return undefined;
     }
   }
 
