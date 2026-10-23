@@ -88,7 +88,7 @@ try {
   await layouts("settings", null);
   await page.goto(`${baseURL}/progress`);
   await page.getByRole("heading", { level: 1, name: /^(Co už umíš|.+ máš za sebou\.)/ }).waitFor();
-  assert.equal(await page.getByTestId("available-progress").textContent(), "6 / 28");
+  assert.equal(await page.getByTestId("available-progress").textContent(), "6 / 29");
   await layouts("progress", "/progress");
   await page.goto(`${baseURL}/lab`);
   await heading("Co se stane, když…");
