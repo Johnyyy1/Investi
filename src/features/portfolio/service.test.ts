@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { adjustmentPolicies } from "@/features/market-data/contracts";
 
-const mocks = vi.hoisted(() => ({ rows: vi.fn(), observe: vi.fn(), history: vi.fn(), fx: vi.fn(), plans: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rows: vi.fn(), observe: vi.fn(), history: vi.fn(), fx: vi.fn(), plans: vi.fn(), classify: vi.fn(), allocation: vi.fn() }));
 vi.mock("@/db", () => ({ db: {} }));
 vi.mock("@/features/artifacts/repository", () => ({ listLearnerArtifacts: mocks.plans }));
 vi.mock("./repository", () => ({
-  getOrCreateActivePortfolio: vi.fn().mockResolvedValue({ id: "p" }), loadLedgerRows: mocks.rows,
-  loadLatestAllocation: vi.fn().mockResolvedValue(null), readBrokerFeeProfile: vi.fn().mockResolvedValue({ id: "investi-standard-v1" }),
+  getOrCreateActivePortfolio: vi.fn().mockResolvedValue({ id: "p" }), loadLedgerRows: mocks.rows, loadPortfolioRows: mocks.rows,
+  loadLatestAllocation: mocks.allocation, readBrokerFeeProfile: vi.fn().mockResolvedValue({ id: "investi-standard-v1" }),
 }));
 vi.mock("./environment", () => ({ portfolioMarketData: { provider: "test", service: { getHistoricalPrices: mocks.history, getFxRate: mocks.fx } } }));
-vi.mock("./market-data", () => ({ observePortfolioHoldingValue: mocks.observe, observeHoldingClassification: vi.fn().mockResolvedValue({ instrumentId: "X", sector: null, country: null }), marketDataMode: () => "market" }));
-import { loadPortfolioView } from "./service";
+vi.mock("./market-data", () => ({ observePortfolioHoldingValue: mocks.observe, observeHoldingClassification: mocks.classify, marketDataMode: () => "market" }));
+import { loadPortfolioCardView, loadPortfolioView } from "./service";
 
 const openedAt = new Date("2026-01-01T12:00:00.000Z");
 const readAt = new Date("2026-02-01T12:00:00.000Z");
@@ -20,6 +20,8 @@ const base = { portfolio: { id: "p", baseCurrency: "CZK", openedAt, openingCapit
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.plans.mockResolvedValue([]);
+  mocks.classify.mockResolvedValue({ instrumentId: "X", sector: null, country: null });
+  mocks.allocation.mockResolvedValue(null);
   mocks.rows.mockResolvedValue(base);
   mocks.observe.mockResolvedValue({ instrumentId: "X", marketValueMinor: 110_000n, currentPrice: "1100", currentPriceCurrency: "CZK", quoteObservedAt: readAt.toISOString() });
   mocks.history.mockResolvedValue({ instrumentId: "X", currency: "CZK", adjustment: adjustmentPolicies.raw, points: [{ date: "2026-01-31", close: 1100 }], provenance: { completeness: "complete" } });
@@ -51,5 +53,27 @@ describe("portfolio performance view", () => {
     mocks.rows.mockResolvedValue({ ...base, trades: [{ ...trade, unitPrice: "200", grossAmountBaseMinor: 20_000n, cashDeltaBaseMinor: -20_000n }] });
     mocks.observe.mockResolvedValue({ instrumentId: "X", marketValueMinor: value, currentPrice: "200", currentPriceCurrency: "CZK", quoteObservedAt: readAt.toISOString() });
     expect((await loadPortfolioView("u")).holdings[0].gainLossBasisPoints).toBe(expected);
+  });
+});
+
+describe("Studovna portfolio card view (#402)", () => {
+  const cardFields = (view: Awaited<ReturnType<typeof loadPortfolioView>>) => ({
+    valuationComplete: view.valuationComplete, portfolioTotalMinor: view.portfolioTotalMinor, availableCashMinor: view.availableCashMinor,
+    marketDataMode: view.marketDataMode, holdings: view.holdings.map(({ assetType, marketValueMinor }) => ({ assetType, marketValueMinor })),
+  });
+
+  it("values the ledger exactly like the full view, without classification, mix, IPS or price history", async () => {
+    const full = await loadPortfolioView("u");
+    vi.clearAllMocks();
+    expect(await loadPortfolioCardView("u")).toEqual(cardFields(full));
+    expect(mocks.classify).not.toHaveBeenCalled();
+    expect(mocks.allocation).not.toHaveBeenCalled();
+    expect(mocks.plans).not.toHaveBeenCalled();
+    expect(mocks.history).not.toHaveBeenCalled();
+  });
+
+  it("keeps a missing quote unvalued instead of zero", async () => {
+    mocks.observe.mockResolvedValue({ instrumentId: "X", marketValueMinor: null, currentPrice: null, currentPriceCurrency: null, quoteObservedAt: null, unavailableReason: "quote" });
+    expect(await loadPortfolioCardView("u")).toEqual({ valuationComplete: false, portfolioTotalMinor: null, availableCashMinor: "400000", marketDataMode: "market", holdings: [{ assetType: "equity", marketValueMinor: null }] });
   });
 });

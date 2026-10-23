@@ -2,7 +2,7 @@ import type { loadLearner } from "@/features/learning/load-learner";
 import { getAuthoredLesson } from "@/features/lessons/registry";
 import { getGuidedSteps } from "@/features/lessons/steps";
 import type { LessonBlock } from "@/features/lessons/types";
-import type { PortfolioView } from "@/features/portfolio/service";
+import type { PortfolioCardView } from "@/features/portfolio/service";
 import { roundDivide } from "@/features/portfolio/decimal";
 
 export type LearnerSummary = Awaited<ReturnType<typeof loadLearner>>;
@@ -34,7 +34,7 @@ export function studovnaLesson(summary: Pick<LearnerSummary, "next" | "position"
 
 /** Presentation ratios only. Money remains integer minor units from the service.
  * ETFs stay separate: their underlying asset allocation is not inferred. */
-export function portfolioComposition(view: Pick<PortfolioView, "valuationComplete" | "portfolioTotalMinor" | "holdings" | "availableCashMinor">) {
+export function portfolioComposition(view: Omit<PortfolioCardView, "marketDataMode">) {
   if (!view.valuationComplete || view.portfolioTotalMinor === null) return null;
   const total = BigInt(view.portfolioTotalMinor);
   if (total <= 0n || view.holdings.some((holding) => holding.marketValueMinor === null)) return null;

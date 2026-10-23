@@ -5,7 +5,7 @@ import { listLearnerArtifacts } from "@/features/artifacts/repository";
 import { portfolioProcess, type ProcessFeedback } from "./process";
 import type { Currency } from "@/features/market-data/contracts";
 import { attributeHolding, foldQuoteCost, impliedPurchaseFxUnits } from "./attribution";
-import { allocationBasisPoints, foldTrades, valuePortfolio, type HoldingValuation, type TradeSide } from "./domain";
+import { allocationBasisPoints, foldTrades, valuePortfolio, type FoldedPortfolio, type HoldingValuation, type TradeSide } from "./domain";
 import { decimalToPriceUnits, fxToDecimal, quantityToDecimal, roundDivide } from "./decimal";
 import { loadPortfolioPerformance } from "./performance-loader";
 import type { PortfolioPerformance } from "./performance";
@@ -132,6 +132,38 @@ export interface PortfolioView {
 
 export type InstrumentPreview = PortfolioInstrumentPreview;
 
+/** Quotes and FX for every holding, folded into the portfolio total. Missing data stays null, never zero. */
+async function valueHoldings(earnedPracticeCapitalMinor: bigint, folded: FoldedPortfolio, baseCurrency: Currency) {
+  const observations = await perfMeasure("portfolio.observeAllHoldings", "external", () => Promise.all(folded.holdings.map((holding) => perfMeasure("portfolio.observeHolding", "external", () => observePortfolioHoldingValue(portfolioMarketData, holding, baseCurrency)))));
+  const valuations: HoldingValuation[] = observations.map((observation) => ({
+    instrumentId: observation.instrumentId,
+    marketValueMinor: observation.marketValueMinor,
+    quoteObservedAt: observation.quoteObservedAt,
+    unavailableReason: observation.unavailableReason,
+  }));
+  return { observations, valued: valuePortfolio(earnedPracticeCapitalMinor, folded, valuations) };
+}
+
+/** What the Studovna card shows: composition by asset type. */
+export type PortfolioCardView = Pick<PortfolioView, "valuationComplete" | "portfolioTotalMinor" | "availableCashMinor" | "marketDataMode"> & {
+  holdings: Array<Pick<PortfolioView["holdings"][number], "assetType" | "marketValueMinor">>;
+};
+
+/** Same ledger fold and valuation as loadPortfolioView, without classification, saved mix, IPS,
+ * performance history or tax lots, which the card does not show. */
+export async function loadPortfolioCardView(userId: string): Promise<PortfolioCardView> {
+  const rows = await loadPortfolioRows(userId);
+  const folded = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades);
+  const { valued } = await valueHoldings(rows.earnedPracticeCapitalMinor, folded, rows.portfolio.baseCurrency as Currency);
+  return {
+    valuationComplete: valued.complete,
+    portfolioTotalMinor: valued.portfolioTotalMinor?.toString() ?? null,
+    availableCashMinor: folded.cashMinor.toString(),
+    marketDataMode: marketDataMode(portfolioMarketData),
+    holdings: valued.holdings.map(({ assetType, marketValueMinor }) => ({ assetType, marketValueMinor: marketValueMinor?.toString() ?? null })),
+  };
+}
+
 export async function loadPortfolioView(userId: string): Promise<PortfolioView> {
   const current = await perfMeasure("portfolio.getOrCreateActivePortfolio", "db", () => getOrCreateActivePortfolio(userId));
   // The saved mix needs only the generation id, so it loads alongside the ledger.
@@ -142,20 +174,13 @@ export async function loadPortfolioView(userId: string): Promise<PortfolioView> 
   ]);
   const baseCurrency = rows.portfolio.baseCurrency as Currency;
   const folded = foldTrades(rows.earnedPracticeCapitalMinor, rows.trades);
-  const [observations, classifications] = await Promise.all([
-    perfMeasure("portfolio.observeAllHoldings", "external", () => Promise.all(folded.holdings.map((holding) => perfMeasure("portfolio.observeHolding", "external", () => observePortfolioHoldingValue(portfolioMarketData, holding, baseCurrency))))),
+  const [{ observations, valued }, classifications] = await Promise.all([
+    valueHoldings(rows.earnedPracticeCapitalMinor, folded, baseCurrency),
     perfMeasure("portfolio.classifyHoldings", "external", () => Promise.all(folded.holdings.map((holding) => observeHoldingClassification(portfolioMarketData, holding)))),
   ]);
   const quoteCost = foldQuoteCost(rows.trades);
   const quoteCurrency = new Map(rows.trades.map((trade) => [trade.instrumentId, trade.quoteCurrency as Currency]));
   const observationByInstrument = new Map(observations.map((observation) => [observation.instrumentId, observation]));
-  const valuations: HoldingValuation[] = observations.map((observation) => ({
-    instrumentId: observation.instrumentId,
-    marketValueMinor: observation.marketValueMinor,
-    quoteObservedAt: observation.quoteObservedAt,
-    unavailableReason: observation.unavailableReason,
-  }));
-  const valued = valuePortfolio(rows.earnedPracticeCapitalMinor, folded, valuations);
   const invested = valued.holdingsMarketValueMinor;
   const total = valued.portfolioTotalMinor;
   const performance = await loadPortfolioPerformance(portfolioMarketData.service, {

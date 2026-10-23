@@ -1,6 +1,6 @@
 import { loadLearner } from "@/features/learning/load-learner";
 import { loadPortfolioLabUnlockStatus } from "@/features/progression/repository";
-import { loadPortfolioView, type PortfolioView } from "@/features/portfolio/service";
+import { loadPortfolioCardView, type PortfolioCardView } from "@/features/portfolio/service";
 import { perfMeasure, perfSegment } from "@/lib/perf";
 import { getCurrentUser } from "@/lib/session";
 import { StudovnaPage } from "@/components/learning/studovna-page";
@@ -12,15 +12,16 @@ export default function LearnPage() {
 
 async function renderLearnPage() {
   const user = await getCurrentUser();
-  // The portfolio card depends only on the user id, so it loads alongside the learner reads.
-  const [summary, portfolio] = await Promise.all([loadLearner(), user ? loadPortfolioCard(user.id) : undefined]);
-  return <StudovnaPage summary={summary} portfolio={portfolio} />;
+  // The card waits on quotes, so it streams in on its own instead of holding the lesson content.
+  // Its own perf segment, because it can finish after the page segment has logged.
+  const portfolio = user ? perfSegment("section:/learn portfolio", () => loadPortfolioCard(user.id)) : Promise.resolve(undefined);
+  return <StudovnaPage summary={await loadLearner()} portfolio={portfolio} />;
 }
 
-async function loadPortfolioCard(userId: string): Promise<PortfolioView | null | undefined> {
+async function loadPortfolioCard(userId: string): Promise<PortfolioCardView | null | undefined> {
   try {
     const unlock = await loadPortfolioLabUnlockStatus(userId);
-    return unlock.unlocked ? await perfMeasure("portfolio.loadPortfolioView", "compute", () => loadPortfolioView(userId)) : null;
+    return unlock.unlocked ? await perfMeasure("portfolio.loadPortfolioCardView", "compute", () => loadPortfolioCardView(userId)) : null;
   } catch {
     // Unavailable portfolio data is explicit; learning can still continue.
     return undefined;
