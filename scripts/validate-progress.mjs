@@ -18,7 +18,7 @@ await mkdir(output, { recursive: true });
 const userIds = [];
 const errors = [];
 const lessons = await sql`select l.id,l.title,l.slug,m.slug as module_slug from lesson l join learning_module m on m.id=l.module_id where l.is_published=true order by m.position,l.position`;
-assert.equal(lessons.length, 29);
+assert.equal(lessons.length, 30);
 const foundation = lessons.filter((lesson) => lesson.module_slug === "investing-foundations");
 const returns = lessons.filter((lesson) => lesson.module_slug === "returns");
 const href = (lesson) => `/learn/${lesson.module_slug}/${lesson.slug}`;
@@ -178,7 +178,7 @@ try {
   assert.equal(await root().locator('[aria-current="step"]').getAttribute("href"), href(returns[0]));
 
   await complete(id, lessons);
-  root = await render(page, "complete", { state: "complete", xp: 1740, capital: 4500000, count: 29, action: "Prozkoumat Lab", actionHref: "/lab", lab: unlocked });
+  root = await render(page, "complete", { state: "complete", xp: 1800, capital: 4500000, count: 30, action: "Prozkoumat Lab", actionHref: "/lab", lab: unlocked });
   assert.equal(await root().locator('[aria-current="step"]').count(), 0);
   assert.equal(await root().getByRole("list", { name: "Za co je cvičný kapitál" }).getByRole("listitem").count(), 5, "newest five receipts");
   assert.equal(await root().getByText("Starší odměny (16)", { exact: true }).count(), 1, "older receipts wait behind a disclosure");

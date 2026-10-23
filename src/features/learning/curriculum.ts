@@ -85,6 +85,7 @@ export type DisplayModuleCode = (typeof displayModules)[number]["code"];
 
 /** What a lesson trains. Mastery states (#122) hang on these IDs. */
 export const skills = {
+  "debt-priorities": "Cena dluhu a pořadí splácení",
   "goals-and-horizon": "Cíle, horizont a pevnost termínu",
   "emergency-fund": "Rezerva, dostupnost a kupní síla",
   "monthly-budget": "Měsíční rozpočet a nepravidelné výdaje",
@@ -134,6 +135,7 @@ const place = (lessonId: string, displayModule: DisplayModuleCode, order: number
 
 /** Where each authored lesson, including editorial drafts, sits in Curriculum 2.0. New lessons are added here and in their storage manifest. */
 export const lessonPlacements: readonly LessonPlacement[] = [
+  place("before-investing-debt", "0.1", 2, "recommended", ["before-investing-budget"], ["debt-priorities"]),
   place("before-investing-goals", "0.1", 4, "recommended", ["before-investing-budget"], ["goals-and-horizon"]),
   place("before-investing-emergency-fund", "0.1", 3, "recommended", ["before-investing-budget"], ["emergency-fund", "inflation"]),
   place("before-investing-budget", "0.1", 1, "recommended", [], ["monthly-budget", "savings-rate"]),
