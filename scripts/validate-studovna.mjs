@@ -29,7 +29,7 @@ async function layouts(state, capture = true) {
   for (const width of [1440, 1024, 768, 390, 375, 320]) {
     await page.setViewportSize({ width, height: 900 }); await settle();
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${state}: overflow at ${width}`);
-    const map = page.getByTestId("journey-modules");
+    const map = learn().getByTestId("journey-modules");
     assert.equal(await map.locator("[data-level]").count(), 9, "all levels including optional tracks");
     assert.equal(await map.locator("[data-display-module]").count(), 25, "registry display modules");
     assert.equal(await map.locator("ol a").count(), 30, "every published lesson appears once");
@@ -50,7 +50,7 @@ async function layouts(state, capture = true) {
       const box = await link.boundingBox(); assert.ok(box && box.height >= 44);
     }
     if (width === 390) {
-      const chapter = page.getByTestId("journey-modules").locator('[data-level="L6"]');
+      const chapter = learn().getByTestId("journey-modules").locator('[data-level="L6"]');
       const wasOpen = await chapter.evaluate((element) => element.open);
       await chapter.locator("summary").focus(); await chapter.locator("summary").press("Enter");
       await chapter.getByRole("link", { name: /Logaritmické/ }).waitFor({ state: wasOpen ? "hidden" : "visible" });
@@ -64,7 +64,7 @@ async function layouts(state, capture = true) {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${state}: 200% text overflow`);
   const clipped = await learn().locator("h1,h2,h3,a,button,label").evaluateAll((elements) => elements.filter((element) => element.clientWidth && element.scrollWidth > element.clientWidth + 2).map((element) => element.textContent));
   assert.deepEqual(clipped, [], `${state}: enlarged essential text clips`);
-  const chapterGeometry = await page.locator("[data-testid=journey-modules]:visible details > summary").evaluateAll((summaries) => summaries.map((summary) => { const title = summary.querySelector("h3").getBoundingClientRect(); const number = summary.firstElementChild.getBoundingClientRect(); return { belowNumber: title.top >= number.bottom, width: title.width }; }));
+  const chapterGeometry = await learn().getByTestId("journey-modules").locator("details > summary").evaluateAll((summaries) => summaries.map((summary) => { const title = summary.querySelector("h3").getBoundingClientRect(); const number = summary.firstElementChild.getBoundingClientRect(); return { belowNumber: title.top >= number.bottom, width: title.width }; }));
   assert.ok(chapterGeometry.every((chapter) => chapter.belowNumber && chapter.width > 200), "enlarged chapter names reflow onto full-width rows");
   await page.screenshot({ path: `${output}/${state}-320-text-200.png`, fullPage: true, animations: "disabled" });
   await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
@@ -77,10 +77,19 @@ try {
   const session = await (await context.request.get(`${baseURL}/api/auth/get-session`)).json(); userId = session.user.id;
   await page.goto(`${baseURL}/onboarding`); await finishOnboarding(page);
   await page.getByRole("button", { name: "Teď ne", exact: true }).click();
+  // Next can retain an earlier route in a hidden tree. Keep a duplicate to exercise locator scoping.
+  await learn().evaluate((element) => {
+    const retained = element.cloneNode(true);
+    retained.hidden = true;
+    retained.style.display = "none";
+    retained.dataset.retainedLearnFixture = "";
+    document.body.append(retained);
+  });
   await layouts("new");
   const published = await sql`select l.slug,m.slug as module_slug from lesson l join learning_module m on m.id=l.module_id where l.is_published=true`;
   const expectedPaths = published.map((lesson) => `/learn/${lesson.module_slug}/${lesson.slug}`).sort();
-  assert.deepEqual(await page.getByTestId("journey-modules").locator("ol a").evaluateAll((links) => links.map((link) => link.getAttribute("href")).sort()), expectedPaths, "display placement preserves original lesson routes");
+  assert.deepEqual(await learn().getByTestId("journey-modules").locator("ol a").evaluateAll((links) => links.map((link) => link.getAttribute("href")).sort()), expectedPaths, "display placement preserves original lesson routes");
+  await page.locator("[data-retained-learn-fixture]").evaluate((element) => element.remove());
   for (const slug of new Set(published.map((lesson) => lesson.module_slug))) {
     assert.equal((await context.request.get(`${baseURL}/learn/${slug}`)).status(), 200, `legacy module overview ${slug}`);
   }
@@ -125,7 +134,7 @@ try {
   // A saved lesson in an optional path opens that level without moving its persistence identity.
   await sql`insert into lesson_progress(user_id,lesson_id,status,last_position,updated_at) values(${userId},'returns-log-returns','in_progress',2,now())`;
   await page.goto(`${baseURL}/learn`); await settle();
-  const quantLevel = page.getByTestId("journey-modules").locator('[data-level="L6"]');
+  const quantLevel = learn().getByTestId("journey-modules").locator('[data-level="L6"]');
   assert.equal(await quantLevel.evaluate((element) => element.open), true, "optional continuation level opens");
   assert.equal(await quantLevel.locator('[aria-current="step"]').getAttribute("href"), "/learn/returns/log-returns", "quant placement retains Returns route");
   assert.match(await quantLevel.locator('[aria-current="step"]').textContent(), /krok 3/);
