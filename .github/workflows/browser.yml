@@ -18,6 +18,7 @@ on:
       - .github/actions/prepare-app/**
       - .github/scripts/**
       - scripts/validate-*.mjs
+      - scripts/validate-lesson-walkthrough.mts
       - scripts/*-browser-fixtures.mts
 
 permissions:
@@ -124,6 +125,12 @@ jobs:
         env:
           CORRELATION_TEST_URL: ${{ env.APP_URL }}
           CORRELATION_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/correlation
+      - name: Every published lesson
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:lesson-walkthrough
+        env:
+          WALKTHROUGH_TEST_URL: ${{ env.APP_URL }}
+          WALKTHROUGH_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/lesson-walkthrough
       - name: Portfolio Lab
         if: ${{ !cancelled() }}
         run: .github/scripts/clear-rate-limits.sh && npm run test:portfolio-browser

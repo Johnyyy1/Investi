@@ -158,6 +158,7 @@ Every suite below is an npm script in `package.json` unless it is written as `no
 | `test:design-system-browser` | Design system (development-only route, needs `next dev`) | browser (development runtime) |
 | `test:facts-browser` | Facts registry (development-only route); `FACTS_EXPECT_PRODUCTION=1` checks its production 404 instead | browser (development runtime, core) |
 | `test:lesson-exercises-browser` | Server-validated lesson exercises | lesson-exercises |
+| `test:lesson-walkthrough` | Every published lesson: wrong answer and retry, then the authored answer for each question, resume after reload, completion with one receipt; no overflow at 1440/390/320 px and no serious axe (WCAG 2.1 AA) finding on any step. `LESSON_IDS=a,b` walks only those lessons | browser (core), lesson-exercises |
 
 **Operator and diagnostics**
 
