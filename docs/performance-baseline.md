@@ -674,3 +674,9 @@ JS transferred by Chrome on a hard load (Playwright, fresh context, KB compresse
 `npm run check:lesson-bundle` runs in CI after `npm run build`. It fails when any client chunk of the build contains an authored lesson string (30+ characters, from every lesson's blocks, with `\uXXXX` escapes decoded), or when the lesson route's initial JS exceeds 340 KB gzip. A new lesson adds only its manifest entry, about 0.02 KB gzip per lesson in the experiment above, so the headroom covers the planned lessons. Raise the budget only together with a new measurement here. `LESSON_BUNDLE_REPORT=1` lists the chunks without failing on the budget.
 
 What remains in the initial 322 KB: `react-dom` 70 KB, Next runtime 44 KB, Motion 40 KB and a 31 KB chunk that contains zod; the rest is under 25 KB each. Not investigated here.
+
+## Phase 9: function region (issue #401, in progress)
+
+Production renders ran in Vercel's default `iad1` (Washington; `x-vercel-id: fra1::iad1::…` on every dynamic route, checked 2026-10-23) while the Neon pooler endpoint is in `eu-central-1` (Frankfurt). A production `/learn` render on 2026-10-23 showed warm parameterized queries at a near-constant 186–200 ms, about 2 round-trips of ~95 ms under `prepare: false`, and reads on new connections at ~995 ms (a new pooler connection costs ~8.7 RTT, measured with `SELECT 1` only).
+
+`vercel.json` now pins functions to `fra1`, next to the database. Expected: one parameterized query in single-digit milliseconds instead of ~190 ms. To check on a preview with `INVESTI_PERF_DEBUG=1`: `x-vercel-id` reads `fra1::fra1::…`, and `[investi:perf]` shows the per-query times and `market.provider.*` latency (FMP is likely farther away from Frankfurt). Before/after numbers are added here once measured.
