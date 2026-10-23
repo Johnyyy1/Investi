@@ -25,10 +25,10 @@ function validationMessage(error: unknown) {
   return error instanceof Error ? error.message : "Zkontroluj plán.";
 }
 
-export function IpsBuilder({ history, goals, portfolioId, sample }: { history: PlanArtifact[]; goals?: IpsPlan["goals"]; portfolioId: string | null; sample: boolean }) {
+export function IpsBuilder({ history, goals, foundation, portfolioId, sample }: { history: PlanArtifact[]; goals?: IpsPlan["goals"]; foundation?: IpsPlan["foundation"]; portfolioId: string | null; sample: boolean }) {
   const [versions, setVersions] = useState(history);
   const current = versions[0];
-  const [draft, setDraft] = useState<IpsDraft>(() => current ? draftFromPlan(current.payload) : newIpsDraft(goals));
+  const [draft, setDraft] = useState<IpsDraft>(() => current ? draftFromPlan(current.payload) : { ...newIpsDraft(goals), ...(foundation ? { foundation } : {}) });
   const [consent, setConsent] = useState(false);
   const [pending, start] = useTransition();
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -77,7 +77,7 @@ export function IpsBuilder({ history, goals, portfolioId, sample }: { history: P
     run(async () => {
       const result = await deleteArtifact({ id: current.id });
       if (!result.ok) { setMessage({ ok: false, text: result.message }); return; }
-      setVersions([]); setDraft(newIpsDraft(goals)); setDirty(false); setConsent(false); setConfirmDelete(false); saveRequest.current = null; applyRequest.current = null;
+      setVersions([]); setDraft({ ...newIpsDraft(goals), ...(foundation ? { foundation } : {}) }); setDirty(false); setConsent(false); setConfirmDelete(false); saveRequest.current = null; applyRequest.current = null;
       setMessage({ ok: true, text: "Plán a všechny jeho verze jsou smazané. Uložené cílové mixy a obchody zůstávají v historii Labu." });
       requestAnimationFrame(() => headingRef.current?.focus());
     });

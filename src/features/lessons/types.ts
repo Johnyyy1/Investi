@@ -51,7 +51,7 @@ export type LessonBlock =
   | (BaseBlock & { type: "workedExample"; title: string; introduction?: string; steps: { label: string; value: string; emphasis?: boolean }[]; conclusion: string })
   | (BaseBlock & { type: "conceptCallout"; title: string; content: string })
   | (BaseBlock & { type: "interactiveFigure"; figure: LessonFigureId; title: string; description: string; emergencyFundFacts?: EmergencyFundFacts })
-  | (BaseBlock & { type: "multipleChoiceQuestion"; prompt: string; options: ChoiceOption[]; correctOptionId: string; correctExplanation: string; incorrectExplanation: string })
+  | (BaseBlock & { type: "multipleChoiceQuestion"; reviewHref?: string; prompt: string; options: ChoiceOption[]; correctOptionId: string; correctExplanation: string; incorrectExplanation: string })
   /** Design F: worked example whose last row the learner completes. Graded like a question. */
   | (BaseBlock & { type: "fadedExample"; title: string; introduction?: string; steps: LabeledValue[]; blank: FadedBlank; misconception?: string; correctExplanation: string; incorrectExplanation: string })
   /** Design H: select the right rows in a fictional document (statement, tariff, KID). Graded like a question. */
@@ -66,7 +66,7 @@ export type LessonBlock =
   | (BaseBlock & { type: "factNotice"; factKeys: FactKey[] })
   /** Design M: 2–4 sentences, self-assessed against a rubric, then a sample answer. Never scored and not persisted yet. */
   | (BaseBlock & { type: "writtenReflection"; prompt: string; rubric: { id: string; text: string }[]; sampleAnswer: string })
-  | (BaseBlock & { type: "numericQuestion"; prompt: string; answer: number; tolerance: number; unit: string; correctExplanation: string; incorrectExplanation: string })
+  | (BaseBlock & { type: "numericQuestion"; reviewHref?: string; prompt: string; answer: number; tolerance: number; unit: string; correctExplanation: string; incorrectExplanation: string })
   | (BaseBlock & { type: "multiNumericQuestion"; prompt: string; answers: { id: string; label: string; answer: number; tolerance: number; unit: string }[]; correctExplanation: string; incorrectExplanation: string })
   | (BaseBlock & { type: "explanation"; title: string; content: string })
   | (BaseBlock & { type: "takeaway"; title: string; content: string })

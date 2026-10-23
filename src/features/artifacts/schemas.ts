@@ -39,6 +39,8 @@ export const artifactPayloadSchemas = {
     budget: z.enum(["reviewed", "needs_review", "prefer_not_to_say"]),
     expensiveDebt: z.enum(["none", "plan_needed", "prefer_not_to_say"]),
     reserve: z.enum(["building", "ready_for_goal", "needs_review", "prefer_not_to_say"]),
+    goals: z.enum(["defined", "needs_review", "prefer_not_to_say"]).optional(),
+    retirement: z.enum(["reviewed", "needs_review", "unknown", "prefer_not_to_say"]).optional(),
     nextStep: z.enum(["review_budget", "make_debt_plan", "build_reserve", "define_goals", "continue_learning"]),
   }),
   fee_profile: z.strictObject({

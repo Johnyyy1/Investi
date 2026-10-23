@@ -19,6 +19,7 @@ export const experienceLabels = {
 export const sessionLabels = { 5: "5 minut", 10: "10 minut", 20: "15–20 minut", 30: "30+ minut" };
 export const questionTitles = ["Co se chceš naučit?", "Co tě zajímá nejvíc?", "Jaké máš zkušenosti s investováním?", "Kolik času chceš učení běžně věnovat?"];
 export const reasonLabels: Record<ReasonCode, string> = {
+  CHECKUP_READINESS: "Podle uloženého check-upu se vyplatí vrátit k finančnímu základu. Jde o doporučení, žádný obsah se nezamyká.",
   BUDGET_READINESS: "Rozpočet ti pomůže ověřit, kolik můžeš pravidelně odkládat.",
   FOUNDATIONS_START: "Začínáš od základů, proto doporučujeme první lekci.",
   FOUNDATIONS_CONTINUE: "Pokračujeme v Základech tam, kde to máš rozdělané.",

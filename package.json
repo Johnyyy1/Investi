@@ -64,6 +64,8 @@
     "test:pension-and-dip-browser": "node scripts/validate-pension-and-dip.mjs",
     "test:goals-browser": "node scripts/validate-goals.mjs",
     "test:goals-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-goals-persistence.mts",
+    "test:financial-checkup-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-financial-checkup-persistence.mts",
+    "test:financial-checkup-browser": "node scripts/validate-financial-checkup.mjs",
     "test:budget-browser": "node scripts/validate-budget.mjs",
     "test:foundations-browser": "node scripts/validate-foundations.mjs",
     "smoke:fmp": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/smoke-fmp-market-data.mts",

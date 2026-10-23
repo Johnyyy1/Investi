@@ -148,6 +148,19 @@ try {
           await largeText.evaluate((element) => element.parentNode?.removeChild(element));
           await page.setViewportSize({ width, height: 900 });
         }
+        if (block.type === "interactiveFigure" && block.figure === "financial-checkup") {
+          const checkup = page.getByRole("region", { name: "Finanční základ", exact: true });
+          await checkup.getByRole("combobox").first().waitFor();
+          assert.equal(await button("Pokračovat").isDisabled(), true, "check-up requires a saved output");
+          for (const [index, value] of ["ready_for_goal", "none", "defined", "reviewed", "reviewed"].entries()) {
+            await checkup.getByRole("combobox").nth(index).selectOption(value);
+          }
+          await checkup.getByRole("checkbox", { name: /Souhlasím s uložením/ }).check();
+          await button("Uložit výstup").click();
+          await checkup.getByText(/^Výstup je uložený\. Verze \d+\.$/).waitFor();
+          assert.equal(await button("Pokračovat").isEnabled(), true, "saved check-up enables continuation");
+          await audit(`${where} after saving`, width);
+        }
         if (block.type === "interactiveFigure" && block.figure === "goal-map") {
           await page.getByRole("checkbox", { name: "Zatím nemám konkrétní cíl", exact: true }).check();
           await page.getByRole("checkbox", { name: /Souhlasím s uložením/ }).check();

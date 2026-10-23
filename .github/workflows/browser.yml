@@ -376,6 +376,15 @@ jobs:
           BETTER_AUTH_URL: ${{ env.ARTIFACTS_URL }}
           IPS_QA_DISPOSABLE: "1"
           IPS_TEST_URL: ${{ env.ARTIFACTS_URL }}
+      - name: Financial check-up lesson
+        if: ${{ !cancelled() }}
+        run: .github/scripts/clear-rate-limits.sh && npm run test:financial-checkup-browser
+        env:
+          DATABASE_URL: ${{ env.ARTIFACTS_DATABASE_URL }}
+          BETTER_AUTH_URL: ${{ env.ARTIFACTS_URL }}
+          ARTIFACTS_QA_DISPOSABLE: "1"
+          CHECKUP_TEST_URL: ${{ env.ARTIFACTS_URL }}
+          CHECKUP_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/financial-checkup
       - name: Goals and investment horizon lesson
         if: ${{ !cancelled() }}
         run: .github/scripts/clear-rate-limits.sh && npm run test:goals-browser

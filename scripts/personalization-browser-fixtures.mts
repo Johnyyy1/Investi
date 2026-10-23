@@ -17,6 +17,7 @@ const { availableLessons } = await import("../src/features/learning/catalog");
 const { lessonSteps } = await import("../src/features/progress/transition");
 const { completeLesson } = await import("../src/features/progress/repository");
 const { saveLearnerArtifact } = await import("../src/features/artifacts/repository");
+const { CHECKUP_LESSON_ID } = await import("../src/features/lessons/before-investing/checkup-model");
 const { GOALS_LESSON_ID } = await import("../src/features/lessons/before-investing/goals-model");
 const { executeTrade } = await import("../src/features/portfolio/repository");
 const mode = process.env.PERSONALIZATION_QA_LESSONS ?? "foundations";
@@ -27,6 +28,11 @@ for (const lesson of mode === "first-return" ? lessons.slice(0, 1) : lessons) {
   // The synthetic learner explicitly skips goal-setting; real completion still checks the stored output.
   if (lesson.id === GOALS_LESSON_ID) await saveLearnerArtifact(id!, {
     content: { kind: "goal_map", payload: { goals: [], noSpecificGoal: true } },
+    sourceLessonId: lesson.id, consent: true, requestId: randomUUID(),
+  });
+  // The all-complete fixture needs a saved, all-ready check-up so it does not recommend remedial review.
+  if (lesson.id === CHECKUP_LESSON_ID) await saveLearnerArtifact(id!, {
+    content: { kind: "financial_checkup", payload: { budget: "reviewed", expensiveDebt: "none", reserve: "ready_for_goal", goals: "defined", retirement: "reviewed", nextStep: "continue_learning" } },
     sourceLessonId: lesson.id, consent: true, requestId: randomUUID(),
   });
   await sql`insert into lesson_progress (user_id, lesson_id, status, last_position, updated_at) values (${id!}, ${lesson.id}, 'in_progress', ${lessonSteps(lesson.id).length - 1}, now()) on conflict (user_id, lesson_id) do update set last_position = excluded.last_position`;
