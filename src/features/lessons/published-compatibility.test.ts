@@ -3,6 +3,7 @@ import { availableLessons } from "@/features/learning/catalog";
 import { lessonSteps } from "@/features/progress/transition";
 import { isQuestion, type QuestionBlock } from "./question-evaluation";
 import publishedLessons from "./published-lessons-v1.json";
+import revisions from "./published-lesson-revisions.json";
 import { correctAnswers } from "./answer-keys";
 
 // This is a historical compatibility fixture, not a snapshot to regenerate after a content edit.
@@ -30,8 +31,15 @@ function expectCompatible(original: Contract, current: Contract) {
   expect(current.steps.length).toBeGreaterThanOrEqual(original.steps.length);
   expect(current.steps.slice(0, prefixLength)).toEqual(original.steps.slice(0, prefixLength));
   expect(current.steps.at(-1)).toEqual(original.steps.at(-1));
-  // The old final cursor now points to explanatory content; it cannot skip a new assessment.
-  for (const step of current.steps.slice(prefixLength, -1)) expect(step.grading).toEqual([]);
+  const revision = revisions.find((revision) => revision.lessonId === original.id);
+  if (revision) {
+    // An explicit identity cursor migration is safe only at the old, ungraded final boundary.
+    expect(revision.previousFinalPosition).toBe(prefixLength);
+    expect(revision.cursorMigration).toBe("identity");
+    expect(current.steps.slice(prefixLength, -1)).toEqual(revision.insertedSteps);
+  } else {
+    for (const step of current.steps.slice(prefixLength, -1)) expect(step.grading).toEqual([]);
+  }
   if (original.id.endsWith("-checkpoint")) expect(current.steps).toEqual(original.steps);
 }
 
@@ -49,6 +57,21 @@ describe("published lesson compatibility (#119)", () => {
     const current = structuredClone(original);
     current.steps.splice(-1, 0, { blocks: ["new-explanation"], grading: [] });
     expectCompatible(original, current);
+  });
+  it("freezes the explicitly versioned stocks extension without weakening its original contract", () => {
+    const original = publishedLessons.find((lesson) => lesson.id === "foundations-stocks")! as Contract;
+    const current = currentContract(original.id);
+    expectCompatible(original, current);
+    for (const edit of [
+      (contract: Contract) => { contract.steps[6].grading = []; },
+      (contract: Contract) => { contract.steps[6].grading[0] = { id: "position-czk", type: "numericQuestion", answer: 450, tolerance: 0.000001 }; },
+      (contract: Contract) => { contract.steps.splice(5, 0, contract.steps[6]); },
+      (contract: Contract) => { contract.steps.push({ blocks: ["after-summary"], grading: [] }); },
+    ]) {
+      const changed = structuredClone(current);
+      edit(changed);
+      expect(() => expectCompatible(original, changed)).toThrow();
+    }
   });
   it("rejects cursor shifts, removed steps, changed block IDs, grading changes and new graded steps", () => {
     const original = currentContract("foundations-why-invest");

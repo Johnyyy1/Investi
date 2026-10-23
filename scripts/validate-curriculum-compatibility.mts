@@ -93,7 +93,35 @@ try {
     assert.equal(reward.practiceCapitalAwardedMinor, 0n);
   }
   assert.equal((await db.select().from(lessonProgress).where(where(partial)))[0].status, "completed");
-  console.log("PASS: curriculum growth preserves identity, cursors, completion/checkpoints and v1/v2/v3/v4 receipts; safe step insertion preserves grading; original and recorded unlocks survive, with one concurrent grant.");
+  // Stocks v2 uses an explicit identity cursor migration at the old summary (#156).
+  const stocksId = "foundations-stocks", oldStocksFinal = 6;
+  const stocksPartial = await owner(), stocksCompleted = await owner();
+  await db.insert(lessonProgress).values([
+    { userId: stocksPartial, lessonId: stocksId, status: "in_progress", lastPosition: oldStocksFinal, updatedAt: historical },
+    { userId: stocksCompleted, lessonId: stocksId, status: "completed", lastPosition: oldStocksFinal, completedAt: historical, updatedAt: historical },
+  ]);
+  await db.insert(lessonAward).values({ userId: stocksCompleted, lessonId: stocksId, xp: 60, practiceCapitalMinor: 200_000n, rewardPolicyVersion: 1, learningDate: "2026-09-09", timeZone: "UTC", awardedAt: historical });
+  const completedBefore = { progress: await progressOf(stocksCompleted), awards: await awardsOf(stocksCompleted) };
+  const partialBefore = await progressOf(stocksPartial);
+  await seedCurriculum(db);
+  await seedCurriculum(db);
+  assert.deepEqual(await progressOf(stocksPartial), partialBefore, "repeat seed leaves the old summary cursor at the FX question");
+  await assert.rejects(() => completeLesson(stocksPartial, stocksId));
+  for (const answers of [undefined, { answer: "450" }]) {
+    await assert.rejects(() => saveLessonProgress(stocksPartial, { lessonId: stocksId, status: "in_progress", lastPosition: oldStocksFinal + 1 }, answers));
+  }
+  await saveLessonProgress(stocksPartial, { lessonId: stocksId, status: "in_progress", lastPosition: oldStocksFinal + 1 }, { answer: String(3 * 150 * 20) });
+  const completions = await Promise.all([completeLesson(stocksPartial, stocksId), completeLesson(stocksPartial, stocksId)]);
+  assert.equal(completions.reduce((sum, result) => sum + result.xpAwarded, 0), 60);
+  assert.ok(completions.every((result) => result.practiceCapitalAwardedMinor === 0n));
+  assert.equal((await awardsOf(stocksPartial)).length, 1);
+  await markLessonInProgress(stocksCompleted, stocksId);
+  await saveLessonProgress(stocksCompleted, { lessonId: stocksId, status: "in_progress", lastPosition: 0 });
+  const review = await completeLesson(stocksCompleted, stocksId);
+  assert.equal(review.xpAwarded, 0);
+  assert.equal(review.practiceCapitalAwardedMinor, 0n);
+  assert.deepEqual({ progress: await progressOf(stocksCompleted), awards: await awardsOf(stocksCompleted) }, completedBefore, "stocks v2 preserves original completion, cursor, dates and legacy receipt on review");
+  console.log("PASS: curriculum growth and stocks v2 preserve identity, cursors, completion/checkpoints and v1/v2/v3/v4 receipts; old stocks summary requires the FX answer; original and recorded unlocks survive, with one concurrent grant.");
 } finally {
   steps.splice(0, steps.length, ...originalSteps);
   for (const id of ids) await db.delete(user).where(eq(user.id, id));

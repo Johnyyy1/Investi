@@ -116,13 +116,45 @@ try {
   await page.screenshot({ path: `${screenshotDir}/07-lesson-complete-60xp-1440.png`, fullPage: true });
 
   await nextLesson(page, "Začni vlastnictvím");
+  await assertResponsive(page, "stocks-01-ownership", [390, 1440]);
   await answerChoice(page, "Vlastnický podíl ve firmě");
+  await assertResponsive(page, "stocks-02-position", [390, 1440]);
   await answerNumber(page, 450);
+  await assertResponsive(page, "stocks-03-explorer", [390, 1440]);
   await continueTo(page, "Tržní cena není vnitřní hodnota");
+  await assertResponsive(page, "stocks-04-price-value", [390, 1440]);
   await continueTo(page, "Ověření znalostí · přepočet pozice");
+  await assertResponsive(page, "stocks-05-position-check", [390, 1440]);
   await answerNumber(page, 360);
+  await assertResponsive(page, "stocks-06-price-check", [390, 1440]);
   await answerChoice(page, "Jedna akcie se právě obchoduje za 75 Kč");
+  await page.getByRole("heading", { name: "Akcie v jiné měně", exact: true }).waitFor();
+  await page.locator('main[data-save-state="idle"]').waitFor();
+  await page.reload();
+  await page.getByRole("heading", { name: "Akcie v jiné měně", exact: true }).waitFor();
+  assert.equal((await sql`select last_position from lesson_progress where user_id = ${userId} and lesson_id = 'foundations-stocks'`)[0].last_position, 6);
+  await assertResponsive(page, "12-stocks-fx", [320, 390, 1440]);
+  await page.setViewportSize({ width: 320, height: 900 });
+  await page.evaluate(() => { document.documentElement.style.fontSize = "200%"; });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "FX question fits 320px at 200% text");
+  await page.screenshot({ path: `${screenshotDir}/12-stocks-fx-320-text-200.png`, fullPage: true });
+  await page.evaluate(() => { document.documentElement.style.fontSize = ""; });
+  await page.setViewportSize({ width: 390, height: 900 });
+  const fxAnswer = page.getByLabel("Tvoje odpověď", { exact: true });
+  await fxAnswer.fill("450");
+  await fxAnswer.press("Tab");
+  await page.getByRole("button", { name: "Zkontrolovat odpověď", exact: true }).press("Enter");
+  await page.getByRole("heading", { name: "Zkus to ještě jednou", exact: true }).waitFor();
+  await page.getByText(/450 je hodnota v USD, ne v Kč/).waitFor();
+  await page.getByRole("button", { name: "Zkusit znovu", exact: true }).press("Enter");
+  await page.waitForFunction(() => {
+    const input = document.querySelector('input[inputmode="decimal"]');
+    return input && input.value === "" && !input.disabled && document.activeElement === input;
+  });
+  assert.ok(await fxAnswer.evaluate((input) => getComputedStyle(input.parentElement).boxShadow !== "none"), "Keyboard focus is visible");
+  await answerNumber(page, 3 * 150 * 20);
   await page.getByRole("heading", { name: "Čti pozici jako počet × cena", exact: true }).waitFor();
+  await assertResponsive(page, "stocks-08-summary", [390, 1440]);
   await completeLesson(page, 120);
 
   await nextLesson(page, "Ukazatel, nebo fond?");
