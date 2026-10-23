@@ -1,10 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ cleanup: vi.fn(), sessions: vi.fn(), env: { CRON_SECRET: undefined as string | undefined } }));
+const mocks = vi.hoisted(() => ({ cleanup: vi.fn(), sessions: vi.fn(), purgeMarketData: vi.fn(), env: { CRON_SECRET: undefined as string | undefined } }));
 vi.mock("@/db", () => ({ db: { marker: "db" } }));
 vi.mock("@/lib/env", () => ({ env: mocks.env }));
 vi.mock("@/features/guest/cleanup", () => ({ deleteUnreachableAnonymousIdentities: mocks.cleanup }));
 vi.mock("@/features/account/session-retention", () => ({ deleteExpiredSessions: mocks.sessions }));
+vi.mock("@/features/market-data/postgres-cache", () => ({
+  PostgresMarketDataCacheStore: class { purgeExpired = mocks.purgeMarketData; },
+}));
 
 import { GET } from "./route";
 
@@ -15,6 +18,7 @@ describe("GET /api/cron/cleanup-anonymous", () => {
   beforeEach(() => {
     mocks.cleanup.mockReset();
     mocks.sessions.mockReset();
+    mocks.purgeMarketData.mockReset();
     mocks.env.CRON_SECRET = secret;
     vi.spyOn(console, "info").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -27,6 +31,7 @@ describe("GET /api/cron/cleanup-anonymous", () => {
     }
     expect(mocks.cleanup).not.toHaveBeenCalled();
     expect(mocks.sessions).not.toHaveBeenCalled();
+    expect(mocks.purgeMarketData).not.toHaveBeenCalled();
   });
 
   it("stays closed when CRON_SECRET is not configured", async () => {
@@ -35,7 +40,7 @@ describe("GET /api/cron/cleanup-anonymous", () => {
     expect(mocks.cleanup).not.toHaveBeenCalled();
   });
 
-  it("runs the anonymous cleanup and the session retention and returns only counts", async () => {
+  it("runs the anonymous cleanup, the session retention and the market-data cache purge and returns only counts", async () => {
     mocks.cleanup.mockResolvedValue({ removed: { demo: 3, guest: 2 }, complete: true });
     mocks.sessions.mockResolvedValue({ removed: 41, complete: false });
     const response = await call(`Bearer ${secret}`);
@@ -43,6 +48,7 @@ describe("GET /api/cron/cleanup-anonymous", () => {
     expect(await response.json()).toEqual({ removed: { demo: 3, guest: 2 }, complete: true, expiredSessions: { removed: 41, complete: false } });
     expect(mocks.cleanup).toHaveBeenCalledWith({ marker: "db" });
     expect(mocks.sessions).toHaveBeenCalledWith({ marker: "db" });
+    expect(mocks.purgeMarketData).toHaveBeenCalledWith(expect.any(Number));
   });
 
   it("fails generically when the session retention fails", async () => {

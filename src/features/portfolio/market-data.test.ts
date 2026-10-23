@@ -15,6 +15,7 @@ import { createDeterministicMarketDataService } from "@/features/market-data/det
 import { MarketDataError } from "@/features/market-data/errors";
 import type { MarketDataProvider } from "@/features/market-data/provider";
 import { MarketDataService } from "@/features/market-data/service";
+import { fxUnitsFromNumber, grossBaseMinor, parseQuantity, priceUnitsFromNumber } from "./decimal";
 import { foldTrades, valuePortfolio, type LedgerTrade } from "./domain";
 import { tradeInputSchema } from "./input";
 import {
@@ -312,6 +313,36 @@ describe("Portfolio execution and current valuation semantics", () => {
     expect(preview).toMatchObject({ fxRate: expect.stringMatching(/^20(\.0+)?$/), fxReferenceDate: "2026-09-18", estimatedUnitCostBaseMinor: "200000" });
   });
 
+  it("requests today's FX beside the quote and values the holding exactly as before", async () => {
+    const provider = new MutableMarketDataProvider([equity()]);
+    provider.price = 100.1;
+    provider.fxRate = 23.456789;
+    let releaseQuote!: () => void;
+    const quoteGate = new Promise<void>((resolve) => { releaseQuote = resolve; });
+    const getQuote = provider.getQuote.bind(provider);
+    provider.getQuote = async (instrumentId) => { await quoteGate; return getQuote(instrumentId); };
+    const pending = observePortfolioHoldingValue(gateway(provider), { instrumentId: FMP_AAPL, quantityUnits: parseQuantity("1.3333") }, "CZK");
+    await vi.waitFor(() => expect(provider.fxCalls).toBe(1));
+    expect(provider.quoteCalls).toBe(0);
+    releaseQuote();
+
+    await expect(pending).resolves.toMatchObject({
+      marketValueMinor: grossBaseMinor(parseQuantity("1.3333"), priceUnitsFromNumber(100.1), fxUnitsFromNumber(23.456789)),
+      fxReferenceDate: "2026-09-18",
+    });
+    expect(provider.fxCalls).toBe(1);
+  });
+
+  it("requests FX again for the quote's day when the quote was retrieved on another day", async () => {
+    const provider = new MutableMarketDataProvider([equity()]);
+    provider.retrievedAt = "2026-09-17T23:59:50.000Z";
+    await expect(observePortfolioHoldingValue(gateway(provider), { instrumentId: FMP_AAPL, quantityUnits: 100_000_000n }, "CZK")).resolves.toMatchObject({
+      marketValueMinor: 200_000n,
+      fxReferenceDate: "2026-09-17",
+    });
+    expect(provider.fxCalls).toBe(2);
+  });
+
   it("keeps a stale supported-market quote out of valuation once a newer session should exist", async () => {
     const provider = new MutableMarketDataProvider([equity()]);
     provider.observedAt = "2026-09-18T14:00:00.000Z";
@@ -365,7 +396,8 @@ describe("Portfolio market-data failures", () => {
       marketValueMinor: null,
       unavailableReason: "provider",
     });
-    expect(fx.fxCalls).toBe(0);
+    // Today's FX is requested beside the quote, but its result is not used without a quote.
+    expect(fx.fxCalls).toBe(1);
 
     security.quoteError = undefined;
     fx.fxError = new MarketDataError("ProviderUnavailable", "fx down");
@@ -374,7 +406,7 @@ describe("Portfolio market-data failures", () => {
       unavailableReason: "provider",
     });
     expect(security.quoteCalls).toBe(2);
-    expect(fx.fxCalls).toBe(1);
+    expect(fx.fxCalls).toBe(2);
   });
 
   it("keeps quote, FX, rate-limit, and provider failures explicit", async () => {

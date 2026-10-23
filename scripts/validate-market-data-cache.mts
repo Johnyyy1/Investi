@@ -110,13 +110,16 @@ try {
   }
   const instance = () => {
     const counting = new CountingProvider(fixtureClock);
-    const service = new MarketDataService(counting, { cache: new TieredMarketDataCache({ clock: () => now, shared: store }), clock: fixtureClock });
-    return { counting, service };
+    const cache = new TieredMarketDataCache({ clock: () => now, shared: store });
+    const service = new MarketDataService(counting, { cache, clock: fixtureClock });
+    return { counting, cache, service };
   };
   const request: HistoricalPriceRequest = { instrumentId: "US-XNAS:AAPL", startDate: "2026-01-05", endDate: "2026-01-16", interval: "daily", timeZone: "UTC", adjustment: adjustmentPolicies["split-adjusted"] };
   const first = instance();
   const firstView = await Promise.all([first.service.getQuote("US-XNAS:AAPL"), first.service.getHistoricalPrices(request)]);
   assert.deepEqual([...new Set(first.counting.calls)].sort(), ["history", "metadata", "quote"], "the first instance loads from the provider");
+  // Shared writes finish after the response; wait for them before another instance reads.
+  await first.cache.flushSharedWrites();
   const second = instance();
   const secondView = await Promise.all([second.service.getQuote("US-XNAS:AAPL"), second.service.getHistoricalPrices(request)]);
   assert.deepEqual(second.counting.calls, [], "another instance reuses metadata, quote and history");

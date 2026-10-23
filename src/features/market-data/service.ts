@@ -100,6 +100,11 @@ export class MarketDataService {
     }
   }
 
+  /** The service clock, so callers can request same-day reference data beside a quote. */
+  now() {
+    return this.clock();
+  }
+
   async searchInstruments(query: string) {
     const normalized = query.trim().toLocaleLowerCase("en-US");
     if (!normalized || normalized.length > MAX_SEARCH_LENGTH || SEARCH_CONTROL_CHARACTER.test(normalized)) {
@@ -375,15 +380,14 @@ export class MarketDataService {
     load: () => Promise<T>,
     shouldCache: (value: T) => boolean = () => true,
   ): Promise<T> {
-    const cached = await get();
     const family = flightKey.slice(0, flightKey.indexOf(":"));
-    if (cached !== undefined) { perfCount(`market.cache.hit.${family}`); return cached; }
     const existing = this.inFlight.get(flightKey) as Promise<T> | undefined;
     if (existing) { perfCount(`market.cache.coalesced.${family}`); return existing; }
-    perfCount(`market.cache.miss.${family}`);
+    // Concurrent callers share one cache read as well as one provider call.
     const pending = (async () => {
-      const racedCache = await get();
-      if (racedCache !== undefined) return racedCache;
+      const cached = await get();
+      if (cached !== undefined) { perfCount(`market.cache.hit.${family}`); return cached; }
+      perfCount(`market.cache.miss.${family}`);
       const value = await load();
       if (shouldCache(value)) await set(value);
       return value;

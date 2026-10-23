@@ -214,8 +214,14 @@ export async function observePortfolioHoldingValue(
     return unavailableHolding(holding.instrumentId, failureReason(error, "quote"));
   }
 
+  // Reference FX is keyed by day, so today's rate is requested beside the quote and again only if the quote was retrieved on another day.
+  const today = gateway.service.now().toISOString();
   let quote: Quote;
+  let fxToday: Promise<FxRate>;
   try {
+    const instrument = await gateway.service.getInstrumentMetadata(holding.instrumentId);
+    fxToday = gateway.service.getFxRate(instrument.quoteCurrency, baseCurrency, today);
+    fxToday.catch(() => undefined); // Observed below unless the quote fails first.
     quote = await gateway.service.getQuote(holding.instrumentId);
     if (!quote.usability.usableForValuation) return unavailableHolding(holding.instrumentId, "quote");
   } catch (error) {
@@ -224,7 +230,10 @@ export async function observePortfolioHoldingValue(
 
   try {
     // Current valuation uses the current reference FX fixing independently from the security observation.
-    const fx = await gateway.service.getFxRate(quote.currency, baseCurrency, quote.retrievedAt);
+    // getQuote already verified that the quote currency is the instrument's quote currency.
+    const fx = await (quote.retrievedAt.slice(0, 10) === today.slice(0, 10)
+      ? fxToday
+      : gateway.service.getFxRate(quote.currency, baseCurrency, quote.retrievedAt));
     const priceUnits = priceUnitsFromNumber(quote.price);
     const fxUnits = fxUnitsFromNumber(fx.rate);
     return {
