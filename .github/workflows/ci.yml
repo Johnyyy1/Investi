@@ -119,6 +119,10 @@ jobs:
         run: npm run test:training-persistence
         env:
           TRAINING_QA_DISPOSABLE: "1"
+      - name: Skill mastery attempts, contexts, claim and cascade
+        run: npm run test:mastery-persistence
+        env:
+          MASTERY_QA_DISPOSABLE: "1"
       - name: Product funnel migration, early returns and landing views
         run: |
           node --input-type=module -e 'import postgres from "postgres"; const sql = postgres(process.env.DATABASE_URL); await sql`CREATE DATABASE investi_funnel_qa`; await sql.end();'

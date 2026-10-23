@@ -1,7 +1,7 @@
 import "server-only";
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { learningProfile, lessonAward, lessonProgress, portfolio, progressionUnlock, user } from "@/db/schema";
+import { learningProfile, lessonAward, lessonProgress, portfolio, progressionUnlock, skillAttempt, user } from "@/db/schema";
 import { isDemoIdentity, isGuestIdentity } from "./identity";
 
 /**
@@ -15,6 +15,7 @@ import { isDemoIdentity, isGuestIdentity } from "./identity";
  *   when the guest finished that lesson.
  * - learning profile: copied only when the account has not finished onboarding.
  * - progression unlocks: one-time grants; the account's existing grant wins.
+ * - skill attempts: append-only evidence, so every guest attempt is added with its original time.
  * Guests cannot open Portfolio Lab, so there are no portfolios or trades to move.
  */
 export async function claimGuestLearning(guestId: string, accountId: string) {
@@ -61,6 +62,11 @@ export async function claimGuestLearning(guestId: string, accountId: string) {
       select ${accountId}, unlock_id, practice_capital_minor, reason, unlocked_at
       from ${progressionUnlock} where user_id = ${guestId}
       on conflict (user_id, unlock_id) do nothing`);
+    await tx.execute(sql`
+      insert into ${skillAttempt} (user_id, request_id, skill_id, item_id, correct, context, attempted_at)
+      select ${accountId}, request_id, skill_id, item_id, correct, context, attempted_at
+      from ${skillAttempt} where user_id = ${guestId}
+      on conflict (user_id, request_id) do nothing`);
     // Cascades the guest's sessions and the rows copied above.
     await tx.delete(user).where(and(eq(user.id, guestId), eq(user.isAnonymous, true)));
     return { claimed: true as const };

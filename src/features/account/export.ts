@@ -2,7 +2,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   account, analyticsEarlyReturn, learningProfile, lesson, lessonAward, lessonProgress, learningModule, portfolio, portfolioAllocation,
-  portfolioAllocationLine, portfolioTrade, progressionUnlock, session, trainingAction, trainingSession, user, learnerArtifact,
+  portfolioAllocationLine, portfolioTrade, progressionUnlock, session, skillAttempt, trainingAction, trainingSession, user, learnerArtifact,
 } from "@/db/schema";
 
 /**
@@ -20,7 +20,7 @@ export async function readAccountExportRows(database: Database, userId: string) 
     isAnonymous: user.isAnonymous, anonymousKind: user.anonymousKind, createdAt: user.createdAt, updatedAt: user.updatedAt,
   }).from(user).where(eq(user.id, userId));
   if (!owner) return null;
-  const [accounts, sessions, profiles, progress, awards, unlocks, portfolios, artifacts, earlyReturns, trainingSessions] = await Promise.all([
+  const [accounts, sessions, profiles, progress, awards, unlocks, portfolios, artifacts, earlyReturns, trainingSessions, skillAttempts] = await Promise.all([
     database.select({ providerId: account.providerId, accountId: account.accountId, scope: account.scope, createdAt: account.createdAt, updatedAt: account.updatedAt })
       .from(account).where(eq(account.userId, userId)).orderBy(asc(account.createdAt)),
     database.select({ createdAt: session.createdAt, updatedAt: session.updatedAt, expiresAt: session.expiresAt, ipAddress: session.ipAddress, userAgent: session.userAgent })
@@ -37,6 +37,8 @@ export async function readAccountExportRows(database: Database, userId: string) 
     database.select().from(learnerArtifact).where(eq(learnerArtifact.userId, userId)).orderBy(asc(learnerArtifact.kind), asc(learnerArtifact.version)),
     database.select({ returnedAt: analyticsEarlyReturn.returnedAt }).from(analyticsEarlyReturn).where(eq(analyticsEarlyReturn.userId, userId)),
     database.select().from(trainingSession).where(eq(trainingSession.userId, userId)).orderBy(asc(trainingSession.startedAt)),
+    database.select({ skillId: skillAttempt.skillId, itemId: skillAttempt.itemId, correct: skillAttempt.correct, context: skillAttempt.context, attemptedAt: skillAttempt.attemptedAt })
+      .from(skillAttempt).where(eq(skillAttempt.userId, userId)).orderBy(asc(skillAttempt.attemptedAt), asc(skillAttempt.requestId)),
   ]);
   const portfolioIds = portfolios.map((row) => row.id);
   const [trades, allocations] = portfolioIds.length === 0 ? [[], []] : await Promise.all([
@@ -49,7 +51,7 @@ export async function readAccountExportRows(database: Database, userId: string) 
   const allocationIds = allocations.map((row) => row.id);
   const lines = allocationIds.length === 0 ? [] : await database.select().from(portfolioAllocationLine)
     .where(inArray(portfolioAllocationLine.allocationId, allocationIds)).orderBy(asc(portfolioAllocationLine.position));
-  return { owner, accounts, sessions, profile: profiles.at(0) ?? null, progress, awards, unlocks, portfolios, trades, allocations, lines, artifacts, earlyReturn: earlyReturns.at(0) ?? null, trainingSessions, trainingActions };
+  return { owner, accounts, sessions, profile: profiles.at(0) ?? null, progress, awards, unlocks, portfolios, trades, allocations, lines, artifacts, earlyReturn: earlyReturns.at(0) ?? null, trainingSessions, trainingActions, skillAttempts };
 }
 
 export type AccountExportRows = NonNullable<Awaited<ReturnType<typeof readAccountExportRows>>>;
@@ -78,6 +80,8 @@ export function buildAccountExport(rows: AccountExportRows, exportedAt = new Dat
     learnerArtifacts: rows.artifacts.map((artifact) => withoutKey(withoutKey(artifact, "userId"), "requestId")),
     lessonRewardReceipts: rows.awards,
     progressionUnlocks: rows.unlocks.map((unlock) => withoutKey(unlock, "userId")),
+    // Skill mastery (#122): every checked answer that counts as evidence; the mastery states are derived from them.
+    skillAttempts: rows.skillAttempts,
     // Product funnel (#355): when the learner first came back within a week of starting, if they did.
     productMeasurement: { earlyReturnAt: rows.earlyReturn?.returnedAt ?? null },
     // Crisis training (#139): fictional money with its frozen plan snapshot, series and ordered actions.
