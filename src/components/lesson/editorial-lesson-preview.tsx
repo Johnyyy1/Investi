@@ -11,7 +11,7 @@ import { LessonFactNotice } from "./lesson-fact-notice";
 import { cn } from "@/lib/utils";
 
 /** Development-only editorial walk. No learner mutations, completion, awards or draft persistence. */
-export function EmergencyFundPreview({ title, steps, notice }: { title: string; steps: readonly GuidedStep[]; notice?: Notice }) {
+export function EditorialLessonPreview({ title, steps, notice }: { title: string; steps: readonly GuidedStep[]; notice?: Notice }) {
   const [position, setPosition] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [verdict, setVerdict] = useState<boolean>();
@@ -21,7 +21,7 @@ export function EmergencyFundPreview({ title, steps, notice }: { title: string; 
   const evaluation = question ? evaluateQuestion(question, answers) : undefined;
   useEffect(() => { heading.current?.focus({ preventScroll: true }); window.scrollTo(0, 0); }, [position]);
   function move(next: number) { setPosition(next); setAnswers({}); setVerdict(undefined); }
-  return <main className="mx-auto min-w-0 max-w-5xl space-y-8 px-4 py-8 md:px-8">
+  return <main className="mx-auto min-w-0 max-w-5xl space-y-8 [overflow-wrap:anywhere] px-4 py-8 md:px-8">
     <header className="space-y-3"><h1 className="text-2xl font-semibold">{title}</h1><p className="text-body text-secondary">Redakční náhled · Lekce čeká na odbornou revizi podle #133. Není publikovaná, neukládá pokrok a neuděluje odměny. Obnovení stránky náhled vrátí na začátek.</p>{notice ? <LessonFactNotice notice={notice} /> : null}</header>
     <section className={cn("mx-auto min-w-0 space-y-6", stepWidth(step.blocks))}>
       <h2 ref={heading} tabIndex={-1} className="text-xl font-semibold">{step.title}</h2>

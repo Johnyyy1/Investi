@@ -1,5 +1,22 @@
 import type { StepDefinition } from "../types";
 export const beforeInvestingSteps: Readonly<Record<string, readonly StepDefinition[]>> = {
+  "before-investing-scams": [
+    { title: "Pavlova nabídka", blocks: ["opening", "prediction"] },
+    { title: "Najdi čtyři varovné znaky", blocks: ["warning-signs", "red-flags"] },
+    { title: "Ověřuj mimo reklamu", blocks: ["verification", "facts"] },
+    { title: "Nabídka A: ověřené oprávnění", blocks: ["offer-a"] },
+    { title: "Nabídka B: slib bez rizika", blocks: ["offer-b"] },
+    { title: "Zahraniční oprávnění", blocks: ["passport"] },
+    { title: "Nabídka C: evropský pas", blocks: ["offer-c"] },
+    { title: "Co regulace nezaručuje", blocks: ["market-risk"] },
+    { title: "Kdo vydělá na doporučení", blocks: ["finfluencer"] },
+    { title: "Prověř příspěvek", blocks: ["influencer-check"] },
+    { title: "Peníze už odešly", blocks: ["response", "first-action"] },
+    { title: "Pozor na druhý podvod", blocks: ["recovery"] },
+    { title: "Vybav si postup", kind: "mastery", blocks: ["recall"] },
+    { title: "Zvol vlastní pojistku", blocks: ["reflection"] },
+    { title: "Co si odneseš", blocks: ["sources", "summary"] },
+  ],
   "before-investing-debt": [
     { title: "Kam s Janinými penězi?", blocks: ["opening", "prediction"] },
     { title: "Co stojí půjčené peníze", blocks: ["rpsn", "worked"] },
