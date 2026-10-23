@@ -17,7 +17,8 @@ export function Formula({ latex, variables }: { latex: string; variables: { symb
   return <figure className="overflow-hidden rounded-surface border border-border bg-surface">
     <div className="flex flex-col gap-3.5 px-[18px] pt-4 pb-[22px] md:gap-[18px] md:px-7 md:pt-5 md:pb-[30px]">
       <p className={cn(eyebrow, "flex items-center gap-1.5 text-muted")}><Sigma aria-hidden="true" className="size-3.5" />Vzorec</p>
-      {html ? <div className="lesson-formula overflow-x-auto text-[23px] text-foreground md:text-[30px]" dangerouslySetInnerHTML={{ __html: html }} /> : <div role="status"><p className="text-sm text-danger">Tento vzorec se nepodařilo zobrazit.</p><code className="break-all text-sm">{latex}</code></div>}
+      {/* Focusable so a formula that scrolls at narrow widths can be scrolled from the keyboard. */}
+      {html ? <div tabIndex={0} className="lesson-formula overflow-x-auto rounded-sm text-[23px] text-foreground focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-foreground md:text-[30px]" dangerouslySetInnerHTML={{ __html: html }} /> : <div role="status"><p className="text-sm text-danger">Tento vzorec se nepodařilo zobrazit.</p><code className="break-all text-sm">{latex}</code></div>}
     </div>
     {variables.length ? <div className="flex flex-col gap-2 border-t border-divider bg-surface-sunken px-[18px] pt-3.5 pb-4 md:gap-2.5 md:px-7 md:pt-4 md:pb-[18px]">
       <p className={cn(eyebrow, "text-muted")}>Co znamenají symboly</p>

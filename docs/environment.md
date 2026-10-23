@@ -46,6 +46,7 @@ All browser app URLs must be loopback. Most suites also refuse non-loopback DB U
 | `PORTFOLIO_TEST_URL`, `PORTFOLIO_SCREENSHOT_DIR` | Portfolio and progression browser suites |
 | `PROGRESSION_SCREENSHOT_DIR` | Progression browser output |
 | `FOUNDATIONS_TEST_URL`, `FOUNDATIONS_SCREENSHOT_DIR` | Foundations browser suite |
+| `WALKTHROUGH_TEST_URL`, `WALKTHROUGH_SCREENSHOT_DIR`, `LESSON_IDS` | Generic walkthrough of every published lesson; `LESSON_IDS` (comma-separated) limits it to those lessons |
 | `MARKETING_TEST_URL`, `MARKETING_SCREENSHOT_DIR` | Landing browser suite |
 | `DESIGN_SYSTEM_BASE_URL` | Development-only design-system browser suite |
 | `PORTFOLIO_CLOSED_TEST_URL`, `PORTFOLIO_CLOSED_SCREENSHOT_DIR` | Closed-market browser runtime/output |
