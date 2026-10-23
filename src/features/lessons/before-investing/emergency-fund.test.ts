@@ -23,7 +23,7 @@ describe("emergency fund lesson 0.1.3", () => {
     expect(availableLessons.some((lesson) => lesson.id === emergencyFundLesson.id)).toBe(false);
     expect(getAuthoredLesson("before-investing", "emergency-fund")).toBeUndefined();
     expect(() => validateMove(emergencyFundLesson.id, 0, 1, { answer: "reserve" })).toThrow(/unavailable/);
-    expect(getModuleBySlug("before-investing")).toMatchObject({ lessonCount: 2, estimatedMinutes: 23 });
+    expect(getModuleBySlug("before-investing")).toMatchObject({ lessonCount: 3, estimatedMinutes: 35 });
     expect(getLessonPlacement(emergencyFundLesson.id)).toMatchObject({ displayCode: "0.1.3", required: "recommended", prerequisites: ["before-investing-budget"] });
   });
   it("recomputes every numeric answer from the explicit example inputs", () => {

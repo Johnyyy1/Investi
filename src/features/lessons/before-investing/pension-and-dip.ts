@@ -1,6 +1,6 @@
 import type { AuthoredLesson } from "../types";
 import { beforeInvestingLessons } from "./manifest";
-const lesson = beforeInvestingLessons[3];
+const lesson = beforeInvestingLessons.find((entry) => entry.id === "before-investing-retirement-products")!;
 
 /** Editorial draft: dps.odpocet and dip.podminky are publication-blocked and the lesson needs an expert review record (docs/education/editorial-workflow.md). */
 export const pensionAndDipLesson: AuthoredLesson = {

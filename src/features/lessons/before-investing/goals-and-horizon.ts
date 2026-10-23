@@ -1,6 +1,6 @@
 import type { AuthoredLesson } from "../types";
 import { beforeInvestingLessons } from "./manifest";
-const lesson = beforeInvestingLessons[2];
+const lesson = beforeInvestingLessons.find((lesson) => lesson.id === "before-investing-goals")!;
 
 export const goalsAndHorizonLesson: AuthoredLesson = {
   id: lesson.id, moduleSlug: "before-investing", slug: lesson.slug, title: lesson.title,

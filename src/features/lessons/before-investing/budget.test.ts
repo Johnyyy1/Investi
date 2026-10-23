@@ -16,7 +16,7 @@ import { evaluateQuestion, isQuestion } from "../question-evaluation";
 const steps = getGuidedSteps(budgetLesson);
 describe("budget lesson 0.1.1", () => {
   it("registers the stable route, recommended placement and existing XP-only level policy", () => {
-    expect(getModuleBySlug("before-investing")).toMatchObject({ lessonCount: 2, estimatedMinutes: 23, status: "available" });
+    expect(getModuleBySlug("before-investing")).toMatchObject({ lessonCount: 3, estimatedMinutes: 35, status: "available" });
     expect(getModuleLessons("before-investing")[0]).toMatchObject({ id: budgetLesson.id, moduleId: "module-before-investing", slug: "budget" });
     expect(getLessonPlacement(budgetLesson.id)).toMatchObject({ displayCode: "0.1.1", required: "recommended", prerequisites: [] });
     expect(lessonReward(budgetLesson.id)).toEqual({ practiceCapitalMinor: 0n, rewardPolicyVersion: REWARD_POLICY_VERSION });
