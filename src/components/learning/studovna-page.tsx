@@ -1,10 +1,11 @@
+import { Suspense } from "react";
 import { CurriculumMap } from "./curriculum-map";
 import { curriculumMapModel } from "./curriculum-map-model";
 import { GuideImage } from "@/components/guide-image";
 import { AppLink as Link } from "@/components/shell/app-link";
 import { ArrowRight, BookOpen, ChevronDown, Clock3 } from "lucide-react";
 import { getModuleLessons, moduleCatalog } from "@/features/learning/catalog";
-import type { PortfolioView } from "@/features/portfolio/service";
+import type { PortfolioCardView } from "@/features/portfolio/service";
 import { formatPracticeCapitalMinor } from "@/features/rewards/presentation";
 import { PersonalizationPrompt } from "@/components/personalization/personalization-prompt";
 import { reasonLabels, contextLabels, scaffoldLabels } from "@/features/personalization/presentation";
@@ -17,22 +18,39 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Wordmark } from "@/components/brand/wordmark";
 
-function PortfolioCard({ summary, portfolio }: { summary: LearnerSummary; portfolio: PortfolioView | null | undefined }) {
-  const composition = portfolio && portfolioComposition(portfolio);
-  let offset = 0;
-  const segments = composition?.map(({ color, percent }) => { const start = offset; offset += percent; return `${color} ${start}% ${offset}%`; });
+type PortfolioCardData = PortfolioCardView | null | undefined;
+
+function PortfolioCardFrame({ summary, children }: { summary: LearnerSummary; children: React.ReactNode }) {
   return <section className={styles.sideCard} aria-labelledby="portfolio-title">
     <p className={styles.eyebrow}>Portfolio Lab</p><h3 id="portfolio-title">Můj první mix</h3><p className={styles.sideDescription}>Cvičný kapitál, skutečné souvislosti.</p>
     <div className={styles.capitalRow}><span>Cvičný kapitál</span><strong>{formatPracticeCapitalMinor(summary.practiceCapital.earnedPracticeCapitalMinor)}</strong></div>
+    {children}
+  </section>;
+}
+
+/** Shown while quotes load: no composition or prices until they are known. */
+function PortfolioCardSkeleton({ summary }: { summary: LearnerSummary }) {
+  return <PortfolioCardFrame summary={summary}><p className={styles.portfolioEmpty} role="status">Načítám složení portfolia…</p></PortfolioCardFrame>;
+}
+
+async function LoadedPortfolioCard({ summary, portfolio }: { summary: LearnerSummary; portfolio: Promise<PortfolioCardData> }) {
+  return <PortfolioCard summary={summary} portfolio={await portfolio} />;
+}
+
+function PortfolioCard({ summary, portfolio }: { summary: LearnerSummary; portfolio: PortfolioCardData }) {
+  const composition = portfolio && portfolioComposition(portfolio);
+  let offset = 0;
+  const segments = composition?.map(({ color, percent }) => { const start = offset; offset += percent; return `${color} ${start}% ${offset}%`; });
+  return <PortfolioCardFrame summary={summary}>
     {composition ? <>
       <div className={styles.composition}><div className={styles.donut} style={{ background: `conic-gradient(${segments!.join(", ")})` }} role="img" aria-label={`Složení portfolia: ${composition.map((item) => `${item.label} ${item.percent} %`).join(", ")}`} /><ul>{composition.map(({ id, label, color, percent }) => <li key={id}><span className={styles.swatch} style={{ background: color }} aria-hidden="true" /><span>{label}</span><strong>{percent.toLocaleString("cs-CZ")} %</strong></li>)}</ul></div>
       <p className={styles.dataLabel}>{portfolio?.marketDataMode === "sample" ? "Ukázková tržní data" : "Složení podle dostupných kotací"}</p>
     </> : <p className={styles.portfolioEmpty}>{portfolio === undefined ? "Portfolio se teď nenačetlo. Zkus ho otevřít znovu." : portfolio === null ? "Dokonči Základy investování a odemkni své cvičné portfolio." : !portfolio.valuationComplete ? "Některé ceny nejsou dostupné. Složení ukážeme, až bude ocenění úplné." : "Tvůj první mix začíná prvním nákupem. Vyzkoušej si ho v Labu."}</p>}
     <Link className={styles.sideLink} href="/lab/portfolio">{portfolio === null ? "Jak odemknout Portfolio Lab" : "Otevřít Portfolio Lab"}<ArrowRight size={16} aria-hidden="true" /></Link>
-  </section>;
+  </PortfolioCardFrame>;
 }
 
-export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; portfolio: PortfolioView | null | undefined }) {
+export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; portfolio: Promise<PortfolioCardData> }) {
   const firstName = summary.user?.name?.trim().split(/\s+/)[0] || "studente";
   const current = summary.state?.status === "in_progress";
   const complete = summary.allComplete;
@@ -61,7 +79,7 @@ export function StudovnaPage({ summary, portfolio }: { summary: LearnerSummary; 
       </div>
       <div className={styles.columns}>
         <section className={styles.curriculum} id="curriculum" aria-labelledby="curriculum-title"><div className={styles.curriculumHeading}><p className={styles.eyebrow}>Kurikulum</p><h2 id="curriculum-title">Všechny lekce jsou otevřené.</h2><p>Doporučujeme pořadí shora dolů, ale začít můžeš kdekoli.</p></div><CurriculumMap levels={curriculumMapModel(summary)} /></section>
-        <aside className={styles.side} aria-label="Lab a studijní pokrok"><PortfolioCard summary={summary} portfolio={portfolio} /><Link href="/lab/backtesting" className={styles.backtesting}><Clock3 size={15} aria-hidden="true" />Otevřít Backtesting Lab<ArrowRight size={15} aria-hidden="true" /></Link><section className={styles.sideCard}><p className={styles.eyebrow}>Tvůj pokrok</p><div className={styles.progressValue}><strong>{summary.percentage} %</strong><span>{summary.completed.length} z {summary.lessons.length} lekcí<small>dokončeno</small></span></div><p className={styles.progressNote}>Učení není závod. K hotovým lekcím se můžeš vracet vlastním tempem.</p><Link href="/progress" className={styles.sideLink}>Zobrazit pokrok<ArrowRight size={16} aria-hidden="true" /></Link></section></aside>
+        <aside className={styles.side} aria-label="Lab a studijní pokrok"><Suspense fallback={<PortfolioCardSkeleton summary={summary} />}><LoadedPortfolioCard summary={summary} portfolio={portfolio} /></Suspense><Link href="/lab/backtesting" className={styles.backtesting}><Clock3 size={15} aria-hidden="true" />Otevřít Backtesting Lab<ArrowRight size={15} aria-hidden="true" /></Link><section className={styles.sideCard}><p className={styles.eyebrow}>Tvůj pokrok</p><div className={styles.progressValue}><strong>{summary.percentage} %</strong><span>{summary.completed.length} z {summary.lessons.length} lekcí<small>dokončeno</small></span></div><p className={styles.progressNote}>Učení není závod. K hotovým lekcím se můžeš vracet vlastním tempem.</p><Link href="/progress" className={styles.sideLink}>Zobrazit pokrok<ArrowRight size={16} aria-hidden="true" /></Link></section></aside>
       </div>
       <section className={styles.planContext} aria-label="Tvůj studijní plán"><p>{recommendationReason}</p>{recommendedLesson && <Link className={styles.recommendedLink} href={`/learn/${recommendedLesson.moduleSlug}/${recommendedLesson.slug}`}>Doporučená lekce: {recommendedLesson.title}<ArrowRight size={16} aria-hidden="true" /></Link>}<details><summary>Jak si rozvrhnout učení</summary><p>{contextLabels[summary.recommendation.exampleContext]}</p><p>{scaffoldLabels[summary.recommendation.scaffoldLevel]}</p>{summary.recommendation.splitLessonAcrossSessions && <p>Lekci si můžeš rozdělit do více sezení. Uložený postup tě dovede zpět.</p>}</details></section>
       {!summary.profile?.personalizedOnboardingCompletedAt && summary.user && <PersonalizationPrompt userId={summary.user.id} />}
