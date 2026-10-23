@@ -240,7 +240,7 @@ describe("FMP requests per instrument detail view", () => {
     "cash-flow-statement": (symbol) => [{ symbol, date: "2025-09-27", filingDate: "2025-10-31", period: "FY", reportedCurrency: "USD", freeCashFlow: 108_000_000_000 }],
   };
 
-  function instance(fmpRequests: string[], sharedCache?: SharedMarketDataCacheStore) {
+  function instance(fmpRequests: string[], sharedCache?: SharedMarketDataCacheStore, now = NOW) {
     const fetch = vi.fn<FmpFetch>(async (input) => {
       const url = new URL(input instanceof Request ? input.url : input.toString());
       const endpoint = url.pathname.split("/").at(-1)!;
@@ -257,7 +257,7 @@ describe("FMP requests per instrument detail view", () => {
         fmpRequests.push("tickerinside/fund/spy.json");
         return Response.json({ ticker: "SPY", expense_ratio: 0.09, holdings: { AAPL: 100 }, holdings_as_of: "2026-06-01", breakdown: { sectors_pct: { technology: 100 }, sectors_stated: true, countries_pct: { US: 100 } } });
       },
-      clock: () => new Date(NOW),
+      clock: () => new Date(now),
       ...(sharedCache ? { sharedCache } : {}),
     });
   }
@@ -289,7 +289,8 @@ describe("FMP requests per instrument detail view", () => {
     expect(shared.families()).toEqual(["equity-fundamentals", "history", "instrument", "quote"]);
   });
 
-  it("only refreshes the quote once its short TTL has passed", async () => {
+  it("keeps a completed-session quote until the next open, then refreshes it", async () => {
+    // NOW is Monday 06:00 New York, before the open; the quote is Friday's 15:55 observation.
     let now = Date.parse(NOW);
     const shared = new FakeSharedStore();
     // The service clock stays fixed; only the shared store observes time passing.
@@ -298,11 +299,26 @@ describe("FMP requests per instrument detail view", () => {
       set: (family, key, value, expiresAt) => shared.set(family, key, value, expiresAt),
     };
     await loadInstrumentDetail(instance([], timedShared), "FMP:NASDAQ:AAPL", new Date(NOW));
+    const quoteRow = [...shared.rows].find(([key]) => key.startsWith("quote|"))![1];
+    expect(quoteRow.expiresAt).toBe(Date.parse("2026-09-21T13:30:00.000Z"));
+
     now += 60_000;
-    const requests: string[] = [];
-    await loadInstrumentDetail(instance(requests, timedShared), "FMP:NASDAQ:AAPL", new Date(NOW));
-    // The FMP adapter resolves the quote currency through its own profile request.
-    expect(requests.sort()).toEqual(["profile", "quote"]);
+    const closed: string[] = [];
+    await loadInstrumentDetail(instance(closed, timedShared), "FMP:NASDAQ:AAPL", new Date(NOW));
+    expect(closed).not.toContain("quote");
+
+    now = Date.parse("2026-09-21T13:30:00.000Z");
+    const opened: string[] = [];
+    await loadInstrumentDetail(instance(opened, timedShared), "FMP:NASDAQ:AAPL", new Date(NOW));
+    expect(opened).toContain("quote");
+  });
+
+  it("keeps the short TTL for a quote taken while the market is open", async () => {
+    const open = "2026-09-18T19:58:00.000Z"; // Friday 15:58 New York, three minutes after the observation
+    const shared = new FakeSharedStore();
+    await loadInstrumentDetail(instance([], shared, open), "FMP:NASDAQ:AAPL", new Date(open));
+    const quoteRow = [...shared.rows].find(([key]) => key.startsWith("quote|"))![1];
+    expect(quoteRow.expiresAt).toBe(Date.parse(open) + 30_000);
   });
 
   it("serves every ETF dataset to another instance from the shared layer", async () => {
