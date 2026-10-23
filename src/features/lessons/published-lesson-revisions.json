@@ -1,0 +1,15 @@
+[
+  {
+    "lessonId": "foundations-stocks",
+    "version": 2,
+    "issue": 156,
+    "previousFinalPosition": 6,
+    "cursorMigration": "identity",
+    "insertedSteps": [
+      {
+        "blocks": ["quote-currency", "fx-example", "position-czk"],
+        "grading": [{ "id": "position-czk", "type": "numericQuestion", "answer": 9000, "tolerance": 0.000001 }]
+      }
+    ]
+  }
+]

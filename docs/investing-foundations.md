@@ -7,7 +7,7 @@ The first published module is `/learn/investing-foundations`. It shares the auth
 | Stable lesson ID | Current focus |
 | --- | --- |
 | `foundations-why-invest` | Saving versus investing, horizon, inflation, and uncertain outcomes |
-| `foundations-stocks` | Ownership, quantity × price, price changes, and value distinctions |
+| `foundations-stocks` | Ownership, quantity × price, CZK/FX conversion, dividends, and value distinctions |
 | `foundations-etfs-indexes` | Fund versus index, weighted holdings, and concentration |
 | `foundations-bonds-cash` | Cash versus lending, principal/coupon/maturity, and issuer risk |
 | `foundations-markets` | Bid/ask/spread, order intent, and execution limits |
@@ -46,6 +46,14 @@ Daily-review content handoff for [#123](https://github.com/Johnyyy1/Investnik/is
 This handoff adds no graded step or runtime field and awards no XP, capital or streak credit. Its integration and scheduling belong to #123.
 
 ### Module validation
+
+Stocks revision 2 ([#156](https://github.com/Johnyyy1/Investnik/issues/156)) adds one assessed step before the summary, retaining the ID, storage module and `/learn/investing-foundations/stocks` route. The model has 3 shares × 150 USD × 22 CZK/USD = 9,900 Kč; the learner recalculates at 20 CZK/USD. Feedback explains the 900 Kč decline caused only by FX. Costs and distributions are excluded from this model. The summary distinguishes dividends from price changes, names the published `returns-comparing` lesson, and identifies dividend tax lesson 2.4.5 as planned, without a dead link or tax rules. The Lab bridge describes existing price/FX attribution and quote currency; no Lab calculation changes.
+
+The [explicit identity cursor migration](education/published-lesson-compatibility.md#explicit-revision-stocks-v2-156) preserves earlier cursors and all completed records; unfinished learners at the old summary must answer the new question. No schema, seed identity, prerequisites, reward policy or unlock requirements change.
+
+Daily-review handoff for #123 (not yet scheduled): source `foundations-stocks`, skills `position-value` / `stock-ownership`; prompt „Co kromě ceny akcie mění hodnotu pozice v Kč?“ Expected recall: „Také počet akcií a u zahraniční měny kurz. I stejná cena v USD může znamenat jinou hodnotu v Kč.“ Misconception: unchanged USD price guarantees unchanged CZK value. This adds no runtime field or reward.
+
+Editorial source check, 2026-10-23: [Investor.gov — Stocks](https://www.investor.gov/introduction-investing/investing-basics/investment-products/stocks) supports ownership, possible dividend distributions and absence of a guaranteed return. FX rates are explicitly invented model inputs, not current market or tax rates. No tax/regulatory amounts are published here. Maintainer: Foundations content; future tax publication requires its own dated facts and expert review.
 
 Use `npm run test:foundations-browser` against a fresh local app/database with deterministic providers. The suite completes the beginner journey, retries incorrect answers, verifies persisted cursor/review and unlock invariance, exercises keyboard/focus behavior, six widths (320–1440px), and enlarged text. Domain/registry/transition tests run in `npm test`; financial persistence/concurrency checks have separate package scripts.
 

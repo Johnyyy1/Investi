@@ -24,6 +24,20 @@ For an existing published lesson:
 
 Changes outside these rules need a separately designed, additive content-version/cursor migration **before publication**, or new lesson/mastery IDs. A migration must map unfinished learners to an explicitly safe section boundary, preserve completed status and dates, and preserve receipts and recorded unlocks. Do not simply reset everyone or regenerate the compatibility fixture. #119 does not add `content_version`: the compatible extension above needs no DB migration.
 
+### Explicit revision: stocks v2 (#156)
+
+The assessed FX exercise requested by #156 is an explicit versioned revision, recorded in `src/features/lessons/published-lesson-revisions.json`. It is not permission to insert graded steps into other published lessons. The original v1 fixture stays immutable; the compatibility test checks its identity, first six steps and final blocks, then checks the exact added step and grading against the revision contract.
+
+The cursor migration is the identity mapping, with no SQL or schema change:
+
+| Stored state before deployment | State after deployment |
+| --- | --- |
+| Unfinished positions 0–5 | Same position, same blocks and grading |
+| Unfinished position 6 (old ungraded summary) | Position 6, new FX exercise; server rejects completion and movement to the new summary without its correct answer |
+| Completed, including position 6 | Completed with the original cursor, completion date and receipt; review is read-only |
+
+There is no valid unfinished v1 cursor above 6. Thus no old cursor can land beyond the new assessment or claim it was passed. The final summary moves from 6 to 7 and remains ungraded. Existing `validateMove`, `validateCompletion` and completed-record early returns enforce this mapping without rewriting persisted data. It is idempotent because deployment, seed and repeated reads perform no cursor update. Unit, disposable-DB and browser checks cover the boundary and historical completion/receipt preservation. Future edits must preserve both contracts or supply another explicit migration; checkpoints retain the original restriction.
+
 ## Regression checks and author review
 
 `src/features/lessons/published-lessons-v1.json` records the identity and step/grading contracts of the original 27 lessons. `published-compatibility.test.ts` compares current content against that historical contract, permits the explanatory insertion above, and rejects incompatible edits. Preserve existing entries; add a contract when publishing a new lesson. A failing contract is a migration decision, not a snapshot-update task.
