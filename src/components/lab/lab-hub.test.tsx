@@ -27,6 +27,7 @@ function view(overrides: Partial<PortfolioView> = {}): PortfolioView {
     performance: { startedAt: "2026-09-01T00:00:00.000Z", endedAt: "2026-10-01T00:00:00.000Z", twrMethod: "cash-flow-boundaries", twr: { status: "available", basisPoints: "144", annualizedBasisPoints: null }, mwr: { status: "available", basisPoints: "144", annualizedBasisPoints: null } },
     valuationComplete: true, valuedHoldingsCount: 0, totalHoldingsCount: 0, marketDataMode: "market", realizedGainLossMinor: "0", cashWeightBasisPoints: "10000",
     attribution: null, allocation: null, holdings: [], recentActivity: [],
+    tax: { year: 2026, proceedsMinor: "0", saleCount: 0, limitMinor: "10000000", limitVerifiedAt: "2026-10-22", lots: [] },
     exposure: { sector: { status: "valued", categories: [], unclassified: [] }, country: { status: "valued", categories: [], unclassified: [] } },
     ...overrides,
   };
