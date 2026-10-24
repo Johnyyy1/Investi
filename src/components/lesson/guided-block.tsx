@@ -8,6 +8,7 @@ import { AppLink as Link } from "@/components/shell/app-link";
 import type { LessonBlock } from "@/features/lessons/types";
 import type { LessonHistoryEntry } from "@/features/lessons/real-history/snapshot";
 import type { RiskHistoryEntry } from "@/features/lessons/real-history/risk-window";
+import { lessonLink } from "@/features/learning/catalog";
 import { metricLabLink } from "@/features/learning/metric-glossary";
 import { cn } from "@/lib/utils";
 import { LessonFigure, LessonFormula } from "./lazy-blocks";
@@ -47,7 +48,7 @@ export function GuidedBlock({ block, history, riskHistory, lessonId, guest, onOu
     case "explanation": return <section className="flex flex-col gap-1.5 border-l-[3px] border-primary-tint py-0.5 pl-3.5"><h3 className={blockTitle}>{block.title}</h3><p className="text-base/[25px] text-secondary">{block.content}</p></section>;
     case "takeaway": return <Titled icon={<Bookmark aria-hidden="true" className="size-4 shrink-0 text-primary" />} title={block.title} className="gap-2 rounded-control border border-border bg-surface p-4 md:px-5" titleClassName="text-base font-semibold"><p className="text-[15px]/[23px] text-foreground">{block.content}</p></Titled>;
     case "checkpoint": return <Titled icon={<Flag aria-hidden="true" className="size-4 shrink-0 text-muted" />} title={block.label} className="gap-1.5 border-t border-divider pt-3.5" titleClassName="text-sm font-semibold text-muted"><p className="text-[15px]/[23px] text-secondary">{block.content}</p></Titled>;
-    case "labBridge": return <Titled as="aside" icon={<ChartPie aria-hidden="true" className="size-4 shrink-0 text-primary" />} title={block.title} className="gap-2 rounded-surface bg-surface-muted px-[18px] py-4 md:px-6" titleClassName="text-base/[22px] font-semibold text-primary"><p className="text-[15px]/[23px] text-foreground">{block.content}</p>{block.metric ? <LabMetricLink {...metricLabLink(block.metric, lessonInstrumentHref(riskHistory, history))} /> : null}</Titled>;
+    case "labBridge": return <Titled as="aside" icon={<ChartPie aria-hidden="true" className="size-4 shrink-0 text-primary" />} title={block.title} className="gap-2 rounded-surface bg-surface-muted px-[18px] py-4 md:px-6" titleClassName="text-base/[22px] font-semibold text-primary"><p className="text-[15px]/[23px] text-foreground">{block.content}</p>{block.lessonLinks?.map(({ lessonId, label }) => { const link = lessonLink(lessonId); return link ? <LabMetricLink key={lessonId} href={link.href} label={label} /> : null; })}{block.metric ? <LabMetricLink {...metricLabLink(block.metric, lessonInstrumentHref(riskHistory, history))} /> : null}</Titled>;
     case "lessonSummary": return <section aria-labelledby={`${block.id}-title`} className="overflow-hidden rounded-surface border border-border-card bg-surface shadow-elevation-1">
       <div className="flex items-center gap-2.5 bg-primary-soft px-[18px] py-3.5 md:px-7"><BookOpenCheck aria-hidden="true" className="size-[18px] shrink-0 text-primary" /><h3 id={`${block.id}-title`} className={blockTitle}>{block.title}</h3></div>
       <p className="px-[18px] pt-4 pb-5 text-base/[25px] text-foreground md:px-7">{block.content}</p>

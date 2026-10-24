@@ -186,11 +186,39 @@ try {
   await answerChoice(page, "Jiný účastník trhu ochotný prodat");
   await continueTo(page, "Směr obchodu určuje cenu");
   await answerChoice(page, "Ask · 100,20 Kč");
-  await answerNumber(page, 0.4);
+  // Spread is a cost even without a broker fee: reject half-spread as the full spread.
+  const spreadAnswer = page.getByLabel("Tvoje odpověď", { exact: true });
+  await spreadAnswer.fill("0,20");
+  await page.getByRole("button", { name: "Zkontrolovat odpověď", exact: true }).press("Enter");
+  await page.getByRole("heading", { name: "Zkus to ještě jednou", exact: true }).waitFor();
+  await page.getByRole("button", { name: "Zkusit znovu", exact: true }).press("Enter");
+  await page.waitForFunction(() => {
+    const input = document.querySelector('input[inputmode="decimal"]');
+    return input && input.value === "" && !input.disabled && document.activeElement === input;
+  });
+  await spreadAnswer.fill(String((10020 - 9980) / 100).replace(".", ","));
+  await page.getByRole("button", { name: "Zkontrolovat odpověď", exact: true }).press("Enter");
+  await page.getByRole("heading", { name: "Správně", exact: true }).waitFor();
+  await page.getByText(/To je polovina spreadu na každé straně obchodu/).waitFor();
+  await assertResponsive(page, "markets-spread-feedback", [320, 390, 1440]);
+  await page.getByRole("button", { name: "Pokračovat", exact: true }).click();
+  await page.getByText(/Hlavní obchodování na Xetře/).waitFor();
+  await page.getByLabel("Platnost vzdělávacího obsahu").waitFor();
+  await page.locator('main[data-save-state="idle"]').waitFor();
+  await page.reload();
+  await page.getByRole("heading", { name: "Zobrazená kotace se může změnit", exact: true }).waitFor();
+  await assertResponsive(page, "markets-cost-and-hours", [320, 390, 1440]);
+  await page.setViewportSize({ width: 320, height: 900 });
+  const enlarged = await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Markets copy fits 320px at 200% text");
+  await page.screenshot({ path: `${screenshotDir}/markets-320-text-200.png`, fullPage: true });
+  await enlarged.evaluate((node) => node.remove());
   await continueTo(page, "Ověření znalostí · okamžitý prodej");
   await answerChoice(page, "Bid");
   await answerChoice(page, "Limitní nákupní pokyn na 100 Kč");
   await page.getByRole("heading", { name: "Věz, co kotace slibuje — a co ne", exact: true }).waitFor();
+  assert.equal(await page.getByRole("link", { name: /lekci 2\.2\.2|lekci 2\.5\.3/ }).count(), 0, "Unpublished follow-ups are hidden");
+  await assertResponsive(page, "markets-summary", [320, 390, 1440]);
   await completeLesson(page, 300);
 
   await nextLesson(page, "Nejdřív odhadni, potom počítej");

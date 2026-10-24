@@ -202,6 +202,7 @@ export const skillItems: readonly SkillItem[] = [
   item("foundations-etfs-indexes", "mastery-weights", "index-vs-fund"),
   item("foundations-bonds-cash", "mastery-lending", "bonds-and-cash"),
   item("foundations-bonds-cash", "mastery-rates", "bonds-and-cash"),
+  item("foundations-markets", "buy-side", "bid-ask-spread"),
   item("foundations-markets", "mastery-sell", "bid-ask-spread"),
   item("foundations-markets", "mastery-order", "bid-ask-spread"),
   item("foundations-risk-reward", "mastery-negative", "simple-return"),

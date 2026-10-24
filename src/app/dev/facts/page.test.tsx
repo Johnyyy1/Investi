@@ -13,7 +13,7 @@ describe("editorial fact overview", () => {
   it("shows verification, sources and overdue states in development, with a rendered token preview", async () => {
     vi.stubEnv("NODE_ENV", "development");
     const html = renderToStaticMarkup(await FactsPage({ searchParams: Promise.resolve({ date: "2027-04-01" }) }));
-    expect(html).toContain("45 klíčů, 49 datovaných verzí");
+    expect(html).toContain("46 klíčů, 50 datovaných verzí");
     expect(html).toContain("Publikace blokována");
     expect(html).toContain("Po termínu revize");
     expect(html).toContain("Údaj může být zastaralý");
