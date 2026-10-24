@@ -104,7 +104,7 @@ describe("lesson fact tokens and publication gate", () => {
     expect(() => prepareLessonFacts(raw, registry, { today, published: true })).toThrow(/structural/);
   });
   it("checks every published lesson in CI and fails publication of an unverified draft", () => {
-    expect(() => checkPublishedFacts(factRegistry, authoredLessons, curriculumLessons, today)).not.toThrow();
+    expect(() => checkPublishedFacts(factRegistry, authoredLessons, curriculumLessons, "2026-10-24")).not.toThrow();
     const draft = lesson("{{dan.parovani_transi}}");
     expect(() => checkPublishedFacts(factRegistry, [draft], [{ id: draft.id, status: "planned" }], today)).not.toThrow();
     expect(() => checkPublishedFacts(factRegistry, [draft], [{ id: draft.id, status: "available" }], today)).toThrow(/Unverified/);

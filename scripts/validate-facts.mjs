@@ -19,7 +19,7 @@ try {
   } else {
     assert.equal(response.status(), 200);
     await page.getByRole("heading", { name: "Registr faktů", exact: true }).waitFor();
-    assert.equal(await page.locator("details").count(), 49);
+    assert.equal(await page.locator("details").count(), 50);
     assert.equal(await page.getByRole("status").count(), 0);
     assert.equal((await page.locator("main").innerText()).includes("{{"), false);
     const first = page.locator("summary").first();

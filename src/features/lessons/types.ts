@@ -71,7 +71,7 @@ export type LessonBlock =
   | (BaseBlock & { type: "explanation"; title: string; content: string })
   | (BaseBlock & { type: "takeaway"; title: string; content: string })
   /** `metric` adds a „Vyzkoušej v Labu“ link to that metric, on the lesson's own instrument when it has one. */
-  | (BaseBlock & { type: "labBridge"; title: string; content: string; metric?: MetricId })
+  | (BaseBlock & { type: "labBridge"; title: string; content: string; metric?: MetricId; lessonLinks?: { lessonId: string; label: string }[] })
   | (BaseBlock & { type: "lessonSummary"; title: string; content: string })
   | (BaseBlock & { type: "checkpoint"; label: string; content: string });
 
