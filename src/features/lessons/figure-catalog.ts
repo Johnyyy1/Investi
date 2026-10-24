@@ -10,6 +10,7 @@ export const lessonFigureCatalog = {
   "state-support-calculator": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/pension-model.ts" },
   "emergency-fund-calculator": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/emergency-fund-model.ts" },
   "debt-vs-invest-calculator": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/debt-model.ts" },
+  "fund-cost-comparison": { owner: "curriculum", data: "model", model: "src/features/lessons/foundations/fund-cost-model.ts" },
   "budget-builder": { owner: "curriculum", data: "model", model: "src/features/lessons/before-investing/model.ts" },
   "return-calculator": { owner: "curriculum", data: "model", model: "src/features/finance/returns.ts" },
   "price-series-explorer": { owner: "curriculum", data: "model", model: "src/features/finance/returns.ts" },

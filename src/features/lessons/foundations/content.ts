@@ -98,7 +98,70 @@ const portfolio: AuthoredStep[] = [
   { title: "Teď umíš číst portfolio", blocks: [bridge("Váha určuje, jak silně konkrétní pozice ovlivňuje celé portfolio. Portfolio Lab ji počítá z hodnot pozic i hotovosti."), summary("Hodnota portfolia je hotovost plus hodnota pozic. Váha pozice je její hodnota vydělená celkovou hodnotou portfolia. Větší váhy mají větší vliv a skutečná diverzifikace závisí na expozicích a vahách, ne jen na počtu řádků.")] },
 ];
 
-const flows = [whyInvest, stocks, etfs, bondsAndCash, markets, returnsAndCompounding, portfolio];
+const funds: AuthoredStep[] = [
+  { title: "Dvě nabídky pro Kláru", blocks: [
+    paragraph("offers", "Modelový příklad · V bance nabízejí Kláře fiktivní akciový fond Svět (fond A) se vstupním poplatkem 3 % a průběžnými náklady 1,9 % ročně. Kamarád má fiktivní ETF B na celosvětový akciový index bez vstupního poplatku a s průběžnými náklady 0,22 % ročně. Klára chce investovat 100 000 Kč na 20 let."),
+    question("opening", "Odhadni: oba fondy vydělají před náklady stejných 6 % ročně. O kolik víc může mít Klára po 20 letech s ETF B?", ["Asi o 3 000 Kč, to je vstupní poplatek", "Asi o 30 000 Kč", "Asi o 90 000 Kč"], 2,
+      "V modelu je to skoro 91 000 Kč. Vstupní poplatek vezme 3 000 Kč jednou, ale rozdíl zhruba 1,7 p. b. v průběžných nákladech se odečítá každý rok z rostoucí částky. Za chvíli to spočítáš krok po kroku.",
+      "Víc. Vstupní poplatek je jen začátek: průběžné náklady se platí každý rok z celé hodnoty investice a jejich rozdíl se skládá 20 let. Zkus vyšší odhad."),
+  ] },
+  { title: "Podílový fond a ETF", blocks: [
+    concept("mutual-fund", "Otevřený podílový fond", "Investoři skládají peníze do společného fondu a správce je za ně investuje. Podíl kupuješ a prodáváš přes správce nebo distributora, třeba banku, za NAV (Net Asset Value): čistou hodnotu majetku fondu na jeden podíl. Počítá se obvykle jednou denně, takže přesnou cenu při zadání pokynu ještě neznáš."),
+    concept("etf", "ETF (Exchange Traded Fund)", "ETF je také fond, ale jeho podíly se obchodují na burze během obchodního dne za tržní cenu. Kupuješ za ask a prodáváš za bid jako u akcie (lekce 1.1.5). Tržní cena bývá blízko NAV, ale nemusí se s ní přesně shodovat."),
+    question("buy-price", "Klára zadá v bance pokyn k nákupu podílů fondu A. Za jakou cenu je obvykle koupí?", ["Za NAV na podíl, kterou správce stanoví obvykle jednou denně", "Za aktuální cenu ask na burze", "Za cenu, za kterou fond vznikl"], 0,
+      "Otevřený podílový fond vydává a odkupuje podíly za NAV. Vstupní poplatek se k nákupu může připočíst.",
+      "Na burze za ask se obchoduje ETF. Podíl otevřeného podílového fondu kupuješ přes správce nebo distributora za NAV, obvykle stanovenou jednou denně."),
+  ] },
+  { title: "Aktivní a pasivní správa", blocks: [
+    concept("management", "Kdo rozhoduje, co fond koupí", "Aktivní správce vybírá investice a snaží se porazit trh nebo zvolený index. Pasivní fond index sleduje a snaží se co nejvěrněji kopírovat jeho výsledek. Aktivní správa bývá dražší, protože platíš analytiky a častější obchody. Není ale automaticky bezpečnější: aktivní akciový fond může klesnout stejně jako trh, nebo víc. Typ správy nezávisí na způsobu nákupu; existují indexové podílové fondy i aktivně řízená ETF. Zda se aktivní správa vyplatí, rozebere plánovaná lekce 1.1.9."),
+    question("passive", "Fond drží stejné firmy ve stejných vahách jako celosvětový akciový index a nesnaží se ho porazit. Jak je spravovaný?", ["Aktivně", "Pasivně", "Garantovaně"], 1,
+      "Sledování indexu bez snahy ho porazit je pasivní správa. Nic negarantuje: když index klesne, klesne i fond.",
+      "Aktivní správce by vybíral investice jinak než index, aby ho porazil. Tento fond index kopíruje, proto jde o pasivní správu. Výnos negarantuje žádná z nich."),
+  ] },
+  { title: "Kde najdeš náklady", blocks: [
+    { id: "kid", type: "explanation", title: "Sdělení klíčových informací (KID)", content: "KID (Key Information Document) je krátký dokument v jednotné struktuře, který mívají fondy nabízené drobným investorům v EU. Náklady najdeš v části „Jaké náklady mě čekají?“: jednorázové vstupní a výstupní náklady, průběžné náklady (ročně v % hodnoty), náklady obchodů fondu a případné výkonnostní poplatky. Na stránkách fondů se podobný roční údaj často jmenuje TER (Total Expense Ratio); nemusí zahrnovat náklady obchodů fondu, proto fondy porovnávej podle stejného zdroje. KID ukazuje i scénáře výkonnosti. Ty nejsou předpovědí." },
+    { id: "kid-costs", type: "documentTap", prompt: "Modelový příklad · Označ dva řádky, ze kterých zjistíš vstupní poplatek a roční průběžné náklady fondu A.", document: { eyebrow: "Modelový příklad · fiktivní dokument", title: "Sdělení klíčových informací · Fond A, akciový fond Svět", meta: "Zjednodušená ukázka, žádná skutečná nabídka", columns: [{ id: "item", label: "Položka", mobile: "title" }, { id: "value", label: "Údaj", align: "end", mobile: "value" }], rows: [
+      { id: "holding", cells: { item: "Doporučená doba držení", value: "5 let" }, note: "Doporučená doba, ne náklad." },
+      { id: "scenario", cells: { item: "Příznivý scénář po 5 letech", value: "+9 % ročně" }, note: "Scénář výkonnosti je ilustrace, ne předpověď ani náklad." },
+      { id: "entry", cells: { item: "Vstupní náklady", value: "3 % z investované částky" }, note: "Jednorázový vstupní poplatek, platí se z každého vkladu." },
+      { id: "exit", cells: { item: "Výstupní náklady", value: "0 %" }, note: "Fond A za odkup podílů nic neúčtuje." },
+      { id: "ongoing", cells: { item: "Průběžné náklady (správa a provoz)", value: "1,9 % hodnoty ročně" }, note: "Odečítají se každý rok z hodnoty investice." },
+      { id: "performance-fee", cells: { item: "Výkonnostní poplatek", value: "0 %" }, note: "Fond A ho neúčtuje." },
+    ] }, correctRowIds: ["entry", "ongoing"],
+      correctExplanation: "Vstupní náklady 3 % se platí z každého vkladu, průběžné náklady 1,9 % každý rok z hodnoty investice. Scénář výkonnosti je ilustrace, ne náklad ani slib.",
+      incorrectExplanation: "Hledáš dva řádky z části o nákladech: jednorázové vstupní náklady a roční průběžné náklady. Doporučená doba držení a scénář výkonnosti náklady nejsou; nulové poplatky nic nestojí." },
+  ] },
+  { title: "Vstupní poplatek ubírá z vkladu", blocks: [numeric("entry-fee", "Modelový příklad: investuješ 50 000 Kč do fondu se vstupním poplatkem 3 %. Kolik Kč se skutečně zainvestuje?", 48500, "Kč",
+    "50 000 × (1 − 0,03) = 48 500 Kč. Poplatek 1 500 Kč pro tebe od začátku nepracuje.",
+    "Vstupní poplatek se odečte z vkladu: 3 % z 50 000 Kč je 1 500 Kč. Zainvestuje se zbytek, 50 000 − 1 500.")] },
+  { title: "Spočítej 20 let", blocks: [{ id: "cost-example", type: "workedExample", title: "Modelový příklad · 100 000 Kč na 20 let", introduction: "Oba fondy vydělají před náklady stejných 6 % ročně. Zjednodušeně odečteme průběžné náklady od výnosu; poplatek brokera u ETF a daně vynecháme. Skutečný výnos se každý rok liší.", steps: [
+    { label: "Fond A · zainvestuje se", value: "100 000 × (1 − 0,03) = 97 000 Kč" },
+    { label: "Fond A · čistý výnos", value: "6 % − 1,9 % = 4,1 % ročně" },
+    { label: "Fond A · po 20 letech", value: "97 000 × 1,041²⁰ ≈ 216 664 Kč" },
+    { label: "ETF B · čistý výnos", value: "6 % − 0,22 % = 5,78 % ročně" },
+    { label: "ETF B · po 20 letech", value: "100 000 × 1,0578²⁰ ≈ 307 660 Kč" },
+    { label: "Rozdíl", value: "307 660 − 216 664 ≈ 90 996 Kč", emphasis: true },
+  ], conclusion: "Vstupní poplatek vzal 3 000 Kč hned na začátku. Většinu rozdílu ale udělaly průběžné náklady: zhruba 1,7 p. b. se odečítá z rostoucí hodnoty 20 let po sobě. Náklady jsou jistá složka výsledku, výnos nejistá." }] },
+  { title: "Vyzkoušej si náklady", blocks: [figure("calculator", "fund-cost-comparison", "Modelový příklad · náklady fondu v čase", "Nejdřív odhadni, o kolik náklady fondu A zmenší výsledek za 20 let proti stejnému fondu bez nákladů. Pak měň poplatky, výnos a dobu a zkus pravidelné vklady. Nástroj se nehodnotí.")] },
+  mastery("Ověření znalostí · co je jisté", question("mastery-certain", "Fond s průběžnými náklady 1,9 % ročně a ETF na stejný trh s 0,22 % mají stejné riziko. Co je jisté?", ["ETF bude mít nižší náklady; výnos ani jednoho jistý není", "ETF vydělá víc než fond", "Dražší fond má lepšího správce, takže vydělá víc"], 0,
+    "Náklady znáš předem, výnos ne. Nižší náklady zlepšují výchozí podmínky, ale lepší výsledek nezaručují.",
+    "Jistý je jen rozdíl v nákladech. Budoucí výnos nezná nikdo a vyšší cena fondu nezaručuje lepší výsledek.")),
+  mastery("Ověření znalostí · pravidelné vklady", numeric("mastery-regular-fee", "Modelový příklad: posíláš do fondu 2 000 Kč měsíčně a vstupní poplatek je 3 % z každého vkladu. Kolik Kč zaplatíš na vstupních poplatcích za rok?", 720, "Kč",
+    "2 000 × 0,03 = 60 Kč z každého vkladu, za 12 měsíců 720 Kč. Při pravidelném investování se vstupní poplatek platí pořád znovu.",
+    "Vstupní poplatek se platí z každého vkladu, ne jen jednou: 3 % z 2 000 Kč je 60 Kč, a to dvanáctkrát za rok.")),
+  { title: "Vysvětli to vlastními slovy", blocks: [{ id: "reflection", type: "writtenReflection", prompt: "Proč rozdíl zhruba 1,7 p. b. ročně v průběžných nákladech udělá za 20 let skoro 91 000 Kč? Vysvětli to ve 2–4 větách a dodej, co zkontroluješ, než si vybereš fond.", rubric: [
+    { id: "compound", text: "Vysvětlím, že náklady se odečítají každý rok z rostoucí hodnoty a jejich vliv se skládá." },
+    { id: "certain", text: "Odliším jisté náklady od nejistého výnosu." },
+    { id: "check", text: "Uvedu konkrétní kontrolu: vstupní a průběžné náklady v KID, porovnané u fondů na stejný trh." },
+  ], sampleAnswer: "Průběžné náklady se strhávají každý rok z celé hodnoty, takže rozdíl 1,7 p. b. se skládá podobně jako výnos. Po 20 letech chybí nejen zaplacené poplatky, ale i výnos, který by z nich vznikl. Náklady znám předem, výnos ne. Před výběrem fondu najdu v KID vstupní a průběžné náklady a porovnám je s fondy na stejný trh." }] },
+  { title: "Porovnávej, co za náklady dostaneš", blocks: [
+    bridge("Na stránce ETF v Portfolio Labu najdeš řádek Nákladovost: roční provozní náklady fondu podle zdroje dat, pokud je zdroj uvádí. Backtesting Lab umí porovnat stejnou strategii s náklady a bez nich."),
+    summary("Otevřený podílový fond kupuješ přes správce nebo distributora za NAV, ETF na burze za tržní cenu. Aktivní správce se snaží porazit trh, pasivní fond sleduje index; aktivní správa bývá dražší a není automaticky bezpečnější. V KID najdeš vstupní a průběžné náklady. Vstupní poplatek se platí z každého vkladu, průběžné náklady každý rok z celé hodnoty. Bankovní fondy nejsou automaticky špatné a ETF nejsou vždy levná: porovnávej celkové náklady a co za ně dostaneš."),
+    paragraph("sources", "Zdroje k dalšímu čtení · EUR-Lex, nařízení (EU) č. 1286/2014 o sdělení klíčových informací (PRIIPs): https://eur-lex.europa.eu/eli/reg/2014/1286/oj · ČNB, dohled nad finančním trhem: https://www.cnb.cz/cs/dohled-financni-trh/ · Investor.gov, Mutual Funds and ETFs: https://www.investor.gov/introduction-investing/investing-basics/investment-products/mutual-funds-and-exchange-traded-1 · Vzdělávací obsah, ne investiční doporučení."),
+  ] },
+];
+
+const flows = [whyInvest, stocks, etfs, bondsAndCash, markets, returnsAndCompounding, portfolio, funds];
 export const foundationsContent: AuthoredLesson[] = flows.map((steps, index) => {
   const definition = foundationsLessons[index];
   return { id: definition.id, moduleSlug: "investing-foundations", slug: definition.slug, title: definition.title, eyebrow: "Základy investování", position: index + 1, estimatedMinutes: definition.estimatedMinutes, sections: steps.map((step, position) => ({ id: String(position), label: step.title })), blocks: steps.flatMap((step) => step.blocks) };

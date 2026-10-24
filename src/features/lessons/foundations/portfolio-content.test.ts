@@ -5,7 +5,7 @@ import { getGuidedSteps } from "../steps";
 import { validateCompletion, validateMove } from "@/features/progress/transition";
 
 describe("Foundations learning experience integrity", () => {
-  it("keeps the seven stable published lesson IDs and the target sequence", () => {
+  it("keeps the stable published lesson IDs and the target sequence", () => {
     expect(foundationsContent.map((lesson) => lesson.id)).toEqual(foundationsLessons.filter((lesson) => lesson.status === "available").map((lesson) => lesson.id));
     expect(foundationsContent.map((lesson) => lesson.title)).toEqual([
       "Spoření vs. investování",
@@ -15,6 +15,7 @@ describe("Foundations learning experience integrity", () => {
       "Jak funguje trh: bid, ask a spread",
       "Výnos a složené zhodnocení",
       "Portfolio, váhy a diverzifikace",
+      "Podílové fondy, ETF a jejich náklady",
     ]);
   });
 
@@ -60,7 +61,7 @@ describe("Foundations learning experience integrity", () => {
   });
 
   it("teaches the required portfolio math and concentration safeguards", () => {
-    const lesson = foundationsContent.at(-1)!;
+    const lesson = foundationsContent.find((lesson) => lesson.id === "foundations-portfolio")!;
     expect(lesson.blocks.find((block) => block.id === "weight-formula")).toMatchObject({ type: "formula", latex: "w_i = \\frac{V_i}{V_p}" });
     expect(lesson.blocks.find((block) => block.id === "weight-practice")).toMatchObject({ type: "numericQuestion", answer: 40 });
     expect(lesson.blocks.find((block) => block.id === "contribution-practice")).toMatchObject({ type: "numericQuestion", answer: 2 });

@@ -1,6 +1,6 @@
 # Investing Foundations
 
-The first published module is `/learn/investing-foundations`. It shares the authored block engine, guided runner, progression actions, and curriculum seed with Returns. Seven lessons are published; the checkpoint is planned and has no authored lesson or actionable route.
+The first published module is `/learn/investing-foundations`. It shares the authored block engine, guided runner, progression actions, and curriculum seed with Returns. Eight lessons are published; the checkpoint is planned and has no authored lesson or actionable route.
 
 ## Stable curriculum
 
@@ -13,6 +13,7 @@ The first published module is `/learn/investing-foundations`. It shares the auth
 | `foundations-markets` | Bid/ask/spread, order intent, and execution limits |
 | `foundations-risk-reward` | Simple returns, growth factors, and compounding asymmetry |
 | `foundations-portfolio` | Cash-inclusive value/weights, diversification, and risk |
+| `foundations-funds` | Open-ended mutual funds (NAV) versus ETFs, active versus passive management, entry and ongoing costs in a fictional KID, and the `fund-cost-comparison` model (1.1.8, #162) |
 
 IDs and slugs survive title/content changes because progress and receipts refer to those IDs. Persisted cursors are numeric; future step reorderings require an explicit resume-compatibility review.
 
@@ -26,7 +27,7 @@ Pure educational utilities live in `features/finance`. Ownership, market capital
 
 Educational floating-point ratios are distinct from the Portfolio Lab's scaled-bigint ledger. Display rounding never becomes accounting state. The Portfolio Builder uses conceptual stocks/bonds/cash weights and one-period returns; it does not optimize portfolios or calculate covariance. Cash-flow illustrations are not bond yield or total-return estimates. Diversification reduces some risks without eliminating loss.
 
-The Foundations curriculum requires all seven completions and 420 internal XP for a normal user's Portfolio Lab unlock; personalization does not bypass it. See [current reward semantics](product-reset.md) and [portfolio accounting](portfolio-lab.md).
+The Portfolio Lab unlock requires the seven original Foundations completions and 420 internal XP; `foundations-funds` (1.1.8) is not a prerequisite for a normal user's Portfolio Lab unlock; personalization does not bypass it. See [current reward semantics](product-reset.md) and [portfolio accounting](portfolio-lab.md).
 
 ## Validation and future checkpoint
 

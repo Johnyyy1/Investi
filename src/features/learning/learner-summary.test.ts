@@ -50,7 +50,7 @@ describe("real learner summary", () => {
     expect(getLearnerSummary(states).completed).toEqual([]);
     expect(getLearnerSummary(states).next.id).toBe("foundations-why-invest");
     const path = getModulePath("investing-foundations", states);
-    expect(path).toHaveLength(8);
-    expect(path.slice(7).every((item) => item.state === "locked")).toBe(true);
+    expect(path).toHaveLength(9);
+    expect(path.slice(8).every((item) => item.state === "locked")).toBe(true);
   });
 });

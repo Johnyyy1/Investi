@@ -79,7 +79,7 @@ try {
 
   await page.goto(`${baseURL}/learn/investing-foundations`);
   await page.getByRole("heading", { name: "Základy investování", exact: true }).waitFor();
-  assert.equal(await page.getByTestId("module-progress").textContent(), "0 / 7 lekcí dokončeno");
+  assert.equal(await page.getByTestId("module-progress").textContent(), "0 / 8 lekcí dokončeno");
   await page.getByText("0 / 420 XP", { exact: true }).waitFor();
   await page.getByText("Zamčeno · dokonči základy", { exact: true }).waitFor();
   await assertResponsive(page, "01-foundations-overview", [1440]);
@@ -270,7 +270,8 @@ try {
   await page.screenshot({ path: `${screenshotDir}/11-unlocked-portfolio-1440.png`, fullPage: true });
 
   await page.goto(`${baseURL}/learn/investing-foundations`);
-  await page.getByText("7 / 7 lekcí dokončeno", { exact: true }).waitFor();
+  // The unlock keeps its original seven prerequisites; lesson 1.1.8 is published but not required for it.
+  await page.getByText("7 / 8 lekcí dokončeno", { exact: true }).waitFor();
   await page.getByText("420 / 420 XP", { exact: true }).waitFor();
   await page.getByText("Odemčen", { exact: true }).waitFor();
   await assertResponsive(page, "01-foundations-overview-complete", [390]);
@@ -290,7 +291,7 @@ try {
   assert.equal((await sql`select count(*)::int as count from progression_unlock where user_id = ${userId} and unlock_id = 'PORTFOLIO_LAB'`)[0].count, 1, "Review does not duplicate unlock");
   assert.deepEqual(errors, [], `Unexpected browser errors: ${JSON.stringify(errors)}`);
 
-  console.log(`PASS: complete seven-lesson beginner journey, wrong-answer retry, reload, 420 XP, one-time 5,000 Kč unlock grant, usable Portfolio Lab, review compatibility, keyboard, mobile, responsive, and 200% text. Screenshots: ${screenshotDir}`);
+  console.log(`PASS: complete seven-lesson beginner journey and unlock without lesson 1.1.8, wrong-answer retry, reload, 420 XP, one-time 5,000 Kč unlock grant, usable Portfolio Lab, review compatibility, keyboard, mobile, responsive, and 200% text. Screenshots: ${screenshotDir}`);
   await context.close();
 } finally {
   if (userId) await sql`delete from "user" where id = ${userId}`;
