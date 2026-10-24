@@ -5,7 +5,7 @@ import type { loadLearner } from "@/features/learning/load-learner";
 import { getAuthoredLesson } from "@/features/lessons/registry";
 import { getGuidedSteps, getStepDefinitions } from "@/features/lessons/steps";
 import type { AuthoredLesson } from "@/features/lessons/types";
-import { chapterTitle, PLANNED_CHAPTER_TITLE } from "@/components/learning/studovna-model";
+import { chapterTitle } from "@/components/learning/studovna-model";
 
 type Summary = Awaited<ReturnType<typeof loadLearner>>;
 export type ProgressSummary = Pick<Summary, "lessons" | "completed" | "next" | "position" | "stepCount" | "allComplete"> & { states: readonly LearnerState[]; recent: readonly LearnerState[] };
@@ -74,7 +74,7 @@ export function progressModel(summary: ProgressSummary) {
     return { slug: chapter.slug, number: String(index + 1).padStart(2, "0"), title: chapterTitle(chapter), description: chapter.description, href: `/learn/${chapter.slug}`, lessons, completed, minutes: minutes(lessons), status, current: !summary.allComplete && summary.next.moduleSlug === chapter.slug };
   });
   const plannedTopics = moduleCatalog.filter((chapter) => chapter.status === "planned").map((chapter) => chapter.title);
-  const planned = plannedTopics.length ? { number: String(available.length + 1).padStart(2, "0"), title: PLANNED_CHAPTER_TITLE, topics: plannedTopics } : undefined;
+  const planned = plannedTopics.length ? { number: String(available.length + 1).padStart(2, "0"), title: plannedTopics[0], topics: plannedTopics } : undefined;
 
   const order = (lesson: Lesson) => summary.lessons.findIndex((item) => item.id === lesson.id);
   const knowledge = summary.completed.map((lesson) => {

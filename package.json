@@ -61,6 +61,7 @@
     "test:progression-browser": "node scripts/validate-progression-browser.mjs",
     "test:scams-browser": "node scripts/validate-scams.mjs",
     "test:emergency-fund-browser": "node scripts/validate-emergency-fund.mjs",
+    "test:tax-filing-browser": "node scripts/validate-when-to-file.mjs",
     "test:pension-and-dip-browser": "node scripts/validate-pension-and-dip.mjs",
     "test:goals-browser": "node scripts/validate-goals.mjs",
     "test:goals-persistence": "tsx --tsconfig scripts/tsconfig.persistence.json scripts/validate-goals-persistence.mts",
