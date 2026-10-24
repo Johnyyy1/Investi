@@ -65,10 +65,11 @@ try {
   assert.equal(await skillRow(page, "position-value").innerText(), "Nezkoušeno");
   const protectedRows = async () => ({ progress: [...await sql`select * from lesson_progress where user_id=${owner.id} order by lesson_id`], awards: [...await sql`select * from lesson_award where user_id=${owner.id}`] });
   const before = await protectedRows();
-  await page.getByRole("link", { name: /Smíšený checkpoint · 10 otázek/ }).click();
+  // One question per skill with items, so the count follows the item bank.
+  const items = mixedCheckpoint("1.1", `${owner.id}:${new Date().toISOString().slice(0, 10)}`);
+  await page.getByRole("link", { name: `Smíšený checkpoint · ${items.length} otázek` }).click();
   await page.waitForURL("**/learn/checkpoint/1.1");
 
-  const items = mixedCheckpoint("1.1", `${owner.id}:${new Date().toISOString().slice(0, 10)}`);
   assert.ok(new Set(items.map((item) => item.lessonId)).size >= 2);
   for (const [index, item] of items.entries()) {
     const question = block(item.lessonId, item.blockId);
