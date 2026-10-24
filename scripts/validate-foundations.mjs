@@ -175,11 +175,15 @@ try {
   await page.screenshot({ path: `${screenshotDir}/09-mobile-lesson-390.png`, fullPage: true });
   await answerChoice(page, "Vysoká likvidita a malé kolísání nominální hodnoty");
   await continueTo(page, "Dluhopis představuje půjčku");
+  await page.getByText(/Dluhopisy vydává i Česká republika/).filter({ visible: true }).waitFor();
+  await page.screenshot({ path: `${screenshotDir}/bonds-03-czech-state-bonds-390.png`, fullPage: true });
   await continueTo(page, "Proč se cena staršího dluhopisu mění");
   await continueTo(page, "Ověření znalostí · vztah k emitentovi");
   await answerChoice(page, "Půjčuješ emitentovi peníze");
   await answerChoice(page, "Tržní cena staršího dluhopisu bude mít tendenci klesnout");
   await page.getByRole("heading", { name: "Rozpoznej úkol každého aktiva", exact: true }).waitFor();
+  await page.getByText(/Dluhopisový fond nemá jedno datum splatnosti/).filter({ visible: true }).waitFor();
+  await page.screenshot({ path: `${screenshotDir}/bonds-07-summary-390.png`, fullPage: true });
   await completeLesson(page, 240);
 
   await nextLesson(page, "Obchod potřebuje dvě strany");
