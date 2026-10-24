@@ -12,8 +12,8 @@ describe("module catalog", () => {
     expect(getModuleBySlug("unknown-module")).toBeUndefined();
   });
 
-  it("keeps published modules available and the tax draft planned", () => {
-    expect(moduleCatalog.map((module) => [module.slug, module.status])).toEqual([["investing-foundations", "available"], ["returns", "available"], ["volatility", "available"], ["correlation", "available"], ["diversification", "available"], ["before-investing", "available"], ["czech-taxes", "planned"]]);
+  it("keeps published modules available and the L2 drafts planned", () => {
+    expect(moduleCatalog.map((module) => [module.slug, module.status])).toEqual([["investing-foundations", "available"], ["returns", "available"], ["volatility", "available"], ["correlation", "available"], ["diversification", "available"], ["before-investing", "available"], ["broker-and-account", "planned"], ["czech-taxes", "planned"]]);
   });
 
   it("builds Lab lesson links from the curriculum and never links an unpublished lesson", () => {

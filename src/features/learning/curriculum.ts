@@ -1,3 +1,4 @@
+import { BROKER_AND_ACCOUNT_MODULE_ID, brokerAndAccountLessons } from "../lessons/broker-and-account/manifest";
 import { CZECH_TAXES_MODULE_ID, czechTaxesLessons } from "../lessons/czech-taxes/manifest";
 import { BEFORE_INVESTING_MODULE_ID, beforeInvestingLessons } from "../lessons/before-investing/manifest";
 import { FOUNDATIONS_MODULE_ID, foundationsLessons } from "../lessons/foundations/manifest";
@@ -25,6 +26,7 @@ export const storageModules = [
   { id: CORRELATION_MODULE_ID, slug: "correlation", title: "Korelace", description: "Jak se aktiva pohybují společně — a kdy ne.", status: "available", lessons: correlationLessons },
   { id: DIVERSIFICATION_MODULE_ID, slug: "diversification", title: "Diverzifikace", description: "Sestavování portfolií, která promyšleně rozkládají riziko.", status: "available", lessons: diversificationLessons },
   { id: BEFORE_INVESTING_MODULE_ID, slug: "before-investing", title: "Než začneš investovat", description: "Prověř rozpočet a rozděl cíle podle termínu a pevnosti.", status: "available", lessons: beforeInvestingLessons },
+  { id: BROKER_AND_ACCOUNT_MODULE_ID, slug: "broker-and-account", title: "Broker a investiční účet", description: "Rozliš typy platforem a prověř, komu svěřuješ své peníze.", status: "planned", lessons: brokerAndAccountLessons },
   { id: CZECH_TAXES_MODULE_ID, slug: "czech-taxes", title: "Daně investora v České republice", description: "Rozliš příjmy, osvobození a povinnosti českého investora.", status: "planned", lessons: czechTaxesLessons },
 ] as const;
 
@@ -87,6 +89,7 @@ export type DisplayModuleCode = (typeof displayModules)[number]["code"];
 
 /** What a lesson trains. Mastery states (#122) hang on these IDs. */
 export const skills = {
+  "platform-types": "Typy investičních platforem a kdo rozhoduje o nákupech",
   "tax-filing": "Rozlišení příjmů a povinnosti podat přiznání",
   "fraud-prevention": "Ověření protistrany a varovné signály",
   "scam-prevention": "Varovné znaky, ověření poskytovatele a střety zájmů",
@@ -143,6 +146,7 @@ const place = (lessonId: string, displayModule: DisplayModuleCode, order: number
 
 /** Where each authored lesson, including editorial drafts, sits in Curriculum 2.0. New lessons are added here and in their storage manifest. */
 export const lessonPlacements: readonly LessonPlacement[] = [
+  place("broker-platform-types", "2.1", 1, "required", ["foundations-funds"], ["platform-types"]),
   place("taxes-filing-obligation", "2.4", 1, "required", ["foundations-stocks"], ["tax-filing"]),
   // Reserve/pension remain unpublished; recommendation prerequisites include only available lessons.
   place("before-investing-checkup", "0.1", 7, "recommended", ["before-investing-budget", "before-investing-debt", "before-investing-goals"], ["savings-rate", "debt-priorities", "inflation", "goals-and-horizon", "fraud-prevention"]),

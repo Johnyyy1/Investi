@@ -132,14 +132,14 @@ describe("Progress presentation model", () => {
     expect(model.milestone).toBeUndefined();
     expect(model.continueHref).toBe("/lab");
     expect(model.knowledge).toHaveLength(availableLessons.length);
-    expect(model.planned).toMatchObject({ title: "Daně investora v České republice", topics: ["Daně investora v České republice"] });
+    expect(model.planned).toMatchObject({ title: "Broker a investiční účet", topics: ["Broker a investiční účet", "Daně investora v České republice"] });
     const html = render(states, { capital: practiceCapitalLedger([grant(100_000n, 1), receipt(returns[0].id, 23_456n, 2)]), portfolio: ledger });
     expect(html).toContain("Všechno, co zatím je, máš za sebou.");
     expect(html).toContain("Prozkoumat Lab");
     expect(html).toContain('href="/lab"');
     expect(html).toMatch(/1\s234,56\sKč/);
     expect(html).toContain("Splnění milníku zatím nevyhodnocujeme.");
-    expect(html).toContain("Kapitola Daně investora v České republice se připravuje.");
+    expect(html).toContain("Kapitola Broker a investiční účet se připravuje.");
     expect(html).not.toContain("Následuje");
     expect(html).not.toContain('aria-current="step"');
   });

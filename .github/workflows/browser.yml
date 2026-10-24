@@ -479,6 +479,12 @@ jobs:
         env:
           TAX_FILING_TEST_URL: ${{ env.APP_URL }}
           TAX_FILING_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/when-to-file
+      - name: Platform types editorial preview
+        if: ${{ !cancelled() }}
+        run: npm run test:platform-types-browser
+        env:
+          PLATFORM_TYPES_TEST_URL: ${{ env.APP_URL }}
+          PLATFORM_TYPES_SCREENSHOT_DIR: ${{ env.SCREENSHOTS }}/platform-types
       - name: Facts registry
         if: ${{ !cancelled() }}
         run: npm run test:facts-browser
