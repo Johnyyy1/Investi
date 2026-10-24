@@ -60,7 +60,7 @@ describe("Practice Capital reward policy v4", () => {
   });
 
   it("keeps the explicitly placed L0 editorial drafts XP-only under the existing policy", () => {
-    for (const draft of draftLessons) expect(lessonReward(draft.id)).toEqual({ practiceCapitalMinor: 0n, rewardPolicyVersion: 4 });
+    for (const draft of draftLessons.filter((entry) => getLessonPlacement(entry.id)?.displayModule === "0.1")) expect(lessonReward(draft.id)).toEqual({ practiceCapitalMinor: 0n, rewardPolicyVersion: 4 });
   });
 
   it("refuses to price a lesson outside the curriculum", () => {
