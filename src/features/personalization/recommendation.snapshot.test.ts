@@ -6,7 +6,8 @@ import { recommendLearning } from "./recommendation";
 import { diagnosticWithCorrectCount } from "./test-fixtures";
 
 // Freeze the pre-0.1.1 inventory: this snapshot protects legacy sequencing, not catalog size.
-const legacyCurriculum = availableLessons.filter((lesson) => lesson.moduleSlug !== "before-investing");
+const laterLessons = new Set(["foundations-funds"]);
+const legacyCurriculum = availableLessons.filter((lesson) => lesson.moduleSlug !== "before-investing" && !laterLessons.has(lesson.id));
 
 /** Deterministic pseudo-random subsets, so the snapshot covers out-of-order progress too. */
 function* seededSubsets(count: number) {

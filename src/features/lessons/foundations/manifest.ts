@@ -8,5 +8,6 @@ export const foundationsLessons = [
   // The slug says "risk" but the lesson teaches returns and compounding; it stays for existing URLs and links (#160).
   { id: "foundations-risk-reward", slug: "risk-vs-reward", title: "Výnos a složené zhodnocení", summary: "Počítej relativní změnu a skládej výnosy v čase.", estimatedMinutes: 9, status: "available" },
   { id: "foundations-portfolio", slug: "your-first-portfolio", title: "Portfolio, váhy a diverzifikace", summary: "Spoj hotovost a pozice, spočítej váhy a odhal koncentraci.", estimatedMinutes: 10, status: "available" },
+  { id: "foundations-funds", slug: "funds", title: "Podílové fondy, ETF a jejich náklady", summary: "Rozliš podílový fond a ETF, aktivní a pasivní správu a spočítej, co stojí náklady.", estimatedMinutes: 12, status: "available" },
   { id: "foundations-checkpoint", slug: "foundations-checkpoint", title: "Ověření základů", summary: "Propoj hlavní investiční principy.", estimatedMinutes: 8, status: "planned" },
 ] as const;

@@ -138,7 +138,8 @@ export function GuidedLesson({ lesson, moduleTitle, steps, factKeys, initialStat
   }
   function retry() {
     setAnswers({}); setVerdict(undefined);
-    requestAnimationFrame(() => questionRef.current?.querySelector<HTMLInputElement>("input, select")?.focus());
+    // First rendered control: a document exercise also keeps a hidden copy for the other breakpoint.
+    requestAnimationFrame(() => [...(questionRef.current?.querySelectorAll<HTMLElement>("input, select") ?? [])].find((control) => control.getClientRects().length > 0)?.focus());
   }
 
   const step = steps[position];

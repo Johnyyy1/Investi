@@ -17,7 +17,7 @@ import { factRegistry } from "../src/features/facts/registry";
 import { factToday } from "../src/features/facts/resolve";
 import { availableLessons } from "../src/features/learning/catalog";
 import { correctAnswers, wrongAnswers } from "../src/features/lessons/answer-keys";
-import { isQuestion, type QuestionBlock } from "../src/features/lessons/question-evaluation";
+import { isQuestion, parseSelection, type QuestionBlock } from "../src/features/lessons/question-evaluation";
 import { getAuthoredLesson } from "../src/features/lessons/registry";
 import { getGuidedSteps } from "../src/features/lessons/steps";
 
@@ -34,7 +34,7 @@ const lessons = availableLessons.filter((lesson) => !requested || requested.incl
   return { id: lesson.id, path: `/learn/${lesson.moduleSlug}/${lesson.slug}`, steps: getGuidedSteps(lesson) };
 });
 
-type Control = { radio: string; value: string } | { label: string; fill: string } | { label: string; select: string };
+type Control = { radio: string; value: string } | { label: string; fill: string } | { label: string; select: string } | { checkbox: string; checked: boolean };
 /** How the player takes an answer from `answer-keys`. A new graded kind in a published lesson needs a driver here. */
 function controls(block: QuestionBlock, answers: Record<string, string>): Control[] {
   switch (block.type) {
@@ -45,6 +45,7 @@ function controls(block: QuestionBlock, answers: Record<string, string>): Contro
     case "documentSearchQuestion": return block.target.type === "region" ? [{ radio: block.id, value: answers.answer }] : [{ label: "Hodnota z dokumentu", fill: answers.answer }];
     case "categorizeQuestion": return block.items.map((item) => ({ label: item.label, select: answers[item.id] }));
     case "orderQuestion": return block.items.map((_, index) => ({ label: `${index + 1}. místo`, select: answers[String(index)] }));
+    case "documentTap": return block.document.rows.filter((row) => row.selectable !== false).map((row) => ({ checkbox: `Označit řádek: ${block.document.columns.map((column) => row.cells[column.id]).filter(Boolean).join(", ")}`, checked: parseSelection(answers.selected).includes(row.id) }));
     default: throw new Error(`No walkthrough driver for ${block.type} (${block.id})`);
   }
 }
@@ -86,6 +87,8 @@ try {
     for (const control of controls(question, answers)) {
       if ("radio" in control) await page.locator(`input[type="radio"][name="${control.radio}"][value="${control.value}"]`).check();
       else if ("fill" in control) await card.getByLabel(control.label, { exact: true }).fill(control.fill);
+      // getByRole skips the hidden copy: the document renders a table from 1280 px and row cards below.
+      else if ("checkbox" in control) await page.getByRole("checkbox", { name: control.checkbox, exact: true }).setChecked(control.checked);
       else await card.locator("label", { has: page.getByText(control.label, { exact: true }) }).locator("select").selectOption(control.select);
     }
     await button("Zkontrolovat odpověď").click();
@@ -161,6 +164,38 @@ try {
           assert.equal(await button("Pokračovat").isEnabled(), true, "saved check-up enables continuation");
           await audit(`${where} after saving`, width);
         }
+        if (block.type === "interactiveFigure" && block.figure === "fund-cost-comparison") {
+          const result = page.getByRole("region", { name: "Výsledek porovnání nákladů fondu", exact: true });
+          const entry = page.getByLabel("Vstupní poplatek", { exact: true });
+          const years = page.getByLabel("Doba investování", { exact: true });
+          assert.match(await result.innerText(), /Hodnota po nákladech\s+216\s664 Kč/, "defaults reproduce fund A from the worked example");
+          await entry.fill("0");
+          await page.getByLabel("Průběžné náklady", { exact: true }).fill("0");
+          assert.match(await result.innerText(), /Náklady tě stály\s+0 Kč/);
+          await years.fill("1,5");
+          assert.equal(await years.getAttribute("aria-invalid"), "true");
+          assert.equal(await result.count(), 0, "fractional years clear the result");
+          await years.fill("20");
+          await page.getByLabel("Způsob investování", { exact: true }).selectOption("regular");
+          assert.match(await result.innerText(), /Vloženo celkem\s+480\s000 Kč/);
+          const slider = page.getByRole("slider", { name: "Vstupní poplatek · posuvník", exact: true });
+          await slider.focus();
+          await slider.press("ArrowRight");
+          assert.equal(await entry.inputValue(), "0.1");
+          assert.notEqual(await slider.evaluate((element) => getComputedStyle(element).outlineStyle), "none", "slider has visible keyboard focus");
+          await audit("fund cost calculator after editing", width);
+          for (const size of [1440, 390, 320]) {
+            await page.setViewportSize({ width: size, height: 900 });
+            await page.evaluate(async () => { window.scrollTo(0, 0); await document.fonts.ready; await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))); });
+            await page.screenshot({ path: `${screenshots}/fund-cost-calculator-${size}.png` });
+          }
+          const largeText = await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "fund cost calculator at 320px and 200% text");
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.screenshot({ path: `${screenshots}/fund-cost-calculator-320-200.png` });
+          await largeText.evaluate((element) => element.parentNode?.removeChild(element));
+          await page.setViewportSize({ width, height: 900 });
+        }
         if (block.type === "interactiveFigure" && block.figure === "goal-map") {
           await page.getByRole("checkbox", { name: "Zatím nemám konkrétní cíl", exact: true }).check();
           await page.getByRole("checkbox", { name: /Souhlasím s uložením/ }).check();
@@ -183,9 +218,9 @@ try {
     const progress: { status: string } | undefined = (await sql<{ status: string }[]>`select status from lesson_progress where user_id = ${userId} and lesson_id = ${lesson.id}`)[0];
     assert.equal(progress?.status, "completed", where);
     assert.equal((await sql<{ count: number }[]>`select count(*)::int as count from lesson_award where user_id = ${userId} and lesson_id = ${lesson.id}`)[0].count, 1, `${where}: one receipt`);
-    if (lesson.id === "before-investing-debt") {
+    if (lesson.id === "before-investing-debt" || lesson.id === "foundations-funds") {
       const [receipt]: { xp: number; practice_capital_minor: string }[] = await sql`select xp, practice_capital_minor::text from lesson_award where user_id = ${userId} and lesson_id = ${lesson.id}`;
-      assert.deepEqual({ ...receipt }, { xp: 60, practice_capital_minor: "0" }, "L0 debt uses existing XP-only policy");
+      assert.deepEqual({ ...receipt }, { xp: 60, practice_capital_minor: "0" }, `${lesson.id} uses the existing XP-only policy`);
     }
     console.log(`✓ ${lesson.id} (${lesson.steps.length} steps at ${width}px)`);
   }
